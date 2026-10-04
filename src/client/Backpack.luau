@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -78,13 +79,14 @@ local function swordTip(copy): (string, Color3)
 	local trait = Config.Traits[copy.trait]
 	local tier = Rarity.tier(sword.rarity)
 	local lines = { sword.name, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
+	local grade = Config.Grades[copy.grade]
 	if trait then
-		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo: {trait.name}</font>`)
+		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo: {trait.name}</font> ({Modifiers.effect(trait)})`)
+	end
+	if grade then
+		table.insert(lines, `<font color="{hex(grade.color)}">Grado: {grade.name}</font> ({Modifiers.effect(grade)})`)
 	end
 	table.insert(lines, `Daño {Format.multiplier(Stats.swordDamage(copy))}`)
-	if trait then
-		table.insert(lines, `Suerte x{Format.multiplier(trait.luck)}`)
-	end
 	table.insert(lines, `<font color="{Ui.SOFT}">{if sword.rarity then "1 entre " .. Format.short(sword.rarity) else "Espada inicial"}</font>`)
 	return table.concat(lines, "\n"), tier.color
 end
@@ -205,12 +207,10 @@ function Backpack.start()
 	end
 	local bestButton = action("Best", "Equipar mejor", Ui.COLORS.green, 12, 176)
 	local sellButton = action("Sell", `Vender\n+{Config.Gacha.SellValue} gemas`, Ui.COLORS.red, 198, 100)
-	local traitButton = action("Trait", "Tirar rasgo\n1 cristal", Ui.COLORS.orange, 308, 108)
-	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 426, 104)
+	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 308, 104)
 	bestButton.TextSize = 23
 	equipButton.TextSize = 20
 	sellButton.TextSize = 15
-	traitButton.TextSize = 15
 
 	local selected = nil -- id de la copia elegida
 	local swordCells = {} -- [id] = casilla
@@ -219,11 +219,6 @@ function Backpack.start()
 	equipButton.Activated:Connect(function()
 		if selected then
 			Remotes.EquipSword:FireServer(selected)
-		end
-	end)
-	traitButton.Activated:Connect(function()
-		if selected then
-			Remotes.RollTrait:FireServer(selected)
 		end
 	end)
 	sellButton.Activated:Connect(function()
@@ -245,7 +240,7 @@ function Backpack.start()
 		end
 	end)
 
-	local function refreshSelection(copies, equippedId: number, crystals: number)
+	local function refreshSelection(copies, equippedId: number)
 		local chosen = nil
 		for _, copy in copies do
 			if copy.id == selected then
@@ -266,13 +261,13 @@ function Backpack.start()
 		if chosen then
 			local sword = Config.Swords[chosen.sword]
 			local trait = Config.Traits[chosen.trait]
-			detail.Text = `{sword.name}{if trait then ` <font color="{hex(trait.color)}">[{trait.name}]</font>` else ""}\n<font color="{Ui.SOFT}">Daño {Format.multiplier(Stats.swordDamage(chosen))}</font>`
+			local grade = Config.Grades[chosen.grade]
+			detail.Text = `{sword.name}{if trait then ` <font color="{hex(trait.color)}">[{trait.name}]</font>` else ""}{if grade then ` <font color="{hex(grade.color)}">[{grade.name}]</font>` else ""}\n<font color="{Ui.SOFT}">Daño {Format.multiplier(Stats.swordDamage(chosen))}</font>`
 		end
 		local isEquipped = selected == equippedId
 		equipButton.Text = if isEquipped then "Equipada" else "Equipar"
 		equipButton.BackgroundColor3 = if isEquipped then Ui.COLORS.gray else Ui.COLORS.blue
 		sellButton.BackgroundColor3 = if isEquipped then Ui.COLORS.gray else Ui.COLORS.red
-		traitButton.BackgroundColor3 = if crystals >= 1 then Ui.COLORS.orange else Ui.COLORS.gray
 	end
 
 	local function rebuildSwords(copies, equippedId: number)
@@ -319,7 +314,7 @@ function Backpack.start()
 			end, true)
 			cell.Activated:Connect(function()
 				selected = copy.id
-				refreshSelection(Stats.swords(player), player:GetAttribute("Equipped") or 1, player:GetAttribute("Item_traitCrystal") or 0)
+				refreshSelection(Stats.swords(player), player:GetAttribute("Equipped") or 1)
 			end)
 			swordCells[copy.id] = cell
 		end
@@ -430,7 +425,6 @@ function Backpack.start()
 	-- Refresco --------------------------------------------------------------------------
 	local function refresh()
 		local equippedId = player:GetAttribute("Equipped") or 1
-		local crystals = player:GetAttribute("Item_traitCrystal") or 0
 		local copies = Stats.swords(player)
 
 		count.Text = `{#copies}/{Config.MaxSwords}`
@@ -439,7 +433,7 @@ function Backpack.start()
 			swordsKey = key
 			rebuildSwords(copies, equippedId)
 		end
-		refreshSelection(copies, equippedId, crystals)
+		refreshSelection(copies, equippedId)
 		if not autoBox:IsFocused() then
 			local autoSell = player:GetAttribute("AutoSell") or 0
 			autoBox.Text = if autoSell > 0 then Format.short(autoSell) else ""

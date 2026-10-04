@@ -36,12 +36,12 @@ local function publish(player: Player)
 	player:SetAttribute("Coins", data.coins)
 	player:SetAttribute("Gems", data.gems)
 
-	-- "Swords" = copias del inventario como "id:espada:rasgo" (rasgo 0 = ninguno) separadas por comas.
+	-- "Swords" = copias del inventario como "id:espada:rasgo:grado" (0 = ninguno) separadas por comas.
 	-- "Equipped" = id de la copia equipada; "SwordLevel" = su tipo (índice de Config.Swords).
 	local swords = {}
 	local equippedType = 1
 	for _, copy in data.swords do
-		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}`)
+		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}:{copy.grade or 0}`)
 		if copy.id == data.equipped then
 			equippedType = copy.sword
 		end
@@ -69,12 +69,16 @@ local function validTrait(trait: unknown): number?
 	return if type(trait) == "number" and Config.Traits[trait] then trait else nil
 end
 
+local function validGrade(grade: unknown): number?
+	return if type(grade) == "number" and Config.Grades[grade] then grade else nil
+end
+
 -- Reconstruye el inventario de espadas a partir de lo guardado, en cualquiera de sus formatos.
 local function loadSwords(data, saved)
 	local swords = {}
-	local function add(sword: number, trait: number?): number
+	local function add(sword: number, trait: number?, grade: number?): number
 		local id = #swords + 1
-		table.insert(swords, { id = id, sword = sword, trait = trait })
+		table.insert(swords, { id = id, sword = sword, trait = trait, grade = grade })
 		return id
 	end
 
@@ -83,13 +87,13 @@ local function loadSwords(data, saved)
 	local first = type(saved.swords) == "table" and saved.swords[1]
 
 	if type(first) == "table" then
-		-- Formato actual: copias { id, sword, trait }. Los ids se renumeran.
+		-- Formato actual: copias { id, sword, trait, grade }. Los ids se renumeran.
 		for _, copy in saved.swords do
 			if #swords >= Config.MaxSwords then
 				break
 			end
 			if type(copy) == "table" and type(copy.sword) == "number" and Config.Swords[copy.sword] then
-				local id = add(copy.sword, validTrait(copy.trait))
+				local id = add(copy.sword, validTrait(copy.trait), validGrade(copy.grade))
 				if copy.id == saved.equipped then
 					equipped = id
 				end
@@ -122,7 +126,8 @@ local function loadSwords(data, saved)
 end
 
 local function load(player: Player)
-	-- swords = copias { id, sword = índice de Config.Swords, trait = índice de Config.Traits o nil };
+	-- swords = copias { id, sword = índice de Config.Swords, trait = índice de Config.Traits o nil,
+	-- grade = índice de Config.Grades o nil };
 	-- equipped = id de la copia equipada; autoSell = se venden solas las espadas de rareza menor (0 = no);
 	-- items = { [nombre] = cantidad }; artifacts = índices de Config.Artifacts que tiene; gear = los equipados.
 	local data = {
@@ -190,10 +195,14 @@ local function load(player: Player)
 		return
 	end
 
-	-- Modo de pruebas (solo en Studio): dinero infinito y sin guardar, para no pisar el progreso real.
+	-- Modo de pruebas (solo en Studio): dinero y objetos infinitos (cristales para la tienda de
+	-- Rasgos) y sin guardar, para no pisar el progreso real.
 	if RunService:IsStudio() and Config.Test.InfiniteMoney then
 		data.coins = math.huge
 		data.gems = math.huge
+		for name in data.items do
+			data.items[name] = math.huge
+		end
 		canSave = false
 	end
 

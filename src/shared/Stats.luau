@@ -14,11 +14,15 @@ function Stats.list(player: Player, attribute: string): { number }
 	return result
 end
 
--- Copias de espada del inventario: { id, sword = índice de Config.Swords, trait = índice de Config.Traits o 0 }.
+-- Copias de espada del inventario: { id, sword = índice de Config.Swords, trait = índice de
+-- Config.Traits o 0, grade = índice de Config.Grades o 0 }.
 function Stats.swords(player: Player)
 	local result = {}
-	for id, sword, trait in string.gmatch(player:GetAttribute("Swords") or "", "(%d+):(%d+):(%d+)") do
-		table.insert(result, { id = tonumber(id), sword = tonumber(sword), trait = tonumber(trait) })
+	for entry in string.gmatch(player:GetAttribute("Swords") or "", "[^,]+") do
+		local id, sword, trait, grade = string.match(entry, "^(%d+):(%d+):(%d+):?(%d*)$")
+		if id then
+			table.insert(result, { id = tonumber(id), sword = tonumber(sword), trait = tonumber(trait), grade = tonumber(grade) or 0 })
+		end
 	end
 	return result
 end
@@ -31,13 +35,13 @@ function Stats.equipped(player: Player)
 			return copy
 		end
 	end
-	return { id = 0, sword = 1, trait = 0 }
+	return { id = 0, sword = 1, trait = 0, grade = 0 }
 end
 
 -- Daño de una copia de espada con su rasgo, sin contar artefactos.
 function Stats.swordDamage(copy): number
 	local trait = Config.Traits[copy.trait]
-	return Config.Swords[copy.sword].damage * (if trait then trait.damage else 1)
+	return Config.Swords[copy.sword].damage * (if trait then trait.damage or 1 else 1)
 end
 
 local function gear(player: Player, stat: string): number
@@ -74,7 +78,7 @@ end
 -- Multiplicador de suerte que dan el rasgo de la espada equipada y los artefactos.
 local function luckBonus(player: Player): number
 	local trait = Config.Traits[Stats.equipped(player).trait]
-	return (if trait then trait.luck else 1) * gear(player, "luck")
+	return (if trait then trait.luck or 1 else 1) * gear(player, "luck")
 end
 
 function Stats.luck(player: Player): number
@@ -90,8 +94,12 @@ function Stats.rollTime(_player: Player): number
 	return Config.Gacha.RollTime
 end
 
+-- Monedas: artefactos, y el rasgo y el grado de la espada equipada.
 function Stats.coins(player: Player): number
-	return gear(player, "coins")
+	local copy = Stats.equipped(player)
+	local trait = Config.Traits[copy.trait]
+	local grade = Config.Grades[copy.grade]
+	return gear(player, "coins") * (if trait then trait.coins or 1 else 1) * (if grade then grade.coins else 1)
 end
 
 function Stats.gems(player: Player): number
