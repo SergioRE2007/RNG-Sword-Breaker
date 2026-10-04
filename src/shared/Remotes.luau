@@ -8,6 +8,7 @@ local NAMES = {
 	"EquipSword", -- cliente -> servidor: (id) equipar una copia de espada del inventario
 	"SellSword", -- cliente -> servidor: (id) vender una copia que no esté equipada
 	"SetAutoSell", -- cliente -> servidor: (rarity) vender solas las espadas de rareza menor; 0 = no
+	"Teleport", -- cliente -> servidor: (destino) "hub", "home" (su parcela) o "shops" (tiendas del hub)
 	"BuyUpgrade", -- cliente -> servidor: (name) subir un nivel una mejora de Config.Upgrades
 	"BuyAllUpgrades", -- cliente -> servidor: subir todas las mejoras que se puedan pagar
 	"SwingFx", -- servidor -> los demás clientes: (player) ese jugador ha dado un espadazo

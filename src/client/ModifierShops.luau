@@ -403,7 +403,7 @@ local function buildShop(kind: string)
 		local row = Instance.new("Frame")
 		row.Name = "Result" .. index
 		row.LayoutOrder = position
-		row.Size = UDim2.new(1, 0, 0, 78)
+		row.Size = UDim2.new(1, -8, 0, 80)
 		row.BackgroundColor3 = WHITE
 		row.Parent = results
 		Ui.round(row, 10)
@@ -414,35 +414,62 @@ local function buildShop(kind: string)
 		elseif Modifiers.percent(kind, index) < 0.1 then
 			pulsing[stroke] = index
 		end
-		-- Columna del icono con el % debajo (cabe hasta "0.0016%").
+		-- Icono a la izquierda, nombre y efecto en el centro y el % en una etiqueta a la derecha.
 		local iconBox = Instance.new("Frame")
-		iconBox.Position = UDim2.fromOffset(10, 4)
-		iconBox.Size = UDim2.fromOffset(60, 42)
+		iconBox.Position = UDim2.fromOffset(12, 10)
+		iconBox.Size = UDim2.fromOffset(62, 58)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
 		entryIcon(iconBox, kind, entry)
-		local percent = Ui.label(row, 16)
-		percent.Position = UDim2.fromOffset(4, 52)
-		percent.Size = UDim2.fromOffset(72, 20)
+		local pill = Instance.new("Frame")
+		pill.Name = "Percent"
+		pill.AnchorPoint = Vector2.new(1, 0.5)
+		pill.Position = UDim2.new(1, -12, 0.5, 0)
+		pill.Size = UDim2.fromOffset(104, 38)
+		pill.BackgroundColor3 = Ui.COLORS.dark
+		pill.Parent = row
+		Ui.round(pill, 10)
+		local pillStroke = Ui.stroke(pill, if entry.rainbow then WHITE else entry.color, 2)
+		if entry.rainbow then
+			rainbow(pillStroke)
+		end
+		local percent = Ui.label(pill, 22)
+		percent.Size = UDim2.fromScale(1, 1)
 		percent.TextScaled = true
 		local limit = Instance.new("UITextSizeConstraint")
-		limit.MaxTextSize = 16
+		limit.MaxTextSize = 22
 		limit.Parent = percent
 		percent.Text = Modifiers.formatPercent(Modifiers.percent(kind, index))
-		local title = Ui.label(row, 26)
-		title.Position = UDim2.fromOffset(84, 8)
-		title.Size = UDim2.new(1, -92, 0, 32)
+		local title = Ui.label(row, 30)
+		title.Position = UDim2.fromOffset(86, 8)
+		title.Size = UDim2.new(1, -210, 0, 34)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		paintName(title, entry)
 		if kind == "grades" then
 			title.Text = "Grado " .. entry.name
 		end
-		local detail = Ui.label(row, 19)
-		detail.Position = UDim2.fromOffset(84, 44)
-		detail.Size = UDim2.new(1, -92, 0, 22)
+		if not entry.rainbow then
+			-- Degradado de blanco al color de la entrada: más llamativo que el color liso.
+			local gradient = Instance.new("UIGradient")
+			gradient.Rotation = 90
+			gradient.Color = ColorSequence.new(entry.color:Lerp(WHITE, 0.55), entry.color)
+			gradient.Parent = title
+		end
+		local detail = Ui.label(row, 20)
+		detail.Position = UDim2.fromOffset(86, 46)
+		detail.Size = UDim2.new(1, -210, 0, 24)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
-		detail.TextColor3 = Color3.fromRGB(120, 230, 120)
+		detail.TextColor3 = Color3.fromRGB(120, 235, 120)
 		detail.Text = Modifiers.effect(entry)
+		-- Crece un poco al pasar el ratón.
+		local grow = Instance.new("UIScale")
+		grow.Parent = row
+		row.MouseEnter:Connect(function()
+			TweenService:Create(grow, TweenInfo.new(0.12), { Scale = 1.03 }):Play()
+		end)
+		row.MouseLeave:Connect(function()
+			TweenService:Create(grow, TweenInfo.new(0.12), { Scale = 1 }):Play()
+		end)
 		rows[index] = row
 	end
 

@@ -6,6 +6,7 @@ require(ReplicatedStorage.Shared.Remotes) -- crea los RemoteEvents antes de que 
 require(script.CollisionGroups).start()
 require(script.PlayerData).start()
 require(script.Plots).start()
+require(script.Teleport).start()
 require(script.Scenery).start()
 require(script.Destructibles).start()
 require(script.Movement).start()
