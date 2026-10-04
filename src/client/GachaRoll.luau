@@ -1,9 +1,9 @@
 -- Gacha en el cliente. Es gratis y se tira desde cualquier sitio (botones "Tirar" y "Auto").
 -- Arriba, el panel del gacha: pasan espadas al azar, cada vez más despacio, y se para en la que
--- ha tocado con un aura distinta para cada nivel de rareza (brillo, rayos, chispas, arcoíris).
+-- ha tocado con un aura según lo rara que era para su suerte (brillo, rayos, chispas, arcoíris).
 -- Si la tirada es muy buena para la suerte de gacha del jugador (Config.Gacha.ShowcaseOdds), el
 -- panel vuela al centro, se convierte en un orbe que se carga y la espada se destapa a pantalla
--- completa, con más efectos cuanto más rara. Las espadas raras sueltan además un aura en el
+-- completa, con más efectos cuanto más rara. Lo raro para su suerte suelta además un aura en el
 -- personaje que ven todos. Pulsar la pantalla durante la animación grande la salta.
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -229,34 +229,58 @@ local function effectPart(color: Color3, size: Vector3, cframe: CFrame): Part
 	return part
 end
 
-local function characterAura(who: Player, index: number)
+local auras = {} -- [player] = función que borra su aura actual
+
+-- Aura en el personaje de quien ha sacado algo raro para su suerte. El nivel (color y cuántos
+-- efectos) sale de la probabilidad real, no de la rareza de la espada. Cada aura nueva borra la
+-- anterior de ese jugador, para que no se amontonen con la tirada automática.
+local function characterAura(who: Player?, _index: number, odds: number)
+	-- Si se fue justo antes, llega sin jugador.
+	if not who then
+		return
+	end
 	local character = who.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not root then
 		return
 	end
-	local sword = Config.Swords[index]
-	local tier = tierIndex(sword.rarity)
-	local color = Rarity.tier(sword.rarity).color
+	if auras[who] then
+		auras[who]()
+	end
+	local tier = tierIndex(odds)
+	local color = Rarity.tier(odds).color
+	local pieces: { Instance } = {}
+	local function clear()
+		for _, piece in pieces do
+			piece:Destroy()
+		end
+		table.clear(pieces)
+		if auras[who] == clear then
+			auras[who] = nil
+		end
+	end
+	auras[who] = clear
 
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Color = ColorSequence.new(WHITE, color)
 	emitter.LightEmission = 1
-	emitter.Lifetime = NumberRange.new(0.8, 1.4)
-	emitter.Speed = NumberRange.new(2, 4 + tier)
+	emitter.Lifetime = NumberRange.new(0.6, 1.1)
+	emitter.Speed = NumberRange.new(2, 3 + tier)
 	emitter.SpreadAngle = Vector2.new(180, 180)
 	emitter.Acceleration = Vector3.new(0, 6, 0)
 	emitter.Drag = 2
-	emitter.Rate = tier * 8
-	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
+	emitter.Rate = tier * 5
+	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.45), NumberSequenceKeypoint.new(1, 0) })
 	emitter.Parent = root
-	emitter:Emit(tier * 12)
+	emitter:Emit(tier * 10)
+	table.insert(pieces, emitter)
 
 	local light = Instance.new("PointLight")
 	light.Color = color
-	light.Brightness = 1 + tier * 0.6
-	light.Range = 8 + tier * 2
+	light.Brightness = 0.6 + tier * 0.3
+	light.Range = 6 + tier * 1.5
 	light.Parent = root
+	table.insert(pieces, light)
 
 	-- Desde Épica, anillos que salen de los pies.
 	local feet = root.Position - Vector3.new(0, 2.8, 0)
@@ -264,12 +288,13 @@ local function characterAura(who: Player, index: number)
 	if tier >= 4 then
 		for wave = 0, math.min(tier - 4, 2) do
 			task.delay(wave * 0.25, function()
+				if auras[who] ~= clear then
+					return
+				end
 				local item = effectPart(color, Vector3.new(0.2, 2, 2), flat)
-				local wide = 12 + tier * 3
+				table.insert(pieces, item)
+				local wide = 10 + tier * 2
 				TweenService:Create(item, TweenInfo.new(0.9), { Size = Vector3.new(0.2, wide, wide), Transparency = 1 }):Play()
-				task.delay(1, function()
-					item:Destroy()
-				end)
 			end)
 		end
 	end
@@ -278,19 +303,22 @@ local function characterAura(who: Player, index: number)
 		local upright = CFrame.new(feet + Vector3.new(0, 40, 0)) * CFrame.Angles(0, 0, math.rad(90))
 		local pillar = effectPart(color, Vector3.new(80, 3, 3), upright)
 		pillar.Transparency = 0.5
-		TweenService:Create(pillar, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(80, 0.5, 0.5), Transparency = 1 }):Play()
-		task.delay(2, function()
-			pillar:Destroy()
-		end)
+		table.insert(pieces, pillar)
+		TweenService:Create(pillar, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(80, 0.5, 0.5), Transparency = 1 }):Play()
 	end
 
-	task.delay(1.5 + tier * 0.3, function()
-		emitter.Enabled = false
-		TweenService:Create(light, TweenInfo.new(1), { Brightness = 0 }):Play()
+	-- Se apaga sola: menos de lo que dura una tirada en las normales, más en las muy raras.
+	local stay = 1 + tier * 0.25
+	task.delay(stay, function()
+		if auras[who] == clear then
+			emitter.Enabled = false
+			TweenService:Create(light, TweenInfo.new(0.8), { Brightness = 0 }):Play()
+		end
 	end)
-	task.delay(4 + tier * 0.3, function()
-		emitter:Destroy()
-		light:Destroy()
+	task.delay(stay + 1.2, function()
+		if auras[who] == clear then
+			clear()
+		end
 	end)
 end
 
@@ -493,7 +521,7 @@ local function makeCard(parent: Instance, index: number, kept: boolean, odds: nu
 	info.Position = UDim2.new(0.5, 0, 1, -8)
 	info.Size = UDim2.new(1, -8, 0.2, 0)
 	info.TextWrapped = true
-	info.Text = `<font color="#{tier.color:ToHex()}">{tier.name}</font>\n1 entre {Format.short(odds)}`
+	info.Text = `<font color="#{tier.color:ToHex()}">{tier.name}</font>\n1 entre {Format.short(math.max(odds, 1))}`
 	info.ZIndex = 8
 
 	if not kept then
@@ -524,7 +552,8 @@ end
 local function showcase(index: number, kept: boolean, odds: number)
 	local sword = Config.Swords[index]
 	local tierInfo = Rarity.tier(sword.rarity)
-	local tier = tierIndex(sword.rarity)
+	-- La carta y el cartel son de la rareza de la espada; cuántos efectos, de la probabilidad real.
+	local tier = tierIndex(odds)
 	local fx = TIER_FX[tier] or {}
 	local color = tierInfo.color
 
@@ -667,7 +696,7 @@ local function showcase(index: number, kept: boolean, odds: number)
 		entry.shine.Visible = false
 	end
 
-	summary.Text = `¡1 entre {Format.short(odds)} con tu suerte de gacha!`
+	summary.Text = `¡1 entre {Format.short(math.max(odds, 1))} con tu suerte de gacha!`
 	footer.Visible = true
 
 	-- Espera a "Continuar" (en automático sigue sola).
@@ -681,6 +710,7 @@ local function showcase(index: number, kept: boolean, odds: number)
 	overlay.Enabled = false
 	footer.Visible = false
 	clearStage()
+	skip = false
 	showcasing = false
 end
 
@@ -717,7 +747,7 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 
 	-- Se para en la que ha tocado.
 	showSword(index)
-	local text = `<font color="#{color:ToHex()}">{tierInfo.name}</font>  ·  1 entre {Format.short(odds)}`
+	local text = `<font color="#{color:ToHex()}">{tierInfo.name}</font>  ·  1 entre {Format.short(math.max(odds, 1))}`
 	if not kept then
 		text ..= `  ·  <font color="#{Ui.COLORS.orange:ToHex()}">vendida +{Config.Gacha.SellValue}</font>`
 	elseif source == "roca" then
@@ -726,10 +756,11 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 	detail.Text = text
 	panelScale.Scale = 1.25
 	TweenService:Create(panelScale, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-	local tier = tierIndex(sword.rarity)
-	panelAura(tier, color)
-	if tier >= 3 and not big then
-		machineEffect(color)
+	-- El aura cuenta la suerte: lo que para este jugador es fácil no brilla.
+	local luckTier = tierIndex(odds)
+	panelAura(luckTier, Rarity.tier(odds).color)
+	if luckTier >= 3 and not big then
+		machineEffect(Rarity.tier(odds).color)
 	end
 	spinning = false
 end
@@ -931,7 +962,20 @@ function GachaRoll.start()
 
 	Remotes.GachaRolled.OnClientEvent:Connect(function(index: number, kept: boolean, luck: number, source: string)
 		task.spawn(function()
-			spin(index, kept, luck, source)
+			-- Si algo falla a mitad, que no se quede atascado el gacha (ni la tirada automática).
+			local ok, problem = pcall(spin, index, kept, luck, source)
+			if not ok then
+				warn(`[GachaRoll] {problem}`)
+				overlay.Enabled = false
+				clearStage()
+				skip = false
+				showcasing = false
+				spinning = false
+			end
+			-- Destapada: el servidor ya puede enseñar su aura y aviso a los demás.
+			if (Config.Swords[index].rarity or 1) / luck >= math.min(Config.Gacha.AuraOdds, Config.AnnounceOdds) then
+				Remotes.GachaRevealed:FireServer()
+			end
 			if source == "gacha" then
 				-- La siguiente se puede pedir cuando pase el tiempo por tirada.
 				local left = Stats.rollTime(player) - (os.clock() - rollStarted)
@@ -943,6 +987,11 @@ function GachaRoll.start()
 		end)
 	end)
 	Remotes.GachaAura.OnClientEvent:Connect(characterAura)
+	Players.PlayerRemoving:Connect(function(who)
+		if auras[who] then
+			auras[who]()
+		end
+	end)
 
 	-- Barra de progreso, botones y tirada automática.
 	RunService.RenderStepped:Connect(function()

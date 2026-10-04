@@ -12,7 +12,8 @@ local NAMES = {
 	"Hit", -- servidor -> clientes: (player, part, position, damage)
 	"Broken", -- servidor -> clientes: (player, cframe, size, color, material, reward, gems)
 	"GachaRolled", -- servidor -> cliente: (index, kept, luck, source) espada sacada; kept = false si se vendió sola; source = "gacha" o "roca"
-	"GachaAura", -- servidor -> clientes: (player, index) aura en el personaje de quien sacó una espada rara
+	"GachaRevealed", -- cliente -> servidor: ya he destapado mi siguiente tirada rara (para mandar su aura y aviso a todos)
+	"GachaAura", -- servidor -> clientes: (player, index, odds) aura en el personaje de quien sacó algo raro para su suerte (odds = rareza / suerte)
 	"RollTrait", -- cliente -> servidor: (id) gastar un Cristal de rasgo en esa copia de espada
 	"ToggleGear", -- cliente -> servidor: (artifactIndex) equipar o quitar un artefacto
 	"Notice", -- servidor -> cliente: (text, color) aviso en pantalla solo para él

@@ -59,8 +59,8 @@ Config.MaxSwords = 200
 Config.Gacha = {
 	RollTime = 2, -- segundos por tirada (lo que bajarán la rama "Velocidad de tirada" y los gamepass)
 	ShowcaseOdds = 200, -- desde "1 entre N" real (rareza / suerte de gacha) la tirada pasa a pantalla completa
-	ShowcaseTime = 4, -- segundos que dura más o menos la animación a pantalla completa
-	AuraRarity = 100, -- desde esta rareza el aura se ve en el personaje (también para los demás)
+	RevealTimeout = 30, -- si el cliente no avisa de que ha destapado una tirada rara, su aura y aviso salen igual a los N segundos
+	AuraOdds = 100, -- desde "1 entre N" real (rareza / suerte de gacha) el aura se ve en el personaje (también para los demás)
 	SellValue = 2, -- gemas por vender una espada (a mano o con la venta automática)
 	RockLuck = 10, -- la tirada gratis de la "Roca de armas" multiplica por esto la suerte de gacha
 }
