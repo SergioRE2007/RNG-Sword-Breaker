@@ -1,6 +1,8 @@
 -- Árbol de mejoras: pantalla completa con nodos hexagonales. Cada mejora de Config.Upgrades
 -- es una rama que sale del nodo de inicio y cada nivel es un nodo; se compran en orden.
 -- Solo se dibujan los nodos comprados y los siguientes, así que el árbol crece al avanzar.
+-- Se arrastra para moverse y tiene zoom (rueda, pellizco o botones + y -): `offset` es el
+-- desplazamiento del lienzo y el UIScale del lienzo, el zoom.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -191,6 +193,7 @@ function SkillTree.start()
 
 	UserInputService.InputChanged:Connect(function(input)
 		if overlay.Visible and input.UserInputType == Enum.UserInputType.MouseWheel then
+			-- La posición del ratón y AbsolutePosition cuentan los dos desde debajo de la franja de arriba.
 			setZoom(zoom.Scale * 1.12 ^ input.Position.Z, Vector2.new(input.Position.X, input.Position.Y))
 		end
 	end)

@@ -1,5 +1,6 @@
 -- Ventanas de las tiendas de modificadores del hub (Rasgos y Grados). Se abren con la tecla de
--- interacción junto a cada puesto y se cierran al alejarse. A la izquierda, la espada elegida
+-- interacción junto a cada puesto y se cierran al alejarse. Las armas se ven en 3D con
+-- WeaponPreview (como en la mochila); el resultado de cada tirada llega por ModifierRolled. A la izquierda, la espada elegida
 -- (se cambia pulsando su casilla), el modificador que tiene, lo que cuesta y los botones
 -- Tirar / Auto / "Parar con..." (con qué resultados se para la tirada automática). A la derecha,
 -- todos los resultados posibles, del más raro al más común, con su % y su efecto.
@@ -15,7 +16,9 @@ local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
+local Backpack = require(script.Parent.Backpack)
 local Ui = require(script.Parent.Ui)
+local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local ModifierShops = {}
 
@@ -211,14 +214,23 @@ local function buildShop(kind: string)
 	slot.Name = "Slot"
 	slot.Position = UDim2.fromOffset(18, 18)
 	slot.Size = UDim2.fromOffset(172, 172)
-	local slotHint = Ui.label(slot, 16)
+	-- Al pasar el ratón: estadísticas de la espada elegida (el mismo cartel que en la mochila).
+	Ui.tip(slot, function()
+		for _, copy in Stats.swords(player) do
+			if copy.id == state.selected then
+				return Backpack.swordTip(copy)
+			end
+		end
+		return "Pulsa para elegir una espada", WHITE
+	end)
+	local slotHint = Ui.label(slot, 19)
 	slotHint.AnchorPoint = Vector2.new(0.5, 1)
 	slotHint.Position = UDim2.new(0.5, 0, 1, -6)
 	slotHint.Size = UDim2.new(1, -8, 0, 22)
 	slotHint.TextScaled = true
 	slotHint.ZIndex = 3
 
-	local heading = Ui.label(left, 26)
+	local heading = Ui.label(left, 30)
 	heading.Position = UDim2.fromOffset(208, 18)
 	heading.Size = UDim2.fromOffset(294, 34)
 	heading.Text = info.label
@@ -233,21 +245,21 @@ local function buildShop(kind: string)
 	Ui.stroke(nameBox, Color3.fromRGB(90, 90, 100), 3)
 	local nameScale = Instance.new("UIScale")
 	nameScale.Parent = nameBox
-	local nameLabel = Ui.label(nameBox, 34)
+	local nameLabel = Ui.label(nameBox, 38)
 	nameLabel.Size = UDim2.fromScale(1, 1)
 
-	local effect = Ui.label(left, 17)
+	local effect = Ui.label(left, 21)
 	effect.Position = UDim2.fromOffset(208, 132)
 	effect.Size = UDim2.fromOffset(294, 26)
 
-	local cost = Ui.label(left, 20)
+	local cost = Ui.label(left, 24)
 	cost.Name = "Cost"
 	cost.Position = UDim2.fromOffset(16, 214)
 	cost.Size = UDim2.new(1, -32, 0, 30)
 
-	local warning = Ui.label(left, 15)
+	local warning = Ui.label(left, 18)
 	warning.Position = UDim2.fromOffset(16, 252)
-	warning.Size = UDim2.new(1, -32, 0, 44)
+	warning.Size = UDim2.new(1, -32, 0, 52)
 	warning.TextWrapped = true
 	warning.TextColor3 = Color3.fromRGB(200, 200, 210)
 	warning.Text = `Al tirar se sustituye el {string.lower(info.label)} que tenga la espada.\nMientras esté equipada, {if kind == "traits" then "sube sus monedas, daño o suerte" else "multiplica sus monedas"}.`
@@ -279,7 +291,7 @@ local function buildShop(kind: string)
 		frame.ZIndex = 5
 		frame.Parent = body
 		Ui.round(frame, 10)
-		local title = Ui.label(frame, 22)
+		local title = Ui.label(frame, 26)
 		title.Position = UDim2.fromOffset(0, 8)
 		title.Size = UDim2.new(1, 0, 0, 30)
 		title.Text = titleText
@@ -287,7 +299,7 @@ local function buildShop(kind: string)
 		local list = Instance.new("ScrollingFrame")
 		list.Name = "List"
 		list.Position = UDim2.fromOffset(12, 44)
-		list.Size = UDim2.new(1, -24, 1, -116)
+		list.Size = UDim2.new(1, -24, 1, -124)
 		list.BackgroundTransparency = 1
 		list.BorderSizePixel = 0
 		list.ScrollBarThickness = 6
@@ -295,13 +307,20 @@ local function buildShop(kind: string)
 		list.CanvasSize = UDim2.new()
 		list.ZIndex = 6
 		list.Parent = frame
+		-- Margen para que no se corten los bordes de las casillas.
+		local padding = Instance.new("UIPadding")
+		padding.PaddingLeft = UDim.new(0, 6)
+		padding.PaddingRight = UDim.new(0, 10)
+		padding.PaddingTop = UDim.new(0, 6)
+		padding.PaddingBottom = UDim.new(0, 6)
+		padding.Parent = list
 		local back = Ui.button(frame, "Volver", Ui.COLORS.red)
 		back.Name = "Back"
 		back.AnchorPoint = Vector2.new(0.5, 1)
 		back.Position = UDim2.new(0.5, 0, 1, -10)
 		back.Size = UDim2.fromOffset(180, 54)
 		back.TextSize = 24
-		back.ZIndex = 6
+		back.ZIndex = 9 -- por encima de las casillas de la lista
 		back.Activated:Connect(function()
 			frame.Visible = false
 		end)
@@ -310,7 +329,7 @@ local function buildShop(kind: string)
 
 	local picker, pickerList = overlay("Picker", "Elige una espada")
 	local pickerGrid = Instance.new("UIGridLayout")
-	pickerGrid.CellSize = UDim2.fromOffset(78, 78)
+	pickerGrid.CellSize = UDim2.fromOffset(84, 84)
 	pickerGrid.CellPadding = UDim2.fromOffset(8, 8)
 	pickerGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	pickerGrid.Parent = pickerList
@@ -368,10 +387,10 @@ local function buildShop(kind: string)
 	local rows = {}
 	for position, item in displayOrder(kind) do
 		if item.header then
-			local header = Ui.label(results, 22)
+			local header = Ui.label(results, 26)
 			header.Name = "Header" .. position
 			header.LayoutOrder = position
-			header.Size = UDim2.new(1, 0, 0, 28)
+			header.Size = UDim2.new(1, 0, 0, 32)
 			header.TextXAlignment = Enum.TextXAlignment.Left
 			header.Text = item.header
 			if position == 1 then
@@ -384,7 +403,7 @@ local function buildShop(kind: string)
 		local row = Instance.new("Frame")
 		row.Name = "Result" .. index
 		row.LayoutOrder = position
-		row.Size = UDim2.new(1, 0, 0, 70)
+		row.Size = UDim2.new(1, 0, 0, 78)
 		row.BackgroundColor3 = WHITE
 		row.Parent = results
 		Ui.round(row, 10)
@@ -402,24 +421,24 @@ local function buildShop(kind: string)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
 		entryIcon(iconBox, kind, entry)
-		local percent = Ui.label(row, 14)
-		percent.Position = UDim2.fromOffset(4, 46)
+		local percent = Ui.label(row, 16)
+		percent.Position = UDim2.fromOffset(4, 52)
 		percent.Size = UDim2.fromOffset(72, 20)
 		percent.TextScaled = true
 		local limit = Instance.new("UITextSizeConstraint")
-		limit.MaxTextSize = 14
+		limit.MaxTextSize = 16
 		limit.Parent = percent
 		percent.Text = Modifiers.formatPercent(Modifiers.percent(kind, index))
-		local title = Ui.label(row, 22)
+		local title = Ui.label(row, 26)
 		title.Position = UDim2.fromOffset(84, 8)
-		title.Size = UDim2.new(1, -92, 0, 28)
+		title.Size = UDim2.new(1, -92, 0, 32)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		paintName(title, entry)
 		if kind == "grades" then
 			title.Text = "Grado " .. entry.name
 		end
-		local detail = Ui.label(row, 16)
-		detail.Position = UDim2.fromOffset(84, 38)
+		local detail = Ui.label(row, 19)
+		detail.Position = UDim2.fromOffset(84, 44)
 		detail.Size = UDim2.new(1, -92, 0, 22)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
 		detail.TextColor3 = Color3.fromRGB(120, 230, 120)
@@ -450,14 +469,19 @@ local function buildShop(kind: string)
 			state.selected = player:GetAttribute("Equipped")
 			copy = selectedCopy()
 		end
-		local old = slot:FindFirstChild("Icon")
-		if old then
-			old:Destroy()
-		end
 		if copy then
 			local sword = Config.Swords[copy.sword]
 			local tierColor = Rarity.tier(sword.rarity).color
-			Ui.swordIcon(slot, sword.color)
+			if state.shown ~= copy.sword then
+				state.shown = copy.sword
+				for _, name in { "Glow", "Preview" } do
+					local old = slot:FindFirstChild(name)
+					if old then
+						old:Destroy()
+					end
+				end
+				WeaponPreview.attach(slot, copy.sword, tierColor)
+			end
 			slot:FindFirstChildOfClass("UIStroke").Color = tierColor
 			slotHint.Text = sword.name
 			if not state.waiting then
@@ -492,9 +516,11 @@ local function buildShop(kind: string)
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = -math.floor(Stats.swordDamage(copy))
 			cell.ZIndex = 7
-			Ui.swordIcon(cell, sword.color)
+			WeaponPreview.attach(cell, copy.sword, Rarity.tier(sword.rarity).color)
 			local current = info.list[copy[info.field]]
-			Ui.cellLabel(cell, if current then current.name else "-")
+			if current then
+				Ui.cellLabel(cell, current.name)
+			end
 			if copy.id == equipped then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
 			end
@@ -503,6 +529,9 @@ local function buildShop(kind: string)
 					descendant.ZIndex = 8
 				end
 			end
+			Ui.tip(cell, function()
+				return Backpack.swordTip(copy)
+			end)
 			cell.Activated:Connect(function()
 				state.selected = copy.id
 				picker.Visible = false
