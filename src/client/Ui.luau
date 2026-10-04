@@ -68,10 +68,11 @@ function Ui.bevel(instance: GuiObject)
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, WHITE),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(225, 225, 225)),
-		ColorSequenceKeypoint.new(0.85, Color3.fromRGB(205, 205, 205)),
-		ColorSequenceKeypoint.new(0.86, Color3.fromRGB(135, 135, 135)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(135, 135, 135)),
+		ColorSequenceKeypoint.new(0.44, Color3.fromRGB(238, 238, 238)),
+		ColorSequenceKeypoint.new(0.45, Color3.fromRGB(206, 206, 206)),
+		ColorSequenceKeypoint.new(0.85, Color3.fromRGB(190, 190, 190)),
+		ColorSequenceKeypoint.new(0.86, Color3.fromRGB(125, 125, 125)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(115, 115, 115)),
 	})
 	gradient.Parent = instance
 end
@@ -97,10 +98,10 @@ function Ui.button(parent: Instance, text: string, color: Color3): TextButton
 	item.TextWrapped = true
 	item.Text = text
 	item.Parent = parent
-	Ui.round(item, 10)
+	Ui.round(item, 12)
 	Ui.bevel(item)
-	Ui.stroke(item, BLACK, 2.5)
-	Ui.textStroke(item, 1.5)
+	Ui.stroke(item, BLACK, 3)
+	Ui.textStroke(item, 2)
 	return item
 end
 
@@ -210,17 +211,89 @@ end
 
 -- Casillas ------------------------------------------------------------------------------
 
+-- Marcos animados de las casillas según el nivel de rareza (posición en Config.RarityTiers):
+-- un brillo da vueltas por el borde, más rápido cuanto más rara.
+local SHINE_SPEED = { 0, 40, 70, 100, 140, 190, 250, 320 } -- grados por segundo
+local PULSE_FROM = 5 -- desde aquí el marco lleva además un halo que late
+local RAINBOW_FROM = 7 -- desde aquí el borde va en arcoíris
+
+local shines = {} -- [UIGradient del borde] = { speed, halo, phase }
+local shining = false
+
+local function animateShines(dt: number)
+	local now = os.clock()
+	for gradient, info in shines do
+		gradient.Rotation = (gradient.Rotation + info.speed * dt) % 360
+		if info.halo then
+			info.halo.Transparency = 0.45 + 0.35 * math.sin(now * 4 + info.phase)
+		end
+	end
+end
+
+local function shineColors(color: Color3, tier: number): ColorSequence
+	if tier >= RAINBOW_FROM then
+		local points = {}
+		for step = 0, 6 do
+			table.insert(points, ColorSequenceKeypoint.new(step / 6, Color3.fromHSV(step / 6 % 1, 0.7, 1)))
+		end
+		return ColorSequence.new(points)
+	end
+	local dark = color:Lerp(BLACK, 0.45)
+	return ColorSequence.new({
+		ColorSequenceKeypoint.new(0, dark),
+		ColorSequenceKeypoint.new(0.35, color),
+		ColorSequenceKeypoint.new(0.5, color:Lerp(WHITE, 0.8)),
+		ColorSequenceKeypoint.new(0.65, color),
+		ColorSequenceKeypoint.new(1, dark),
+	})
+end
+
 -- Casilla cuadrada con borde del color que se le pase (la rareza). El tamaño lo pone quien la usa.
-function Ui.cell(parent: Instance, color: Color3): TextButton
+-- Con `tier` (nivel de rareza, 2 o más) el marco se anima.
+function Ui.cell(parent: Instance, color: Color3, tier: number?): TextButton
 	local cell = Instance.new("TextButton")
 	cell.Text = ""
 	cell.AutoButtonColor = false
 	cell.BackgroundColor3 = color
 	cell.Parent = parent
 	Ui.round(cell, 10)
-	Ui.stroke(cell, color, 3)
 	-- Fondo oscuro teñido del color de la rareza, más claro arriba.
-	Ui.gradient(cell, Color3.fromRGB(95, 95, 105), Color3.fromRGB(28, 28, 36), 90)
+	Ui.gradient(cell, Color3.fromRGB(115, 115, 125), Color3.fromRGB(30, 30, 38), 90)
+
+	local level = math.clamp(tier or 1, 1, #SHINE_SPEED)
+	if level < 2 then
+		Ui.stroke(cell, color, 4)
+	else
+		-- El degradado tiñe el borde, así que el borde va en blanco.
+		local border = Ui.stroke(cell, WHITE, 6)
+		local shine = Instance.new("UIGradient")
+		shine.Color = shineColors(color, level)
+		shine.Rotation = math.random(0, 359)
+		shine.Parent = border
+
+		local halo = nil
+		if level >= PULSE_FROM then
+			local aura = Instance.new("Frame")
+			aura.Name = "Halo"
+			-- Por fuera del borde (6 px), sin llegar a la casilla de al lado.
+			aura.Position = UDim2.fromOffset(-6, -6)
+			aura.Size = UDim2.new(1, 12, 1, 12)
+			aura.BackgroundTransparency = 1
+			aura.ZIndex = 0
+			aura.Parent = cell
+			Ui.round(aura, 15)
+			halo = Ui.stroke(aura, if level >= RAINBOW_FROM then WHITE else color:Lerp(WHITE, 0.3), 2)
+		end
+
+		shines[shine] = { speed = SHINE_SPEED[level], halo = halo, phase = math.random() * 6 }
+		cell.Destroying:Connect(function()
+			shines[shine] = nil
+		end)
+		if not shining then
+			shining = true
+			RunService.RenderStepped:Connect(animateShines)
+		end
+	end
 
 	local glow = Instance.new("Frame")
 	glow.Name = "Select"

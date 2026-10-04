@@ -14,7 +14,7 @@ local WeaponPreview = require(script.Parent.WeaponPreview)
 local Backpack = {}
 
 local player = Players.LocalPlayer
-local CELL = 84
+local CELL = 100
 
 local function hex(color: Color3): string
 	return "#" .. color:ToHex()
@@ -44,14 +44,15 @@ local function grid(parent: Instance, position: UDim2, size: UDim2): ScrollingFr
 
 	local layout = Instance.new("UIGridLayout")
 	layout.CellSize = UDim2.fromOffset(CELL, CELL)
-	layout.CellPadding = UDim2.fromOffset(12, 12)
+	layout.CellPadding = UDim2.fromOffset(16, 16) -- los marcos gruesos y el halo ocupan parte del hueco
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = scroll
 
 	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, 6)
-	padding.PaddingLeft = UDim.new(0, 6)
-	padding.PaddingBottom = UDim.new(0, 6)
+	-- Hueco para el halo de las casillas raras, que sobresale del borde.
+	padding.PaddingTop = UDim.new(0, 10)
+	padding.PaddingLeft = UDim.new(0, 10)
+	padding.PaddingBottom = UDim.new(0, 10)
 	padding.Parent = scroll
 	return scroll
 end
@@ -95,7 +96,7 @@ local function artifactTip(index: number): (string, Color3)
 end
 
 function Backpack.start()
-	local window, body = Ui.window("Backpack", "Mochila", Vector2.new(740, 500))
+	local window, body = Ui.window("Backpack", "Mochila", Vector2.new(740, 560))
 
 	-- Pestañas, pegadas al lado izquierdo de la ventana.
 	local panes = {}
@@ -159,25 +160,25 @@ function Backpack.start()
 		autoBox.Text = if shown > 0 then Format.short(shown) else ""
 	end)
 
-	local count = Ui.label(swordsPane, 18)
+	local count = Ui.label(swordsPane, 21)
 	count.Name = "Count"
 	count.AnchorPoint = Vector2.new(1, 0)
-	count.Position = UDim2.new(1, -12, 0, 8)
-	count.Size = UDim2.fromOffset(110, 34)
+	count.Position = UDim2.new(1, -12, 0, 6)
+	count.Size = UDim2.fromOffset(130, 40)
 	count.BackgroundTransparency = 0
 	count.BackgroundColor3 = Ui.COLORS.blue
 	Ui.round(count, 8)
 	Ui.bevel(count)
 	Ui.stroke(count, Color3.new(0, 0, 0), 2)
 
-	local swordGrid = grid(swordsPane, UDim2.fromOffset(8, 50), UDim2.new(1, -16, 1, -118))
+	local swordGrid = grid(swordsPane, UDim2.fromOffset(8, 52), UDim2.new(1, -16, 1, -130))
 
 	-- Barra de abajo: detalles de la espada elegida y sus acciones.
 	local detail = Ui.label(swordsPane, 16)
 	detail.Name = "Detail"
 	detail.AnchorPoint = Vector2.new(0, 1)
 	detail.Position = UDim2.new(0, 12, 1, -8)
-	detail.Size = UDim2.fromOffset(210, 52)
+	detail.Size = UDim2.fromOffset(172, 62)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.TextWrapped = true
 
@@ -186,15 +187,17 @@ function Backpack.start()
 		item.Name = name
 		item.AnchorPoint = Vector2.new(1, 1)
 		item.Position = UDim2.new(1, -right, 1, -8)
-		item.Size = UDim2.fromOffset(width, 52)
+		item.Size = UDim2.fromOffset(width, 62)
 		return item
 	end
-	local bestButton = action("Best", "Equipar mejor", Ui.COLORS.green, 12, 140)
-	local sellButton = action("Sell", `Vender\n+{Config.Gacha.SellValue} gemas`, Ui.COLORS.red, 160, 100)
-	local traitButton = action("Trait", "Tirar rasgo\n1 cristal", Ui.COLORS.orange, 268, 110)
-	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 386, 100)
-	sellButton.TextSize = 14
-	traitButton.TextSize = 14
+	local bestButton = action("Best", "Equipar mejor", Ui.COLORS.green, 12, 176)
+	local sellButton = action("Sell", `Vender\n+{Config.Gacha.SellValue} gemas`, Ui.COLORS.red, 198, 100)
+	local traitButton = action("Trait", "Tirar rasgo\n1 cristal", Ui.COLORS.orange, 308, 108)
+	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 426, 104)
+	bestButton.TextSize = 23
+	equipButton.TextSize = 20
+	sellButton.TextSize = 15
+	traitButton.TextSize = 15
 
 	local selected = nil -- id de la copia elegida
 	local swordCells = {} -- [id] = casilla
@@ -267,12 +270,19 @@ function Backpack.start()
 		for _, copy in copies do
 			local sword = Config.Swords[copy.sword]
 			local trait = Config.Traits[copy.trait]
-			local cell = Ui.cell(swordGrid, Rarity.tier(sword.rarity).color)
+			local tier = Rarity.tier(sword.rarity)
+			local cell = Ui.cell(swordGrid, tier.color, table.find(Config.RarityTiers, tier))
 			cell.Name = "Sword" .. copy.id
 			-- Las mejores primero: por daño del arma y, a igualdad, por rasgo.
 			cell.LayoutOrder = -(damageRank[copy.sword] * 1000 + copy.trait)
-			WeaponPreview.attach(cell, copy.sword, Rarity.tier(sword.rarity).color)
-			Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
+			WeaponPreview.attach(cell, copy.sword, tier.color)
+			-- Daño grande abajo a la izquierda.
+			local damage = Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
+			damage.Position = UDim2.new(0.5, 3, 1, -3)
+			damage.Size = UDim2.new(1, -10, 0, 26)
+			damage.TextXAlignment = Enum.TextXAlignment.Left
+			damage:FindFirstChildOfClass("UITextSizeConstraint").MaxTextSize = 23
+			damage:FindFirstChildOfClass("UIStroke").Thickness = 2.5
 			if copy.id == equippedId then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
 			end
@@ -281,8 +291,8 @@ function Backpack.start()
 				local mark = Instance.new("Frame")
 				mark.Name = "Trait"
 				mark.AnchorPoint = Vector2.new(1, 0)
-				mark.Position = UDim2.new(1, -7, 0, 7)
-				mark.Size = UDim2.fromOffset(16, 16)
+				mark.Position = UDim2.new(1, -9, 0, 9)
+				mark.Size = UDim2.fromOffset(20, 20)
 				mark.Rotation = 45
 				mark.BackgroundColor3 = trait.color
 				mark.BorderSizePixel = 0
