@@ -38,6 +38,7 @@ local function grid(parent: Instance, position: UDim2, size: UDim2): ScrollingFr
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.ScrollBarThickness = 8
+	scroll.ScrollBarImageColor3 = Color3.fromRGB(150, 130, 255)
 	scroll.CanvasSize = UDim2.new()
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	scroll.Parent = parent
@@ -171,9 +172,21 @@ function Backpack.start()
 	Ui.bevel(count)
 	Ui.stroke(count, Color3.new(0, 0, 0), 2)
 
-	local swordGrid = grid(swordsPane, UDim2.fromOffset(8, 52), UDim2.new(1, -16, 1, -130))
+	local swordGrid = grid(swordsPane, UDim2.fromOffset(8, 52), UDim2.new(1, -16, 1, -134))
 
-	-- Barra de abajo: detalles de la espada elegida y sus acciones.
+	-- Barra de abajo: detalles de la espada elegida y sus acciones, sobre una franja oscura.
+	local bar = Instance.new("Frame")
+	bar.Name = "Bar"
+	bar.AnchorPoint = Vector2.new(0, 1)
+	bar.Position = UDim2.new(0, 4, 1, -2)
+	bar.Size = UDim2.new(1, -8, 0, 74)
+	bar.BackgroundColor3 = Color3.new(1, 1, 1)
+	bar.BorderSizePixel = 0
+	bar.Parent = swordsPane
+	Ui.round(bar, 10)
+	Ui.stroke(bar, Color3.new(0, 0, 0), 2)
+	Ui.gradient(bar, Color3.fromRGB(58, 52, 96), Color3.fromRGB(20, 20, 34), 90)
+
 	local detail = Ui.label(swordsPane, 16)
 	detail.Name = "Detail"
 	detail.AnchorPoint = Vector2.new(0, 1)
@@ -283,6 +296,7 @@ function Backpack.start()
 			damage.TextXAlignment = Enum.TextXAlignment.Left
 			damage:FindFirstChildOfClass("UITextSizeConstraint").MaxTextSize = 23
 			damage:FindFirstChildOfClass("UIStroke").Thickness = 2.5
+			Ui.gradient(damage, Color3.new(1, 1, 1), tier.color:Lerp(Color3.new(1, 1, 1), 0.45), 90)
 			if copy.id == equippedId then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
 			end

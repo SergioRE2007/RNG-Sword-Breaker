@@ -89,9 +89,14 @@ function WeaponPreview.attach(cell: GuiObject, level: number, glowColor: Color3)
 	glow.Position = UDim2.fromScale(0.5, 0.45)
 	glow.Size = UDim2.fromScale(0.72, 0.72)
 	glow.BackgroundColor3 = glowColor
-	glow.BackgroundTransparency = 0.8
+	glow.BackgroundTransparency = 0.55
 	glow.BorderSizePixel = 0
 	glow.Parent = cell
+	-- Foco: más luz arriba y se apaga hacia abajo.
+	local fade = Instance.new("UIGradient")
+	fade.Rotation = 90
+	fade.Transparency = NumberSequence.new(0, 0.9)
+	fade.Parent = glow
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(1, 0)
 	corner.Parent = glow

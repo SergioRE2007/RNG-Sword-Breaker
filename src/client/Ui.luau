@@ -153,7 +153,28 @@ function Ui.window(name: string, title: string, size: Vector2)
 	header.BorderSizePixel = 0
 	header.Parent = frame
 	Ui.round(header, 14)
-	Ui.gradient(header, Color3.fromRGB(70, 150, 255), Color3.fromRGB(150, 90, 240), 0)
+	local headerColors = Instance.new("UIGradient")
+	headerColors.Rotation = 8
+	headerColors.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 170, 255)),
+		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(125, 105, 250)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 95, 235)),
+	})
+	headerColors.Parent = header
+
+	-- Brillo en la mitad de arriba de la cabecera.
+	local headerGloss = Instance.new("Frame")
+	headerGloss.Name = "Gloss"
+	headerGloss.Position = UDim2.fromOffset(6, 5)
+	headerGloss.Size = UDim2.new(1, -12, 0.45, 0)
+	headerGloss.BackgroundColor3 = WHITE
+	headerGloss.BorderSizePixel = 0
+	headerGloss.Parent = header
+	Ui.round(headerGloss, 10)
+	local headerFade = Instance.new("UIGradient")
+	headerFade.Rotation = 90
+	headerFade.Transparency = NumberSequence.new(0.68, 0.95)
+	headerFade.Parent = headerGloss
 
 	local heading = Ui.label(header, 32)
 	heading.Position = UDim2.fromOffset(20, 0)
@@ -179,7 +200,7 @@ function Ui.window(name: string, title: string, size: Vector2)
 	body.Parent = frame
 	Ui.round(body, 10)
 	Ui.stroke(body, Ui.COLORS.dark, 3)
-	Ui.gradient(body, WHITE, Color3.fromRGB(190, 190, 205), 90)
+	Ui.gradient(body, WHITE, Color3.fromRGB(140, 140, 170), 90)
 
 	windows[name] = frame
 	return frame, body
@@ -257,8 +278,55 @@ function Ui.cell(parent: Instance, color: Color3, tier: number?): TextButton
 	cell.BackgroundColor3 = color
 	cell.Parent = parent
 	Ui.round(cell, 10)
-	-- Fondo oscuro teñido del color de la rareza, más claro arriba.
-	Ui.gradient(cell, Color3.fromRGB(115, 115, 125), Color3.fromRGB(30, 30, 38), 90)
+	-- Fondo teñido del color de la rareza: claro en la esquina de arriba y casi negro abajo.
+	local back = Instance.new("UIGradient")
+	back.Rotation = 115
+	back.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 170, 180)),
+		ColorSequenceKeypoint.new(0.45, Color3.fromRGB(80, 80, 92)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 18, 26)),
+	})
+	back.Parent = cell
+
+	-- Canto negro por dentro del marco, para que el borde de color destaque.
+	local rim = Instance.new("Frame")
+	rim.Name = "Rim"
+	rim.Position = UDim2.fromOffset(2, 2)
+	rim.Size = UDim2.new(1, -4, 1, -4)
+	rim.BackgroundTransparency = 1
+	rim.Parent = cell
+	Ui.round(rim, 8)
+	Ui.stroke(rim, BLACK, 2)
+
+	-- Brillo de cristal en la mitad de arriba.
+	local gloss = Instance.new("Frame")
+	gloss.Name = "Gloss"
+	gloss.Position = UDim2.fromOffset(4, 4)
+	gloss.Size = UDim2.new(1, -8, 0.42, 0)
+	gloss.BackgroundColor3 = WHITE
+	gloss.BorderSizePixel = 0
+	gloss.Parent = cell
+	Ui.round(gloss, 7)
+	local glossFade = Instance.new("UIGradient")
+	glossFade.Rotation = 90
+	glossFade.Transparency = NumberSequence.new(0.8, 1)
+	glossFade.Parent = gloss
+
+	-- Sombra abajo, detrás del texto de la casilla.
+	local shade = Instance.new("Frame")
+	shade.Name = "Shade"
+	shade.AnchorPoint = Vector2.new(0, 1)
+	shade.Position = UDim2.new(0, 4, 1, -4)
+	shade.Size = UDim2.new(1, -8, 0.42, 0)
+	shade.BackgroundColor3 = BLACK
+	shade.BorderSizePixel = 0
+	shade.ZIndex = 3
+	shade.Parent = cell
+	Ui.round(shade, 7)
+	local shadeFade = Instance.new("UIGradient")
+	shadeFade.Rotation = 90
+	shadeFade.Transparency = NumberSequence.new(1, 0.4)
+	shadeFade.Parent = shade
 
 	local level = math.clamp(tier or 1, 1, #SHINE_SPEED)
 	if level < 2 then
