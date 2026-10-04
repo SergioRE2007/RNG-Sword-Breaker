@@ -17,6 +17,7 @@ local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
+local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local GachaRoll = {}
 
@@ -24,7 +25,7 @@ local player = Players.LocalPlayer
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
 local ORB_COLOR = Color3.fromRGB(190, 110, 255)
-local PANEL_SIZE = Vector2.new(400, 78)
+local PANEL_SIZE = Vector2.new(430, 104)
 local CARD_SIZE = Vector2.new(220, 290)
 
 -- Efectos de cada nivel de Config.RarityTiers (misma posición): brillo alrededor del panel
@@ -381,17 +382,13 @@ local panelScale: UIScale
 local sparkleArea: Frame
 local auraId = 0
 
-local function setIcon(color: Color3)
-	local old = iconSlot:FindFirstChild("Icon")
-	if old then
-		old:Destroy()
+-- El arma del panel en 3D, girando despacio (la misma vista que las casillas de la mochila).
+local iconView
+local function setIcon(index: number)
+	if not iconView then
+		iconView = WeaponPreview.view(iconSlot, true, 4)
 	end
-	Ui.swordIcon(iconSlot, color)
-	for _, descendant in iconSlot:GetDescendants() do
-		if descendant:IsA("GuiObject") then
-			descendant.ZIndex = 4
-		end
-	end
+	iconView.set(index)
 end
 
 local function clearAura()
@@ -444,15 +441,26 @@ local function panelAura(tier: number, color: Color3)
 end
 
 -- Espada que se ve pasar mientras gira: casi siempre comunes, a veces alguna rara para picar.
+-- Config.Swords no va ordenada por rareza, así que se elige sobre la lista ordenada.
+local byRarity = {}
+for index, sword in Config.Swords do
+	if sword.rarity then
+		table.insert(byRarity, index)
+	end
+end
+table.sort(byRarity, function(a, b)
+	return Config.Swords[a].rarity < Config.Swords[b].rarity
+end)
+
 local function teaseIndex(): number
-	return math.min(2 + math.floor(math.random() ^ 3 * (#Config.Swords - 1)), #Config.Swords)
+	return byRarity[math.min(1 + math.floor(math.random() ^ 3 * #byRarity), #byRarity)]
 end
 
 local function showSword(index: number)
 	local sword = Config.Swords[index]
 	title.Text = sword.name
 	title.TextColor3 = sword.color:Lerp(WHITE, 0.35)
-	setIcon(sword.color)
+	setIcon(index)
 	iconSlot.BackgroundColor3 = Rarity.tier(sword.rarity).color:Lerp(Ui.COLORS.cell, 0.6)
 end
 
@@ -500,12 +508,7 @@ local function makeCard(parent: Instance, index: number, kept: boolean, odds: nu
 	iconBox.ZIndex = 6
 	local aspect = Instance.new("UIAspectRatioConstraint")
 	aspect.Parent = iconBox
-	Ui.swordIcon(iconBox, sword.color)
-	for _, descendant in iconBox:GetDescendants() do
-		if descendant:IsA("GuiObject") then
-			descendant.ZIndex = 7
-		end
-	end
+	WeaponPreview.view(iconBox, true, 7).set(index)
 
 	local name = Ui.label(front, 26)
 	name.AnchorPoint = Vector2.new(0.5, 0)
@@ -806,7 +809,7 @@ local function buildPanel()
 	iconSlot.Name = "Slot"
 	iconSlot.AnchorPoint = Vector2.new(0, 0.5)
 	iconSlot.Position = UDim2.new(0, 9, 0.5, 0)
-	iconSlot.Size = UDim2.fromOffset(58, 58)
+	iconSlot.Size = UDim2.fromOffset(86, 86) -- grande: el arma en 3D es lo que más se mira del panel
 	iconSlot.BackgroundColor3 = Ui.COLORS.cell
 	iconSlot.ZIndex = 3
 	iconSlot.Parent = box
@@ -815,15 +818,15 @@ local function buildPanel()
 
 	title = Ui.label(box, 24)
 	title.Name = "Title"
-	title.Position = UDim2.fromOffset(78, 6)
-	title.Size = UDim2.new(1, -88, 0, 32)
+	title.Position = UDim2.fromOffset(106, 14)
+	title.Size = UDim2.new(1, -116, 0, 34)
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.ZIndex = 4
 
 	detail = Ui.label(box, 16)
 	detail.Name = "Detail"
-	detail.Position = UDim2.fromOffset(78, 36)
-	detail.Size = UDim2.new(1, -88, 0, 22)
+	detail.Position = UDim2.fromOffset(106, 48)
+	detail.Size = UDim2.new(1, -116, 0, 24)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.Text = "¡Gratis! Pulsa Tirar"
 	detail.ZIndex = 4
@@ -831,8 +834,8 @@ local function buildPanel()
 	-- Barra del tiempo que falta para la siguiente tirada.
 	local track = Instance.new("Frame")
 	track.AnchorPoint = Vector2.new(0, 1)
-	track.Position = UDim2.new(0, 78, 1, -8)
-	track.Size = UDim2.new(1, -90, 0, 7)
+	track.Position = UDim2.new(0, 106, 1, -12)
+	track.Size = UDim2.new(1, -118, 0, 8)
 	track.BackgroundColor3 = Ui.COLORS.dark
 	track.ZIndex = 4
 	track.Parent = box

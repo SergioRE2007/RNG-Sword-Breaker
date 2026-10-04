@@ -1,5 +1,6 @@
 -- Vista 3D de un arma dentro de la interfaz (librería sin start()): un ViewportFrame con el modelo de
--- shared/SwordModel, quieto y en diagonal, que gira sobre sí mismo y se acerca al pasar el ratón por su casilla.
+-- shared/SwordModel en diagonal. `attach` es para casillas (gira y se acerca al pasar el ratón) y `view`
+-- para un hueco donde el arma va cambiando (el panel del gacha).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -10,6 +11,7 @@ local WeaponPreview = {}
 local FOV = 30
 local REST = math.rad(35) -- giro en reposo: un poco de lado para que se vea el grosor
 local SPIN = math.rad(220) -- giro por segundo con el ratón encima
+local SLOW_SPIN = math.rad(70) -- giro por segundo de las vistas que giran siempre
 local ZOOM = 0.9 -- la cámara se acerca a esta fracción de la distancia con el ratón encima
 local ROLL = CFrame.Angles(0, 0, math.rad(45)) -- inclina la imagen: la punta arriba a la derecha
 
@@ -60,7 +62,9 @@ end
 
 local function step(dt: number)
 	for view in active do
-		if view.hovered then
+		if view.always then
+			view.angle = (view.angle + SLOW_SPIN * dt) % (2 * math.pi)
+		elseif view.hovered then
 			view.angle += SPIN * dt
 			view.zoom += (ZOOM - view.zoom) * math.min(dt * 12, 1)
 		else
@@ -76,6 +80,35 @@ local function step(dt: number)
 		end
 		place(view)
 	end
+end
+
+local function newView(parent: GuiObject, zIndex: number)
+	local viewport = Instance.new("ViewportFrame")
+	viewport.Name = "Preview"
+	viewport.AnchorPoint = Vector2.new(0.5, 0.5)
+	viewport.Position = UDim2.fromScale(0.5, 0.45)
+	viewport.Size = UDim2.fromScale(0.94, 0.94)
+	viewport.BackgroundTransparency = 1
+	viewport.Ambient = Color3.fromRGB(165, 165, 180)
+	viewport.LightColor = Color3.new(1, 1, 1)
+	viewport.LightDirection = Vector3.new(-1, -1.5, -0.6)
+	viewport.ZIndex = zIndex
+
+	local camera = Instance.new("Camera")
+	camera.FieldOfView = FOV
+	camera.Parent = viewport
+	viewport.CurrentCamera = camera
+
+	local view = { viewport = viewport, camera = camera, distance = 1, angle = REST, zoom = 1, hovered = false, always = false }
+	viewport.Destroying:Connect(function()
+		active[view] = nil
+	end)
+	if not connected then
+		connected = true
+		RunService.RenderStepped:Connect(step)
+	end
+	viewport.Parent = parent
+	return view
 end
 
 -- Pone la vista 3D del arma de ese nivel (índice de Config.Swords) dentro de la casilla, con un brillo del color
@@ -101,24 +134,9 @@ function WeaponPreview.attach(cell: GuiObject, level: number, glowColor: Color3)
 	corner.CornerRadius = UDim.new(1, 0)
 	corner.Parent = glow
 
-	local viewport = Instance.new("ViewportFrame")
-	viewport.Name = "Preview"
-	viewport.AnchorPoint = Vector2.new(0.5, 0.5)
-	viewport.Position = UDim2.fromScale(0.5, 0.45)
-	viewport.Size = UDim2.fromScale(0.94, 0.94)
-	viewport.BackgroundTransparency = 1
-	viewport.Ambient = Color3.fromRGB(165, 165, 180)
-	viewport.LightColor = Color3.new(1, 1, 1)
-	viewport.LightDirection = Vector3.new(-1, -1.5, -0.6)
-	viewport.ZIndex = 2
-
-	local camera = Instance.new("Camera")
-	camera.FieldOfView = FOV
-	camera.Parent = viewport
-	viewport.CurrentCamera = camera
-	info.model:Clone().Parent = viewport
-
-	local view = { camera = camera, distance = info.distance, angle = REST, zoom = 1, hovered = false }
+	local view = newView(cell, 2)
+	info.model:Clone().Parent = view.viewport
+	view.distance = info.distance
 	place(view)
 
 	cell.MouseEnter:Connect(function()
@@ -128,16 +146,44 @@ function WeaponPreview.attach(cell: GuiObject, level: number, glowColor: Color3)
 	cell.MouseLeave:Connect(function()
 		view.hovered = false
 	end)
-	viewport.Destroying:Connect(function()
-		active[view] = nil
+	return view.viewport
+end
+
+-- Vista 3D que llena `parent` y cuya arma se cambia con `set(nivel)`; guarda un modelo por arma ya enseñada,
+-- así que cambiar entre ellas es barato. Con `spin` gira siempre, despacio.
+function WeaponPreview.view(parent: GuiObject, spin: boolean, zIndex: number)
+	local view = newView(parent, zIndex)
+	view.viewport.Position = UDim2.fromScale(0.5, 0.5)
+	view.viewport.Size = UDim2.fromScale(1, 1)
+	view.always = spin
+	if spin then
+		active[view] = true
+	end
+
+	local models = {} -- [nivel] = copia del modelo; solo la que se enseña está dentro del ViewportFrame
+	local shown: number? = nil
+	view.viewport.Destroying:Connect(function()
+		for _, model in models do
+			model:Destroy()
+		end
 	end)
 
-	if not connected then
-		connected = true
-		RunService.RenderStepped:Connect(step)
+	local function set(level: number)
+		if shown == level then
+			return
+		end
+		if shown then
+			models[shown].Parent = nil
+		end
+		local info = template(level)
+		models[level] = models[level] or info.model:Clone()
+		models[level].Parent = view.viewport
+		shown = level
+		view.distance = info.distance
+		place(view)
 	end
-	viewport.Parent = cell
-	return viewport
+
+	return { viewport = view.viewport, set = set }
 end
 
 return WeaponPreview
