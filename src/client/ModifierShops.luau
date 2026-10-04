@@ -45,6 +45,13 @@ end
 local spinning = {}
 -- Bordes de las especiales sin arcoíris: laten (los mueve ModifierShops.start).
 local pulsing = {}
+-- Efectos de las filas de la lista (los mueve ModifierShops.start):
+local shines = {} -- [degradado] = desfase: brillo blanco que cruza la fila de vez en cuando
+local bobbing = {} -- [icono] = { phase, scale }: el icono flota y late
+local sparkly = {} -- [fila] = { color, window, next }: chispas en las raras (< 1 %)
+local SHINE_EVERY = 4.5 -- segundos entre dos brillos de la misma fila
+local SHINE_TIME = 0.7 -- lo que tarda el brillo en cruzar
+local SPARKLE_EVERY = 0.35 -- segundos entre chispas de una fila rara
 
 local function rainbow(parent: Instance)
 	local gradient = Instance.new("UIGradient")
@@ -414,6 +421,29 @@ local function buildShop(kind: string)
 		elseif Modifiers.percent(kind, index) < 0.1 then
 			pulsing[stroke] = index
 		end
+		-- Brillo: una franja blanca (degradado de transparencia) que cruza la fila.
+		local shine = Instance.new("Frame")
+		shine.Name = "Shine"
+		shine.Size = UDim2.fromScale(1, 1)
+		shine.BackgroundColor3 = WHITE
+		shine.ZIndex = row.ZIndex
+		shine.Parent = row
+		Ui.round(shine, 10)
+		local shineGradient = Instance.new("UIGradient")
+		shineGradient.Rotation = 20
+		shineGradient.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.42, 1),
+			NumberSequenceKeypoint.new(0.5, 0.75),
+			NumberSequenceKeypoint.new(0.58, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		shineGradient.Offset = Vector2.new(-1, 0)
+		shineGradient.Parent = shine
+		shines[shineGradient] = position * 0.37
+		if Modifiers.percent(kind, index) < 1 then
+			sparkly[row] = { color = if entry.rainbow then WHITE else entry.color, window = window, next = 0 }
+		end
 		-- Icono a la izquierda, nombre y efecto en el centro y el % en una etiqueta a la derecha.
 		local iconBox = Instance.new("Frame")
 		iconBox.Position = UDim2.fromOffset(12, 10)
@@ -421,6 +451,9 @@ local function buildShop(kind: string)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
 		entryIcon(iconBox, kind, entry)
+		local iconScale = Instance.new("UIScale")
+		iconScale.Parent = iconBox
+		bobbing[iconBox] = { phase = position * 0.9, scale = iconScale }
 		local pill = Instance.new("Frame")
 		pill.Name = "Percent"
 		pill.AnchorPoint = Vector2.new(1, 0.5)
@@ -707,6 +740,50 @@ function ModifierShops.start()
 			local wave = (math.sin(now * 4 + phase) + 1) / 2
 			stroke.Thickness = 2.5 + wave * 2.5
 			stroke.Transparency = 0.35 - wave * 0.35
+		end
+		-- Filas de la lista: brillo que cruza, iconos que flotan y laten, chispas en las raras.
+		for gradient, phase in shines do
+			if not gradient.Parent then
+				shines[gradient] = nil
+				continue
+			end
+			local t = (now + phase) % SHINE_EVERY
+			gradient.Offset = Vector2.new(if t < SHINE_TIME then -1 + 2 * t / SHINE_TIME else -1, 0)
+		end
+		for icon, data in bobbing do
+			if not icon.Parent then
+				bobbing[icon] = nil
+				continue
+			end
+			icon.Position = UDim2.fromOffset(12, 10 + math.sin(now * 2 + data.phase) * 3)
+			data.scale.Scale = 1 + math.sin(now * 3 + data.phase) * 0.06
+		end
+		for row, data in sparkly do
+			if not row.Parent then
+				sparkly[row] = nil
+				continue
+			end
+			if not data.window.Visible or now < data.next then
+				continue
+			end
+			data.next = now + SPARKLE_EVERY * (0.6 + random:NextNumber() * 0.8)
+			-- Chispa (rombo blanco con borde del color) que crece y se apaga en un punto al azar.
+			local spark = Instance.new("Frame")
+			spark.AnchorPoint = Vector2.new(0.5, 0.5)
+			spark.Position = UDim2.fromScale(random:NextNumber(0.05, 0.8), random:NextNumber(0.15, 0.85))
+			spark.Size = UDim2.fromOffset(0, 0)
+			spark.Rotation = 45
+			spark.BackgroundColor3 = WHITE
+			spark.BorderSizePixel = 0
+			spark.ZIndex = row.ZIndex + 5
+			spark.Parent = row
+			Ui.stroke(spark, data.color, 2)
+			local size = random:NextInteger(7, 12)
+			local grow = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, true)
+			TweenService:Create(spark, grow, { Size = UDim2.fromOffset(size, size) }):Play()
+			task.delay(0.5, function()
+				spark:Destroy()
+			end)
 		end
 	end)
 
