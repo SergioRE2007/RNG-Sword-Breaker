@@ -48,10 +48,10 @@ local pulsing = {}
 -- Efectos de las filas de la lista (los mueve ModifierShops.start):
 local shines = {} -- [degradado] = desfase: brillo blanco que cruza la fila de vez en cuando
 local bobbing = {} -- [icono] = { phase, scale }: el icono flota y late
-local sparkly = {} -- [fila] = { color, window, next }: chispas en las raras (< 1 %)
+local sparkly = {} -- [capa] = { color, window, next }: chispas de fondo en las raras (< 1 %)
 local SHINE_EVERY = 4.5 -- segundos entre dos brillos de la misma fila
 local SHINE_TIME = 0.7 -- lo que tarda el brillo en cruzar
-local SPARKLE_EVERY = 0.35 -- segundos entre chispas de una fila rara
+local SPARKLE_EVERY = 1.6 -- segundos entre chispas de una fila rara
 
 local function rainbow(parent: Instance)
 	local gradient = Instance.new("UIGradient")
@@ -442,7 +442,14 @@ local function buildShop(kind: string)
 		shineGradient.Parent = shine
 		shines[shineGradient] = position * 0.37
 		if Modifiers.percent(kind, index) < 1 then
-			sparkly[row] = { color = if entry.rainbow then WHITE else entry.color, window = window, next = 0 }
+			-- Capa de las chispas, creada antes que el icono y los textos para quedar por detrás.
+			local sparkLayer = Instance.new("Frame")
+			sparkLayer.Name = "Sparkles"
+			sparkLayer.Size = UDim2.fromScale(1, 1)
+			sparkLayer.BackgroundTransparency = 1
+			sparkLayer.ZIndex = row.ZIndex
+			sparkLayer.Parent = row
+			sparkly[sparkLayer] = { color = if entry.rainbow then WHITE else entry.color, window = window, next = 0 }
 		end
 		-- Icono a la izquierda, nombre y efecto en el centro y el % en una etiqueta a la derecha.
 		local iconBox = Instance.new("Frame")
@@ -758,9 +765,9 @@ function ModifierShops.start()
 			icon.Position = UDim2.fromOffset(12, 10 + math.sin(now * 2 + data.phase) * 3)
 			data.scale.Scale = 1 + math.sin(now * 3 + data.phase) * 0.06
 		end
-		for row, data in sparkly do
-			if not row.Parent then
-				sparkly[row] = nil
+		for layer, data in sparkly do
+			if not layer.Parent then
+				sparkly[layer] = nil
 				continue
 			end
 			if not data.window.Visible or now < data.next then
@@ -775,10 +782,11 @@ function ModifierShops.start()
 			spark.Rotation = 45
 			spark.BackgroundColor3 = WHITE
 			spark.BorderSizePixel = 0
-			spark.ZIndex = row.ZIndex + 5
-			spark.Parent = row
-			Ui.stroke(spark, data.color, 2)
-			local size = random:NextInteger(7, 12)
+			spark.BackgroundTransparency = 0.4
+			spark.ZIndex = layer.ZIndex
+			spark.Parent = layer
+			Ui.stroke(spark, data.color, 1).Transparency = 0.4
+			local size = random:NextInteger(5, 8)
 			local grow = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, true)
 			TweenService:Create(spark, grow, { Size = UDim2.fromOffset(size, size) }):Play()
 			task.delay(0.5, function()
