@@ -1,5 +1,6 @@
 -- Ventanas de las tiendas de modificadores del hub (Rasgos y Grados). Se abren con la tecla de
--- interacción junto a cada puesto y se cierran al alejarse. A la izquierda, la espada elegida
+-- interacción junto a cada puesto y se cierran al alejarse. Las armas se ven en 3D con
+-- WeaponPreview (como en la mochila); el resultado de cada tirada llega por ModifierRolled. A la izquierda, la espada elegida
 -- (se cambia pulsando su casilla), el modificador que tiene, lo que cuesta y los botones
 -- Tirar / Auto / "Parar con..." (con qué resultados se para la tirada automática). A la derecha,
 -- todos los resultados posibles, del más raro al más común, con su % y su efecto.
@@ -16,6 +17,7 @@ local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
+local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local ModifierShops = {}
 
@@ -287,7 +289,7 @@ local function buildShop(kind: string)
 		local list = Instance.new("ScrollingFrame")
 		list.Name = "List"
 		list.Position = UDim2.fromOffset(12, 44)
-		list.Size = UDim2.new(1, -24, 1, -116)
+		list.Size = UDim2.new(1, -24, 1, -124)
 		list.BackgroundTransparency = 1
 		list.BorderSizePixel = 0
 		list.ScrollBarThickness = 6
@@ -295,13 +297,20 @@ local function buildShop(kind: string)
 		list.CanvasSize = UDim2.new()
 		list.ZIndex = 6
 		list.Parent = frame
+		-- Margen para que no se corten los bordes de las casillas.
+		local padding = Instance.new("UIPadding")
+		padding.PaddingLeft = UDim.new(0, 6)
+		padding.PaddingRight = UDim.new(0, 10)
+		padding.PaddingTop = UDim.new(0, 6)
+		padding.PaddingBottom = UDim.new(0, 6)
+		padding.Parent = list
 		local back = Ui.button(frame, "Volver", Ui.COLORS.red)
 		back.Name = "Back"
 		back.AnchorPoint = Vector2.new(0.5, 1)
 		back.Position = UDim2.new(0.5, 0, 1, -10)
 		back.Size = UDim2.fromOffset(180, 54)
 		back.TextSize = 24
-		back.ZIndex = 6
+		back.ZIndex = 9 -- por encima de las casillas de la lista
 		back.Activated:Connect(function()
 			frame.Visible = false
 		end)
@@ -310,7 +319,7 @@ local function buildShop(kind: string)
 
 	local picker, pickerList = overlay("Picker", "Elige una espada")
 	local pickerGrid = Instance.new("UIGridLayout")
-	pickerGrid.CellSize = UDim2.fromOffset(78, 78)
+	pickerGrid.CellSize = UDim2.fromOffset(84, 84)
 	pickerGrid.CellPadding = UDim2.fromOffset(8, 8)
 	pickerGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	pickerGrid.Parent = pickerList
@@ -450,14 +459,19 @@ local function buildShop(kind: string)
 			state.selected = player:GetAttribute("Equipped")
 			copy = selectedCopy()
 		end
-		local old = slot:FindFirstChild("Icon")
-		if old then
-			old:Destroy()
-		end
 		if copy then
 			local sword = Config.Swords[copy.sword]
 			local tierColor = Rarity.tier(sword.rarity).color
-			Ui.swordIcon(slot, sword.color)
+			if state.shown ~= copy.sword then
+				state.shown = copy.sword
+				for _, name in { "Glow", "Preview" } do
+					local old = slot:FindFirstChild(name)
+					if old then
+						old:Destroy()
+					end
+				end
+				WeaponPreview.attach(slot, copy.sword, tierColor)
+			end
 			slot:FindFirstChildOfClass("UIStroke").Color = tierColor
 			slotHint.Text = sword.name
 			if not state.waiting then
@@ -492,9 +506,11 @@ local function buildShop(kind: string)
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = -math.floor(Stats.swordDamage(copy))
 			cell.ZIndex = 7
-			Ui.swordIcon(cell, sword.color)
+			WeaponPreview.attach(cell, copy.sword, Rarity.tier(sword.rarity).color)
 			local current = info.list[copy[info.field]]
-			Ui.cellLabel(cell, if current then current.name else "-")
+			if current then
+				Ui.cellLabel(cell, current.name)
+			end
 			if copy.id == equipped then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
 			end

@@ -1,6 +1,10 @@
 -- Piezas comunes de la interfaz: estilo (degradados, bordes, botones con relieve), ventanas,
 -- casillas cuadradas con icono, cartel flotante al pasar el ratón y avisos en pantalla.
--- No tiene start(): lo usan Hud y Backpack.
+-- No tiene start(): lo usan Hud, Backpack, GachaRoll, ModifierShops y SkillTree.
+-- Notas: la pantalla "Hud" ignora la franja de arriba de Roblox (IgnoreGuiInset), así que las
+-- posiciones cuentan desde el borde real de la pantalla (igual que GetMouseLocation), pero
+-- AbsolutePosition sigue contando desde debajo de la franja (hay que sumar GetGuiInset). Las capas
+-- se ordenan globalmente: un hijo con menos ZIndex que su padre queda tapado por él.
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -111,6 +115,8 @@ function Ui.screen(): ScreenGui
 		gui = Instance.new("ScreenGui")
 		gui.Name = "Hud"
 		gui.ResetOnSpawn = false
+		-- Usa también la franja de arriba (donde Roblox pone sus botones a la izquierda).
+		gui.IgnoreGuiInset = true
 		gui.Parent = player:WaitForChild("PlayerGui")
 	end
 	return gui
@@ -198,7 +204,7 @@ function Ui.window(name: string, title: string, size: Vector2)
 	local frame = Instance.new("Frame")
 	frame.Name = name
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.new(0.5, 0, 0.5, 24)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
 	frame.Size = UDim2.fromOffset(size.X, size.Y)
 	frame.BackgroundColor3 = WHITE
 	frame.BorderSizePixel = 0
@@ -243,8 +249,9 @@ function Ui.window(name: string, title: string, size: Vector2)
 	local camera = workspace.CurrentCamera
 	local function fit()
 		local view = camera.ViewportSize
-		-- Deja sitio a la izquierda para el menú y arriba para los contadores.
-		scale.Scale = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 150) / size.Y), 0.45, 1)
+		-- Deja sitio a la izquierda para el menú y, como va centrada, arriba y abajo para los
+		-- contadores (que llegan a ~100 px del borde).
+		scale.Scale = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, 1)
 		shadowScale.Scale = scale.Scale
 	end
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
@@ -669,7 +676,7 @@ local function ensureTip()
 			tip.Visible = false
 			return
 		end
-		local mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
+		local mouse = UserInputService:GetMouseLocation() -- la pantalla Hud ignora la franja de arriba
 		local view = workspace.CurrentCamera.ViewportSize
 		local size = tip.AbsoluteSize
 		local x = mouse.X + 18
@@ -679,7 +686,7 @@ local function ensureTip()
 		end
 		if tipBeside then
 			-- Pegado al lado de la casilla, para no tapar lo que se está mirando.
-			local corner, box = tipSource.AbsolutePosition, tipSource.AbsoluteSize
+			local corner, box = tipSource.AbsolutePosition + GuiService:GetGuiInset(), tipSource.AbsoluteSize
 			x = corner.X + box.X + 10
 			if x + size.X > view.X - 8 then
 				x = corner.X - size.X - 10

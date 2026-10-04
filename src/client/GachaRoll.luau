@@ -570,6 +570,7 @@ local function showcase(index: number, kept: boolean, odds: number)
 	local scale = stage:FindFirstChildOfClass("UIScale")
 	local factor = if scale then scale.Scale else 1
 	local viewport = workspace.CurrentCamera.ViewportSize
+	-- AbsolutePosition cuenta desde debajo de la franja de arriba; esta pantalla, desde el borde.
 	local from = box.AbsolutePosition + box.AbsoluteSize / 2 + GuiService:GetGuiInset()
 	-- El escenario se encoge desde el centro: se deshace para que la copia salga de su sitio.
 	local start = (from - viewport / 2) / factor + viewport / 2
