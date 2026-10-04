@@ -1,5 +1,5 @@
--- Gacha de espadas: máquina en el centro del hub, tiradas con gemas e inventario
--- (equipar, vender y venta automática).
+-- Gacha de espadas: tiradas gratis desde cualquier sitio (una cada Stats.rollTime segundos),
+-- máquina decorativa en el centro del hub e inventario (equipar, vender y venta automática).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Chance = require(ReplicatedStorage.Shared.Chance)
@@ -26,14 +26,18 @@ end
 
 -- Saca una espada con suerte `luck` y la guarda como una copia más (se equipa si pega más que
 -- la actual). Se vende sola si es menos rara que el límite de venta automática del jugador o
--- el inventario está lleno. Avisa a todos si es muy rara, `delay` segundos después (para no
--- destripar la animación). Devuelve el índice de la espada y si se la ha quedado.
-local function draw(player: Player, luck: number, delay: number): (number, boolean)
+-- el inventario está lleno. Se lo manda al jugador para que lo enseñe, y si es raro, a todos
+-- (aura en su personaje); si es muy raro, aviso en el chat cuando acaba la animación.
+local function draw(player: Player, luck: number, source: string)
 	local data = PlayerData.read(player)
+	if not data then
+		return
+	end
 	local index = roll(luck)
 	local sword = Config.Swords[index]
-	if sword.rarity / luck >= Config.AnnounceOdds then
-		task.delay(delay, function()
+	local odds = sword.rarity / luck
+	if odds >= Config.AnnounceOdds then
+		task.delay(Config.Gacha.RollTime + Config.Gacha.ShowcaseTime, function()
 			Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {sword.name} (1 entre {Format.short(sword.rarity)})!`, sword.color)
 		end)
 	end
@@ -51,44 +55,30 @@ local function draw(player: Player, luck: number, delay: number): (number, boole
 	else
 		PlayerData.addGems(player, Config.Gacha.SellValue)
 	end
-	return index, kept
+	Remotes.GachaRolled:FireClient(player, index, kept, luck, source)
+	if sword.rarity >= Config.Gacha.AuraRarity then
+		-- Espera a que el jugador lo destape para no destriparlo a los demás.
+		task.delay(Stats.rollTime(player), function()
+			Remotes.GachaAura:FireAllClients(player, index)
+		end)
+	end
 end
 
 -- Espada gratis (p. ej. la roca de armas) con la suerte de gacha multiplicada por `luckMultiplier`.
 function Gacha.give(player: Player, luckMultiplier: number, source: string)
-	if not PlayerData.read(player) then
-		return
-	end
-	local index, kept = draw(player, Stats.gachaLuck(player) * luckMultiplier, 0)
-	Remotes.SwordObtained:FireClient(player, index, kept, source)
+	draw(player, Stats.gachaLuck(player) * luckMultiplier, source)
 end
 
 local lastRoll = {} -- [player] = os.clock() de su última tirada
 
-local function onRoll(player: Player, count: unknown)
-	if not table.find(Config.Gacha.Counts, count) then
-		return
-	end
+local function onRoll(player: Player)
+	-- Un poco de margen por el retraso de la red.
 	local now = os.clock()
-	if now - (lastRoll[player] or 0) < Config.Gacha.Cooldown then
-		return
-	end
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root or (root.Position - machinePosition).Magnitude > Config.Gacha.UseDistance + 4 then
-		return
-	end
-	if not PlayerData.read(player) or not PlayerData.trySpendGems(player, Config.Gacha.Cost * count) then
+	if now - (lastRoll[player] or 0) < Stats.rollTime(player) * 0.85 then
 		return
 	end
 	lastRoll[player] = now
-	local luck = Stats.gachaLuck(player)
-	local results = {}
-	for position = 1, count :: number do
-		local index, kept = draw(player, luck, Config.Gacha.RollTime + position * Config.Gacha.RevealStep)
-		table.insert(results, { index = index, kept = kept })
-	end
-	Remotes.GachaRolled:FireClient(player, results, luck)
+	draw(player, Stats.gachaLuck(player), "gacha")
 end
 
 local function onEquip(player: Player, id: unknown)
@@ -166,7 +156,7 @@ local function buildMachine(parent: Instance)
 	label.TextStrokeTransparency = 0
 	label.Font = Enum.Font.FredokaOne
 	label.TextSize = 28
-	label.Text = `Gacha de espadas\n{Config.Gacha.Cost} gemas`
+	label.Text = "Gacha de espadas\n¡Gratis!"
 	label.Parent = gui
 
 	model.Parent = parent

@@ -4,7 +4,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
-local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -80,15 +79,6 @@ function Hud.start()
 
 	player.AttributeChanged:Connect(refresh)
 	refresh()
-
-	Remotes.SwordObtained.OnClientEvent:Connect(function(index: number, kept: boolean, source: string)
-		local sword = Config.Swords[index]
-		local origin = if source == "roca" then "¡La roca de armas soltó" else "¡Te ha salido"
-		local detail = if kept
-			then `1 entre {Format.short(sword.rarity or 1)} · daño {Format.short(sword.damage)}`
-			else `Vendida sola: +{Config.Gacha.SellValue} gemas`
-		Ui.toast(`{origin} {sword.name}!\n{detail}`, sword.color)
-	end)
 
 	Remotes.Notice.OnClientEvent:Connect(Ui.toast)
 

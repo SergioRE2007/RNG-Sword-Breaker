@@ -55,16 +55,14 @@ Config.RarityTiers = {
 -- Máximo de espadas en el inventario; con el inventario lleno las nuevas se venden solas.
 Config.MaxSwords = 200
 
--- Gacha de espadas: se tira en la máquina del hub y se paga con gemas.
+-- Gacha de espadas: gratis, se tira desde cualquier sitio, una tirada cada RollTime segundos.
 Config.Gacha = {
-	Cost = 5, -- gemas por tirada
+	RollTime = 2, -- segundos por tirada (lo que bajarán la rama "Velocidad de tirada" y los gamepass)
+	ShowcaseOdds = 200, -- desde "1 entre N" real (rareza / suerte de gacha) la tirada pasa a pantalla completa
+	ShowcaseTime = 4, -- segundos que dura más o menos la animación a pantalla completa
+	AuraRarity = 100, -- desde esta rareza el aura se ve en el personaje (también para los demás)
 	SellValue = 2, -- gemas por vender una espada (a mano o con la venta automática)
 	RockLuck = 10, -- la tirada gratis de la "Roca de armas" multiplica por esto la suerte de gacha
-	Counts = { 1, 5, 10 }, -- tiradas que se pueden hacer de golpe (botones x1, x5, x10)
-	RollTime = 1.2, -- segundos que dura la animación de la tirada antes de destapar las espadas
-	RevealStep = 0.22, -- segundos entre carta y carta al destaparlas
-	Cooldown = 0.6, -- segundos mínimos entre tiradas
-	UseDistance = 12, -- distancia máxima a la máquina
 }
 
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro

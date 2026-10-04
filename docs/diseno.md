@@ -6,7 +6,7 @@ Incremental de espadas estilo RNG. Servidores de 8 jugadores (una parcela cada u
 
 Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, más suerte) → salen objetos más raros y duros → hace falta mejor espada → gacha.
 
-- **El dinero** mejora la parcela y la suerte. **Las espadas** salen del gacha del hub, que se paga con **gemas**; las gemas solo las sueltan los objetos raros (de la Roca en adelante), así que subir la suerte es lo que da acceso a mejores espadas.
+- **El dinero** mejora la parcela y la suerte. **Las espadas** salen del gacha, que es **gratis** y se tira todo el rato (una tirada cada 2 s, desde cualquier sitio); lo que limita es el tiempo por tirada y la suerte de gacha. Las **gemas** las sueltan los objetos raros (de la Roca en adelante) y se gastan en suerte de gacha.
 - **Mapa**: hub circular en el centro y 8 parcelas en círculo. El jugador aparece en la suya y solo puede romper sus propios objetos.
 - **Objetos**: 16 tipos (Caja → Infinito), cada uno con una rareza "1 entre N" que llega hasta 1 entre 1Sp. En cada aparición se prueba del más raro al más común; la suerte multiplica la probabilidad.
 - **Todo es exponencial**: cada nivel de Suerte y de Suerte de gacha multiplica x1.5 (150 niveles, hasta ~x259Sp), y los precios crecen también exponencialmente. Las rarezas, vidas, recompensas y daños suben por órdenes de magnitud.
@@ -17,12 +17,13 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 
 - Hub y parcelas con asignación automática y cartel del dueño.
 - Aparición de objetos por rareza y suerte, mejoras de cantidad y suerte.
-- Gacha de espadas: máquina en el centro del hub, 5 gemas por tirada, 15 espadas por rareza hasta 1 entre 1Sp (la de madera es la inicial). Una espada nueva mejor que la actual se equipa sola.
-- Tirada x1, x5 o x10 y tirada automática (repite la última hasta quedarse sin gemas o alejarse). Animación a pantalla completa: el orbe se carga con rayos y anillos (cambian al color de lo mejor que ha salido si es raro), estalla y las cartas se destapan una a una; las raras (1 entre 100 real) tiemblan antes, las de aviso (1 entre 500) paran la pantalla con destello y cartel de su rareza. Pulsar la pantalla la salta. La máquina del hub se hincha y suelta chispas (solo lo ve quien tira).
+- Gacha de espadas gratis: botones "Tirar" y "Auto" abajo, una tirada cada `Config.Gacha.RollTime` (2 s; `Stats.rollTime` es donde se restarán mejoras y gamepass). 15 espadas por rareza hasta 1 entre 1Sp (la de madera es la inicial). Una espada nueva mejor que la actual se equipa sola. La máquina del hub queda de decorado (se hincha y suelta chispas con las tiradas buenas, solo para quien tira).
+- Panel del gacha arriba: pasan espadas al azar cada vez más despacio y se para en la que ha tocado, con barra del tiempo hasta la siguiente tirada. Aura del panel por nivel de rareza (`TIER_FX` en `GachaRoll`): nada (Común), brillo (Poco común), + chispas (Rara), + rayos (Épica), + temblor (Legendaria, Mítica), + arcoíris (Secreta, Divina).
+- Tirada muy buena para tu suerte (1 entre 200 real o más, `Config.Gacha.ShowcaseOdds`): el panel vuela al centro y se hace orbe, se carga con el color de la rareza, estalla y destapa la carta con rayos, destello, temblor y cartel ("¡MÍTICA!"); más largo y con más efectos cuanto más rara. "Continuar" para volver (en automático sigue sola a los 3 s). Pulsar la pantalla la salta.
+- Aura en el personaje al sacar una espada desde Rara (la ven todos): partículas y luz del color de la rareza; anillos en el suelo desde Épica y columna de luz desde Mítica.
 - Inventario de espadas por copias: se pueden tener varias de la misma (máximo 200), cada copia con su rasgo. Cada una se equipa, se le tira rasgo o se vende (2 gemas).
 - Venta automática: el jugador escribe un número (admite 1000, 1.5K, 2M...) y las espadas menos raras que 1 entre ese número se venden solas al salir. Con el inventario lleno también se venden.
 - "Roca de armas" (1 entre 2000): al romperse da una tirada gratis con la suerte de gacha x10.
-- Animación de la tirada (pasan espadas al azar 1,2 s) y aviso en pantalla con la espada obtenida.
 - Aviso en el chat a todo el servidor cuando aparece un objeto o sale una espada que, con la suerte del jugador ya contada, era 1 entre 500 o más raro (`Config.AnnounceOdds`).
 - Mejoras de velocidad de golpe (0,35 s → 0,14 s) y suerte de gacha.
 - `Chance`: tiradas exactas con probabilidades diminutas.
@@ -50,7 +51,8 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Los objetos y espadas a partir de Obelisco / Espada solar, y el ritmo de las suertes (x1.5 por nivel, precio x1.55 / x1.6), son números puestos a ojo sin jugar: nadie ha llegado ahí.
 - Rasgos y artefactos: nombres, multiplicadores y rarezas inventados por Claude sin jugar. Probado con rarezas bajadas: caída de cristal, tirada de rasgo, caída y equipar/quitar artefactos. Sin ver: rasgos raros y las 3 ranuras llenas.
 - Vender una espada da siempre 2 gemas, sea cual sea su rareza. Es a propósito: si el precio subiera con la rareza, con mucha suerte de gacha cada tirada devolvería más gemas de las que cuesta.
-- Tirada múltiple y automática probadas en Studio con dinero infinito y con tiradas falsas (espadas épicas forzadas); no se ha probado en móvil ni con pantallas pequeñas (todo se encoge con la pantalla).
+- Gacha gratis probado en Studio con tiradas reales y falsas (Legendaria, Secreta y el aura de Mítica forzadas). Sin probar en móvil ni con varios jugadores viendo auras a la vez.
+- **Gemas con el gacha gratis**: vender espadas sigue dando 2 gemas, y con la tirada automática y venta automática salen ~60 gemas por minuto sin hacer nada, más que de los objetos raros. Hay que decidir si vender da gemas, otra cosa o nada.
 - Sin probar: varios jugadores a la vez, liberar la parcela al salir, la mejora de suerte, los objetos raros, el guardado y el sonido del espadazo.
 - Al publicar: máximo 8 jugadores por servidor (un noveno se queda sin parcela) y activar el acceso de Studio a los servicios de API para probar el guardado.
 
@@ -59,6 +61,13 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 Hecha (ver "Hecho"). Ideas que quedaron fuera:
 
 - Que los demás jugadores vean el efecto de la máquina cuando alguien tira.
+
+## Velocidad de tirada y gamepass (pedido por el usuario)
+
+Como el gacha es gratis y se tira todo el rato, lo que se mejora es lo rápido que se tira:
+
+- **Rama "Velocidad de tirada"** en el árbol de mejoras (`Config.Upgrades`, una dirección más en `BRANCHES` de `SkillTree`): baja `Stats.rollTime` nivel a nivel desde 2 s.
+- **Gamepass** (Robux): tirada más rápida, doble tirada (dos espadas por tirada), más suerte de gacha. La tirada automática se queda gratis.
 
 ## Ideas para más adelante
 
