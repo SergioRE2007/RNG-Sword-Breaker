@@ -39,6 +39,7 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - `Stats` (shared) calcula el daño y las suertes finales juntando espada, rasgo, artefactos y mejoras.
 - Espadas con volumen hechas con piezas (`SwordModel`): hoja con filo, nervio y punta, guarda con remates, empuñadura y pomo. Desde la de acero, guarda dorada con cuernos y gema; las de neón brillan y sueltan chispas; desde la de cometa llevan esquirlas flotando. El expositor del hub usa el mismo modelo.
 - Animación del golpe por código (`SwingAnim`), que se adapta a la velocidad de golpe y enciende una estela. La espada alterna tres tajos (diagonal, revés y desde arriba).
+- Auras de las armas (`WeaponAura`), más cargadas cuanto más rara es el arma: chispas (Poco común), llamas por la hoja (Rara), cintas de luz girando (Épica, hasta 3), ascuas y luz (Legendaria), bruma (Mítica), todo en arcoíris con luz que cambia de color (Secreta) y destellos grandes (Divina). Las comunes no llevan. También las llevan las espadas del expositor del hub. Vistas en captura la Divina y una Legendaria doble; el resto de niveles, sin mirar.
 - Tipos de arma (`Config.WeaponKinds`), 9 armas nuevas en el gacha (3 de cada):
   - **Hachas**: el jugador da una vuelta entera y pega a todo lo que le rodea; golpean x1.7 más lento.
   - **Espadas dobles**: una en cada mano, tajos alternos casi el doble de rápidos, con menos daño por golpe y menos alcance.
