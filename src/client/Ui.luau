@@ -125,7 +125,7 @@ end
 -- Ventanas ------------------------------------------------------------------------------
 
 local windows = {} -- [nombre] = Frame
-local MAX_WINDOW_SCALE = 1.15 -- las ventanas crecen hasta aquí en pantallas grandes
+local MAX_WINDOW_SCALE = 1.22 -- las ventanas crecen hasta aquí en pantallas grandes
 
 -- Brillos que cruzan los títulos de las ventanas (los mueve un solo bucle).
 local shines = {}
@@ -252,7 +252,7 @@ function Ui.window(name: string, title: string, size: Vector2)
 		local view = camera.ViewportSize
 		-- Deja sitio a la izquierda para el menú y, como va centrada, arriba y abajo para los
 		-- contadores (que llegan a ~100 px del borde).
-		-- Hasta un 15 % más grande que su tamaño de diseño si la pantalla da para ello.
+		-- Hasta un 22 % más grande que su tamaño de diseño si la pantalla da para ello.
 		scale.Scale = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, MAX_WINDOW_SCALE)
 		shadowScale.Scale = scale.Scale
 	end
@@ -533,8 +533,8 @@ function Ui.cellLabel(cell: Instance, text: string): TextLabel
 	label.Text = text
 	label.ZIndex = 3
 	local limit = Instance.new("UITextSizeConstraint")
-	limit.MaxTextSize = 18
-	limit.MinTextSize = 9
+	limit.MaxTextSize = 21
+	limit.MinTextSize = 10
 	limit.Parent = label
 	return label
 end
@@ -643,7 +643,7 @@ local function ensureTip()
 	if tip then
 		return
 	end
-	tip = Ui.label(Ui.screen(), 18)
+	tip = Ui.label(Ui.screen(), 21)
 	tip.Name = "Tip"
 	tip.BackgroundTransparency = 0.04
 	tip.BackgroundColor3 = Ui.COLORS.dark

@@ -223,14 +223,14 @@ local function buildShop(kind: string)
 		end
 		return "Pulsa para elegir una espada", WHITE
 	end)
-	local slotHint = Ui.label(slot, 16)
+	local slotHint = Ui.label(slot, 19)
 	slotHint.AnchorPoint = Vector2.new(0.5, 1)
 	slotHint.Position = UDim2.new(0.5, 0, 1, -6)
 	slotHint.Size = UDim2.new(1, -8, 0, 22)
 	slotHint.TextScaled = true
 	slotHint.ZIndex = 3
 
-	local heading = Ui.label(left, 26)
+	local heading = Ui.label(left, 30)
 	heading.Position = UDim2.fromOffset(208, 18)
 	heading.Size = UDim2.fromOffset(294, 34)
 	heading.Text = info.label
@@ -245,21 +245,21 @@ local function buildShop(kind: string)
 	Ui.stroke(nameBox, Color3.fromRGB(90, 90, 100), 3)
 	local nameScale = Instance.new("UIScale")
 	nameScale.Parent = nameBox
-	local nameLabel = Ui.label(nameBox, 34)
+	local nameLabel = Ui.label(nameBox, 38)
 	nameLabel.Size = UDim2.fromScale(1, 1)
 
-	local effect = Ui.label(left, 17)
+	local effect = Ui.label(left, 21)
 	effect.Position = UDim2.fromOffset(208, 132)
 	effect.Size = UDim2.fromOffset(294, 26)
 
-	local cost = Ui.label(left, 20)
+	local cost = Ui.label(left, 24)
 	cost.Name = "Cost"
 	cost.Position = UDim2.fromOffset(16, 214)
 	cost.Size = UDim2.new(1, -32, 0, 30)
 
-	local warning = Ui.label(left, 15)
+	local warning = Ui.label(left, 18)
 	warning.Position = UDim2.fromOffset(16, 252)
-	warning.Size = UDim2.new(1, -32, 0, 44)
+	warning.Size = UDim2.new(1, -32, 0, 52)
 	warning.TextWrapped = true
 	warning.TextColor3 = Color3.fromRGB(200, 200, 210)
 	warning.Text = `Al tirar se sustituye el {string.lower(info.label)} que tenga la espada.\nMientras esté equipada, {if kind == "traits" then "sube sus monedas, daño o suerte" else "multiplica sus monedas"}.`
@@ -291,7 +291,7 @@ local function buildShop(kind: string)
 		frame.ZIndex = 5
 		frame.Parent = body
 		Ui.round(frame, 10)
-		local title = Ui.label(frame, 22)
+		local title = Ui.label(frame, 26)
 		title.Position = UDim2.fromOffset(0, 8)
 		title.Size = UDim2.new(1, 0, 0, 30)
 		title.Text = titleText
@@ -387,10 +387,10 @@ local function buildShop(kind: string)
 	local rows = {}
 	for position, item in displayOrder(kind) do
 		if item.header then
-			local header = Ui.label(results, 22)
+			local header = Ui.label(results, 26)
 			header.Name = "Header" .. position
 			header.LayoutOrder = position
-			header.Size = UDim2.new(1, 0, 0, 28)
+			header.Size = UDim2.new(1, 0, 0, 32)
 			header.TextXAlignment = Enum.TextXAlignment.Left
 			header.Text = item.header
 			if position == 1 then
@@ -403,7 +403,7 @@ local function buildShop(kind: string)
 		local row = Instance.new("Frame")
 		row.Name = "Result" .. index
 		row.LayoutOrder = position
-		row.Size = UDim2.new(1, 0, 0, 70)
+		row.Size = UDim2.new(1, 0, 0, 78)
 		row.BackgroundColor3 = WHITE
 		row.Parent = results
 		Ui.round(row, 10)
@@ -421,24 +421,24 @@ local function buildShop(kind: string)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
 		entryIcon(iconBox, kind, entry)
-		local percent = Ui.label(row, 14)
-		percent.Position = UDim2.fromOffset(4, 46)
+		local percent = Ui.label(row, 16)
+		percent.Position = UDim2.fromOffset(4, 52)
 		percent.Size = UDim2.fromOffset(72, 20)
 		percent.TextScaled = true
 		local limit = Instance.new("UITextSizeConstraint")
-		limit.MaxTextSize = 14
+		limit.MaxTextSize = 16
 		limit.Parent = percent
 		percent.Text = Modifiers.formatPercent(Modifiers.percent(kind, index))
-		local title = Ui.label(row, 22)
+		local title = Ui.label(row, 26)
 		title.Position = UDim2.fromOffset(84, 8)
-		title.Size = UDim2.new(1, -92, 0, 28)
+		title.Size = UDim2.new(1, -92, 0, 32)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		paintName(title, entry)
 		if kind == "grades" then
 			title.Text = "Grado " .. entry.name
 		end
-		local detail = Ui.label(row, 16)
-		detail.Position = UDim2.fromOffset(84, 38)
+		local detail = Ui.label(row, 19)
+		detail.Position = UDim2.fromOffset(84, 44)
 		detail.Size = UDim2.new(1, -92, 0, 22)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
 		detail.TextColor3 = Color3.fromRGB(120, 230, 120)
