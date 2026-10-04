@@ -131,9 +131,9 @@ Config.StatNames = { damage = "daño", luck = "suerte", coins = "monedas", gems 
 -- Mapa: un hub circular en el centro y las parcelas en círculo a su alrededor.
 Config.Plot = {
 	Count = 8,
-	Size = 60, -- lado de la parcela
-	RingRadius = 150, -- distancia del centro del mapa al centro de cada parcela
-	HubRadius = 60,
+	Size = 100, -- lado de la parcela (múltiplo de 20: la valla va en tramos de 10 con la entrada en el centro)
+	RingRadius = 250, -- distancia del centro del mapa al centro de cada parcela
+	HubRadius = 90,
 	FloorHeight = 0.4,
 	SpawnInterval = 1.5, -- segundos entre apariciones de objetos en una parcela
 }
