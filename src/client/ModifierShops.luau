@@ -410,7 +410,7 @@ local function buildShop(kind: string)
 		local row = Instance.new("Frame")
 		row.Name = "Result" .. index
 		row.LayoutOrder = position
-		row.Size = UDim2.new(1, -8, 0, 80)
+		row.Size = UDim2.new(1, -8, 0, 92)
 		row.BackgroundColor3 = WHITE
 		row.Parent = results
 		Ui.round(row, 10)
@@ -451,9 +451,9 @@ local function buildShop(kind: string)
 			sparkLayer.Parent = row
 			sparkly[sparkLayer] = { color = if entry.rainbow then WHITE else entry.color, window = window, next = 0 }
 		end
-		-- Icono a la izquierda, nombre y efecto en el centro y el % en una etiqueta a la derecha.
+		-- Icono a la izquierda; arriba el nombre y el % en una etiqueta a la derecha; abajo el efecto a lo ancho.
 		local iconBox = Instance.new("Frame")
-		iconBox.Position = UDim2.fromOffset(12, 10)
+		iconBox.Position = UDim2.fromOffset(12, 17)
 		iconBox.Size = UDim2.fromOffset(62, 58)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
@@ -463,9 +463,9 @@ local function buildShop(kind: string)
 		bobbing[iconBox] = { phase = position * 0.9, scale = iconScale }
 		local pill = Instance.new("Frame")
 		pill.Name = "Percent"
-		pill.AnchorPoint = Vector2.new(1, 0.5)
-		pill.Position = UDim2.new(1, -12, 0.5, 0)
-		pill.Size = UDim2.fromOffset(104, 38)
+		pill.AnchorPoint = Vector2.new(1, 0)
+		pill.Position = UDim2.new(1, -12, 0, 10)
+		pill.Size = UDim2.fromOffset(104, 34)
 		pill.BackgroundColor3 = Ui.COLORS.dark
 		pill.Parent = row
 		Ui.round(pill, 10)
@@ -496,11 +496,15 @@ local function buildShop(kind: string)
 			gradient.Parent = title
 		end
 		local detail = Ui.label(row, 20)
-		detail.Position = UDim2.fromOffset(86, 46)
-		detail.Size = UDim2.new(1, -210, 0, 24)
+		detail.Position = UDim2.fromOffset(86, 54)
+		detail.Size = UDim2.new(1, -98, 0, 26)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
 		detail.TextColor3 = Color3.fromRGB(120, 235, 120)
 		detail.Text = Modifiers.effect(entry)
+		detail.TextScaled = true
+		local detailLimit = Instance.new("UITextSizeConstraint")
+		detailLimit.MaxTextSize = 20
+		detailLimit.Parent = detail
 		-- Crece un poco al pasar el ratón.
 		local grow = Instance.new("UIScale")
 		grow.Parent = row
@@ -577,11 +581,21 @@ local function buildShop(kind: string)
 			end
 		end
 		local equipped = player:GetAttribute("Equipped")
-		for _, copy in Stats.swords(player) do
+		-- De la más rara a la más común; dentro de la misma rareza, de más a menos daño.
+		local copies = Stats.swords(player)
+		table.sort(copies, function(a, b)
+			-- La espada inicial no tiene rareza: cuenta como la más común.
+			local rarityA, rarityB = Config.Swords[a.sword].rarity or 1, Config.Swords[b.sword].rarity or 1
+			if rarityA ~= rarityB then
+				return rarityA > rarityB
+			end
+			return Stats.swordDamage(a) > Stats.swordDamage(b)
+		end)
+		for position, copy in copies do
 			local sword = Config.Swords[copy.sword]
 			local cell = Ui.cell(pickerList, Rarity.tier(sword.rarity).color)
 			cell.Name = "Sword" .. copy.id
-			cell.LayoutOrder = -math.floor(Stats.swordDamage(copy))
+			cell.LayoutOrder = position
 			cell.ZIndex = 7
 			WeaponPreview.attach(cell, copy.sword, Rarity.tier(sword.rarity).color)
 			local current = info.list[copy[info.field]]
@@ -762,7 +776,7 @@ function ModifierShops.start()
 				bobbing[icon] = nil
 				continue
 			end
-			icon.Position = UDim2.fromOffset(12, 10 + math.sin(now * 2 + data.phase) * 3)
+			icon.Position = UDim2.fromOffset(12, 17 + math.sin(now * 2 + data.phase) * 3)
 			data.scale.Scale = 1 + math.sin(now * 3 + data.phase) * 0.06
 		end
 		for layer, data in sparkly do
