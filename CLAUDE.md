@@ -8,8 +8,18 @@ Cada jugador tiene una parcela donde aparecen objetos; los rompe a espadazos, ga
 - Le gustan las físicas y los juegos RNG. Da ideas a grandes rasgos y espera que Claude proponga los detalles, los construya y los pruebe.
 - Quiere una base sólida que se pueda ampliar; no hay modelos ni sonidos propios, todo se hace con piezas y código.
 
+## Trabajo en equipo
+
+Trabajan dos personas, cada una con su Claude y su Studio (reparto de zonas y archivos compartidos en `README.md`).
+
+- Al empezar: `git switch main` y `git pull`. Una rama por funcionalidad, nunca commits directos en `main`.
+- Al terminar y haber probado: commit, `git push`, PR con `gh pr create --fill` y `gh pr merge --squash --delete-branch`. Preguntar antes de juntar con `main`.
+- Quedarse en los archivos de la zona de la tarea. En los compartidos (`Config`, `Stats`, `Remotes`, `PlayerData`, `Ui`, `Hud`, los `init`, `docs/diseno.md`) hacer cambios pequeños y no reordenar ni reformatear lo que no se toca.
+- No subir valores de `Config` bajados temporalmente para probar.
+
 ## Al empezar una sesión
 
+0. `git pull` (ver "Trabajo en equipo").
 1. Arrancar `rojo serve` en segundo plano en esta carpeta y comprobar que responde en `http://localhost:34872/api/rojo`.
 2. `list_roblox_studios` para obtener el `studio_id` del Studio abierto (`mi-juego`).
 3. Si Studio no tiene conexiones al puerto 34872, pedir al usuario que pulse Rojo → Connect.
