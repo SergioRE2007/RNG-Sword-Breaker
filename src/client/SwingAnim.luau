@@ -1,98 +1,181 @@
--- Animación del espadazo hecha por código (no hay animaciones subidas): mueve cintura, hombro, codo y muñeca
--- durante el golpe, alternando tres tajos, y enciende la estela de la hoja. Vale para el jugador y para los demás.
+-- Animación del golpe hecha por código (no hay animaciones subidas): mueve las articulaciones del personaje
+-- durante el golpe y enciende la estela del arma. Cada tipo de arma tiene sus movimientos, que se van alternando.
+-- Vale para el jugador y para los demás.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
+local Stats = require(ReplicatedStorage.Shared.Stats)
 
 local SwingAnim = {}
 
-local MIN_DURATION = 0.24 -- con la velocidad de golpe al máximo el tajo aún se tiene que ver
-local COMBO_RESET = 0.7 -- segundos sin golpear para volver al primer tajo
+local MIN_DURATION = 0.26 -- con la velocidad de golpe al máximo el movimiento aún se tiene que ver
+local COMBO_RESET = 0.7 -- segundos sin golpear (tras acabar el golpe) para volver al primer movimiento
+local BLEND_IN = 0.12 -- parte del golpe que tarda en pasar de la postura normal a la primera postura
 
--- Reparto del tiempo del tajo: preparar, golpear y volver a la postura normal.
-local BLEND_IN = 0.15
-local WINDUP_END = 0.25
-local STRIKE_END = 0.55
-local TRAIL_FROM, TRAIL_TO = 0.2, 0.7
-
--- Posturas en grados. lean = inclinar el torso (negativo hacia delante), turn = girarlo (positivo a la izquierda),
--- raise = subir el brazo (0 abajo, 90 al frente, 180 arriba), swing = llevarlo a la izquierda,
--- elbow = doblar el codo, wrist = muñeca (negativo echa la hoja hacia delante).
+-- Cada movimiento es una lista de { momento (0 a 1), postura }. Antes del primer momento se entra en la primera
+-- postura, entre momentos se pasa de una a otra con suavidad y tras el último se vuelve a la postura normal.
+-- Posturas en grados (lo que no se pone vale 0):
+--   spin = girar el cuerpo entero, turn = girar el torso (positivo a la izquierda), lean = inclinarlo (negativo adelante),
+--   raise = subir el brazo derecho (0 abajo, 90 al frente, 180 arriba), swing = llevarlo a la izquierda,
+--   elbow = doblar el codo, wrist = muñeca (negativo echa la hoja hacia delante).
+--   lraise, lswing, lelbow, lwrist = lo mismo para el brazo izquierdo.
 local MOVES = {
-	{ -- tajo diagonal de derecha a izquierda
-		windup = { lean = 5, turn = -30, raise = 155, swing = -30, elbow = 70, wrist = 25 },
-		strike = { lean = -12, turn = 35, raise = 55, swing = 35, elbow = 5, wrist = -45 },
+	sword = {
+		{ -- tajo diagonal de derecha a izquierda
+			{ 0.2, { spin = -8, turn = -28, lean = 4, raise = 125, swing = -25, elbow = 85, wrist = 15, lraise = 20 } },
+			{ 0.6, { spin = 10, turn = 38, lean = -13, raise = 45, swing = 45, elbow = 20, wrist = -55, lraise = -25 } },
+		},
+		{ -- revés horizontal de izquierda a derecha
+			{ 0.2, { spin = 10, turn = 35, lean = -3, raise = 80, swing = 55, elbow = 95, wrist = -20, lraise = -20 } },
+			{ 0.6, { spin = -10, turn = -35, lean = -8, raise = 72, swing = -45, elbow = 15, wrist = -62, lraise = 20 } },
+		},
+		{ -- golpe desde arriba
+			{ 0.22, { lean = 10, raise = 165, elbow = 80, wrist = 20, lraise = 30 } },
+			{ 0.6, { turn = 8, lean = -24, raise = 35, swing = 10, elbow = 15, wrist = -62, lraise = -20 } },
+		},
 	},
-	{ -- revés horizontal de izquierda a derecha
-		windup = { lean = 0, turn = 40, raise = 85, swing = 45, elbow = 85, wrist = -30 },
-		strike = { lean = -5, turn = -35, raise = 80, swing = -35, elbow = 5, wrist = -75 },
+	dual = {
+		{ -- tajo con la derecha, la izquierda en guardia
+			{ 0.2, { turn = -22, raise = 115, swing = -20, elbow = 75, wrist = 10, lraise = 55, lelbow = 15 } },
+			{ 0.65, { turn = 28, lean = -8, raise = 55, swing = 40, elbow = 15, wrist = -55, lraise = 55, lelbow = 15 } },
+		},
+		{ -- tajo con la izquierda, la derecha en guardia
+			{ 0.2, { turn = 22, lraise = 115, lswing = 20, lelbow = 75, lwrist = 10, raise = 55, elbow = 15 } },
+			{ 0.65, { turn = -28, lean = -8, lraise = 55, lswing = -40, lelbow = 15, lwrist = -55, raise = 55, elbow = 15 } },
+		},
 	},
-	{ -- golpe desde arriba
-		windup = { lean = 15, turn = 0, raise = 185, swing = 0, elbow = 80, wrist = 30 },
-		strike = { lean = -28, turn = 5, raise = 25, swing = 10, elbow = 0, wrist = -70 },
+	axe = {
+		{ -- vuelta entera con el hacha extendida
+			{ 0.18, { spin = -30, turn = -25, raise = 90, swing = -55, elbow = 15, wrist = -70, lraise = 70, lswing = 45, lelbow = 20 } },
+			{ 0.82, { spin = 360, raise = 90, swing = -55, elbow = 15, wrist = -70, lraise = 70, lswing = 45, lelbow = 20 } },
+		},
+	},
+	spear = {
+		{ -- estocada: codo atrás y brazo recto al frente
+			{ 0.25, { spin = -10, turn = -35, lean = 3, raise = -35, elbow = 125, lraise = 55, lelbow = 25 } },
+			{ 0.5, { spin = 12, turn = 35, lean = -14, raise = 88, elbow = 2, lraise = -25, lelbow = 10 } },
+			{ 0.7, { spin = 12, turn = 35, lean = -14, raise = 88, elbow = 2, lraise = -25, lelbow = 10 } },
+		},
 	},
 }
 
+-- Articulaciones: pieza donde está, nombre, valores de la postura que usa y cómo se convierten en giro.
 local JOINTS = {
-	waist = { "UpperTorso", "Waist" },
-	shoulder = { "RightUpperArm", "RightShoulder" },
-	elbow = { "RightLowerArm", "RightElbow" },
-	wrist = { "RightHand", "RightWrist" },
+	{ "LowerTorso", "Root", { "spin" }, function(p)
+		return CFrame.Angles(0, p.spin, 0)
+	end },
+	{ "UpperTorso", "Waist", { "turn", "lean" }, function(p)
+		return CFrame.Angles(0, p.turn, 0) * CFrame.Angles(p.lean, 0, 0)
+	end },
+	{ "RightUpperArm", "RightShoulder", { "raise", "swing" }, function(p)
+		return CFrame.Angles(0, p.swing, 0) * CFrame.Angles(p.raise, 0, 0)
+	end },
+	{ "RightLowerArm", "RightElbow", { "elbow" }, function(p)
+		return CFrame.Angles(p.elbow, 0, 0)
+	end },
+	{ "RightHand", "RightWrist", { "wrist" }, function(p)
+		return CFrame.Angles(p.wrist, 0, 0)
+	end },
+	{ "LeftUpperArm", "LeftShoulder", { "lraise", "lswing" }, function(p)
+		return CFrame.Angles(0, p.lswing, 0) * CFrame.Angles(p.lraise, 0, 0)
+	end },
+	{ "LeftLowerArm", "LeftElbow", { "lelbow" }, function(p)
+		return CFrame.Angles(p.lelbow, 0, 0)
+	end },
+	{ "LeftHand", "LeftWrist", { "lwrist" }, function(p)
+		return CFrame.Angles(p.lwrist, 0, 0)
+	end },
 }
 
-local active = {} -- [personaje] = tajo en curso
-local combos = setmetatable({}, { __mode = "k" }) -- [personaje] = { index, time }
-
-local function findJoints(character: Model)
-	local joints = {}
-	for key, path in JOINTS do
-		local part = character:FindFirstChild(path[1])
-		local motor = part and part:FindFirstChild(path[2])
-		-- Según el avatar, la articulación es un Motor6D o un AnimationConstraint; los dos tienen Transform.
-		if not motor or not (motor:IsA("Motor6D") or motor:IsA("AnimationConstraint")) then
-			return nil
-		end
-		joints[key] = motor
+local FIELDS = {}
+for _, joint in JOINTS do
+	for _, field in joint[3] do
+		table.insert(FIELDS, field)
 	end
-	return joints
 end
 
-local function findTrail(character: Model): Trail?
+local active = {} -- [personaje] = golpe en curso
+local combos = setmetatable({}, { __mode = "k" }) -- [personaje] = { kind, index, time }
+
+-- Articulaciones que mueve ese movimiento, o nil si al personaje le falta alguna (no es R15).
+local function findJoints(character: Model, move)
+	local found = {}
+	for _, joint in JOINTS do
+		local used = false
+		for _, key in move do
+			for _, field in joint[3] do
+				used = used or key[2][field] ~= nil
+			end
+		end
+		if used then
+			local part = character:FindFirstChild(joint[1])
+			local motor = part and part:FindFirstChild(joint[2])
+			-- Según el avatar, la articulación es un Motor6D o un AnimationConstraint; los dos tienen Transform.
+			if not motor or not (motor:IsA("Motor6D") or motor:IsA("AnimationConstraint")) then
+				return nil
+			end
+			table.insert(found, { motor = motor, cframe = joint[4] })
+		end
+	end
+	return found
+end
+
+local function findTrails(character: Model): { Trail }
+	local trails = {}
 	local tool = character:FindFirstChildWhichIsA("Tool")
-	local blade = tool and tool:FindFirstChild("Blade")
-	return blade and blade:FindFirstChild("SwingTrail") :: Trail?
+	if tool then
+		for _, item in tool:GetDescendants() do
+			if item:IsA("Trail") then
+				table.insert(trails, item)
+			end
+		end
+	end
+	return trails
 end
 
 local function smooth(t: number): number
 	return t * t * (3 - 2 * t)
 end
 
-local function pose(a, b, t: number)
-	local function mix(key: string): number
-		return math.rad(a[key] + (b[key] - a[key]) * t)
+-- Postura del movimiento en el momento t, ya en radianes.
+local function sample(move, t: number)
+	local from, to, progress = move[1][2], move[1][2], 0
+	if t >= move[#move][1] then
+		from, to = move[#move][2], move[#move][2]
+	else
+		for index = 1, #move - 1 do
+			local a, b = move[index], move[index + 1]
+			if t >= a[1] and t < b[1] then
+				from, to, progress = a[2], b[2], smooth((t - a[1]) / (b[1] - a[1]))
+				break
+			end
+		end
 	end
-	return {
-		waist = CFrame.Angles(0, mix("turn"), 0) * CFrame.Angles(mix("lean"), 0, 0),
-		shoulder = CFrame.Angles(0, mix("swing"), 0) * CFrame.Angles(mix("raise"), 0, 0),
-		elbow = CFrame.Angles(mix("elbow"), 0, 0),
-		wrist = CFrame.Angles(mix("wrist"), 0, 0),
-	}
+	local pose = {}
+	for _, field in FIELDS do
+		local a, b = from[field] or 0, to[field] or 0
+		pose[field] = math.rad(a + (b - a) * progress)
+	end
+	return pose
+end
+
+local function setTrails(swing, enabled: boolean)
+	for _, trail in swing.trails do
+		trail.Enabled = enabled
+	end
 end
 
 local function stop(character: Model)
 	local swing = active[character]
 	if swing then
-		if swing.trail then
-			swing.trail.Enabled = false
-		end
+		setTrails(swing, false)
 		active[character] = nil
 	end
 end
 
--- El Animator escribe las articulaciones justo antes de Stepped; aquí se mezcla el tajo por encima.
+-- El Animator escribe las articulaciones justo antes de Stepped; aquí se mezcla el golpe por encima.
 local function step()
 	local now = os.clock()
 	for character, swing in active do
@@ -103,60 +186,59 @@ local function step()
 		end
 
 		local move = swing.move
-		local target, weight
-		if t < WINDUP_END then
-			target = pose(move.windup, move.windup, 0)
+		local first, last = move[1][1], move[#move][1]
+		local weight = 1
+		if t < first then
 			weight = smooth(math.min(t / BLEND_IN, 1))
-		elseif t < STRIKE_END then
-			local progress = (t - WINDUP_END) / (STRIKE_END - WINDUP_END)
-			target = pose(move.windup, move.strike, progress * progress)
-			weight = 1
-		else
-			target = pose(move.strike, move.strike, 0)
-			weight = 1 - smooth((t - STRIKE_END) / (1 - STRIKE_END))
+		elseif t > last then
+			weight = 1 - smooth((t - last) / (1 - last))
 		end
 
-		for key, motor in swing.joints do
-			motor.Transform = motor.Transform:Lerp(target[key], weight)
+		local pose = sample(move, t)
+		for _, joint in swing.joints do
+			joint.motor.Transform = joint.motor.Transform:Lerp(joint.cframe(pose), weight)
 		end
-		if swing.trail then
-			swing.trail.Enabled = t >= TRAIL_FROM and t <= TRAIL_TO
-		end
+		setTrails(swing, t >= first and t <= last + 0.05)
 	end
 end
 
--- Lanza el tajo en ese personaje. Devuelve false si su esqueleto no es R15 (no se puede animar así).
-function SwingAnim.play(character: Model?, cooldown: number): boolean
+-- Lanza el golpe de ese tipo de arma en el personaje. Devuelve false si su esqueleto no es R15 (no se puede animar así).
+function SwingAnim.play(character: Model?, cooldown: number, kind: string): boolean
 	if not character then
 		return false
 	end
-	local joints = findJoints(character)
+	local moves = MOVES[kind] or MOVES.sword
+	local now = os.clock()
+	local duration = math.max(cooldown * 1.15, MIN_DURATION)
+
+	local combo = combos[character]
+	local index = 1
+	if combo and combo.kind == kind and now - combo.time < combo.duration + COMBO_RESET then
+		index = combo.index % #moves + 1
+	end
+
+	local joints = findJoints(character, moves[index])
 	if not joints then
 		return false
 	end
 	stop(character)
-
-	local now = os.clock()
-	local combo = combos[character]
-	local index = if combo and now - combo.time < COMBO_RESET then combo.index % #MOVES + 1 else 1
-	combos[character] = { index = index, time = now }
-
+	combos[character] = { kind = kind, index = index, time = now, duration = duration }
 	active[character] = {
 		start = now,
-		duration = math.max(cooldown * 1.15, MIN_DURATION),
-		move = MOVES[index],
+		duration = duration,
+		move = moves[index],
 		joints = joints,
-		trail = findTrail(character),
+		trails = findTrails(character),
 	}
 	return true
 end
 
 function SwingAnim.start()
 	RunService.Stepped:Connect(step)
-	-- Tajos de los demás jugadores (el propio se lanza desde SwordController sin esperar al servidor).
+	-- Golpes de los demás jugadores (el propio se lanza desde SwordController sin esperar al servidor).
 	Remotes.SwingFx.OnClientEvent:Connect(function(other: Player)
 		if other ~= Players.LocalPlayer then
-			SwingAnim.play(other.Character, Upgrades.value("speed", other:GetAttribute("Upgrade_speed") or 0))
+			SwingAnim.play(other.Character, Stats.cooldown(other), (Stats.weapon(other)))
 		end
 	end)
 end

@@ -1,6 +1,6 @@
--- Construye el modelo de una espada con piezas: hoja con filo, nervio y punta, guarda, empuñadura y pomo.
--- Lo usan el servidor (la espada en la mano) y el decorado (expositor del hub).
--- Ejes de la empuñadura: la hoja sube por +Y, es ancha en Z y fina en X.
+-- Construye el modelo de un arma con piezas, según su tipo: espada, espadas dobles, hacha o lanza.
+-- Lo usan el servidor (el arma en la mano) y el decorado (expositor del hub).
+-- Ejes de la empuñadura: el arma sube por +Y, es ancha en Z y fina en X; -Z es hacia donde mira el jugador.
 local Config = require(script.Parent.Config)
 
 local SwordModel = {}
@@ -8,32 +8,24 @@ local SwordModel = {}
 local WHITE = Color3.new(1, 1, 1)
 local BLACK = Color3.new(0, 0, 0)
 local LEATHER = Color3.fromRGB(70, 45, 30)
+local WOOD = Color3.fromRGB(110, 75, 45)
 local STEEL = Color3.fromRGB(75, 78, 88)
 local GOLD = Color3.fromRGB(235, 190, 60)
 
 local GLOWING = { [Enum.Material.Neon] = true, [Enum.Material.ForceField] = true }
 
-local FANCY_FROM = 4 -- desde aquí la guarda es dorada, con cuernos y gema
-local SHARDS_FROM = 10 -- desde aquí flotan esquirlas junto a la hoja
+local FANCY_FROM = 10 -- rareza desde la que el arma lleva adornos dorados y gema
+local SHARDS_FROM = 1e7 -- rareza desde la que flotan esquirlas junto a la hoja
 
-local BLADE_BASE = 0.84 -- altura a la que empieza la hoja sobre el centro de la empuñadura
+local BLADE_BASE = 0.84 -- altura a la que empieza la hoja de una espada sobre el centro de la empuñadura
 
--- Devuelve la empuñadura ("Handle") y el cuerpo de la hoja ("Blade").
--- `anchored` = pieza de decorado: ancladas y sin soldar ni estela.
-function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale: number, anchored: boolean): (BasePart, BasePart)
-	local def = Config.Swords[level]
-	local length = def.bladeLength
-	local width = 0.6 + level * 0.025
-	local glowing = GLOWING[def.material] == true
-	local fancy = level >= FANCY_FROM
+type Add = (className: string, name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material) -> BasePart
 
-	local edgeColor = def.color:Lerp(WHITE, 0.45)
-	local darkColor = def.color:Lerp(BLACK, 0.35)
-	local trimColor = if level == 1 then Color3.fromRGB(110, 75, 45) elseif fancy then GOLD else STEEL
-	local trimMaterial = if level == 1 then Enum.Material.Wood else Enum.Material.Metal
-
-	local handle: BasePart? = nil
-	local function add(className: string, name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material): BasePart
+-- Devuelve la función que va añadiendo piezas. La primera es la raíz y las demás se sueldan a ella.
+-- `anchored` = pieza de decorado: ancladas y sin soldar.
+local function builder(parent: Instance, origin: CFrame, scale: number, anchored: boolean): Add
+	local root: BasePart? = nil
+	return function(className, name, size, offset, color, material)
 		local part = Instance.new(className) :: BasePart
 		part.Name = name
 		part.Size = size * scale
@@ -43,74 +35,153 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 		part.Anchored = anchored
 		part.CanCollide = false
 		part.Massless = true
-		part.CastShadow = handle == nil
+		part.CastShadow = root == nil
 		part.TopSurface = Enum.SurfaceType.Smooth
 		part.BottomSurface = Enum.SurfaceType.Smooth
-		if handle then
+		if root then
 			part.CanTouch = false
 			part.CanQuery = false
 			if not anchored then
 				local weld = Instance.new("WeldConstraint")
-				weld.Part0 = handle
+				weld.Part0 = root
 				weld.Part1 = part
 				weld.Parent = part
 			end
 		else
-			handle = part
+			root = part
 		end
 		part.Parent = parent
 		return part
 	end
+end
 
-	-- Punta: dos cuñas espalda con espalda que cierran una capa de la hoja.
-	local function tip(name: string, thickness: number, layerWidth: number, height: number, color: Color3, material: Enum.Material)
-		local y = BLADE_BASE + length + height / 2
-		local size = Vector3.new(thickness, height, layerWidth / 2)
-		add("WedgePart", name, size, CFrame.new(0, y, -layerWidth / 4), color, material)
-		add("WedgePart", name, size, CFrame.new(0, y, layerWidth / 4) * CFrame.Angles(0, math.pi, 0), color, material)
-	end
+local function look(def)
+	local rarity = def.rarity or 0
+	local starter = def.rarity == nil
+	local fancy = rarity >= FANCY_FROM
+	return {
+		glowing = GLOWING[def.material] == true,
+		fancy = fancy,
+		shards = rarity >= SHARDS_FROM,
+		width = 0.62 + 0.016 * math.log10(math.max(rarity, 1)),
+		edgeColor = def.color:Lerp(WHITE, 0.45),
+		darkColor = def.color:Lerp(BLACK, 0.35),
+		trimColor = if starter then WOOD elseif fancy then GOLD else STEEL,
+		trimMaterial = if starter then Enum.Material.Wood else Enum.Material.Metal,
+		gripMaterial = if starter then Enum.Material.Wood else Enum.Material.Fabric,
+	}
+end
 
-	-- Empuñadura y pomo.
-	add("Part", "Handle", Vector3.new(0.32, 1.2, 0.32), CFrame.identity, LEATHER, if level == 1 then Enum.Material.Wood else Enum.Material.Fabric)
+local function ball(add: Add, name: string, diameter: number, y: number, color: Color3, material: Enum.Material)
+	local part = add("Part", name, Vector3.new(diameter, diameter, diameter), CFrame.new(0, y, 0), color, material) :: Part
+	part.Shape = Enum.PartType.Ball
+end
+
+-- Empuñadura con vueltas de cuero: es la raíz del arma.
+local function grip(add: Add, name: string, style): BasePart
+	local handle = add("Part", name, Vector3.new(0.32, 1.2, 0.32), CFrame.identity, LEATHER, style.gripMaterial)
 	for _, y in { -0.32, 0, 0.32 } do
 		add("Part", "Wrap", Vector3.new(0.38, 0.1, 0.38), CFrame.new(0, y, 0), LEATHER:Lerp(BLACK, 0.4), Enum.Material.Fabric)
 	end
-	local pommel = add("Part", "Pommel", Vector3.new(0.5, 0.5, 0.5), CFrame.new(0, -0.78, 0), trimColor, trimMaterial) :: Part
-	pommel.Shape = Enum.PartType.Ball
+	return handle
+end
 
-	-- Guarda.
-	local guardLength = if fancy then 1.9 else 1.5
-	add("Part", "Guard", Vector3.new(0.34, 0.24, guardLength), CFrame.new(0, 0.72, 0), trimColor, trimMaterial)
-	for _, side in { -1, 1 } do
-		add("Part", "GuardCap", Vector3.new(0.42, 0.36, 0.25), CFrame.new(0, 0.72, side * guardLength / 2), trimColor, trimMaterial)
-		if fancy then
-			add("Part", "GuardHorn", Vector3.new(0.3, 0.6, 0.2), CFrame.new(0, 1.02, side * (guardLength / 2 + 0.06)) * CFrame.Angles(side * math.rad(25), 0, 0), trimColor, trimMaterial)
-		end
-	end
-	if fancy then
-		local gem = add("Part", "Gem", Vector3.new(0.46, 0.46, 0.46), CFrame.new(0, 0.72, 0), def.color, if glowing then Enum.Material.Neon else Enum.Material.Glass) :: Part
-		gem.Shape = Enum.PartType.Ball
-	end
+-- Punta: dos cuñas espalda con espalda que cierran una capa de la hoja.
+local function tip(add: Add, name: string, baseY: number, thickness: number, width: number, height: number, color: Color3, material: Enum.Material)
+	local y = baseY + height / 2
+	local size = Vector3.new(thickness, height, width / 2)
+	add("WedgePart", name, size, CFrame.new(0, y, -width / 4), color, material)
+	add("WedgePart", name, size, CFrame.new(0, y, width / 4) * CFrame.Angles(0, math.pi, 0), color, material)
+end
 
-	-- Hoja: cuerpo grueso, filo más ancho y fino, y nervio central en relieve.
-	local center = CFrame.new(0, BLADE_BASE + length / 2, 0)
+-- Hoja recta desde baseY: cuerpo grueso, filo más ancho y fino, nervio central y punta.
+local function straightBlade(add: Add, def, style, baseY: number, length: number, width: number): BasePart
+	local center = CFrame.new(0, baseY + length / 2, 0)
 	local coreWidth = width * 0.62
 	local blade = add("Part", "Blade", Vector3.new(0.2, length, coreWidth), center, def.color, def.material)
-	add("Part", "Edge", Vector3.new(0.08, length, width), center, edgeColor, def.material)
-	add("Part", "Fuller", Vector3.new(0.27, length * 0.7, width * 0.16), CFrame.new(0, BLADE_BASE + length * 0.38, 0), if glowing then edgeColor else darkColor, def.material)
-	tip("Tip", 0.2, coreWidth, coreWidth * 1.3, def.color, def.material)
-	tip("EdgeTip", 0.08, width, width * 1.3, edgeColor, def.material)
+	add("Part", "Edge", Vector3.new(0.08, length, width), center, style.edgeColor, def.material)
+	add("Part", "Fuller", Vector3.new(0.27, length * 0.7, width * 0.16), CFrame.new(0, baseY + length * 0.38, 0), if style.glowing then style.edgeColor else style.darkColor, def.material)
+	tip(add, "Tip", baseY + length, 0.2, coreWidth, coreWidth * 1.3, def.color, def.material)
+	tip(add, "EdgeTip", baseY + length, 0.08, width, width * 1.3, style.edgeColor, def.material)
+	return blade
+end
 
-	if level >= SHARDS_FROM then
+local function sword(add: Add, def, style, rootName: string): (BasePart, BasePart)
+	local handle = grip(add, rootName, style)
+	ball(add, "Pommel", 0.5, -0.78, style.trimColor, style.trimMaterial)
+
+	local guardLength = if style.fancy then 1.9 else 1.5
+	add("Part", "Guard", Vector3.new(0.34, 0.24, guardLength), CFrame.new(0, 0.72, 0), style.trimColor, style.trimMaterial)
+	for _, side in { -1, 1 } do
+		add("Part", "GuardCap", Vector3.new(0.42, 0.36, 0.25), CFrame.new(0, 0.72, side * guardLength / 2), style.trimColor, style.trimMaterial)
+		if style.fancy then
+			add("Part", "GuardHorn", Vector3.new(0.3, 0.6, 0.2), CFrame.new(0, 1.02, side * (guardLength / 2 + 0.06)) * CFrame.Angles(side * math.rad(25), 0, 0), style.trimColor, style.trimMaterial)
+		end
+	end
+	if style.fancy then
+		ball(add, "Gem", 0.46, 0.72, def.color, if style.glowing then Enum.Material.Neon else Enum.Material.Glass)
+	end
+
+	local length = def.bladeLength
+	local blade = straightBlade(add, def, style, BLADE_BASE, length, style.width)
+	if style.shards then
 		for index, height in { 0.22, 0.42 } do
 			for _, side in { -1, 1 } do
-				local offset = CFrame.new(0, BLADE_BASE + length * height, side * (width / 2 + 0.4)) * CFrame.Angles(side * math.rad(-18), 0, 0)
-				add("Part", "Shard", Vector3.new(0.1, 1 - index * 0.25, 0.22), offset, edgeColor, Enum.Material.Neon)
+				local offset = CFrame.new(0, BLADE_BASE + length * height, side * (style.width / 2 + 0.4)) * CFrame.Angles(side * math.rad(-18), 0, 0)
+				add("Part", "Shard", Vector3.new(0.1, 1 - index * 0.25, 0.22), offset, style.edgeColor, Enum.Material.Neon)
 			end
 		end
 	end
+	return handle, blade
+end
 
-	if glowing then
+-- Hacha: mango largo y cabeza arriba con el filo hacia delante. Las que brillan tienen doble filo.
+local function axe(add: Add, def, style): (BasePart, BasePart)
+	local handle = grip(add, "Handle", style)
+	local shaft = def.bladeLength + 1.2
+	local bottom = -0.9
+	local top = bottom + shaft
+	add("Part", "Shaft", Vector3.new(0.24, shaft, 0.24), CFrame.new(0, bottom + shaft / 2, 0), WOOD, Enum.Material.Wood)
+	ball(add, "Pommel", 0.42, bottom, style.trimColor, style.trimMaterial)
+
+	local k = 0.9 + shaft * 0.06 -- tamaño de la cabeza
+	local y = top - 0.8 * k
+	add("Part", "Socket", Vector3.new(0.42, 1.0 * k, 0.42), CFrame.new(0, y, 0), style.trimColor, style.trimMaterial)
+	tip(add, "Spike", top, 0.2, 0.3, 0.6 * k, style.trimColor, style.trimMaterial)
+
+	local blade: BasePart
+	local function head(side: number, name: string): BasePart
+		add("Part", "Cheek", Vector3.new(0.22, 0.9 * k, 0.7 * k), CFrame.new(0, y, side * (0.2 + 0.35 * k)), def.color, def.material)
+		local body = add("Part", name, Vector3.new(0.16, 1.5 * k, 0.45 * k), CFrame.new(0, y, side * (0.2 + 0.9 * k)), def.color, def.material)
+		add("Part", "Edge", Vector3.new(0.07, 1.9 * k, 0.3 * k), CFrame.new(0, y, side * (0.2 + 1.23 * k)), style.edgeColor, def.material)
+		return body
+	end
+	blade = head(-1, "Blade")
+	if style.glowing then
+		head(1, "BackBlade")
+	else
+		add("Part", "BackSpike", Vector3.new(0.2, 0.35 * k, 0.4 * k), CFrame.new(0, y, 0.2 + 0.2 * k), style.trimColor, style.trimMaterial)
+	end
+	return handle, blade
+end
+
+-- Lanza: asta larga agarrada a un tercio, con punta corta arriba.
+local function spear(add: Add, def, style): (BasePart, BasePart)
+	local handle = grip(add, "Handle", style)
+	local shaft = def.bladeLength
+	local bottom = -0.3 * shaft
+	local top = bottom + shaft
+	add("Part", "Shaft", Vector3.new(0.24, shaft, 0.24), CFrame.new(0, bottom + shaft / 2, 0), WOOD, Enum.Material.Wood)
+	ball(add, "Butt", 0.4, bottom, style.trimColor, style.trimMaterial)
+	add("Part", "Tassel", Vector3.new(0.36, 0.5, 0.36), CFrame.new(0, top - 0.55, 0), def.color, Enum.Material.Fabric)
+	add("Part", "Collar", Vector3.new(0.42, 0.35, 0.42), CFrame.new(0, top, 0), style.trimColor, style.trimMaterial)
+	local blade = straightBlade(add, def, style, top + 0.15, 1.5, style.width * 1.15)
+	return handle, blade
+end
+
+-- Luz y chispas en las armas que brillan, y la estela del tajo (el cliente la enciende mientras dura el golpe).
+local function effects(blade: BasePart, def, style, scale: number, anchored: boolean)
+	if style.glowing then
 		local light = Instance.new("PointLight")
 		light.Color = def.color
 		light.Range = 9 * scale
@@ -119,7 +190,7 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 
 		local sparks = Instance.new("ParticleEmitter")
 		sparks.Name = "Sparks"
-		sparks.Color = ColorSequence.new(edgeColor)
+		sparks.Color = ColorSequence.new(style.edgeColor)
 		sparks.LightEmission = 1
 		sparks.Size = NumberSequence.new(0.18 * scale, 0)
 		sparks.Transparency = NumberSequence.new(0, 1)
@@ -131,29 +202,58 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 	end
 
 	if not anchored then
-		-- Estela del tajo: el cliente la enciende mientras dura el golpe.
+		local half = blade.Size.Y / 2
 		local base = Instance.new("Attachment")
 		base.Name = "TrailBase"
-		base.Position = Vector3.new(0, -length * scale * 0.4, 0)
+		base.Position = Vector3.new(0, -half * 0.8, 0)
 		base.Parent = blade
 		local point = Instance.new("Attachment")
 		point.Name = "TrailTip"
-		point.Position = Vector3.new(0, length * scale / 2 + width * scale, 0)
+		point.Position = Vector3.new(0, half + style.width * scale, 0)
 		point.Parent = blade
 
 		local trail = Instance.new("Trail")
 		trail.Name = "SwingTrail"
 		trail.Attachment0 = base
 		trail.Attachment1 = point
-		trail.Color = ColorSequence.new(edgeColor, def.color)
+		trail.Color = ColorSequence.new(style.edgeColor, def.color)
 		trail.Transparency = NumberSequence.new(0.25, 1)
 		trail.Lifetime = 0.16
 		trail.LightEmission = 0.6
 		trail.Enabled = false
 		trail.Parent = blade
 	end
+end
 
-	return handle :: BasePart, blade
+-- Devuelve la empuñadura ("Handle") y la hoja principal ("Blade").
+-- Las espadas dobles llevan la segunda en un Model "OffHand" con raíz "OffHandle", para soldarla a la mano izquierda.
+function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale: number, anchored: boolean): (BasePart, BasePart)
+	local def = Config.Swords[level]
+	local kind = def.kind or "sword"
+	local style = look(def)
+	local add = builder(parent, origin, scale, anchored)
+
+	local handle, blade
+	if kind == "axe" then
+		handle, blade = axe(add, def, style)
+	elseif kind == "spear" then
+		handle, blade = spear(add, def, style)
+	else
+		handle, blade = sword(add, def, style, "Handle")
+	end
+	effects(blade, def, style, scale, anchored)
+
+	if kind == "dual" then
+		local offHand = Instance.new("Model")
+		offHand.Name = "OffHand"
+		offHand.Parent = parent
+		-- En el expositor se enseña al lado de la primera; en la mano la coloca la soldadura.
+		local offOrigin = origin * CFrame.new(0, 0, 2.2 * scale) * CFrame.Angles(math.rad(12), 0, 0)
+		local _, offBlade = sword(builder(offHand, offOrigin, scale, anchored), def, style, "OffHandle")
+		effects(offBlade, def, style, scale, anchored)
+	end
+
+	return handle, blade
 end
 
 return SwordModel

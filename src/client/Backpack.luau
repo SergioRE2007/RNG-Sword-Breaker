@@ -55,11 +55,26 @@ local function grid(parent: Instance, position: UDim2, size: UDim2): ScrollingFr
 	return scroll
 end
 
+-- Puesto de cada arma de Config.Swords por daño (1 = la más floja), para ordenar el inventario.
+local damageRank = {}
+do
+	local order = {}
+	for index in Config.Swords do
+		table.insert(order, index)
+	end
+	table.sort(order, function(a, b)
+		return Config.Swords[a].damage < Config.Swords[b].damage
+	end)
+	for rank, index in order do
+		damageRank[index] = rank
+	end
+end
+
 local function swordTip(copy): (string, Color3)
 	local sword = Config.Swords[copy.sword]
 	local trait = Config.Traits[copy.trait]
 	local tier = Rarity.tier(sword.rarity)
-	local lines = { sword.name, `<font color="{hex(tier.color)}">{tier.name}</font>` }
+	local lines = { sword.name, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
 	if trait then
 		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo: {trait.name}</font>`)
 	end
@@ -253,8 +268,8 @@ function Backpack.start()
 			local trait = Config.Traits[copy.trait]
 			local cell = Ui.cell(swordGrid, Rarity.tier(sword.rarity).color)
 			cell.Name = "Sword" .. copy.id
-			-- Las mejores primero: por tipo y, a igualdad, por rasgo.
-			cell.LayoutOrder = -(copy.sword * 1000 + copy.trait)
+			-- Las mejores primero: por daño del arma y, a igualdad, por rasgo.
+			cell.LayoutOrder = -(damageRank[copy.sword] * 1000 + copy.trait)
 			Ui.swordIcon(cell, sword.color)
 			Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
 			if copy.id == equippedId then

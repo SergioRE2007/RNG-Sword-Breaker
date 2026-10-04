@@ -244,8 +244,20 @@ function Scenery.start()
 
 	-- Expositor del hub: las espadas más raras, en círculo alrededor del gacha.
 	local shown = 6
+	local rarest = {}
+	for level, sword in Config.Swords do
+		if sword.rarity then
+			table.insert(rarest, level)
+		end
+	end
+	table.sort(rarest, function(a, b)
+		return Config.Swords[a].rarity < Config.Swords[b].rarity
+	end)
 	ring(shown, cfg.HubRadius * 0.55, 0.5, function(position, index)
-		showcase(folder, position, #Config.Swords - shown + index)
+		local level = rarest[#rarest - shown + index]
+		if level then
+			showcase(folder, position, level)
+		end
 	end)
 
 	-- Palmeras, arbustos y rocas entre las parcelas (huecos del anillo).
