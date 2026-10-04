@@ -68,10 +68,11 @@ function Ui.bevel(instance: GuiObject)
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, WHITE),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(225, 225, 225)),
-		ColorSequenceKeypoint.new(0.85, Color3.fromRGB(205, 205, 205)),
-		ColorSequenceKeypoint.new(0.86, Color3.fromRGB(135, 135, 135)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(135, 135, 135)),
+		ColorSequenceKeypoint.new(0.44, Color3.fromRGB(238, 238, 238)),
+		ColorSequenceKeypoint.new(0.45, Color3.fromRGB(206, 206, 206)),
+		ColorSequenceKeypoint.new(0.85, Color3.fromRGB(190, 190, 190)),
+		ColorSequenceKeypoint.new(0.86, Color3.fromRGB(125, 125, 125)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(115, 115, 115)),
 	})
 	gradient.Parent = instance
 end
@@ -97,10 +98,10 @@ function Ui.button(parent: Instance, text: string, color: Color3): TextButton
 	item.TextWrapped = true
 	item.Text = text
 	item.Parent = parent
-	Ui.round(item, 10)
+	Ui.round(item, 12)
 	Ui.bevel(item)
-	Ui.stroke(item, BLACK, 2.5)
-	Ui.textStroke(item, 1.5)
+	Ui.stroke(item, BLACK, 3)
+	Ui.textStroke(item, 2)
 	return item
 end
 
@@ -152,7 +153,28 @@ function Ui.window(name: string, title: string, size: Vector2)
 	header.BorderSizePixel = 0
 	header.Parent = frame
 	Ui.round(header, 14)
-	Ui.gradient(header, Color3.fromRGB(70, 150, 255), Color3.fromRGB(150, 90, 240), 0)
+	local headerColors = Instance.new("UIGradient")
+	headerColors.Rotation = 8
+	headerColors.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 170, 255)),
+		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(125, 105, 250)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 95, 235)),
+	})
+	headerColors.Parent = header
+
+	-- Brillo en la mitad de arriba de la cabecera.
+	local headerGloss = Instance.new("Frame")
+	headerGloss.Name = "Gloss"
+	headerGloss.Position = UDim2.fromOffset(6, 5)
+	headerGloss.Size = UDim2.new(1, -12, 0.45, 0)
+	headerGloss.BackgroundColor3 = WHITE
+	headerGloss.BorderSizePixel = 0
+	headerGloss.Parent = header
+	Ui.round(headerGloss, 10)
+	local headerFade = Instance.new("UIGradient")
+	headerFade.Rotation = 90
+	headerFade.Transparency = NumberSequence.new(0.68, 0.95)
+	headerFade.Parent = headerGloss
 
 	local heading = Ui.label(header, 32)
 	heading.Position = UDim2.fromOffset(20, 0)
@@ -178,7 +200,7 @@ function Ui.window(name: string, title: string, size: Vector2)
 	body.Parent = frame
 	Ui.round(body, 10)
 	Ui.stroke(body, Ui.COLORS.dark, 3)
-	Ui.gradient(body, WHITE, Color3.fromRGB(190, 190, 205), 90)
+	Ui.gradient(body, WHITE, Color3.fromRGB(140, 140, 170), 90)
 
 	windows[name] = frame
 	return frame, body
@@ -210,17 +232,147 @@ end
 
 -- Casillas ------------------------------------------------------------------------------
 
+-- Marcos animados de las casillas según el nivel de rareza (posición en Config.RarityTiers):
+-- un brillo da vueltas por el borde, a la misma velocidad en todas (pedido por el usuario).
+local SHINE_SPEED = 90 -- grados por segundo
+local PULSE_FROM = 5 -- desde aquí el marco lleva además un halo que late
+-- Las más raras llevan el borde de dos tonos (su color y este otro) con destellos blancos.
+local DUO_TONES = {
+	[7] = Color3.fromRGB(110, 60, 255), -- Secreta: rosa y violeta
+	[8] = Color3.fromRGB(110, 175, 255), -- Divina: celeste y azul claro
+}
+
+local shines = {} -- [UIGradient del borde] = { speed, halo, phase }
+local shining = false
+
+local function animateShines(dt: number)
+	local now = os.clock()
+	for gradient, info in shines do
+		gradient.Rotation = (gradient.Rotation + info.speed * dt) % 360
+		if info.halo then
+			info.halo.Transparency = 0.45 + 0.35 * math.sin(now * 4 + info.phase)
+		end
+	end
+end
+
+local function shineColors(color: Color3, tier: number): ColorSequence
+	local tone = DUO_TONES[tier]
+	if tone then
+		return ColorSequence.new({
+			ColorSequenceKeypoint.new(0, tone),
+			ColorSequenceKeypoint.new(0.22, color),
+			ColorSequenceKeypoint.new(0.3, WHITE),
+			ColorSequenceKeypoint.new(0.38, color),
+			ColorSequenceKeypoint.new(0.5, tone),
+			ColorSequenceKeypoint.new(0.72, color),
+			ColorSequenceKeypoint.new(0.8, WHITE),
+			ColorSequenceKeypoint.new(0.88, color),
+			ColorSequenceKeypoint.new(1, tone),
+		})
+	end
+	local dark = color:Lerp(BLACK, 0.45)
+	return ColorSequence.new({
+		ColorSequenceKeypoint.new(0, dark),
+		ColorSequenceKeypoint.new(0.35, color),
+		ColorSequenceKeypoint.new(0.5, color:Lerp(WHITE, 0.8)),
+		ColorSequenceKeypoint.new(0.65, color),
+		ColorSequenceKeypoint.new(1, dark),
+	})
+end
+
 -- Casilla cuadrada con borde del color que se le pase (la rareza). El tamaño lo pone quien la usa.
-function Ui.cell(parent: Instance, color: Color3): TextButton
+-- Con `tier` (nivel de rareza, 2 o más) el marco se anima.
+function Ui.cell(parent: Instance, color: Color3, tier: number?): TextButton
 	local cell = Instance.new("TextButton")
 	cell.Text = ""
 	cell.AutoButtonColor = false
 	cell.BackgroundColor3 = color
 	cell.Parent = parent
 	Ui.round(cell, 10)
-	Ui.stroke(cell, color, 3)
-	-- Fondo oscuro teñido del color de la rareza, más claro arriba.
-	Ui.gradient(cell, Color3.fromRGB(95, 95, 105), Color3.fromRGB(28, 28, 36), 90)
+	-- Fondo teñido del color de la rareza: claro en la esquina de arriba y casi negro abajo.
+	local back = Instance.new("UIGradient")
+	back.Rotation = 115
+	back.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 170, 180)),
+		ColorSequenceKeypoint.new(0.45, Color3.fromRGB(80, 80, 92)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 18, 26)),
+	})
+	back.Parent = cell
+
+	-- Canto negro por dentro del marco, para que el borde de color destaque.
+	local rim = Instance.new("Frame")
+	rim.Name = "Rim"
+	rim.Position = UDim2.fromOffset(2, 2)
+	rim.Size = UDim2.new(1, -4, 1, -4)
+	rim.BackgroundTransparency = 1
+	rim.Parent = cell
+	Ui.round(rim, 8)
+	Ui.stroke(rim, BLACK, 2)
+
+	-- Brillo de cristal en la mitad de arriba.
+	local gloss = Instance.new("Frame")
+	gloss.Name = "Gloss"
+	gloss.Position = UDim2.fromOffset(4, 4)
+	gloss.Size = UDim2.new(1, -8, 0.42, 0)
+	gloss.BackgroundColor3 = WHITE
+	gloss.BorderSizePixel = 0
+	gloss.Parent = cell
+	Ui.round(gloss, 7)
+	local glossFade = Instance.new("UIGradient")
+	glossFade.Rotation = 90
+	glossFade.Transparency = NumberSequence.new(0.8, 1)
+	glossFade.Parent = gloss
+
+	-- Sombra abajo, detrás del texto de la casilla.
+	local shade = Instance.new("Frame")
+	shade.Name = "Shade"
+	shade.AnchorPoint = Vector2.new(0, 1)
+	shade.Position = UDim2.new(0, 4, 1, -4)
+	shade.Size = UDim2.new(1, -8, 0.42, 0)
+	shade.BackgroundColor3 = BLACK
+	shade.BorderSizePixel = 0
+	shade.ZIndex = 3
+	shade.Parent = cell
+	Ui.round(shade, 7)
+	local shadeFade = Instance.new("UIGradient")
+	shadeFade.Rotation = 90
+	shadeFade.Transparency = NumberSequence.new(1, 0.4)
+	shadeFade.Parent = shade
+
+	local level = tier or 1
+	if level < 2 then
+		Ui.stroke(cell, color, 4)
+	else
+		-- El degradado tiñe el borde, así que el borde va en blanco.
+		local border = Ui.stroke(cell, WHITE, 6)
+		local shine = Instance.new("UIGradient")
+		shine.Color = shineColors(color, level)
+		shine.Rotation = math.random(0, 359)
+		shine.Parent = border
+
+		local halo = nil
+		if level >= PULSE_FROM then
+			local aura = Instance.new("Frame")
+			aura.Name = "Halo"
+			-- Por fuera del borde (6 px), sin llegar a la casilla de al lado.
+			aura.Position = UDim2.fromOffset(-6, -6)
+			aura.Size = UDim2.new(1, 12, 1, 12)
+			aura.BackgroundTransparency = 1
+			aura.ZIndex = 0
+			aura.Parent = cell
+			Ui.round(aura, 15)
+			halo = Ui.stroke(aura, color:Lerp(WHITE, 0.3), 2)
+		end
+
+		shines[shine] = { speed = SHINE_SPEED, halo = halo, phase = math.random() * 6 }
+		cell.Destroying:Connect(function()
+			shines[shine] = nil
+		end)
+		if not shining then
+			shining = true
+			RunService.RenderStepped:Connect(animateShines)
+		end
+	end
 
 	local glow = Instance.new("Frame")
 	glow.Name = "Select"
@@ -349,6 +501,7 @@ end
 -- Cartel flotante --------------------------------------------------------------------------
 
 local tip, tipStroke, tipSource
+local tipBeside = false
 
 local function ensureTip()
 	if tip then
@@ -393,23 +546,35 @@ local function ensureTip()
 		local view = workspace.CurrentCamera.ViewportSize
 		local size = tip.AbsoluteSize
 		local x = mouse.X + 18
+		local top = mouse.Y + 14
 		if x + size.X > view.X - 8 then
 			x = mouse.X - size.X - 12
 		end
-		local y = math.clamp(mouse.Y + 14, 0, math.max(0, view.Y - size.Y - 50))
+		if tipBeside then
+			-- Pegado al lado de la casilla, para no tapar lo que se está mirando.
+			local corner, box = tipSource.AbsolutePosition, tipSource.AbsoluteSize
+			x = corner.X + box.X + 10
+			if x + size.X > view.X - 8 then
+				x = corner.X - size.X - 10
+			end
+			top = corner.Y
+		end
+		local y = math.clamp(top, 0, math.max(0, view.Y - size.Y - 50))
 		tip.Position = UDim2.fromOffset(x, y)
 	end)
 end
 
 -- Al pasar el ratón por `target` muestra un cartel con lo que devuelva getContent(): texto
--- (RichText, varias líneas) y color del borde.
-function Ui.tip(target: GuiObject, getContent: () -> (string, Color3))
+-- (RichText, varias líneas) y color del borde. Con `beside` el cartel se pega al lado de `target`
+-- en vez de seguir al ratón.
+function Ui.tip(target: GuiObject, getContent: () -> (string, Color3), beside: boolean?)
 	ensureTip()
 	target.MouseEnter:Connect(function()
 		local text, color = getContent()
 		tip.Text = text
 		tipStroke.Color = color
 		tipSource = target
+		tipBeside = beside == true
 		tip.Visible = true
 	end)
 	target.MouseLeave:Connect(function()

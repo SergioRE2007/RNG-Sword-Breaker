@@ -206,6 +206,21 @@ local function load(player: Player)
 		canSave = false
 	end
 
+	-- Modo de pruebas (solo en Studio): una copia de cada arma que aún no tenga, también sin guardar.
+	if RunService:IsStudio() and Config.Test.AllWeapons then
+		local owned = {}
+		for _, copy in data.swords do
+			owned[copy.sword] = true
+		end
+		for index in Config.Swords do
+			if not owned[index] then
+				table.insert(data.swords, { id = data.nextSwordId, sword = index })
+				data.nextSwordId += 1
+			end
+		end
+		canSave = false
+	end
+
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	local coins = Instance.new("NumberValue") -- un IntValue se desborda con cantidades enormes

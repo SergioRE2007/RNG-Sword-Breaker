@@ -180,7 +180,12 @@ local function spear(add: Add, def, style): (BasePart, BasePart)
 end
 
 -- Luz y chispas en las armas que brillan, y la estela del tajo (el cliente la enciende mientras dura el golpe).
-local function effects(blade: BasePart, def, style, scale: number, anchored: boolean)
+local function effects(blade: BasePart, level: number, def, style, scale: number, anchored: boolean)
+	-- El aura la pone cada cliente (client/WeaponAura) en las hojas marcadas con esta etiqueta.
+	blade:SetAttribute("Level", level)
+	blade:SetAttribute("Scale", scale)
+	blade:AddTag("WeaponAura")
+
 	if style.glowing then
 		local light = Instance.new("PointLight")
 		light.Color = def.color
@@ -241,7 +246,7 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 	else
 		handle, blade = sword(add, def, style, "Handle")
 	end
-	effects(blade, def, style, scale, anchored)
+	effects(blade, level, def, style, scale, anchored)
 
 	if kind == "dual" then
 		local offHand = Instance.new("Model")
@@ -250,7 +255,7 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 		-- En el expositor se enseña al lado de la primera; en la mano la coloca la soldadura.
 		local offOrigin = origin * CFrame.new(0, 0, 2.2 * scale) * CFrame.Angles(math.rad(12), 0, 0)
 		local _, offBlade = sword(builder(offHand, offOrigin, scale, anchored), def, style, "OffHandle")
-		effects(offBlade, def, style, scale, anchored)
+		effects(offBlade, level, def, style, scale, anchored)
 	end
 
 	return handle, blade
