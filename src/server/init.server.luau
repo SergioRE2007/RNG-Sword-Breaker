@@ -1,0 +1,17 @@
+-- Arranque del servidor: cada sistema es un módulo hijo con una función start().
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+require(ReplicatedStorage.Shared.Remotes) -- crea los RemoteEvents antes de que nadie los use
+
+require(script.CollisionGroups).start()
+require(script.PlayerData).start()
+require(script.Plots).start()
+require(script.Scenery).start()
+require(script.Destructibles).start()
+require(script.Movement).start()
+require(script.Swords).start()
+require(script.Gacha).start()
+require(script.Traits).start()
+require(script.Gear).start()
+require(script.Combat).start()
+require(script.Shop).start()
