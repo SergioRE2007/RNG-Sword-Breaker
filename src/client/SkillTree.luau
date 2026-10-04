@@ -1,7 +1,6 @@
 -- Árbol de mejoras: pantalla completa con el espacio de fondo y las mejoras como una galaxia de hexágonos.
 -- Cada mejora de Config.Upgrades es un brazo en espiral que sale del nodo de inicio y cada nivel es un nodo,
 -- unidos por líneas como una constelación; se compran en orden. Se arrastra para moverse y se puede acercar.
-local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -250,9 +249,8 @@ function SkillTree.start()
 	overlay.Visible = false
 	overlay.ZIndex = Z_BACK
 
-	-- Va en su propia pantalla: así tapa también la franja de arriba de Roblox (la del Hud no puede)
-	-- y queda entera por debajo de los contadores y el menú.
-	local top = 0 -- lo que mide esa franja; se mide al abrir (al arrancar aún vale 0) y los carteles de arriba se bajan eso
+	-- Va en su propia pantalla, por debajo de la del Hud: así queda entera detrás de los contadores y el menú.
+	-- Como la del Hud, ocupa también la franja de arriba de Roblox.
 	local screen = Instance.new("ScreenGui")
 	screen.Name = "UpgradesScreen"
 	screen.ResetOnSpawn = false
@@ -297,14 +295,14 @@ function SkillTree.start()
 
 	local heading = Ui.label(overlay, 30)
 	heading.AnchorPoint = Vector2.new(0.5, 0)
-	heading.Position = UDim2.new(0.5, 0, 0, top + 100)
+	heading.Position = UDim2.new(0.5, 0, 0, 100)
 	heading.Size = UDim2.fromOffset(520, 34)
 	heading.Text = "Árbol de mejoras"
 	heading.ZIndex = Z_FRONT
 	Ui.gradient(heading, WHITE, Color3.fromRGB(170, 190, 255), 90)
 	local hint = Ui.label(overlay, 16)
 	hint.AnchorPoint = Vector2.new(0.5, 0)
-	hint.Position = UDim2.new(0.5, 0, 0, top + 134)
+	hint.Position = UDim2.new(0.5, 0, 0, 134)
 	hint.Size = UDim2.fromOffset(620, 22)
 	hint.Text = `<font color="{Ui.SOFT}">Arrastra para moverte · rueda o botones para acercar</font>`
 	hint.ZIndex = Z_FRONT
@@ -336,7 +334,7 @@ function SkillTree.start()
 	local summary = Instance.new("Frame")
 	summary.Name = "Summary"
 	summary.AnchorPoint = Vector2.new(1, 0)
-	summary.Position = UDim2.new(1, -16, 0, top + 100)
+	summary.Position = UDim2.new(1, -16, 0, 100)
 	summary.Size = UDim2.fromOffset(290, 16 + #Config.UpgradeOrder * 40)
 	summary.BackgroundColor3 = WHITE
 	summary.BorderSizePixel = 0
@@ -431,8 +429,7 @@ function SkillTree.start()
 			place()
 		elseif input.UserInputType == Enum.UserInputType.MouseWheel then
 			local center = overlay.AbsolutePosition + overlay.AbsoluteSize / 2
-			-- La posición del ratón no cuenta la franja de arriba; esta pantalla sí.
-			setZoom(zoom * 1.15 ^ input.Position.Z, Vector2.new(input.Position.X, input.Position.Y + top) - center)
+			setZoom(zoom * 1.15 ^ input.Position.Z, Vector2.new(input.Position.X, input.Position.Y) - center)
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
@@ -628,10 +625,6 @@ function SkillTree.start()
 
 	overlay:GetPropertyChangedSignal("Visible"):Connect(function()
 		if overlay.Visible then
-			top = GuiService:GetGuiInset().Y
-			heading.Position = UDim2.new(0.5, 0, 0, top + 100)
-			hint.Position = UDim2.new(0.5, 0, 0, top + 134)
-			summary.Position = UDim2.new(1, -16, 0, top + 100)
 			refresh()
 			if not animation then
 				animation = RunService.RenderStepped:Connect(animate)

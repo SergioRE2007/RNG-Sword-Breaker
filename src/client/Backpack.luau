@@ -74,6 +74,8 @@ do
 	end
 end
 
+-- Cartel de una copia de espada (nombre, rareza, tipo, rasgo, grado, daño). También lo usan
+-- las tiendas de Rasgos y Grados (Backpack.swordTip).
 local function swordTip(copy): (string, Color3)
 	local sword = Config.Swords[copy.sword]
 	local trait = Config.Traits[copy.trait]
@@ -123,7 +125,7 @@ function Backpack.start()
 		tab.Name = "Tab" .. name
 		tab.Position = UDim2.fromOffset(-108, 66 + (order - 1) * 78)
 		tab.Size = UDim2.fromOffset(96, 66)
-		tab.TextSize = 18
+		tab.TextSize = 21
 		tabs[name] = { button = tab, stroke = tab:FindFirstChildOfClass("UIStroke") }
 		tab.Activated:Connect(function()
 			show(name)
@@ -133,7 +135,7 @@ function Backpack.start()
 	-- Espadas ---------------------------------------------------------------------------
 	local swordsPane = panes.Swords
 
-	local autoText = Ui.label(swordsPane, 16)
+	local autoText = Ui.label(swordsPane, 19)
 	autoText.Position = UDim2.fromOffset(12, 8)
 	autoText.Size = UDim2.fromOffset(330, 34)
 	autoText.TextXAlignment = Enum.TextXAlignment.Left
@@ -148,7 +150,7 @@ function Backpack.start()
 	autoBox.PlaceholderColor3 = Color3.fromRGB(140, 145, 165)
 	autoBox.PlaceholderText = "no vender"
 	autoBox.Font = Ui.FONT
-	autoBox.TextSize = 17
+	autoBox.TextSize = 20
 	autoBox.ClearTextOnFocus = false
 	autoBox.Parent = swordsPane
 	Ui.round(autoBox, 8)
@@ -163,7 +165,7 @@ function Backpack.start()
 		autoBox.Text = if shown > 0 then Format.short(shown) else ""
 	end)
 
-	local count = Ui.label(swordsPane, 21)
+	local count = Ui.label(swordsPane, 24)
 	count.Name = "Count"
 	count.AnchorPoint = Vector2.new(1, 0)
 	count.Position = UDim2.new(1, -12, 0, 6)
@@ -189,7 +191,7 @@ function Backpack.start()
 	Ui.stroke(bar, Color3.new(0, 0, 0), 2)
 	Ui.gradient(bar, Color3.fromRGB(58, 52, 96), Color3.fromRGB(20, 20, 34), 90)
 
-	local detail = Ui.label(swordsPane, 16)
+	local detail = Ui.label(swordsPane, 19)
 	detail.Name = "Detail"
 	detail.AnchorPoint = Vector2.new(0, 1)
 	detail.Position = UDim2.new(0, 12, 1, -8)
@@ -210,7 +212,7 @@ function Backpack.start()
 	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 308, 104)
 	bestButton.TextSize = 23
 	equipButton.TextSize = 20
-	sellButton.TextSize = 15
+	sellButton.TextSize = 17
 
 	local selected = nil -- id de la copia elegida
 	local swordCells = {} -- [id] = casilla
@@ -416,7 +418,7 @@ function Backpack.start()
 	end
 	onShow.Gear = showCharacter
 
-	local gearHint = Ui.label(gearPane, 15)
+	local gearHint = Ui.label(gearPane, 18)
 	gearHint.Position = UDim2.fromOffset(400, 8)
 	gearHint.Size = UDim2.new(1, -412, 0, 34)
 	gearHint.TextXAlignment = Enum.TextXAlignment.Left
@@ -503,5 +505,7 @@ function Backpack.start()
 	show("Swords")
 	refresh()
 end
+
+Backpack.swordTip = swordTip
 
 return Backpack

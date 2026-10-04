@@ -1,6 +1,10 @@
 -- Piezas comunes de la interfaz: estilo (degradados, bordes, botones con relieve), ventanas,
 -- casillas cuadradas con icono, cartel flotante al pasar el ratón y avisos en pantalla.
--- No tiene start(): lo usan Hud y Backpack.
+-- No tiene start(): lo usan Hud, Backpack, GachaRoll, ModifierShops y SkillTree.
+-- Notas: la pantalla "Hud" ignora la franja de arriba de Roblox (IgnoreGuiInset), así que las
+-- posiciones cuentan desde el borde real de la pantalla (igual que GetMouseLocation), pero
+-- AbsolutePosition sigue contando desde debajo de la franja (hay que sumar GetGuiInset). Las capas
+-- se ordenan globalmente: un hijo con menos ZIndex que su padre queda tapado por él.
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -111,6 +115,8 @@ function Ui.screen(): ScreenGui
 		gui = Instance.new("ScreenGui")
 		gui.Name = "Hud"
 		gui.ResetOnSpawn = false
+		-- Usa también la franja de arriba (donde Roblox pone sus botones a la izquierda).
+		gui.IgnoreGuiInset = true
 		gui.Parent = player:WaitForChild("PlayerGui")
 	end
 	return gui
@@ -119,40 +125,147 @@ end
 -- Ventanas ------------------------------------------------------------------------------
 
 local windows = {} -- [nombre] = Frame
+local MAX_WINDOW_SCALE = 1.22 -- las ventanas crecen hasta aquí en pantallas grandes
 
--- Ventana con cabecera degradada, título y botón de cerrar. Devuelve el marco y el cuerpo
--- (donde va el contenido). En pantallas pequeñas se encoge sola.
+-- Brillos que cruzan los títulos de las ventanas (los mueve un solo bucle).
+local shines = {}
+RunService.RenderStepped:Connect(function()
+	local now = os.clock()
+	for gradient, phase in shines do
+		if gradient.Parent then
+			-- Pasa de izquierda a derecha cada 3 s y espera un poco fuera.
+			gradient.Offset = Vector2.new(((now + phase) % 3) / 1.5 - 1, 0)
+		else
+			shines[gradient] = nil
+		end
+	end
+end)
+
+-- Rayas diagonales muy suaves sobre un marco de `size` píxeles (que no se vea plano). Son marcos
+-- girados calculados para que no se salgan del rectángulo (el recorte no funciona con giros).
+-- Hay que ponerlas antes que el contenido: la interfaz ordena las capas globalmente y, a igual
+-- ZIndex, se pinta antes lo que se creó antes.
+function Ui.stripes(parent: GuiObject, size: Vector2, spacing: number, transparency: number, zIndex: number?)
+	local holder = Instance.new("Frame")
+	holder.Name = "Stripes"
+	holder.Size = UDim2.fromScale(1, 1)
+	holder.BackgroundTransparency = 1
+	holder.ZIndex = zIndex or 1
+	holder.Parent = parent
+	local width, height = size.X, size.Y
+	-- Líneas x + y = c (45°), de c = spacing a c = width + height.
+	for c = spacing, width + height - spacing, spacing do
+		local x1, y1 = math.max(0, c - height), math.min(height, c)
+		local x2, y2 = math.min(width, c), math.max(0, c - width)
+		local length = math.sqrt((x2 - x1) ^ 2 + (y2 - y1) ^ 2)
+		if length > 8 then
+			local line = Instance.new("Frame")
+			line.AnchorPoint = Vector2.new(0.5, 0.5)
+			line.Position = UDim2.fromOffset((x1 + x2) / 2, (y1 + y2) / 2)
+			line.Size = UDim2.fromOffset(length, spacing * 0.35)
+			line.Rotation = -45
+			line.BackgroundColor3 = WHITE
+			line.BackgroundTransparency = transparency
+			line.BorderSizePixel = 0
+			line.ZIndex = zIndex or 1
+			line.Parent = holder
+		end
+	end
+	return holder
+end
+
+-- Cuadros claros alternos (como las cabeceras de la captura de referencia), sin salirse del marco.
+local function checker(parent: GuiObject, size: Vector2, cell: number, inset: number)
+	local holder = Instance.new("Frame")
+	holder.Name = "Checker"
+	holder.Position = UDim2.fromOffset(inset, 0)
+	holder.Size = UDim2.new(1, -inset * 2, 1, 0)
+	holder.BackgroundTransparency = 1
+	holder.ClipsDescendants = true
+	holder.Parent = parent
+	for row = 0, math.ceil(size.Y / cell) - 1 do
+		for column = 0, math.ceil((size.X - inset * 2) / cell) - 1 do
+			if (row + column) % 2 == 0 then
+				local square = Instance.new("Frame")
+				square.Position = UDim2.fromOffset(column * cell, row * cell)
+				square.Size = UDim2.fromOffset(cell, cell)
+				square.BackgroundColor3 = WHITE
+				square.BackgroundTransparency = 0.88
+				square.BorderSizePixel = 0
+				square.Parent = holder
+			end
+		end
+	end
+end
+
+-- Ventana centrada con sombra, cabecera degradada a cuadros con brillo y título que destella,
+-- botón de cerrar y cuerpo con rayas diagonales suaves. Devuelve el marco y el cuerpo (donde
+-- va el contenido). En pantallas pequeñas se encoge sola.
 function Ui.window(name: string, title: string, size: Vector2)
 	local frame = Instance.new("Frame")
 	frame.Name = name
-	frame.AnchorPoint = Vector2.new(0.5, 0)
-	frame.Position = UDim2.new(0.5, 0, 0, 108)
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
 	frame.Size = UDim2.fromOffset(size.X, size.Y)
-	frame.BackgroundColor3 = Ui.COLORS.panel
+	frame.BackgroundColor3 = WHITE
 	frame.BorderSizePixel = 0
 	frame.Visible = false
 	frame.Parent = Ui.screen()
-	Ui.round(frame, 14)
+	Ui.round(frame, 16)
 	Ui.stroke(frame, BLACK, 5)
+	Ui.gradient(frame, Color3.fromRGB(52, 56, 74), Color3.fromRGB(24, 25, 34), 90)
+
+	-- Sombra detrás de la ventana: va aparte (los hijos se pintan encima) y la sigue.
+	local shadow = Instance.new("Frame")
+	shadow.Name = name .. "Shadow"
+	shadow.AnchorPoint = frame.AnchorPoint
+	shadow.Position = frame.Position + UDim2.fromOffset(8, 10)
+	shadow.Size = frame.Size
+	shadow.BackgroundColor3 = BLACK
+	shadow.BackgroundTransparency = 0.55
+	shadow.BorderSizePixel = 0
+	shadow.Visible = false
+	shadow.ZIndex = 0
+	shadow.Parent = Ui.screen()
+	Ui.round(shadow, 18)
+	frame:GetPropertyChangedSignal("Visible"):Connect(function()
+		shadow.Visible = frame.Visible
+	end)
+
+	-- Bisel: una línea clara por dentro del borde.
+	local rim = Instance.new("Frame")
+	rim.Name = "Rim"
+	rim.Position = UDim2.fromOffset(3, 3)
+	rim.Size = UDim2.new(1, -6, 1, -6)
+	rim.BackgroundTransparency = 1
+	rim.Parent = frame
+	Ui.round(rim, 13)
+	local rimStroke = Ui.stroke(rim, WHITE, 2)
+	rimStroke.Transparency = 0.82
 
 	local scale = Instance.new("UIScale")
 	scale.Parent = frame
+	local shadowScale = Instance.new("UIScale")
+	shadowScale.Parent = shadow
 	local camera = workspace.CurrentCamera
 	local function fit()
 		local view = camera.ViewportSize
-		-- Deja sitio a la izquierda para el menú y las pestañas.
-		scale.Scale = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 125) / size.Y), 0.45, 1)
+		-- Deja sitio a la izquierda para el menú y, como va centrada, arriba y abajo para los
+		-- contadores (que llegan a ~100 px del borde).
+		-- Hasta un 22 % más grande que su tamaño de diseño si la pantalla da para ello.
+		scale.Scale = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, MAX_WINDOW_SCALE)
+		shadowScale.Scale = scale.Scale
 	end
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 	fit()
 
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, 56)
+	header.Size = UDim2.new(1, 0, 0, 58)
 	header.BackgroundColor3 = WHITE
 	header.BorderSizePixel = 0
 	header.Parent = frame
-	Ui.round(header, 14)
+	Ui.round(header, 16)
 	local headerColors = Instance.new("UIGradient")
 	headerColors.Rotation = 8
 	headerColors.Color = ColorSequence.new({
@@ -161,46 +274,69 @@ function Ui.window(name: string, title: string, size: Vector2)
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 95, 235)),
 	})
 	headerColors.Parent = header
+	checker(header, Vector2.new(size.X, 58), 14, 14)
+	local gloss = Instance.new("Frame")
+	gloss.Name = "Gloss"
+	gloss.Position = UDim2.fromOffset(8, 3)
+	gloss.Size = UDim2.new(1, -16, 0.42, 0)
+	gloss.BackgroundColor3 = WHITE
+	gloss.BorderSizePixel = 0
+	gloss.Parent = header
+	Ui.round(gloss, 10)
+	local fade = Instance.new("UIGradient")
+	fade.Rotation = 90
+	fade.Transparency = NumberSequence.new(0.68, 0.95)
+	fade.Parent = gloss
+	-- Franja oscura bajo la cabecera, para separarla del cuerpo.
+	local edge = Instance.new("Frame")
+	edge.Name = "Edge"
+	edge.AnchorPoint = Vector2.new(0, 1)
+	edge.Position = UDim2.fromScale(0, 1)
+	edge.Size = UDim2.new(1, 0, 0, 4)
+	edge.BackgroundColor3 = BLACK
+	edge.BackgroundTransparency = 0.5
+	edge.BorderSizePixel = 0
+	edge.Parent = header
 
-	-- Brillo en la mitad de arriba de la cabecera.
-	local headerGloss = Instance.new("Frame")
-	headerGloss.Name = "Gloss"
-	headerGloss.Position = UDim2.fromOffset(6, 5)
-	headerGloss.Size = UDim2.new(1, -12, 0.45, 0)
-	headerGloss.BackgroundColor3 = WHITE
-	headerGloss.BorderSizePixel = 0
-	headerGloss.Parent = header
-	Ui.round(headerGloss, 10)
-	local headerFade = Instance.new("UIGradient")
-	headerFade.Rotation = 90
-	headerFade.Transparency = NumberSequence.new(0.68, 0.95)
-	headerFade.Parent = headerGloss
-
-	local heading = Ui.label(header, 32)
-	heading.Position = UDim2.fromOffset(20, 0)
+	local heading = Ui.label(header, 34)
+	heading.Name = "Title"
+	heading.Position = UDim2.fromOffset(22, 0)
 	heading.Size = UDim2.new(1, -90, 1, 0)
 	heading.TextXAlignment = Enum.TextXAlignment.Left
 	heading.Text = title
+	heading.ZIndex = 3
+	local shine = Instance.new("UIGradient")
+	shine.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, WHITE),
+		ColorSequenceKeypoint.new(0.42, WHITE),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 240, 150)),
+		ColorSequenceKeypoint.new(0.58, WHITE),
+		ColorSequenceKeypoint.new(1, WHITE),
+	})
+	shine.Parent = heading
+	shines[shine] = math.random() * 3
 
 	local close = Ui.button(header, "X", Ui.COLORS.red)
 	close.AnchorPoint = Vector2.new(1, 0)
 	close.Position = UDim2.new(1, 0, 0, 0)
-	close.Size = UDim2.fromOffset(60, 56)
+	close.Size = UDim2.fromOffset(60, 58)
 	close.TextSize = 30
+	close.ZIndex = 3
 	close.Activated:Connect(function()
 		frame.Visible = false
 	end)
 
 	local body = Instance.new("Frame")
 	body.Name = "Body"
-	body.Position = UDim2.fromOffset(10, 66)
-	body.Size = UDim2.new(1, -20, 1, -76)
-	body.BackgroundColor3 = Ui.COLORS.body
+	body.Position = UDim2.fromOffset(10, 68)
+	body.Size = UDim2.new(1, -20, 1, -78)
+	body.BackgroundColor3 = WHITE
 	body.BorderSizePixel = 0
 	body.Parent = frame
-	Ui.round(body, 10)
+	Ui.round(body, 12)
 	Ui.stroke(body, Ui.COLORS.dark, 3)
-	Ui.gradient(body, WHITE, Color3.fromRGB(140, 140, 170), 90)
+	Ui.gradient(body, Color3.fromRGB(62, 66, 86), Color3.fromRGB(34, 36, 48), 90)
+	Ui.stripes(body, Vector2.new(size.X - 20, size.Y - 78), 26, 0.95)
 
 	windows[name] = frame
 	return frame, body
@@ -397,8 +533,8 @@ function Ui.cellLabel(cell: Instance, text: string): TextLabel
 	label.Text = text
 	label.ZIndex = 3
 	local limit = Instance.new("UITextSizeConstraint")
-	limit.MaxTextSize = 18
-	limit.MinTextSize = 9
+	limit.MaxTextSize = 21
+	limit.MinTextSize = 10
 	limit.Parent = label
 	return label
 end
@@ -507,7 +643,7 @@ local function ensureTip()
 	if tip then
 		return
 	end
-	tip = Ui.label(Ui.screen(), 18)
+	tip = Ui.label(Ui.screen(), 21)
 	tip.Name = "Tip"
 	tip.BackgroundTransparency = 0.04
 	tip.BackgroundColor3 = Ui.COLORS.dark
@@ -542,7 +678,7 @@ local function ensureTip()
 			tip.Visible = false
 			return
 		end
-		local mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
+		local mouse = UserInputService:GetMouseLocation() -- la pantalla Hud ignora la franja de arriba
 		local view = workspace.CurrentCamera.ViewportSize
 		local size = tip.AbsoluteSize
 		local x = mouse.X + 18
@@ -552,7 +688,7 @@ local function ensureTip()
 		end
 		if tipBeside then
 			-- Pegado al lado de la casilla, para no tapar lo que se está mirando.
-			local corner, box = tipSource.AbsolutePosition, tipSource.AbsoluteSize
+			local corner, box = tipSource.AbsolutePosition + GuiService:GetGuiInset(), tipSource.AbsoluteSize
 			x = corner.X + box.X + 10
 			if x + size.X > view.X - 8 then
 				x = corner.X - size.X - 10
