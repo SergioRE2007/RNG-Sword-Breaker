@@ -9,6 +9,7 @@ local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
+local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local Backpack = {}
 
@@ -270,7 +271,7 @@ function Backpack.start()
 			cell.Name = "Sword" .. copy.id
 			-- Las mejores primero: por daño del arma y, a igualdad, por rasgo.
 			cell.LayoutOrder = -(damageRank[copy.sword] * 1000 + copy.trait)
-			Ui.swordIcon(cell, sword.color)
+			WeaponPreview.attach(cell, copy.sword, Rarity.tier(sword.rarity).color)
 			Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
 			if copy.id == equippedId then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
@@ -291,7 +292,7 @@ function Backpack.start()
 			end
 			Ui.tip(cell, function()
 				return swordTip(copy)
-			end)
+			end, true)
 			cell.Activated:Connect(function()
 				selected = copy.id
 				refreshSelection(Stats.swords(player), player:GetAttribute("Equipped") or 1, player:GetAttribute("Item_traitCrystal") or 0)

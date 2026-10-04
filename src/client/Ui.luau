@@ -349,6 +349,7 @@ end
 -- Cartel flotante --------------------------------------------------------------------------
 
 local tip, tipStroke, tipSource
+local tipBeside = false
 
 local function ensureTip()
 	if tip then
@@ -393,23 +394,35 @@ local function ensureTip()
 		local view = workspace.CurrentCamera.ViewportSize
 		local size = tip.AbsoluteSize
 		local x = mouse.X + 18
+		local top = mouse.Y + 14
 		if x + size.X > view.X - 8 then
 			x = mouse.X - size.X - 12
 		end
-		local y = math.clamp(mouse.Y + 14, 0, math.max(0, view.Y - size.Y - 50))
+		if tipBeside then
+			-- Pegado al lado de la casilla, para no tapar lo que se está mirando.
+			local corner, box = tipSource.AbsolutePosition, tipSource.AbsoluteSize
+			x = corner.X + box.X + 10
+			if x + size.X > view.X - 8 then
+				x = corner.X - size.X - 10
+			end
+			top = corner.Y
+		end
+		local y = math.clamp(top, 0, math.max(0, view.Y - size.Y - 50))
 		tip.Position = UDim2.fromOffset(x, y)
 	end)
 end
 
 -- Al pasar el ratón por `target` muestra un cartel con lo que devuelva getContent(): texto
--- (RichText, varias líneas) y color del borde.
-function Ui.tip(target: GuiObject, getContent: () -> (string, Color3))
+-- (RichText, varias líneas) y color del borde. Con `beside` el cartel se pega al lado de `target`
+-- en vez de seguir al ratón.
+function Ui.tip(target: GuiObject, getContent: () -> (string, Color3), beside: boolean?)
 	ensureTip()
 	target.MouseEnter:Connect(function()
 		local text, color = getContent()
 		tip.Text = text
 		tipStroke.Color = color
 		tipSource = target
+		tipBeside = beside == true
 		tip.Visible = true
 	end)
 	target.MouseLeave:Connect(function()
