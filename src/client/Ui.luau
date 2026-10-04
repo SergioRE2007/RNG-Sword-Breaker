@@ -233,11 +233,14 @@ end
 -- Casillas ------------------------------------------------------------------------------
 
 -- Marcos animados de las casillas según el nivel de rareza (posición en Config.RarityTiers):
--- un brillo da vueltas por el borde, más rápido cuanto más rara.
-local SHINE_SPEED = { 0, 40, 70, 100, 140, 190, 250, 320 } -- grados por segundo
+-- un brillo da vueltas por el borde, a la misma velocidad en todas (pedido por el usuario).
+local SHINE_SPEED = 90 -- grados por segundo
 local PULSE_FROM = 5 -- desde aquí el marco lleva además un halo que late
-local DUO_FROM = 7 -- Secreta: borde de dos tonos (su color y violeta) con destellos blancos
-local RAINBOW_FROM = 8 -- Divina: borde en arcoíris
+-- Las más raras llevan el borde de dos tonos (su color y este otro) con destellos blancos.
+local DUO_TONES = {
+	[7] = Color3.fromRGB(110, 60, 255), -- Secreta: rosa y violeta
+	[8] = Color3.fromRGB(110, 175, 255), -- Divina: celeste y azul claro
+}
 
 local shines = {} -- [UIGradient del borde] = { speed, halo, phase }
 local shining = false
@@ -253,25 +256,18 @@ local function animateShines(dt: number)
 end
 
 local function shineColors(color: Color3, tier: number): ColorSequence
-	if tier >= RAINBOW_FROM then
-		local points = {}
-		for step = 0, 6 do
-			table.insert(points, ColorSequenceKeypoint.new(step / 6, Color3.fromHSV(step / 6 % 1, 0.7, 1)))
-		end
-		return ColorSequence.new(points)
-	end
-	if tier >= DUO_FROM then
-		local violet = Color3.fromRGB(110, 60, 255)
+	local tone = DUO_TONES[tier]
+	if tone then
 		return ColorSequence.new({
-			ColorSequenceKeypoint.new(0, violet),
+			ColorSequenceKeypoint.new(0, tone),
 			ColorSequenceKeypoint.new(0.22, color),
 			ColorSequenceKeypoint.new(0.3, WHITE),
 			ColorSequenceKeypoint.new(0.38, color),
-			ColorSequenceKeypoint.new(0.5, violet),
+			ColorSequenceKeypoint.new(0.5, tone),
 			ColorSequenceKeypoint.new(0.72, color),
 			ColorSequenceKeypoint.new(0.8, WHITE),
 			ColorSequenceKeypoint.new(0.88, color),
-			ColorSequenceKeypoint.new(1, violet),
+			ColorSequenceKeypoint.new(1, tone),
 		})
 	end
 	local dark = color:Lerp(BLACK, 0.45)
@@ -343,7 +339,7 @@ function Ui.cell(parent: Instance, color: Color3, tier: number?): TextButton
 	shadeFade.Transparency = NumberSequence.new(1, 0.4)
 	shadeFade.Parent = shade
 
-	local level = math.clamp(tier or 1, 1, #SHINE_SPEED)
+	local level = tier or 1
 	if level < 2 then
 		Ui.stroke(cell, color, 4)
 	else
@@ -365,10 +361,10 @@ function Ui.cell(parent: Instance, color: Color3, tier: number?): TextButton
 			aura.ZIndex = 0
 			aura.Parent = cell
 			Ui.round(aura, 15)
-			halo = Ui.stroke(aura, if level >= RAINBOW_FROM then WHITE else color:Lerp(WHITE, 0.3), 2)
+			halo = Ui.stroke(aura, color:Lerp(WHITE, 0.3), 2)
 		end
 
-		shines[shine] = { speed = SHINE_SPEED[level], halo = halo, phase = math.random() * 6 }
+		shines[shine] = { speed = SHINE_SPEED, halo = halo, phase = math.random() * 6 }
 		cell.Destroying:Connect(function()
 			shines[shine] = nil
 		end)
