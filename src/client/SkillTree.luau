@@ -111,8 +111,8 @@ function SkillTree.start()
 	local overlay = Instance.new("TextButton")
 	overlay.Name = "Upgrades"
 	overlay.Size = UDim2.fromScale(1, 1)
-	overlay.BackgroundColor3 = Color3.fromRGB(8, 12, 30)
-	overlay.BackgroundTransparency = 0.4
+	overlay.BackgroundColor3 = Color3.new(1, 1, 1) -- el color lo pone el degradado
+	overlay.BackgroundTransparency = 0.3
 	overlay.BorderSizePixel = 0
 	overlay.AutoButtonColor = false
 	overlay.Text = ""
@@ -121,6 +121,17 @@ function SkillTree.start()
 	overlay.ZIndex = -1 -- por debajo de contadores y menú
 	overlay.Parent = Ui.screen()
 	Ui.register("Upgrades", overlay)
+	-- Fondo con degradado y rayas suaves (que no se vea plano), por debajo de contadores y menú.
+	Ui.gradient(overlay, Color3.fromRGB(40, 60, 130), Color3.fromRGB(14, 10, 40), 90)
+	local stripes
+	local function drawStripes()
+		if stripes then
+			stripes:Destroy()
+		end
+		stripes = Ui.stripes(overlay, workspace.CurrentCamera.ViewportSize, 34, 0.94, -1)
+	end
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(drawStripes)
+	drawStripes()
 
 	local canvas = Instance.new("Frame")
 	canvas.Name = "Canvas"
@@ -128,12 +139,16 @@ function SkillTree.start()
 	canvas.Size = UDim2.fromOffset(0, 0)
 	canvas.BackgroundTransparency = 1
 	canvas.Parent = overlay
+	-- Zoom: la escala del lienzo (rueda del ratón, pellizco o los botones + y -).
+	local zoom = Instance.new("UIScale")
+	zoom.Scale = 0.8
+	zoom.Parent = canvas
 
 	local hint = Ui.label(overlay, 18)
 	hint.AnchorPoint = Vector2.new(0.5, 0)
 	hint.Position = UDim2.new(0.5, 0, 0, 106)
-	hint.Size = UDim2.fromOffset(520, 26)
-	hint.Text = "Árbol de mejoras · arrastra para moverte"
+	hint.Size = UDim2.fromOffset(720, 26)
+	hint.Text = "Árbol de mejoras · arrastra para moverte · rueda o + y - para acercar y alejar"
 
 	local close = Ui.button(overlay, "Cerrar", Ui.COLORS.red)
 	close.Name = "Close"
@@ -148,6 +163,47 @@ function SkillTree.start()
 
 	-- Arrastrar el fondo mueve el árbol.
 	local offset = Vector2.zero
+	local MIN_ZOOM, MAX_ZOOM = 0.3, 1.6
+
+	-- Cambia el zoom dejando quieto el punto `focus` de la pantalla (el ratón o el centro).
+	local function setZoom(target: number, focus: Vector2?)
+		local old = zoom.Scale
+		local new = math.clamp(target, MIN_ZOOM, MAX_ZOOM)
+		local center = overlay.AbsolutePosition + overlay.AbsoluteSize / 2
+		local point = (focus or center) - center
+		offset = point - (point - offset) * (new / old)
+		zoom.Scale = new
+		canvas.Position = UDim2.new(0.5, offset.X, 0.5, offset.Y)
+	end
+
+	for index, entry in { { "ZoomOut", "-", 1 / 1.25, -150 }, { "ZoomIn", "+", 1.25, 150 } } do
+		local button = Ui.button(overlay, entry[2], Ui.COLORS.blue)
+		button.Name = entry[1]
+		button.AnchorPoint = Vector2.new(0.5, 1)
+		button.Position = UDim2.new(0.5, entry[4] + (if index == 1 then -40 else 40), 1, -28)
+		button.Size = UDim2.fromOffset(66, 66)
+		button.TextSize = 40
+		button.ZIndex = 10
+		button.Activated:Connect(function()
+			setZoom(zoom.Scale * entry[3])
+		end)
+	end
+
+	UserInputService.InputChanged:Connect(function(input)
+		if overlay.Visible and input.UserInputType == Enum.UserInputType.MouseWheel then
+			setZoom(zoom.Scale * 1.12 ^ input.Position.Z, Vector2.new(input.Position.X, input.Position.Y))
+		end
+	end)
+	local pinchStart = 1
+	UserInputService.TouchPinch:Connect(function(_, scale, _, state)
+		if not overlay.Visible then
+			return
+		end
+		if state == Enum.UserInputState.Begin then
+			pinchStart = zoom.Scale
+		end
+		setZoom(pinchStart * scale)
+	end)
 	local dragging = false
 	local last = Vector3.zero
 	overlay.InputBegan:Connect(function(input)

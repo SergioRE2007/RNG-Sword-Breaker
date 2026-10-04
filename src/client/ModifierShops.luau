@@ -3,6 +3,7 @@
 -- (se cambia pulsando su casilla), el modificador que tiene, lo que cuesta y los botones
 -- Tirar / Auto / "Parar con..." (con qué resultados se para la tirada automática). A la derecha,
 -- todos los resultados posibles, del más raro al más común, con su % y su efecto.
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,8 +22,8 @@ local ModifierShops = {}
 local player = Players.LocalPlayer
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
-local SIZE = Vector2.new(900, 470)
-local LEFT = 470 -- ancho de la parte izquierda del cuerpo
+local SIZE = Vector2.new(1000, 540)
+local LEFT = 520 -- ancho de la parte izquierda del cuerpo
 local AUTO_DELAY = 0.45 -- segundos entre tiradas automáticas
 local CLOSE_DISTANCE = 30 -- se cierra al alejarse del puesto
 
@@ -173,6 +174,26 @@ local function buildShop(kind: string)
 	if headerGradient then
 		headerGradient.Color = if kind == "traits" then rainbowColors() else ColorSequence.new(Color3.fromRGB(150, 70, 255), Color3.fromRGB(210, 120, 255))
 	end
+	-- Título animado: arcoíris que gira en Rasgos, morado y blanco que gira en Grados.
+	local heading = header and header:FindFirstChild("Title")
+	if heading then
+		local shine = heading:FindFirstChildOfClass("UIGradient")
+		if shine then
+			shine:Destroy()
+		end
+		if kind == "traits" then
+			rainbow(heading)
+		else
+			local gradient = Instance.new("UIGradient")
+			gradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+				ColorSequenceKeypoint.new(0.5, Color3.fromRGB(225, 170, 255)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
+			})
+			gradient.Parent = heading
+			spinning[gradient] = true
+		end
+	end
 
 	local state = { selected = nil, auto = false, waiting = false, last = nil, stop = {} }
 	for index in info.list do
@@ -188,8 +209,8 @@ local function buildShop(kind: string)
 	-- Casilla de la espada elegida.
 	local slot = Ui.cell(left, Color3.fromRGB(230, 230, 240))
 	slot.Name = "Slot"
-	slot.Position = UDim2.fromOffset(16, 16)
-	slot.Size = UDim2.fromOffset(150, 150)
+	slot.Position = UDim2.fromOffset(18, 18)
+	slot.Size = UDim2.fromOffset(172, 172)
 	local slotHint = Ui.label(slot, 16)
 	slotHint.AnchorPoint = Vector2.new(0.5, 1)
 	slotHint.Position = UDim2.new(0.5, 0, 1, -6)
@@ -198,34 +219,34 @@ local function buildShop(kind: string)
 	slotHint.ZIndex = 3
 
 	local heading = Ui.label(left, 26)
-	heading.Position = UDim2.fromOffset(186, 16)
-	heading.Size = UDim2.fromOffset(270, 32)
+	heading.Position = UDim2.fromOffset(208, 18)
+	heading.Size = UDim2.fromOffset(294, 34)
 	heading.Text = info.label
 
 	local nameBox = Instance.new("Frame")
 	nameBox.Name = "Current"
-	nameBox.Position = UDim2.fromOffset(186, 54)
-	nameBox.Size = UDim2.fromOffset(270, 58)
+	nameBox.Position = UDim2.fromOffset(208, 58)
+	nameBox.Size = UDim2.fromOffset(294, 66)
 	nameBox.BackgroundColor3 = Ui.COLORS.dark
 	nameBox.Parent = left
 	Ui.round(nameBox, 10)
 	Ui.stroke(nameBox, Color3.fromRGB(90, 90, 100), 3)
 	local nameScale = Instance.new("UIScale")
 	nameScale.Parent = nameBox
-	local nameLabel = Ui.label(nameBox, 30)
+	local nameLabel = Ui.label(nameBox, 34)
 	nameLabel.Size = UDim2.fromScale(1, 1)
 
 	local effect = Ui.label(left, 17)
-	effect.Position = UDim2.fromOffset(186, 118)
-	effect.Size = UDim2.fromOffset(270, 24)
+	effect.Position = UDim2.fromOffset(208, 132)
+	effect.Size = UDim2.fromOffset(294, 26)
 
 	local cost = Ui.label(left, 20)
 	cost.Name = "Cost"
-	cost.Position = UDim2.fromOffset(16, 186)
+	cost.Position = UDim2.fromOffset(16, 214)
 	cost.Size = UDim2.new(1, -32, 0, 30)
 
 	local warning = Ui.label(left, 15)
-	warning.Position = UDim2.fromOffset(16, 222)
+	warning.Position = UDim2.fromOffset(16, 252)
 	warning.Size = UDim2.new(1, -32, 0, 44)
 	warning.TextWrapped = true
 	warning.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -233,19 +254,19 @@ local function buildShop(kind: string)
 
 	local rollButton = Ui.button(left, "Tirar", Ui.COLORS.blue)
 	rollButton.Name = "Roll"
-	rollButton.Position = UDim2.fromOffset(16, 300)
-	rollButton.Size = UDim2.fromOffset(180, 66)
+	rollButton.Position = UDim2.fromOffset(18, 362)
+	rollButton.Size = UDim2.fromOffset(200, 74)
 	rollButton.TextSize = 28
 	local autoButton = Ui.button(left, "Auto", Ui.COLORS.red)
 	autoButton.Name = "Auto"
-	autoButton.Position = UDim2.fromOffset(208, 300)
-	autoButton.Size = UDim2.fromOffset(180, 66)
+	autoButton.Position = UDim2.fromOffset(230, 362)
+	autoButton.Size = UDim2.fromOffset(200, 74)
 	autoButton.TextSize = 26
 	-- Engranaje: con qué resultados se para la tirada automática.
 	local settingsButton = Ui.button(left, "", Ui.COLORS.gray)
 	settingsButton.Name = "Settings"
-	settingsButton.Position = UDim2.fromOffset(400, 300)
-	settingsButton.Size = UDim2.fromOffset(62, 66)
+	settingsButton.Position = UDim2.fromOffset(442, 362)
+	settingsButton.Size = UDim2.fromOffset(66, 74)
 	gearIcon(settingsButton)
 
 	-- Capas que tapan la parte izquierda: elegir espada y elegir con qué se para el automático.
@@ -504,7 +525,6 @@ local function buildShop(kind: string)
 		local row = rows[index]
 		local flash = TweenService:Create(row, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 1, true), { BackgroundColor3 = entry.color })
 		flash:Play()
-		results.CanvasPosition = Vector2.new(0, math.max(0, row.AbsolutePosition.Y - results.AbsolutePosition.Y + results.CanvasPosition.Y - 80))
 		if Modifiers.percent(kind, index) < 1 then
 			Ui.toast(`¡{entry.name}! ({Modifiers.formatPercent(Modifiers.percent(kind, index))})`, entry.color)
 		end
@@ -609,6 +629,20 @@ function ModifierShops.start()
 			end
 		end
 		local now = os.clock()
+		-- Carteles de los puestos: los colores giran, el cartel late y flota.
+		for _, sign in CollectionService:GetTagged("ShopSign") do
+			local billboard = sign :: BillboardGui
+			local wave = math.sin(now * 2.2)
+			billboard.StudsOffset = Vector3.new(0, 13 + wave * 0.5, 0)
+			local label = billboard:FindFirstChildOfClass("TextLabel")
+			if label then
+				label.TextSize = 48 * (1 + wave * 0.06)
+				local gradient = label:FindFirstChildOfClass("UIGradient")
+				if gradient then
+					gradient.Rotation = (now * 90) % 360
+				end
+			end
+		end
 		for stroke, phase in pulsing do
 			if not stroke.Parent then
 				pulsing[stroke] = nil

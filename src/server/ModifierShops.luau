@@ -2,6 +2,7 @@
 -- Se abren con la tecla de interacción (ProximityPrompt; la ventana la abre el cliente) y
 -- aquí se validan y se hacen las tiradas: los rasgos gastan un Cristal de rasgo y los grados
 -- Config.GradeCost gemas. El resultado sustituye al que tuviera la espada.
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -125,6 +126,8 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 	local gradient = Instance.new("UIGradient")
 	gradient.Color = ColorSequence.new(keys)
 	gradient.Parent = label
+	-- El cliente (ModifierShops) lo hace girar, latir y flotar.
+	CollectionService:AddTag(gui, "ShopSign")
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Abrir"
