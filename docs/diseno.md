@@ -18,6 +18,7 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Hub y parcelas con asignación automática y cartel del dueño.
 - Aparición de objetos por rareza y suerte, mejoras de cantidad y suerte.
 - Gacha de espadas: máquina en el centro del hub, 5 gemas por tirada, 15 espadas por rareza hasta 1 entre 1Sp (la de madera es la inicial). Una espada nueva mejor que la actual se equipa sola.
+- Tirada x1, x5 o x10 y tirada automática (repite la última hasta quedarse sin gemas o alejarse). Animación a pantalla completa: el orbe se carga con rayos y anillos (cambian al color de lo mejor que ha salido si es raro), estalla y las cartas se destapan una a una; las raras (1 entre 100 real) tiemblan antes, las de aviso (1 entre 500) paran la pantalla con destello y cartel de su rareza. Pulsar la pantalla la salta. La máquina del hub se hincha y suelta chispas (solo lo ve quien tira).
 - Inventario de espadas por copias: se pueden tener varias de la misma (máximo 200), cada copia con su rasgo. Cada una se equipa, se le tira rasgo o se vende (2 gemas).
 - Venta automática: el jugador escribe un número (admite 1000, 1.5K, 2M...) y las espadas menos raras que 1 entre ese número se venden solas al salir. Con el inventario lleno también se venden.
 - "Roca de armas" (1 entre 2000): al romperse da una tirada gratis con la suerte de gacha x10.
@@ -49,7 +50,7 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Los objetos y espadas a partir de Obelisco / Espada solar, y el ritmo de las suertes (x1.5 por nivel, precio x1.55 / x1.6), son números puestos a ojo sin jugar: nadie ha llegado ahí.
 - Rasgos y artefactos: nombres, multiplicadores y rarezas inventados por Claude sin jugar. Probado con rarezas bajadas: caída de cristal, tirada de rasgo, caída y equipar/quitar artefactos. Sin ver: rasgos raros y las 3 ranuras llenas.
 - Vender una espada da siempre 2 gemas, sea cual sea su rareza. Es a propósito: si el precio subiera con la rareza, con mucha suerte de gacha cada tirada devolvería más gemas de las que cuesta.
-- La tirada cuesta siempre 5 gemas: con muchas gemas no hay tirada múltiple ni automática.
+- Tirada múltiple y automática probadas en Studio con dinero infinito y con tiradas falsas (espadas épicas forzadas); no se ha probado en móvil ni con pantallas pequeñas (todo se encoge con la pantalla).
 - Sin probar: varios jugadores a la vez, liberar la parcela al salir, la mejora de suerte, los objetos raros, el guardado y el sonido del espadazo.
 - Al publicar: máximo 8 jugadores por servidor (un noveno se queda sin parcela) y activar el acceso de Studio a los servicios de API para probar el guardado.
 
@@ -57,8 +58,7 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 
 Hecha (ver "Hecho"). Ideas que quedaron fuera:
 
-- Tirada múltiple o automática del gacha.
-- Efecto en la propia máquina al tirar (luces, partículas).
+- Que los demás jugadores vean el efecto de la máquina cuando alguien tira.
 
 ## Ideas para más adelante
 

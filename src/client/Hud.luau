@@ -1,5 +1,5 @@
--- Interfaz fija: contadores, línea de estadísticas, menú, botón del gacha y avisos.
--- La mochila está en Backpack, las mejoras en SkillTree y el estilo en Ui.
+-- Interfaz fija: contadores, línea de estadísticas, menú y avisos.
+-- La mochila está en Backpack, las mejoras en SkillTree, el gacha en GachaRoll y el estilo en Ui.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
@@ -13,7 +13,6 @@ local Ui = require(script.Parent.Ui)
 local Hud = {}
 
 local player = Players.LocalPlayer
-local MACHINE_POSITION = Vector3.new(0, Config.Plot.FloorHeight, 0)
 local BLACK = Color3.new(0, 0, 0)
 
 local function counter(gui: Instance, offset: number, color: Color3): TextLabel
@@ -70,18 +69,6 @@ function Hud.start()
 		end)
 	end
 
-	-- Solo aparece junto a la máquina del hub.
-	local rollButton = Ui.button(gui, `Tirar gacha\n{Config.Gacha.Cost} gemas`, Ui.COLORS.gray)
-	rollButton.Name = "Roll"
-	rollButton.AnchorPoint = Vector2.new(0.5, 1)
-	rollButton.Position = UDim2.new(0.5, 0, 1, -104)
-	rollButton.Size = UDim2.fromOffset(290, 72)
-	rollButton.TextSize = 24
-	rollButton.Visible = false
-	rollButton.Activated:Connect(function()
-		Remotes.RollGacha:FireServer()
-	end)
-
 	local function refresh()
 		local amount = player:GetAttribute("Coins") or 0
 		local gemAmount = player:GetAttribute("Gems") or 0
@@ -89,7 +76,6 @@ function Hud.start()
 		coins.Text = "Monedas: " .. Format.short(amount)
 		gems.Text = "Gemas: " .. Format.short(gemAmount)
 		stats.Text = `Daño {Format.multiplier(Stats.damage(player))}  ·  Suerte x{Format.multiplier(Stats.luck(player))}  ·  Suerte de gacha x{Format.multiplier(Stats.gachaLuck(player))}`
-		rollButton.BackgroundColor3 = if gemAmount >= Config.Gacha.Cost then Ui.COLORS.green else Ui.COLORS.gray
 	end
 
 	player.AttributeChanged:Connect(refresh)
@@ -97,15 +83,6 @@ function Hud.start()
 
 	Remotes.SwordObtained.OnClientEvent:Connect(function(index: number, kept: boolean, source: string)
 		local sword = Config.Swords[index]
-		if source == "gacha" then
-			-- Animación de la tirada: pasan espadas al azar, cada vez más despacio.
-			local steps = 12
-			for step = 1, steps do
-				local random = Config.Swords[math.random(2, #Config.Swords)]
-				Ui.toast(`Tirando...\n{random.name}`, random.color)
-				task.wait(Config.Gacha.RollTime * 2 * step / (steps * (steps + 1)))
-			end
-		end
 		local origin = if source == "roca" then "¡La roca de armas soltó" else "¡Te ha salido"
 		local detail = if kept
 			then `1 entre {Format.short(sword.rarity or 1)} · daño {Format.short(sword.damage)}`
@@ -123,17 +100,6 @@ function Hud.start()
 			channel:DisplaySystemMessage(`<font color="#{color:ToHex()}"><b>{text}</b></font>`)
 		else
 			Ui.toast(text, color)
-		end
-	end)
-
-	task.spawn(function()
-		while true do
-			task.wait(0.2)
-			local character = player.Character
-			local root = character and character:FindFirstChild("HumanoidRootPart")
-			local near = root ~= nil and (root.Position - MACHINE_POSITION).Magnitude <= Config.Gacha.UseDistance
-			-- Con una ventana abierta se esconde para no taparla.
-			rollButton.Visible = near and not Ui.anyOpen()
 		end
 	end)
 end

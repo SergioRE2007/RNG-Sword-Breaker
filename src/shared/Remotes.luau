@@ -4,14 +4,15 @@ local RunService = game:GetService("RunService")
 
 local NAMES = {
 	"Swing", -- cliente -> servidor: he dado un espadazo
-	"RollGacha", -- cliente -> servidor: tirar el gacha (hay que estar junto a la máquina del hub)
+	"RollGacha", -- cliente -> servidor: (count) tirar el gacha count veces, de Config.Gacha.Counts (hay que estar junto a la máquina del hub)
 	"EquipSword", -- cliente -> servidor: (id) equipar una copia de espada del inventario
 	"SellSword", -- cliente -> servidor: (id) vender una copia que no esté equipada
 	"SetAutoSell", -- cliente -> servidor: (rarity) vender solas las espadas de rareza menor; 0 = no
 	"BuyUpgrade", -- cliente -> servidor: (name) subir un nivel una mejora de Config.Upgrades
 	"Hit", -- servidor -> clientes: (player, part, position, damage)
 	"Broken", -- servidor -> clientes: (player, cframe, size, color, material, reward, gems)
-	"SwordObtained", -- servidor -> cliente: (index, kept, source) kept = false si se vendió sola; source = "gacha" o "roca"
+	"SwordObtained", -- servidor -> cliente: (index, kept, source) espada gratis; kept = false si se vendió sola; source = "roca"
+	"GachaRolled", -- servidor -> cliente: (results, luck) results = { { index, kept } } de una tirada del gacha
 	"RollTrait", -- cliente -> servidor: (id) gastar un Cristal de rasgo en esa copia de espada
 	"ToggleGear", -- cliente -> servidor: (artifactIndex) equipar o quitar un artefacto
 	"Notice", -- servidor -> cliente: (text, color) aviso en pantalla solo para él

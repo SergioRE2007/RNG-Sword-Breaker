@@ -60,7 +60,10 @@ Config.Gacha = {
 	Cost = 5, -- gemas por tirada
 	SellValue = 2, -- gemas por vender una espada (a mano o con la venta automática)
 	RockLuck = 10, -- la tirada gratis de la "Roca de armas" multiplica por esto la suerte de gacha
-	RollTime = 1.2, -- segundos que dura la animación de la tirada
+	Counts = { 1, 5, 10 }, -- tiradas que se pueden hacer de golpe (botones x1, x5, x10)
+	RollTime = 1.2, -- segundos que dura la animación de la tirada antes de destapar las espadas
+	RevealStep = 0.22, -- segundos entre carta y carta al destaparlas
+	Cooldown = 0.6, -- segundos mínimos entre tiradas
 	UseDistance = 12, -- distancia máxima a la máquina
 }
 

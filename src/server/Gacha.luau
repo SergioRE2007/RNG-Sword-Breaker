@@ -24,20 +24,16 @@ local function roll(luck: number): number
 	return 2
 end
 
--- Da una espada al azar con la suerte de gacha del jugador multiplicada por `luckMultiplier`.
--- Va al inventario como una copia más y se equipa si pega más que la actual. Se vende sola
--- si es menos rara que el límite de venta automática del jugador o el inventario está lleno.
-function Gacha.give(player: Player, luckMultiplier: number, source: string)
+-- Saca una espada con suerte `luck` y la guarda como una copia más (se equipa si pega más que
+-- la actual). Se vende sola si es menos rara que el límite de venta automática del jugador o
+-- el inventario está lleno. Avisa a todos si es muy rara, `delay` segundos después (para no
+-- destripar la animación). Devuelve el índice de la espada y si se la ha quedado.
+local function draw(player: Player, luck: number, delay: number): (number, boolean)
 	local data = PlayerData.read(player)
-	if not data then
-		return
-	end
-	local luck = Stats.gachaLuck(player) * luckMultiplier
 	local index = roll(luck)
 	local sword = Config.Swords[index]
 	if sword.rarity / luck >= Config.AnnounceOdds then
-		-- Espera a que termine la animación de la tirada para no destripar el resultado.
-		task.delay(if source == "gacha" then Config.Gacha.RollTime else 0, function()
+		task.delay(delay, function()
 			Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {sword.name} (1 entre {Format.short(sword.rarity)})!`, sword.color)
 		end)
 	end
@@ -55,18 +51,44 @@ function Gacha.give(player: Player, luckMultiplier: number, source: string)
 	else
 		PlayerData.addGems(player, Config.Gacha.SellValue)
 	end
+	return index, kept
+end
+
+-- Espada gratis (p. ej. la roca de armas) con la suerte de gacha multiplicada por `luckMultiplier`.
+function Gacha.give(player: Player, luckMultiplier: number, source: string)
+	if not PlayerData.read(player) then
+		return
+	end
+	local index, kept = draw(player, Stats.gachaLuck(player) * luckMultiplier, 0)
 	Remotes.SwordObtained:FireClient(player, index, kept, source)
 end
 
-local function onRoll(player: Player)
+local lastRoll = {} -- [player] = os.clock() de su última tirada
+
+local function onRoll(player: Player, count: unknown)
+	if not table.find(Config.Gacha.Counts, count) then
+		return
+	end
+	local now = os.clock()
+	if now - (lastRoll[player] or 0) < Config.Gacha.Cooldown then
+		return
+	end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root or (root.Position - machinePosition).Magnitude > Config.Gacha.UseDistance + 4 then
 		return
 	end
-	if PlayerData.trySpendGems(player, Config.Gacha.Cost) then
-		Gacha.give(player, 1, "gacha")
+	if not PlayerData.read(player) or not PlayerData.trySpendGems(player, Config.Gacha.Cost * count) then
+		return
 	end
+	lastRoll[player] = now
+	local luck = Stats.gachaLuck(player)
+	local results = {}
+	for position = 1, count :: number do
+		local index, kept = draw(player, luck, Config.Gacha.RollTime + position * Config.Gacha.RevealStep)
+		table.insert(results, { index = index, kept = kept })
+	end
+	Remotes.GachaRolled:FireClient(player, results, luck)
 end
 
 local function onEquip(player: Player, id: unknown)
@@ -156,6 +178,9 @@ function Gacha.start()
 	Remotes.EquipSword.OnServerEvent:Connect(onEquip)
 	Remotes.SellSword.OnServerEvent:Connect(onSell)
 	Remotes.SetAutoSell.OnServerEvent:Connect(onSetAutoSell)
+	game:GetService("Players").PlayerRemoving:Connect(function(player)
+		lastRoll[player] = nil
+	end)
 end
 
 return Gacha
