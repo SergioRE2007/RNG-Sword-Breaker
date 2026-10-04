@@ -36,10 +36,86 @@ local function rainbowColors(): ColorSequence
 	return ColorSequence.new(keys)
 end
 
+-- Degradados arcoíris de las entradas especiales: giran sin parar (los mueve ModifierShops.start).
+-- (Tablas normales: en una tabla débil Luau suelta las instancias aunque sigan en pantalla.)
+local spinning = {}
+-- Bordes de las especiales sin arcoíris: laten (los mueve ModifierShops.start).
+local pulsing = {}
+
 local function rainbow(parent: Instance)
 	local gradient = Instance.new("UIGradient")
 	gradient.Color = rainbowColors()
 	gradient.Parent = parent
+	spinning[gradient] = true
+end
+
+-- Orden de la lista de resultados: los grados, del más raro al más común; los rasgos por tipo
+-- (Especiales, Monedas, Daño, Suerte), cada tipo del más raro al más común. Devuelve una lista
+-- de { header = texto } y { index = posición en la lista de Config }.
+local GROUPS = {
+	{ icon = "all", title = "Especiales" },
+	{ icon = "coins", title = "Monedas" },
+	{ icon = "damage", title = "Daño" },
+	{ icon = "luck", title = "Suerte" },
+}
+local function displayOrder(kind: string)
+	local list = Modifiers.KINDS[kind].list
+	local result = {}
+	if kind ~= "traits" then
+		for index = #list, 1, -1 do
+			table.insert(result, { index = index })
+		end
+		return result
+	end
+	for _, group in GROUPS do
+		table.insert(result, { header = group.title })
+		for index = #list, 1, -1 do
+			if list[index].icon == group.icon then
+				table.insert(result, { index = index })
+			end
+		end
+	end
+	return result
+end
+
+-- Engranaje hecho con marcos (la fuente no tiene el icono): dientes, aro y agujero.
+local function gearIcon(parent: GuiObject)
+	local holder = Instance.new("Frame")
+	holder.Name = "Gear"
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.Position = UDim2.fromScale(0.5, 0.5)
+	holder.Size = UDim2.fromOffset(40, 40)
+	holder.BackgroundTransparency = 1
+	holder.Parent = parent
+	local metal = Color3.fromRGB(230, 233, 240)
+	for tooth = 0, 3 do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Position = UDim2.fromScale(0.5, 0.5)
+		bar.Size = UDim2.fromOffset(44, 9)
+		bar.Rotation = tooth * 45
+		bar.BackgroundColor3 = metal
+		bar.BorderSizePixel = 0
+		bar.Parent = holder
+		Ui.round(bar, 3)
+	end
+	local wheel = Instance.new("Frame")
+	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
+	wheel.Position = UDim2.fromScale(0.5, 0.5)
+	wheel.Size = UDim2.fromOffset(28, 28)
+	wheel.BackgroundColor3 = metal
+	wheel.Parent = holder
+	Ui.round(wheel, 14)
+	Ui.stroke(wheel, BLACK, 2)
+	local hole = Instance.new("Frame")
+	hole.AnchorPoint = Vector2.new(0.5, 0.5)
+	hole.Position = UDim2.fromScale(0.5, 0.5)
+	hole.Size = UDim2.fromOffset(12, 12)
+	hole.BackgroundColor3 = Color3.fromRGB(80, 84, 98)
+	hole.Parent = wheel
+	Ui.round(hole, 6)
+	Ui.stroke(hole, BLACK, 2)
+	return holder
 end
 
 -- Icono de una entrada: la letra del grado, o un dibujo según lo que sube el rasgo.
@@ -165,12 +241,12 @@ local function buildShop(kind: string)
 	autoButton.Position = UDim2.fromOffset(208, 300)
 	autoButton.Size = UDim2.fromOffset(180, 66)
 	autoButton.TextSize = 26
-	-- Con qué resultados se para la tirada automática (la fuente no tiene el icono de engranaje).
-	local settingsButton = Ui.button(left, "Parar\ncon...", Ui.COLORS.gray)
+	-- Engranaje: con qué resultados se para la tirada automática.
+	local settingsButton = Ui.button(left, "", Ui.COLORS.gray)
 	settingsButton.Name = "Settings"
 	settingsButton.Position = UDim2.fromOffset(400, 300)
 	settingsButton.Size = UDim2.fromOffset(62, 66)
-	settingsButton.TextSize = 14
+	gearIcon(settingsButton)
 
 	-- Capas que tapan la parte izquierda: elegir espada y elegir con qué se para el automático.
 	local function overlay(name: string, titleText: string): (Frame, ScrollingFrame)
@@ -224,10 +300,15 @@ local function buildShop(kind: string)
 	stopGrid.CellPadding = UDim2.fromOffset(8, 8)
 	stopGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	stopGrid.Parent = stopList
-	for index, entry in info.list do
+	for position, item in displayOrder(kind) do
+		local index = item.index
+		if not index then
+			continue
+		end
+		local entry = info.list[index]
 		local toggle = Ui.button(stopList, entry.name, Ui.COLORS.cell)
 		toggle.Name = "Stop" .. index
-		toggle.LayoutOrder = index
+		toggle.LayoutOrder = position
 		toggle.TextSize = 24
 		toggle.ZIndex = 7
 		toggle.TextColor3 = if entry.rainbow then WHITE else entry.color
@@ -241,7 +322,7 @@ local function buildShop(kind: string)
 		paint()
 	end
 
-	-- Lista de resultados posibles (derecha), del más raro al más común.
+	-- Lista de resultados posibles (derecha), en el orden de displayOrder.
 	local results = Instance.new("ScrollingFrame")
 	results.Name = "Results"
 	results.Position = UDim2.fromOffset(LEFT + 8, 8)
@@ -256,12 +337,33 @@ local function buildShop(kind: string)
 	resultsLayout.Padding = UDim.new(0, 8)
 	resultsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	resultsLayout.Parent = results
+	-- Margen para que no se corten los bordes de las filas ni choquen con la barra.
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, 5)
+	padding.PaddingRight = UDim.new(0, 14)
+	padding.PaddingTop = UDim.new(0, 5)
+	padding.PaddingBottom = UDim.new(0, 5)
+	padding.Parent = results
 	local rows = {}
-	for index, entry in info.list do
+	for position, item in displayOrder(kind) do
+		if item.header then
+			local header = Ui.label(results, 22)
+			header.Name = "Header" .. position
+			header.LayoutOrder = position
+			header.Size = UDim2.new(1, 0, 0, 28)
+			header.TextXAlignment = Enum.TextXAlignment.Left
+			header.Text = item.header
+			if position == 1 then
+				rainbow(header)
+			end
+			continue
+		end
+		local index = item.index
+		local entry = info.list[index]
 		local row = Instance.new("Frame")
 		row.Name = "Result" .. index
-		row.LayoutOrder = -index
-		row.Size = UDim2.new(1, -10, 0, 70)
+		row.LayoutOrder = position
+		row.Size = UDim2.new(1, 0, 0, 70)
 		row.BackgroundColor3 = WHITE
 		row.Parent = results
 		Ui.round(row, 10)
@@ -269,28 +371,35 @@ local function buildShop(kind: string)
 		local stroke = Ui.stroke(row, if entry.rainbow then WHITE else entry.color, 3)
 		if entry.rainbow then
 			rainbow(stroke)
+		elseif Modifiers.percent(kind, index) < 0.1 then
+			pulsing[stroke] = index
 		end
+		-- Columna del icono con el % debajo (cabe hasta "0.0016%").
 		local iconBox = Instance.new("Frame")
-		iconBox.Position = UDim2.fromOffset(8, 4)
-		iconBox.Size = UDim2.fromOffset(54, 46)
+		iconBox.Position = UDim2.fromOffset(10, 4)
+		iconBox.Size = UDim2.fromOffset(60, 42)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
 		entryIcon(iconBox, kind, entry)
 		local percent = Ui.label(row, 14)
-		percent.Position = UDim2.fromOffset(2, 48)
-		percent.Size = UDim2.fromOffset(66, 18)
+		percent.Position = UDim2.fromOffset(4, 46)
+		percent.Size = UDim2.fromOffset(72, 20)
+		percent.TextScaled = true
+		local limit = Instance.new("UITextSizeConstraint")
+		limit.MaxTextSize = 14
+		limit.Parent = percent
 		percent.Text = Modifiers.formatPercent(Modifiers.percent(kind, index))
 		local title = Ui.label(row, 22)
-		title.Position = UDim2.fromOffset(76, 8)
-		title.Size = UDim2.new(1, -84, 0, 28)
+		title.Position = UDim2.fromOffset(84, 8)
+		title.Size = UDim2.new(1, -92, 0, 28)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		paintName(title, entry)
 		if kind == "grades" then
 			title.Text = "Grado " .. entry.name
 		end
 		local detail = Ui.label(row, 16)
-		detail.Position = UDim2.fromOffset(76, 38)
-		detail.Size = UDim2.new(1, -84, 0, 22)
+		detail.Position = UDim2.fromOffset(84, 38)
+		detail.Size = UDim2.new(1, -92, 0, 22)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
 		detail.TextColor3 = Color3.fromRGB(120, 230, 120)
 		detail.Text = Modifiers.effect(entry)
@@ -490,6 +599,27 @@ local function buildShop(kind: string)
 end
 
 function ModifierShops.start()
+	-- Los arcoíris de las especiales giran.
+	game:GetService("RunService").RenderStepped:Connect(function(delta)
+		for gradient in spinning do
+			if gradient.Parent then
+				gradient.Rotation = (gradient.Rotation + delta * 120) % 360
+			else
+				spinning[gradient] = nil
+			end
+		end
+		local now = os.clock()
+		for stroke, phase in pulsing do
+			if not stroke.Parent then
+				pulsing[stroke] = nil
+				continue
+			end
+			local wave = (math.sin(now * 4 + phase) + 1) / 2
+			stroke.Thickness = 2.5 + wave * 2.5
+			stroke.Transparency = 0.35 - wave * 0.35
+		end
+	end)
+
 	local windows = {}
 	for _, kind in { "traits", "grades" } do
 		local name, window = buildShop(kind)

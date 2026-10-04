@@ -99,24 +99,31 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 		strip.CastShadow = true
 	end
 
-	-- Cartel con el nombre de la tienda.
+	-- Cartel con el nombre de la tienda, por encima del toldo y con borde negro grueso.
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(300, 70)
-	gui.StudsOffset = Vector3.new(0, 9.5, 0)
-	gui.MaxDistance = 200
+	gui.Size = UDim2.fromOffset(340, 80)
+	gui.StudsOffset = Vector3.new(0, 13, 0)
+	gui.MaxDistance = 220
+	gui.LightInfluence = 0
 	gui.Parent = counter
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 40
+	label.TextSize = 48
 	label.TextColor3 = Color3.new(1, 1, 1)
-	label.TextStrokeTransparency = 0
 	label.Text = string.upper(Modifiers.KINDS[kind].title)
 	label.Parent = gui
+	local outline = Instance.new("UIStroke")
+	outline.Color = Color3.new(0, 0, 0)
+	outline.Thickness = 3.5
+	outline.Parent = label
+	local keys = {}
+	for index, color in stripes do
+		table.insert(keys, ColorSequenceKeypoint.new((index - 1) / math.max(#stripes - 1, 1), color))
+	end
 	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new(stripes[1]:Lerp(Color3.new(1, 1, 1), 0.3), stripes[2]:Lerp(Color3.new(1, 1, 1), 0.3))
-	gradient.Rotation = 90
+	gradient.Color = ColorSequence.new(keys)
 	gradient.Parent = label
 
 	local prompt = Instance.new("ProximityPrompt")
