@@ -74,6 +74,8 @@ do
 	end
 end
 
+-- Cartel de una copia de espada (nombre, rareza, tipo, rasgo, grado, daño). También lo usan
+-- las tiendas de Rasgos y Grados (Backpack.swordTip).
 local function swordTip(copy): (string, Color3)
 	local sword = Config.Swords[copy.sword]
 	local trait = Config.Traits[copy.trait]
@@ -481,5 +483,7 @@ function Backpack.start()
 	show("Swords")
 	refresh()
 end
+
+Backpack.swordTip = swordTip
 
 return Backpack

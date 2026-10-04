@@ -16,6 +16,7 @@ local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
+local Backpack = require(script.Parent.Backpack)
 local Ui = require(script.Parent.Ui)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 
@@ -213,6 +214,15 @@ local function buildShop(kind: string)
 	slot.Name = "Slot"
 	slot.Position = UDim2.fromOffset(18, 18)
 	slot.Size = UDim2.fromOffset(172, 172)
+	-- Al pasar el ratón: estadísticas de la espada elegida (el mismo cartel que en la mochila).
+	Ui.tip(slot, function()
+		for _, copy in Stats.swords(player) do
+			if copy.id == state.selected then
+				return Backpack.swordTip(copy)
+			end
+		end
+		return "Pulsa para elegir una espada", WHITE
+	end)
 	local slotHint = Ui.label(slot, 16)
 	slotHint.AnchorPoint = Vector2.new(0.5, 1)
 	slotHint.Position = UDim2.new(0.5, 0, 1, -6)
@@ -519,6 +529,9 @@ local function buildShop(kind: string)
 					descendant.ZIndex = 8
 				end
 			end
+			Ui.tip(cell, function()
+				return Backpack.swordTip(copy)
+			end)
 			cell.Activated:Connect(function()
 				state.selected = copy.id
 				picker.Visible = false

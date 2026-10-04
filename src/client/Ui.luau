@@ -125,6 +125,7 @@ end
 -- Ventanas ------------------------------------------------------------------------------
 
 local windows = {} -- [nombre] = Frame
+local MAX_WINDOW_SCALE = 1.15 -- las ventanas crecen hasta aquí en pantallas grandes
 
 -- Brillos que cruzan los títulos de las ventanas (los mueve un solo bucle).
 local shines = {}
@@ -251,7 +252,8 @@ function Ui.window(name: string, title: string, size: Vector2)
 		local view = camera.ViewportSize
 		-- Deja sitio a la izquierda para el menú y, como va centrada, arriba y abajo para los
 		-- contadores (que llegan a ~100 px del borde).
-		scale.Scale = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, 1)
+		-- Hasta un 15 % más grande que su tamaño de diseño si la pantalla da para ello.
+		scale.Scale = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, MAX_WINDOW_SCALE)
 		shadowScale.Scale = scale.Scale
 	end
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
