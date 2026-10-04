@@ -35,6 +35,8 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Velocidad al andar 30 (la normal de Roblox es 16), en `Config.WalkSpeed`.
 - Modo de pruebas en Studio: monedas y gemas infinitas (`Config.Test.InfiniteMoney`). No actúa en el juego publicado.
 - `Stats` (shared) calcula el daño y las suertes finales juntando espada, rasgo, artefactos y mejoras.
+- Espadas con volumen hechas con piezas (`SwordModel`): hoja con filo, nervio y punta, guarda con remates, empuñadura y pomo. Desde la de acero, guarda dorada con cuernos y gema; las de neón brillan y sueltan chispas; desde la de cometa llevan esquirlas flotando. El expositor del hub usa el mismo modelo.
+- Animación del espadazo por código (`SwingAnim`): combo de tres tajos (diagonal, revés y desde arriba) que se adapta a la velocidad de golpe, con estela en la hoja. Visto en capturas el tajo diagonal; el revés y el de arriba, y cómo se ve en otro jugador, sin mirar.
 - HUD, tabla de clasificación, escombros con físicas, números de daño, barra de vida.
 - Guardado con DataStore (solo funciona con el lugar publicado).
 

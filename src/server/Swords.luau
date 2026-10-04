@@ -1,29 +1,12 @@
--- Construye la espada del jugador con piezas y se la entrega según su nivel.
+-- Entrega al jugador la espada de su nivel (el modelo lo construye shared/SwordModel).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
-local Swords = {}
+local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 
-local function addPart(tool: Tool, handle: BasePart?, name: string, size: Vector3, offset: CFrame): BasePart
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Size = size
-	part.CanCollide = false
-	part.Massless = true
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	if handle then
-		part.CFrame = handle.CFrame * offset
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = handle
-		weld.Part1 = part
-		weld.Parent = part
-	end
-	part.Parent = tool
-	return part
-end
+local Swords = {}
 
 local function build(level: number): Tool
 	local def = Config.Swords[level]
@@ -33,17 +16,7 @@ local function build(level: number): Tool
 	tool.CanBeDropped = false
 	tool:SetAttribute("Sword", true)
 
-	local handle = addPart(tool, nil, "Handle", Vector3.new(0.35, 1.2, 0.35), CFrame.identity)
-	handle.Color = Color3.fromRGB(70, 45, 30)
-	handle.Material = Enum.Material.Wood
-
-	local guard = addPart(tool, handle, "Guard", Vector3.new(0.3, 0.25, 1.5), CFrame.new(0, 0.7, 0))
-	guard.Color = Color3.fromRGB(60, 60, 65)
-	guard.Material = Enum.Material.Metal
-
-	local blade = addPart(tool, handle, "Blade", Vector3.new(0.15, def.bladeLength, 0.55), CFrame.new(0, 0.8 + def.bladeLength / 2, 0))
-	blade.Color = def.color
-	blade.Material = def.material
+	local handle = SwordModel.build(level, tool, CFrame.identity, 1, false)
 
 	local slash = Instance.new("Sound")
 	slash.Name = "Slash"

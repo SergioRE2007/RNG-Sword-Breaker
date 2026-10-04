@@ -35,6 +35,12 @@ local function onSwing(player: Player)
 		return
 	end
 
+	for _, other in Players:GetPlayers() do
+		if other ~= player then
+			Remotes.SwingFx:FireClient(other, player)
+		end
+	end
+
 	local sword = Config.Swords[PlayerData.getSwordLevel(player)]
 	local range = Config.BaseRange + sword.bladeLength
 	local damage = Stats.damage(player)

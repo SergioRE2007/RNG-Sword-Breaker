@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
+local SwingAnim = require(script.Parent.SwingAnim)
 
 local SwordController = {}
 
@@ -13,16 +14,19 @@ local lastSwing = 0
 
 local function swing(tool: Tool)
 	local now = os.clock()
-	if now - lastSwing < Upgrades.value("speed", player:GetAttribute("Upgrade_speed") or 0) then
+	local cooldown = Upgrades.value("speed", player:GetAttribute("Upgrade_speed") or 0)
+	if now - lastSwing < cooldown then
 		return
 	end
 	lastSwing = now
 
-	-- El script Animate por defecto reproduce el tajo al ver este valor en la herramienta.
-	local anim = Instance.new("StringValue")
-	anim.Name = "toolanim"
-	anim.Value = "Slash"
-	anim.Parent = tool
+	if not SwingAnim.play(player.Character, cooldown) then
+		-- Sin esqueleto R15: el script Animate por defecto reproduce el tajo al ver este valor en la herramienta.
+		local anim = Instance.new("StringValue")
+		anim.Name = "toolanim"
+		anim.Value = "Slash"
+		anim.Parent = tool
+	end
 
 	local handle = tool:FindFirstChild("Handle")
 	local sound = handle and handle:FindFirstChild("Slash")
