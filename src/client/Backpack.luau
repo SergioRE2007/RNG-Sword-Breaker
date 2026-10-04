@@ -272,12 +272,22 @@ function Backpack.start()
 		sellButton.BackgroundColor3 = if isEquipped then Ui.COLORS.gray else Ui.COLORS.red
 	end
 
-	local function rebuildSwords(copies, equippedId: number)
-		for _, cell in swordCells do
-			cell:Destroy()
-		end
-		table.clear(swordCells)
+	-- Deja las casillas como el inventario tocando solo las que han cambiado. Rehacerlas todas en cada
+	-- tirada del gacha daba un tirón, porque cada casilla lleva su vista 3D.
+	local cellKeys = {} -- [id] = de qué depende lo que enseña su casilla
+	local function syncSwords(copies, equippedId: number)
+		local seen = {}
 		for _, copy in copies do
+			seen[copy.id] = true
+			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.id == equippedId}`
+			if cellKeys[copy.id] == key then
+				continue
+			end
+			if swordCells[copy.id] then
+				swordCells[copy.id]:Destroy()
+			end
+			cellKeys[copy.id] = key
+
 			local sword = Config.Swords[copy.sword]
 			local trait = Config.Traits[copy.trait]
 			local tier = Rarity.tier(sword.rarity)
@@ -319,6 +329,13 @@ function Backpack.start()
 				refreshSelection(Stats.swords(player), player:GetAttribute("Equipped") or 1)
 			end)
 			swordCells[copy.id] = cell
+		end
+		for id, cell in swordCells do
+			if not seen[id] then
+				cell:Destroy()
+				swordCells[id] = nil
+				cellKeys[id] = nil
+			end
 		end
 	end
 
@@ -426,6 +443,10 @@ function Backpack.start()
 
 	-- Refresco --------------------------------------------------------------------------
 	local function refresh()
+		-- Con la ventana cerrada no se toca nada: se pone al día al abrirla.
+		if not window.Visible then
+			return
+		end
 		local equippedId = player:GetAttribute("Equipped") or 1
 		local copies = Stats.swords(player)
 
@@ -433,7 +454,7 @@ function Backpack.start()
 		local key = `{player:GetAttribute("Swords")}|{equippedId}`
 		if key ~= swordsKey then
 			swordsKey = key
-			rebuildSwords(copies, equippedId)
+			syncSwords(copies, equippedId)
 		end
 		refreshSelection(copies, equippedId)
 		if not autoBox:IsFocused() then
@@ -476,6 +497,7 @@ function Backpack.start()
 
 	player.AttributeChanged:Connect(refresh)
 	window:GetPropertyChangedSignal("Visible"):Connect(function()
+		refresh()
 		if window.Visible and current == "Gear" then
 			showCharacter()
 		end
