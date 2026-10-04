@@ -14,7 +14,7 @@ Cada jugador tiene una parcela donde aparecen objetos; los rompe a espadazos, ga
 2. `list_roblox_studios` para obtener el `studio_id` del Studio abierto (`mi-juego`).
 3. Si Studio no tiene conexiones al puerto 34872, pedir al usuario que pulse Rojo → Connect.
 
-Entorno: Windows, PowerShell, Rojo 7.7.1 instalado con Rokit, sin git. El lugar no está publicado (`PlaceId` 0), así que el guardado no actúa.
+Entorno: Windows, PowerShell, Rojo 7.7.1 instalado con Rokit. Git y GitHub CLI (`gh`) instalados; repo privado `SergioRE2007/mi-juego`, rama `main`. El archivo del lugar (`.rbxl`) no se sube. El lugar no está publicado (`PlaceId` 0), así que el guardado no actúa.
 
 ## Cómo trabajar
 
