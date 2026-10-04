@@ -6,7 +6,7 @@ Incremental de espadas estilo RNG. Servidores de 8 jugadores (una parcela cada u
 
 Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, más suerte) → salen objetos más raros y duros → hace falta mejor espada → gacha.
 
-- **El dinero** mejora la parcela y la suerte. **Las espadas** salen del gacha, que es **gratis** y se tira todo el rato (una tirada cada 2 s, desde cualquier sitio); lo que limita es el tiempo por tirada y la suerte de gacha. Las **gemas** las sueltan los objetos raros (de la Roca en adelante) y se gastan en suerte de gacha.
+- **El dinero** mejora la parcela y la suerte. **Las espadas** salen del gacha, que es **gratis** y se tira todo el rato (una tirada cada 2 s, desde cualquier sitio); lo que limita es el tiempo por tirada y la suerte de gacha. Las **gemas** las sueltan los objetos raros (de la Roca en adelante) y se gastan en suerte de gacha y en Grados.
 - **Mapa**: hub circular en el centro y 8 parcelas en círculo. El jugador aparece en la suya y solo puede romper sus propios objetos.
 - **Objetos**: 16 tipos (Caja → Infinito), cada uno con una rareza "1 entre N" que llega hasta 1 entre 1Sp. En cada aparición se prueba del más raro al más común; la suerte multiplica la probabilidad.
 - **Todo es exponencial**: cada nivel de Suerte y de Suerte de gacha multiplica x3 (50 niveles, hasta ~x718Sx), y los precios crecen también exponencialmente. Las rarezas, vidas, recompensas y daños suben por órdenes de magnitud.
@@ -25,7 +25,6 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Venta automática: el jugador escribe un número (admite 1000, 1.5K, 2M...) y las espadas menos raras que 1 entre ese número se venden solas al salir. Con el inventario lleno también se venden.
 - "Roca de armas" (1 entre 2000): al romperse da una tirada gratis con la suerte de gacha x10.
 - Aviso en el chat a todo el servidor cuando aparece un objeto o sale una espada que, con la suerte del jugador ya contada, era 1 entre 500 o más raro (`Config.AnnounceOdds`).
-- Mejoras de velocidad de golpe (0,35 s → 0,14 s) y suerte de gacha.
 - `Chance`: tiradas exactas con probabilidades diminutas.
 - Interfaz: contadores arriba con una línea del daño y las suertes finales, y menú a la izquierda (Mochila, Mejoras).
 - Tiendas de modificadores en el hub (pedido por el usuario, con capturas de referencia): dos puestos con toldo de rayas y cartel, entre dos caminos. Se abren con la tecla de interacción (ProximityPrompt) y se cierran al alejarse. Ventana: a la izquierda la espada elegida (se cambia pulsando su casilla), el modificador que tiene, el coste y los botones Tirar / Auto / engranaje (resultados con los que se para la automática; por defecto los de menos del 1 %); a la derecha todos los resultados con su % y su efecto: los grados del más raro al más común y los rasgos por tipo (Especiales, Monedas, Daño, Suerte). Las especiales arcoíris giran y las muy raras sin arcoíris laten. El resultado sustituye al anterior. La mochila ya no tira rasgos.
@@ -50,7 +49,7 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - `Stats` (shared) calcula el daño y las suertes finales juntando espada, rasgo, artefactos y mejoras.
 - Espadas con volumen hechas con piezas (`SwordModel`): hoja con filo, nervio y punta, guarda con remates, empuñadura y pomo. Desde la de acero, guarda dorada con cuernos y gema; las de neón brillan y sueltan chispas; desde la de cometa llevan esquirlas flotando. El expositor del hub usa el mismo modelo.
 - Animación del golpe por código (`SwingAnim`), que se adapta a la velocidad de golpe y enciende una estela. La espada alterna tres tajos (diagonal, revés y desde arriba).
-- Mochila con las armas en 3D (`WeaponPreview`): cada casilla enseña el modelo real del arma en diagonal sobre un círculo del color de su rareza; al pasar el ratón gira sobre sí misma y se acerca. El gacha (`GachaRoll`) sigue usando el icono plano de espada.
+- Mochila con las armas en 3D (`WeaponPreview`): cada casilla enseña el modelo real del arma en diagonal sobre un círculo del color de su rareza; al pasar el ratón gira sobre sí misma y se acerca.
 - Marcos animados por rareza en las casillas (`Ui.cell(padre, color, nivel)`): un brillo da vueltas por el borde, a la misma velocidad en todas (el usuario no quiere que las raras giren más rápido); desde Legendaria un halo que late; Secreta en rosa y violeta y Divina en celeste y blanco (sin arcoíris, a petición del usuario). Casillas de espadas más grandes (6 por fila) con el daño abajo a la izquierda, y botones más gruesos. Solo las casillas de espadas pasan el nivel; las de objetos y artefactos siguen con marco quieto.
 - Degradados y brillos de la interfaz (estilo común, afecta a todas las ventanas y casillas): casillas con fondo en degradado diagonal del color de la rareza, brillo de cristal arriba, canto negro por dentro y sombra detrás del texto; cabecera de ventana de azul a violeta y rosa con brillo; fondo de ventana más oscuro abajo; en la mochila, franja oscura detrás de los botones y número de daño en degradado. El cartel de las casillas de espadas sale pegado al lado de la casilla para no tapar el arma.
 - Modo de pruebas `Config.Test.AllWeapons`: una copia de cada arma al entrar en Studio.
@@ -70,11 +69,11 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Interfaz sin ver o sin probar a mano: pestaña Objetos; arrastrar el árbol de mejoras, la rueda del ratón y el pellizco táctil (probados solo los botones de zoom, comprar un nodo y "Mejorar todo"); escribir en la casilla de venta automática; inventario lleno (200). En móvil no hay cartel al pasar el ratón.
 - Mapa: tras el último retoque del mar y las colinas no se ha vuelto a mirar desde arriba, ni se ha recorrido andando. La valla de las parcelas choca (se entra por el hueco).
 - La velocidad al andar (30) es para todos, no solo en pruebas; el usuario no ha confirmado si la quería así.
-- Precios, vidas, rarezas, gemas por objeto y coste del gacha son una primera estimación; el usuario aún no ha dado su opinión sobre el ritmo. El arranque puede ser lento: con la espada de madera hacen falta 5 Rocas (1 entre 20) para la primera tirada.
+- Precios, vidas, rarezas, gemas por objeto y coste de los Grados son una primera estimación; el usuario aún no ha dado su opinión sobre el ritmo.
 - El gacha, la roca de armas, las mejoras nuevas y los avisos se probaron bajando temporalmente las rarezas en `Config`; con los valores reales no se han visto salir.
 - Los objetos y espadas a partir de Obelisco / Espada solar, y el ritmo de las suertes (x3 por nivel, precio x3.7 / x4.1), son números puestos a ojo sin jugar: nadie ha llegado ahí.
 - Armas nuevas: daños, rarezas y cadencias puestos a ojo. Vistos en captura los 9 modelos, la vuelta del hacha y la estocada de la lanza; los tajos de las espadas dobles y los de la espada tras rehacerlos no se han visto en movimiento. Probado en una parcela: el hacha da a un objeto que está a la espalda y las dobles solo de frente; sin probar el alcance largo de la lanza ni que solo pegue justo delante. "Equipar mejor" y el equipado automático comparan solo el daño por golpe, no la cadencia ni el área. En la animación de la tirada del gacha las armas de relleno se eligen por posición en la lista, así que hachas, lanzas y dobles casi no pasan (no afecta a lo que toca).
-- Auras de armas: a plena luz las chispas y las llamas se ven finas; destacan las cintas y la bruma. El aura sigue en arcoíris para Secreta y Divina, aunque el marco de la mochila ya no. La mochila en 3D: las lanzas se ven finas por ser largas; el panel del gacha y las tiendas siguen con el icono plano de espada.
+- Auras de armas: a plena luz las chispas y las llamas se ven finas; destacan las cintas y la bruma. El aura sigue en arcoíris para Secreta y Divina, aunque el marco de la mochila ya no. En las vistas 3D (mochila, gacha y tiendas) las lanzas se ven finas por ser largas.
 - Rasgos, grados y artefactos: nombres, multiplicadores y probabilidades puestos por Claude sin jugar. Los rasgos se cambiaron por completo (antes: Afilada → Cósmica); como el lugar nunca se ha publicado no hay partidas guardadas con los viejos. Probado en Studio: tiradas de rasgo y de grado, automática, el engranaje y elegir espada. Sin ver: un rasgo o grado muy raro de verdad. El coste del grado (25 gemas) está sin equilibrar.
 - Vender una espada da siempre 2 gemas, sea cual sea su rareza. Es a propósito: si el precio subiera con la rareza, con mucha suerte de gacha cada tirada devolvería más gemas de las que cuesta.
 - Gacha gratis probado en Studio con tiradas reales y falsas (Legendaria, Secreta y el aura de Mítica forzadas). Sin probar en móvil ni con varios jugadores viendo auras a la vez.
@@ -82,17 +81,11 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Sin probar: varios jugadores a la vez, liberar la parcela al salir, la mejora de suerte, los objetos raros, el guardado y el sonido del espadazo.
 - Al publicar: máximo 8 jugadores por servidor (un noveno se queda sin parcela) y activar el acceso de Studio a los servicios de API para probar el guardado.
 
-## Fase 2: pendiente
-
-Hecha (ver "Hecho"). Ideas que quedaron fuera:
-
-- Que los demás jugadores vean el efecto de la máquina cuando alguien tira.
-
-## Velocidad de tirada y gamepass (pedido por el usuario)
+## Pendiente: velocidad de tirada y gamepass (pedido por el usuario, sin hacer)
 
 Como el gacha es gratis y se tira todo el rato, lo que se mejora es lo rápido que se tira:
 
-- **Rama "Velocidad de tirada"** en el árbol de mejoras (`Config.Upgrades` y `Config.UpgradeOrder`; el árbol reparte solo los brazos): baja `Stats.rollTime` nivel a nivel desde 2 s.
+- **Rama "Velocidad de tirada"** en el árbol de mejoras: irá en `Config.Upgrades` y `Config.UpgradeOrder` (el árbol reparte solo los brazos) y bajará `Stats.rollTime` nivel a nivel desde 2 s. Hoy `Stats.rollTime` devuelve siempre `Config.Gacha.RollTime`.
 - **Gamepass** (Robux): tirada más rápida, doble tirada (dos espadas por tirada), más suerte de gacha. La tirada automática se queda gratis.
 
 ## Ideas para más adelante
@@ -101,6 +94,7 @@ Como el gacha es gratis y se tira todo el rato, lo que se mejora es lo rápido q
 - Más ramas en el árbol de mejoras (monedas, daño, velocidad al andar, tamaño de mochila…), como en la captura de referencia del usuario.
 - Vender varias espadas a la vez, venta automática también por rasgo.
 - Más tipos de objetos.
+- Que los demás jugadores vean el efecto de la máquina del gacha cuando alguien tira.
 - Nivel del jugador y experiencia, enemigos, renacimiento.
 - **Clasificaciones** (pedido por el usuario, más adelante): paneles grandes en el hub, como en la captura de referencia, con las mejores tiradas ("mejor tirada" con su 1 entre N), más monedas y más tiradas; globales entre servidores con OrderedDataStore (necesita el lugar publicado).
 - Decorado de parcelas, sonido al romper, partículas, modelos de espada más trabajados.
