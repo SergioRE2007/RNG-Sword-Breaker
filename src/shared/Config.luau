@@ -91,23 +91,50 @@ Config.Gacha = {
 -- (los que dan gemas) al romperse.
 Config.ItemOrder = { "traitCrystal" }
 Config.Items = {
-	traitCrystal = { name = "Cristal de rasgo", description = "Da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.2, color = Color3.fromRGB(90, 230, 255) },
+	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.2, color = Color3.fromRGB(90, 230, 255) },
 }
 
--- Rasgos de espada, de común a raro. Se tiran con un Cristal de rasgo ("rarity" = 1 entre N,
--- sin suerte). Multiplican el daño de esa espada y, mientras esté equipada, la suerte
--- (de parcela y de gacha). No cambies el orden: el guardado usa la posición en la lista.
+-- Rasgos de espada (tienda de Rasgos del hub). Se tiran con un Cristal de rasgo; "chance" = peso
+-- de salir (el % se calcula sobre el total, sin suerte). Mientras la espada está equipada
+-- multiplican sus monedas, su daño y la suerte (de parcela y de gacha); lo que no se pone vale 1.
+-- "icon" = coins, damage, luck o all (los que lo suben todo salen con arcoíris).
+-- No cambies el orden: el guardado usa la posición en la lista; lo nuevo, al final.
 Config.Traits = {
-	{ name = "Afilada", damage = 1.5, luck = 1, rarity = 1, color = Color3.fromRGB(200, 200, 205) },
-	{ name = "Afortunada", damage = 1.2, luck = 1.5, rarity = 3, color = Color3.fromRGB(110, 220, 120) },
-	{ name = "Pesada", damage = 3, luck = 1, rarity = 8, color = Color3.fromRGB(120, 160, 255) },
-	{ name = "Bendita", damage = 2, luck = 3, rarity = 25, color = Color3.fromRGB(255, 230, 120) },
-	{ name = "Feroz", damage = 8, luck = 1.5, rarity = 100, color = Color3.fromRGB(255, 120, 60) },
-	{ name = "Mística", damage = 5, luck = 10, rarity = 500, color = Color3.fromRGB(190, 110, 255) },
-	{ name = "Legendaria", damage = 30, luck = 5, rarity = 4000, color = Color3.fromRGB(255, 200, 50) },
-	{ name = "Divina", damage = 100, luck = 50, rarity = 50000, color = Color3.fromRGB(255, 255, 255) },
-	{ name = "Cósmica", damage = 1000, luck = 500, rarity = 1e6, color = Color3.fromRGB(255, 60, 200) },
+	{ name = "Monedas I", coins = 1.2, chance = 24.76, icon = "coins", color = Color3.fromRGB(110, 220, 120) },
+	{ name = "Daño I", damage = 1.2, chance = 24.76, icon = "damage", color = Color3.fromRGB(90, 210, 230) },
+	{ name = "Suerte I", luck = 1.2, chance = 24.76, icon = "luck", color = Color3.fromRGB(150, 230, 90) },
+	{ name = "Monedas II", coins = 1.5, chance = 6.7, icon = "coins", color = Color3.fromRGB(60, 200, 90) },
+	{ name = "Daño II", damage = 1.5, chance = 6.7, icon = "damage", color = Color3.fromRGB(50, 170, 240) },
+	{ name = "Suerte II", luck = 1.5, chance = 6.7, icon = "luck", color = Color3.fromRGB(120, 210, 50) },
+	{ name = "Monedas III", coins = 2, chance = 1.5, icon = "coins", color = Color3.fromRGB(30, 180, 70) },
+	{ name = "Daño III", damage = 2, chance = 1.5, icon = "damage", color = Color3.fromRGB(40, 120, 255) },
+	{ name = "Suerte III", luck = 2, chance = 1.5, icon = "luck", color = Color3.fromRGB(90, 190, 30) },
+	{ name = "Samurái", coins = 3, damage = 3, luck = 3, chance = 0.9, icon = "all", color = Color3.fromRGB(255, 120, 200), rainbow = true },
+	{ name = "Shogun", coins = 5, damage = 5, luck = 5, chance = 0.17, icon = "all", color = Color3.fromRGB(120, 230, 160), rainbow = true },
+	{ name = "Monarca", coins = 8, damage = 8, luck = 8, chance = 0.039, icon = "all", color = Color3.fromRGB(180, 120, 255), rainbow = true },
+	{ name = "Trascendente", coins = 15, damage = 15, luck = 15, chance = 0.01, icon = "all", color = Color3.fromRGB(255, 80, 60) },
+	{ name = "Eterno", coins = 30, damage = 30, luck = 30, chance = 0.0045, icon = "all", color = Color3.fromRGB(220, 40, 40) },
+	{ name = "Paradoja", coins = 57.5, damage = 57.5, luck = 57.5, chance = 0.0019, icon = "all", color = Color3.fromRGB(235, 235, 245) },
 }
+
+-- Grados de espada (tienda de Grados del hub). Se tiran con gemas (GradeCost cada vez) y
+-- multiplican las monedas mientras la espada está equipada. "chance" como en los rasgos.
+-- No cambies el orden: el guardado usa la posición en la lista.
+Config.Grades = {
+	{ name = "D", coins = 1.1, chance = 50.21, color = Color3.fromRGB(200, 200, 205) },
+	{ name = "C", coins = 1.25, chance = 25, color = Color3.fromRGB(80, 210, 80) },
+	{ name = "B", coins = 1.5, chance = 12, color = Color3.fromRGB(60, 140, 255) },
+	{ name = "A", coins = 2, chance = 7.4, color = Color3.fromRGB(160, 80, 255) },
+	{ name = "A+", coins = 3, chance = 3.8, color = Color3.fromRGB(255, 190, 40) },
+	{ name = "S", coins = 5, chance = 1.3, color = Color3.fromRGB(240, 50, 60) },
+	{ name = "S+", coins = 8, chance = 0.2, color = Color3.fromRGB(50, 80, 255) },
+	{ name = "Z", coins = 12, chance = 0.063, color = Color3.fromRGB(40, 210, 190) },
+	{ name = "Z+", coins = 20, chance = 0.019, color = Color3.fromRGB(200, 90, 255), rainbow = true },
+	{ name = "X", coins = 40, chance = 0.0057, color = Color3.fromRGB(230, 40, 40), rainbow = true },
+	{ name = "∞", coins = 100, chance = 0.0016, color = Color3.fromRGB(190, 150, 255), rainbow = true },
+}
+Config.GradeCost = 25 -- gemas por tirada de grado
+Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grado
 
 -- Artefactos (equipo). Pueden caer al romper cualquier objeto ("rarity" = 1 entre N, la
 -- suerte de parcela multiplica la probabilidad). "stat": damage, luck (parcela y gacha),

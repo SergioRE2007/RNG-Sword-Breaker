@@ -15,7 +15,9 @@ local NAMES = {
 	"GachaRolled", -- servidor -> cliente: (index, kept, luck, source) espada sacada; kept = false si se vendió sola; source = "gacha" o "roca"
 	"GachaRevealed", -- cliente -> servidor: ya he destapado mi siguiente tirada rara (para mandar su aura y aviso a todos)
 	"GachaAura", -- servidor -> clientes: (player, index, odds) aura en el personaje de quien sacó algo raro para su suerte (odds = rareza / suerte)
-	"RollTrait", -- cliente -> servidor: (id) gastar un Cristal de rasgo en esa copia de espada
+	"RollTrait", -- cliente -> servidor: (id) gastar un Cristal de rasgo en esa copia de espada (tienda de Rasgos)
+	"RollGrade", -- cliente -> servidor: (id) gastar Config.GradeCost gemas en un grado para esa copia (tienda de Grados)
+	"ModifierRolled", -- servidor -> cliente: (kind, id, index) resultado de una tirada de rasgo ("traits") o grado ("grades")
 	"ToggleGear", -- cliente -> servidor: (artifactIndex) equipar o quitar un artefacto
 	"Notice", -- servidor -> cliente: (text, color) aviso en pantalla solo para él
 	"Announce", -- servidor -> clientes: (text, color) aviso de algo muy raro
