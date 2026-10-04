@@ -7,9 +7,10 @@ Config.AnnounceOdds = 500
 Config.WalkSpeed = 30 -- velocidad al andar (la normal de Roblox es 16)
 
 -- Modo de pruebas: solo actúa al darle a Jugar dentro de Studio, nunca en el juego publicado.
--- Da monedas y gemas infinitas y no guarda el progreso de esa partida.
+-- No guarda el progreso de esa partida.
 Config.Test = {
-	InfiniteMoney = true,
+	InfiniteMoney = true, -- monedas y gemas infinitas
+	AllWeapons = true, -- una copia de cada arma de Config.Swords en la mochila al entrar
 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
