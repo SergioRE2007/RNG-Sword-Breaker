@@ -1,5 +1,5 @@
 -- Ambiente y decorado: una isla tropical. Mar turquesa a cuadros, playa, césped a cuadros,
--- palmeras, rocas, colinas y nubes de fondo, caminos, farolas y un expositor en el hub con
+-- palmeras, rocas, colinas y nubes de fondo, caminos con balizas, plaza del hub y un expositor con
 -- las espadas más raras. Todo es decoración: no afecta al juego.
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,6 +16,8 @@ local Scenery = {}
 local rng = Random.new(7) -- semilla fija: el decorado sale igual en todos los servidores
 
 local SAND = Color3.fromRGB(245, 226, 165)
+local SAND_DARK = Color3.fromRGB(232, 208, 145)
+local CURB = Color3.fromRGB(70, 130, 230)
 local GRASS = { Color3.fromRGB(96, 200, 90), Color3.fromRGB(82, 184, 80) }
 local SEA = { Color3.fromRGB(50, 200, 225), Color3.fromRGB(72, 214, 234) }
 local LEAVES = { Color3.fromRGB(50, 180, 95), Color3.fromRGB(70, 200, 110), Color3.fromRGB(40, 160, 110) }
@@ -80,6 +82,9 @@ end
 local function buildSea(parent: Instance, islandRadius: number)
 	local baseplate = workspace:FindFirstChild("Baseplate")
 	if baseplate and baseplate:IsA("BasePart") then
+		-- Con CFrame y no con Position: al agrandarla, Studio la sube para que no se solape con
+		-- nada y tapa la isla.
+		baseplate.CFrame = CFrame.new(0, -baseplate.Size.Y / 2, 0)
 		baseplate.Material = Enum.Material.SmoothPlastic
 		baseplate.Color = SEA[1]
 		for _, child in baseplate:GetChildren() do
@@ -164,15 +169,61 @@ local function bush(parent: Instance, position: Vector3)
 	item.CanCollide = false
 end
 
+-- Baliza del camino: poste blanco con una bola del color de la parcela. Sin brillo (el
+-- usuario no quería luces encendidas en los caminos).
 local function lamp(parent: Instance, position: Vector3, color: Color3)
-	part(parent, "Post", Vector3.new(0.8, 7, 0.8), CFrame.new(position + Vector3.new(0, 3.5, 0)), Color3.fromRGB(250, 250, 255), Enum.Material.SmoothPlastic)
-	local bulb = part(parent, "Bulb", Vector3.one * 2.4, CFrame.new(position + Vector3.new(0, 7.8, 0)), color, Enum.Material.Neon)
+	part(parent, "Post", Vector3.new(0.8, 6, 0.8), CFrame.new(position + Vector3.new(0, 3, 0)), Color3.fromRGB(250, 250, 255), Enum.Material.SmoothPlastic)
+	local bulb = part(parent, "Bulb", Vector3.one * 2, CFrame.new(position + Vector3.new(0, 6.6, 0)), color, Enum.Material.SmoothPlastic)
 	bulb.Shape = Enum.PartType.Ball
-	local light = Instance.new("PointLight")
-	light.Color = color
-	light.Range = 18
-	light.Brightness = 1.5
-	light.Parent = bulb
+end
+
+-- Camino ancho de baldosas de arena en dos tonos, con un bordillo azul a cada lado (como las
+-- vías de la captura de referencia) y balizas cada cierto trecho.
+local function path(parent: Instance, direction: Vector3, from: number, to: number, color: Color3)
+	local width = 18
+	local tile = 9
+	local side = Vector3.new(-direction.Z, 0, direction.X)
+	local facing = CFrame.lookAt(Vector3.zero, direction).Rotation
+	local count = math.floor((to - from) / tile)
+	for step = 0, count - 1 do
+		for lane = 0, 1 do
+			local center = direction * (from + (step + 0.5) * tile) + side * ((lane - 0.5) * tile) + Vector3.new(0, 0.42, 0)
+			local shade = if (step + lane) % 2 == 0 then SAND else SAND_DARK
+			decor(part(parent, "Path", Vector3.new(tile, 0.12, tile), facing + center, shade, Enum.Material.SmoothPlastic))
+		end
+	end
+	local length = count * tile
+	for _, sign in { 1, -1 } do
+		local middle = direction * (from + length / 2) + side * sign * (width / 2 + 0.6) + Vector3.new(0, 0.6, 0)
+		decor(part(parent, "Curb", Vector3.new(1.2, 0.5, length), facing + middle, CURB, Enum.Material.SmoothPlastic))
+	end
+	for distance = from + 12, from + length - 6, 36 do
+		for _, sign in { 1, -1 } do
+			lamp(parent, direction * distance + side * sign * (width / 2 + 3), color)
+		end
+	end
+end
+
+-- Plaza del hub: dos anillos de baldosas a cuadros (junto al gacha y junto al borde) y un
+-- bordillo bajo en el borde, que no choca para no tapar las entradas.
+local function plaza(parent: Instance, radius: number)
+	for _, band in { { inner = 16, outer = 22 }, { inner = radius - 10, outer = radius - 2 } } do
+		local middle = (band.inner + band.outer) / 2
+		local count = math.floor(2 * math.pi * middle / 8)
+		for index = 1, count do
+			local angle = index / count * math.pi * 2
+			local position = Vector3.new(math.cos(angle) * middle, 0.45, math.sin(angle) * middle)
+			local shade = if index % 2 == 0 then SAND else SAND_DARK
+			local arc = 2 * math.pi * middle / count + 0.3
+			decor(part(parent, "PlazaTile", Vector3.new(band.outer - band.inner, 0.12, arc), CFrame.new(position) * CFrame.Angles(0, -angle, 0), shade, Enum.Material.SmoothPlastic))
+		end
+	end
+	local count = 72
+	for index = 1, count do
+		local angle = index / count * math.pi * 2
+		local position = Vector3.new(math.cos(angle) * radius, 0.7, math.sin(angle) * radius)
+		decor(part(parent, "HubCurb", Vector3.new(1.4, 0.6, 2 * math.pi * radius / count + 0.2), CFrame.new(position) * CFrame.Angles(0, -angle, 0), CURB, Enum.Material.SmoothPlastic))
+	end
 end
 
 -- Expositor: pedestal con una espada gigante flotando y su rareza en un cartel.
@@ -229,17 +280,12 @@ function Scenery.start()
 	buildSea(folder, islandRadius + beach)
 	buildIsland(folder, Vector3.zero, islandRadius, beach)
 
-	-- Caminos y farolas de cada parcela.
+	plaza(folder, cfg.HubRadius)
+
+	-- Camino del hub a cada parcela, con balizas del color de la parcela.
 	ring(cfg.Count, 1, 0, function(direction, index)
 		local color = Color3.fromHSV((index - 1) / cfg.Count, 0.65, 1)
-		local from = cfg.HubRadius - 2
-		local to = cfg.RingRadius - cfg.Size / 2
-		local middle = direction * ((from + to) / 2) + Vector3.new(0, 0.2, 0)
-		decor(part(folder, "Path", Vector3.new(12, 0.3, to - from), CFrame.lookAt(middle, middle + direction), SAND, Enum.Material.Sand))
-
-		local side = Vector3.new(-direction.Z, 0, direction.X)
-		lamp(folder, direction * (cfg.HubRadius - 3) + side * 8, color)
-		lamp(folder, direction * (cfg.HubRadius - 3) - side * 8, color)
+		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, color)
 	end)
 
 	-- Expositor del hub: las espadas más raras, en círculo alrededor del gacha.
@@ -261,28 +307,31 @@ function Scenery.start()
 	end)
 
 	-- Palmeras, arbustos y rocas entre las parcelas (huecos del anillo).
-	ring(cfg.Count, cfg.HubRadius + 22, 0.5, function(position)
+	ring(cfg.Count, cfg.HubRadius + 25, 0.5, function(position)
 		palm(folder, position)
 		bush(folder, position + Vector3.new(rng:NextNumber(-9, 9), 0, rng:NextNumber(-9, 9)))
 	end)
-	ring(cfg.Count, cfg.RingRadius + 8, 0.5, function(position)
-		palm(folder, position)
-		rock(folder, position + Vector3.new(rng:NextNumber(-12, 12), 0, rng:NextNumber(-12, 12)))
-		bush(folder, position + Vector3.new(rng:NextNumber(-12, 12), 0, rng:NextNumber(-12, 12)))
-	end)
+	for _, distance in { (cfg.HubRadius + cfg.RingRadius) / 2 + 20, cfg.RingRadius, cfg.RingRadius + 45 } do
+		ring(cfg.Count, distance, 0.5, function(position)
+			palm(folder, position)
+			palm(folder, position + Vector3.new(rng:NextNumber(-16, 16), 0, rng:NextNumber(-16, 16)))
+			rock(folder, position + Vector3.new(rng:NextNumber(-14, 14), 0, rng:NextNumber(-14, 14)))
+			bush(folder, position + Vector3.new(rng:NextNumber(-14, 14), 0, rng:NextNumber(-14, 14)))
+		end)
+	end
 
 	-- Borde de la isla: palmeras en el césped, rocas y arbustos sueltos.
-	ring(26, islandRadius - 10, 0.3, function(position)
+	ring(40, islandRadius - 10, 0.3, function(position)
 		palm(folder, position + Vector3.new(rng:NextNumber(-6, 6), 0, rng:NextNumber(-6, 6)))
 	end)
-	ring(18, islandRadius + beach * 0.5, 0.1, function(position)
+	ring(28, islandRadius + beach * 0.5, 0.1, function(position)
 		if rng:NextNumber() < 0.5 then
 			rock(folder, position)
 		else
 			palm(folder, position)
 		end
 	end)
-	ring(30, islandRadius - 24, 0.7, function(position)
+	ring(46, islandRadius - 24, 0.7, function(position)
 		bush(folder, position + Vector3.new(rng:NextNumber(-8, 8), 0, rng:NextNumber(-8, 8)))
 	end)
 
@@ -297,12 +346,12 @@ function Scenery.start()
 	end)
 
 	-- Colinas azuladas en el horizonte y nubes.
-	ring(14, 930, 0, function(position)
+	ring(16, 1100, 0, function(position)
 		local size = rng:NextNumber(200, 340)
 		local hill = decor(part(folder, "Hill", Vector3.one * size, CFrame.new(position + Vector3.new(0, -size * 0.18, 0)), HILLS[rng:NextInteger(1, #HILLS)], Enum.Material.SmoothPlastic))
 		hill.Shape = Enum.PartType.Ball
 	end)
-	ring(10, 480, 0.2, function(position)
+	ring(12, 600, 0.2, function(position)
 		local height = rng:NextNumber(190, 260)
 		for _ = 1, 3 do
 			local size = rng:NextNumber(40, 70)
