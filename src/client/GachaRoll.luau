@@ -784,7 +784,7 @@ local function buildPanel()
 	panel = Instance.new("Frame")
 	panel.Name = "GachaBar"
 	panel.AnchorPoint = Vector2.new(0.5, 0)
-	panel.Position = UDim2.new(0.5, 0, 0, 106)
+	panel.Position = UDim2.new(0.5, 0, 0, 84) -- bajo la barra de transporte
 	panel.Size = UDim2.fromOffset(PANEL_SIZE.X, PANEL_SIZE.Y)
 	panel.BackgroundTransparency = 1
 	panel.Parent = Ui.screen()
