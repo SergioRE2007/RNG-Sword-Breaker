@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 
 local NAMES = {
 	"Swing", -- cliente -> servidor: he dado un espadazo
-	"RollGacha", -- cliente -> servidor: tirar el gacha (hay que estar junto a la máquina del hub)
+	"RollGacha", -- cliente -> servidor: tirar el gacha (gratis, una vez cada Stats.rollTime)
 	"EquipSword", -- cliente -> servidor: (id) equipar una copia de espada del inventario
 	"SellSword", -- cliente -> servidor: (id) vender una copia que no esté equipada
 	"SetAutoSell", -- cliente -> servidor: (rarity) vender solas las espadas de rareza menor; 0 = no
@@ -12,7 +12,9 @@ local NAMES = {
 	"SwingFx", -- servidor -> los demás clientes: (player) ese jugador ha dado un espadazo
 	"Hit", -- servidor -> clientes: (player, part, position, damage)
 	"Broken", -- servidor -> clientes: (player, cframe, size, color, material, reward, gems)
-	"SwordObtained", -- servidor -> cliente: (index, kept, source) kept = false si se vendió sola; source = "gacha" o "roca"
+	"GachaRolled", -- servidor -> cliente: (index, kept, luck, source) espada sacada; kept = false si se vendió sola; source = "gacha" o "roca"
+	"GachaRevealed", -- cliente -> servidor: ya he destapado mi siguiente tirada rara (para mandar su aura y aviso a todos)
+	"GachaAura", -- servidor -> clientes: (player, index, odds) aura en el personaje de quien sacó algo raro para su suerte (odds = rareza / suerte)
 	"RollTrait", -- cliente -> servidor: (id) gastar un Cristal de rasgo en esa copia de espada
 	"ToggleGear", -- cliente -> servidor: (artifactIndex) equipar o quitar un artefacto
 	"Notice", -- servidor -> cliente: (text, color) aviso en pantalla solo para él

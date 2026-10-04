@@ -1,5 +1,5 @@
--- Gacha de espadas: máquina en el centro del hub, tiradas con gemas e inventario
--- (equipar, vender y venta automática).
+-- Gacha de espadas: tiradas gratis desde cualquier sitio (una cada Stats.rollTime segundos),
+-- máquina decorativa en el centro del hub e inventario (equipar, vender y venta automática).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Chance = require(ReplicatedStorage.Shared.Chance)
@@ -34,23 +34,40 @@ local function roll(luck: number): number
 	return 2
 end
 
--- Da una espada al azar con la suerte de gacha del jugador multiplicada por `luckMultiplier`.
--- Va al inventario como una copia más y se equipa si pega más que la actual. Se vende sola
--- si es menos rara que el límite de venta automática del jugador o el inventario está lleno.
-function Gacha.give(player: Player, luckMultiplier: number, source: string)
+local pendingReveals = {} -- [player] = { { index, odds } } tiradas raras que aún no ha destapado
+
+-- Desde qué "1 entre N" real hay algo que enseñar a los demás (aura o aviso).
+local function revealOdds(): number
+	return math.min(Config.Gacha.AuraOdds, Config.AnnounceOdds)
+end
+
+-- Aura en su personaje y, si es muy raro, aviso en el chat con la probabilidad real.
+local function broadcast(player: Player, entry)
+	if not player.Parent then
+		return
+	end
+	local sword = Config.Swords[entry.index]
+	if entry.odds >= Config.Gacha.AuraOdds then
+		Remotes.GachaAura:FireAllClients(player, entry.index, entry.odds)
+	end
+	if entry.odds >= Config.AnnounceOdds then
+		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {sword.name} (1 entre {Format.short(entry.odds)} con su suerte)!`, sword.color)
+	end
+end
+
+-- Saca una espada con suerte `luck` y la guarda como una copia más (se equipa si pega más que
+-- la actual). Se vende sola si es menos rara que el límite de venta automática del jugador o
+-- el inventario está lleno. Se lo manda al jugador para que lo enseñe; si es raro para su
+-- suerte, queda pendiente el aura en su personaje (y el aviso en el chat si es muy raro), que se
+-- manda a todos cuando su cliente lo destapa.
+local function draw(player: Player, luck: number, source: string)
 	local data = PlayerData.read(player)
 	if not data then
 		return
 	end
-	local luck = Stats.gachaLuck(player) * luckMultiplier
 	local index = roll(luck)
 	local sword = Config.Swords[index]
-	if sword.rarity / luck >= Config.AnnounceOdds then
-		-- Espera a que termine la animación de la tirada para no destripar el resultado.
-		task.delay(if source == "gacha" then Config.Gacha.RollTime else 0, function()
-			Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {sword.name} (1 entre {Format.short(sword.rarity)})!`, sword.color)
-		end)
-	end
+	local odds = sword.rarity / luck
 	local kept = sword.rarity >= data.autoSell and #data.swords < Config.MaxSwords
 	if kept then
 		local better = sword.damage > Stats.swordDamage(Stats.equipped(player))
@@ -65,18 +82,48 @@ function Gacha.give(player: Player, luckMultiplier: number, source: string)
 	else
 		PlayerData.addGems(player, Config.Gacha.SellValue)
 	end
-	Remotes.SwordObtained:FireClient(player, index, kept, source)
+	Remotes.GachaRolled:FireClient(player, index, kept, luck, source)
+	-- Cuenta la suerte: con mucha suerte de gacha, una espada rara ya no tiene aura ni aviso.
+	if odds >= revealOdds() then
+		local entry = { index = index, odds = odds }
+		local queue = pendingReveals[player] or {}
+		pendingReveals[player] = queue
+		table.insert(queue, entry)
+		-- Si el cliente no avisa (se cuelga, lo deja abierto), se manda igual pasado un rato.
+		task.delay(Config.Gacha.RevealTimeout, function()
+			local current = pendingReveals[player]
+			local position = current and table.find(current, entry)
+			if position then
+				table.remove(current, position)
+				broadcast(player, entry)
+			end
+		end)
+	end
 end
 
+-- El cliente avisa de que ha destapado su siguiente tirada rara (van en orden).
+local function onRevealed(player: Player)
+	local queue = pendingReveals[player]
+	if queue and #queue > 0 then
+		broadcast(player, table.remove(queue, 1))
+	end
+end
+
+-- Espada gratis (p. ej. la roca de armas) con la suerte de gacha multiplicada por `luckMultiplier`.
+function Gacha.give(player: Player, luckMultiplier: number, source: string)
+	draw(player, Stats.gachaLuck(player) * luckMultiplier, source)
+end
+
+local lastRoll = {} -- [player] = os.clock() de su última tirada
+
 local function onRoll(player: Player)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root or (root.Position - machinePosition).Magnitude > Config.Gacha.UseDistance + 4 then
+	-- Un poco de margen por el retraso de la red.
+	local now = os.clock()
+	if now - (lastRoll[player] or 0) < Stats.rollTime(player) * 0.85 then
 		return
 	end
-	if PlayerData.trySpendGems(player, Config.Gacha.Cost) then
-		Gacha.give(player, 1, "gacha")
-	end
+	lastRoll[player] = now
+	draw(player, Stats.gachaLuck(player), "gacha")
 end
 
 local function onEquip(player: Player, id: unknown)
@@ -154,7 +201,7 @@ local function buildMachine(parent: Instance)
 	label.TextStrokeTransparency = 0
 	label.Font = Enum.Font.FredokaOne
 	label.TextSize = 28
-	label.Text = `Gacha de espadas\n{Config.Gacha.Cost} gemas`
+	label.Text = "Gacha de espadas\n¡Gratis!"
 	label.Parent = gui
 
 	model.Parent = parent
@@ -163,9 +210,14 @@ end
 function Gacha.start()
 	buildMachine(workspace:WaitForChild("Map"))
 	Remotes.RollGacha.OnServerEvent:Connect(onRoll)
+	Remotes.GachaRevealed.OnServerEvent:Connect(onRevealed)
 	Remotes.EquipSword.OnServerEvent:Connect(onEquip)
 	Remotes.SellSword.OnServerEvent:Connect(onSell)
 	Remotes.SetAutoSell.OnServerEvent:Connect(onSetAutoSell)
+	game:GetService("Players").PlayerRemoving:Connect(function(player)
+		lastRoll[player] = nil
+		pendingReveals[player] = nil
+	end)
 end
 
 return Gacha

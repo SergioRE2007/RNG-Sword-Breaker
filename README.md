@@ -38,7 +38,7 @@ Cada zona tiene sus archivos. Si cada uno se queda en la suya, no hay conflictos
 
 | Zona | Servidor | Cliente | Shared |
 |---|---|---|---|
-| **Espadas y gacha** | `Swords`, `Gacha`, `Traits`, `Gear` | `Backpack`, `SwordController` | — |
+| **Espadas y gacha** | `Swords`, `Gacha`, `Traits`, `Gear` | `Backpack`, `GachaRoll`, `SwordController` | — |
 | **Mejoras** | `Shop` | `SkillTree` | `Upgrades` |
 | **Mapa y objetos** | `Plots`, `Scenery`, `Destructibles` | — | — |
 | **Combate y efectos** | `Combat`, `Movement`, `CollisionGroups` | `Effects` | `Chance` |
