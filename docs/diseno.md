@@ -32,7 +32,9 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Artefactos (equipo): 10 artefactos que caen al romper objetos (la suerte de parcela cuenta), 3 ranuras. Multiplican daño, suerte, monedas o gemas.
 - Interfaz estilo simulador: ventana "Mochila" con pestañas Espadas / Objetos / Equipo, casillas cuadradas con borde según la rareza (Común → Divina), cartel con detalles al pasar el ratón, barra de acciones para la espada elegida ("Equipar", "Tirar rasgo", "Vender", "Equipar mejor"), y en Equipo las 3 ranuras junto al personaje. Los iconos están hechos con marcos porque no hay imágenes propias.
 - Árbol de mejoras (botón "Mejoras"): pantalla completa con nodos hexagonales que salen de "Inicio"; cada mejora es una rama y cada nivel un nodo (Suerte I, II, III…). Solo se ven los comprados y los 3 siguientes, así que el árbol crece al avanzar. Se arrastra para moverse; el cartel de cada nodo dice qué da y cuánto cuesta.
-- Mapa: isla tropical redonda en un mar turquesa a cuadros, con playa, césped a cuadros, palmeras, arbustos, rocas, islotes, colinas azules en el horizonte y nubes. Hub más grande (radio 60) y parcelas más separadas (anillo de radio 150). En el hub, expositor con las 6 espadas más raras flotando sobre pedestales con su "1 entre N".
+- Mapa: isla tropical redonda en un mar turquesa a cuadros, con playa, césped a cuadros, palmeras, arbustos, rocas, islotes, colinas azules en el horizonte y nubes. Mapa grande: parcelas de 100x100 en un anillo de radio 250 y hub de radio 90 con plaza a cuadros y bordillo azul. Caminos anchos de baldosas con bordillos azules y balizas del color de la parcela, sin brillo (pedido por el usuario). En el hub, expositor con las 6 espadas más raras flotando sobre pedestales con su "1 entre N". La base (`Baseplate`, 2048 de lado) se coloca por `CFrame` en `Scenery`: con `Position` Studio la sube y tapa la isla.
+- Detalles de la isla: césped con textura (material Grass), matas de hierba y flores por el césped libre, agua poco profunda y espuma en la orilla, cordilleras nevadas en el horizonte con bancos de niebla, niebla más densa a lo lejos, rayos de sol y un leve desenfoque de lo lejano (estilo ilustración).
+- Animaciones del decorado en el cliente (`Ambience`): las palmeras se mecen, las nubes giran despacio alrededor de la isla, la espuma de la orilla late, las espadas del expositor giran y flotan, y seis gaviotas vuelan en círculos. Scenery marca las piezas con etiquetas (`Sway`, `Cloud`, `Foam`, `ShowcaseSword`).
 - Parcelas con suelo a cuadros (verde con dueño, gris libre) y valla de su color con entrada por el lado del hub.
 - Velocidad al andar 30 (la normal de Roblox es 16), en `Config.WalkSpeed`.
 - Modo de pruebas en Studio: monedas y gemas infinitas (`Config.Test.InfiniteMoney`). No actúa en el juego publicado.
@@ -49,7 +51,8 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 
 ## Provisional o sin probar
 
-- El hub solo tiene la máquina del gacha y el expositor de espadas raras (decorativo: las espadas no giran y sus carteles se pisan vistos de lejos).
+- El hub solo tiene la máquina del gacha y el expositor de espadas raras (los carteles de las espadas se pisan vistos de lejos, y más ahora que giran).
+- El decorado tiene ~7900 piezas (sobre todo matas de hierba); en Studio va a 60 fps, sin probar en móvil.
 - Interfaz sin ver o sin probar a mano: pestaña Objetos; comprar pulsando un nodo del árbol, arrastrarlo y cómo queda una rama larga (Suerte y Gacha tienen 150 niveles); escribir en la casilla de venta automática; inventario lleno (200). En móvil no hay cartel al pasar el ratón.
 - Mapa: tras el último retoque del mar y las colinas no se ha vuelto a mirar desde arriba, ni se ha recorrido andando. La valla de las parcelas choca (se entra por el hueco).
 - La velocidad al andar (30) es para todos, no solo en pruebas; el usuario no ha confirmado si la quería así.
@@ -84,5 +87,5 @@ Como el gacha es gratis y se tira todo el rato, lo que se mejora es lo rápido q
 - Vender varias espadas a la vez, venta automática también por rasgo.
 - Cristales de grado (otro modificador aparte del rasgo), más tipos de objetos.
 - Nivel del jugador y experiencia, enemigos, renacimiento.
-- Contenido del hub (tiendas, clasificaciones globales).
+- **Clasificaciones** (pedido por el usuario, más adelante): paneles grandes en el hub, como en la captura de referencia, con las mejores tiradas ("mejor tirada" con su 1 entre N), más monedas y más tiradas; globales entre servidores con OrderedDataStore (necesita el lugar publicado).
 - Decorado de parcelas, sonido al romper, partículas, modelos de espada más trabajados.
