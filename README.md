@@ -1,6 +1,6 @@
 # mi-juego
 
-Incremental de espadas para Roblox, estilo RNG. Cada jugador tiene una parcela donde aparecen objetos; los rompe a espadazos, gana monedas y mejora la parcela para que salgan objetos más raros. Los raros sueltan gemas, que pagan el gacha de espadas del hub.
+Incremental de espadas para Roblox, estilo RNG. Cada jugador tiene una parcela donde aparecen objetos; los rompe a espadazos, gana monedas y mejora la parcela para que salgan objetos más raros. Las armas salen de un gacha gratis; los objetos raros sueltan gemas, que pagan la suerte de gacha y los Grados.
 
 Todo el juego es código: no hay nada colocado a mano en Studio ni modelos propios. El código vive en `src/` y [Rojo](https://rojo.space) lo mete en Studio.
 
