@@ -236,7 +236,8 @@ end
 -- un brillo da vueltas por el borde, más rápido cuanto más rara.
 local SHINE_SPEED = { 0, 40, 70, 100, 140, 190, 250, 320 } -- grados por segundo
 local PULSE_FROM = 5 -- desde aquí el marco lleva además un halo que late
-local RAINBOW_FROM = 7 -- desde aquí el borde va en arcoíris
+local DUO_FROM = 7 -- Secreta: borde de dos tonos (su color y violeta) con destellos blancos
+local RAINBOW_FROM = 8 -- Divina: borde en arcoíris
 
 local shines = {} -- [UIGradient del borde] = { speed, halo, phase }
 local shining = false
@@ -258,6 +259,20 @@ local function shineColors(color: Color3, tier: number): ColorSequence
 			table.insert(points, ColorSequenceKeypoint.new(step / 6, Color3.fromHSV(step / 6 % 1, 0.7, 1)))
 		end
 		return ColorSequence.new(points)
+	end
+	if tier >= DUO_FROM then
+		local violet = Color3.fromRGB(110, 60, 255)
+		return ColorSequence.new({
+			ColorSequenceKeypoint.new(0, violet),
+			ColorSequenceKeypoint.new(0.22, color),
+			ColorSequenceKeypoint.new(0.3, WHITE),
+			ColorSequenceKeypoint.new(0.38, color),
+			ColorSequenceKeypoint.new(0.5, violet),
+			ColorSequenceKeypoint.new(0.72, color),
+			ColorSequenceKeypoint.new(0.8, WHITE),
+			ColorSequenceKeypoint.new(0.88, color),
+			ColorSequenceKeypoint.new(1, violet),
+		})
 	end
 	local dark = color:Lerp(BLACK, 0.45)
 	return ColorSequence.new({
