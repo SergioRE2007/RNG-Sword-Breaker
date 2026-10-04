@@ -73,6 +73,11 @@ function Stats.gachaLuck(player: Player): number
 	return upgrade(player, "gachaLuck") * luckBonus(player)
 end
 
+-- Segundos por tirada del gacha. Aquí se restarán la rama "Velocidad de tirada" y los gamepass.
+function Stats.rollTime(_player: Player): number
+	return Config.Gacha.RollTime
+end
+
 function Stats.coins(player: Player): number
 	return gear(player, "coins")
 end
