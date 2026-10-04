@@ -127,7 +127,7 @@ local function findTrails(character: Model): { Trail }
 	local tool = character:FindFirstChildWhichIsA("Tool")
 	if tool then
 		for _, item in tool:GetDescendants() do
-			if item:IsA("Trail") then
+			if item:IsA("Trail") and item.Name == "SwingTrail" then
 				table.insert(trails, item)
 			end
 		end
