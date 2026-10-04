@@ -45,6 +45,13 @@ end
 local spinning = {}
 -- Bordes de las especiales sin arcoíris: laten (los mueve ModifierShops.start).
 local pulsing = {}
+-- Efectos de las filas de la lista (los mueve ModifierShops.start):
+local shines = {} -- [degradado] = desfase: brillo blanco que cruza la fila de vez en cuando
+local bobbing = {} -- [icono] = { phase, scale }: el icono flota y late
+local sparkly = {} -- [capa] = { color, window, next }: chispas de fondo en las raras (< 1 %)
+local SHINE_EVERY = 4.5 -- segundos entre dos brillos de la misma fila
+local SHINE_TIME = 0.7 -- lo que tarda el brillo en cruzar
+local SPARKLE_EVERY = 1.6 -- segundos entre chispas de una fila rara
 
 local function rainbow(parent: Instance)
 	local gradient = Instance.new("UIGradient")
@@ -403,7 +410,7 @@ local function buildShop(kind: string)
 		local row = Instance.new("Frame")
 		row.Name = "Result" .. index
 		row.LayoutOrder = position
-		row.Size = UDim2.new(1, -8, 0, 80)
+		row.Size = UDim2.new(1, -8, 0, 92)
 		row.BackgroundColor3 = WHITE
 		row.Parent = results
 		Ui.round(row, 10)
@@ -414,18 +421,51 @@ local function buildShop(kind: string)
 		elseif Modifiers.percent(kind, index) < 0.1 then
 			pulsing[stroke] = index
 		end
-		-- Icono a la izquierda, nombre y efecto en el centro y el % en una etiqueta a la derecha.
+		-- Brillo: una franja blanca (degradado de transparencia) que cruza la fila.
+		local shine = Instance.new("Frame")
+		shine.Name = "Shine"
+		shine.Size = UDim2.fromScale(1, 1)
+		shine.BackgroundColor3 = WHITE
+		shine.ZIndex = row.ZIndex
+		shine.Parent = row
+		Ui.round(shine, 10)
+		local shineGradient = Instance.new("UIGradient")
+		shineGradient.Rotation = 20
+		shineGradient.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.42, 1),
+			NumberSequenceKeypoint.new(0.5, 0.75),
+			NumberSequenceKeypoint.new(0.58, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		shineGradient.Offset = Vector2.new(-1, 0)
+		shineGradient.Parent = shine
+		shines[shineGradient] = position * 0.37
+		if Modifiers.percent(kind, index) < 1 then
+			-- Capa de las chispas, creada antes que el icono y los textos para quedar por detrás.
+			local sparkLayer = Instance.new("Frame")
+			sparkLayer.Name = "Sparkles"
+			sparkLayer.Size = UDim2.fromScale(1, 1)
+			sparkLayer.BackgroundTransparency = 1
+			sparkLayer.ZIndex = row.ZIndex
+			sparkLayer.Parent = row
+			sparkly[sparkLayer] = { color = if entry.rainbow then WHITE else entry.color, window = window, next = 0 }
+		end
+		-- Icono a la izquierda; arriba el nombre y el % en una etiqueta a la derecha; abajo el efecto a lo ancho.
 		local iconBox = Instance.new("Frame")
-		iconBox.Position = UDim2.fromOffset(12, 10)
+		iconBox.Position = UDim2.fromOffset(12, 17)
 		iconBox.Size = UDim2.fromOffset(62, 58)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
 		entryIcon(iconBox, kind, entry)
+		local iconScale = Instance.new("UIScale")
+		iconScale.Parent = iconBox
+		bobbing[iconBox] = { phase = position * 0.9, scale = iconScale }
 		local pill = Instance.new("Frame")
 		pill.Name = "Percent"
-		pill.AnchorPoint = Vector2.new(1, 0.5)
-		pill.Position = UDim2.new(1, -12, 0.5, 0)
-		pill.Size = UDim2.fromOffset(104, 38)
+		pill.AnchorPoint = Vector2.new(1, 0)
+		pill.Position = UDim2.new(1, -12, 0, 10)
+		pill.Size = UDim2.fromOffset(104, 34)
 		pill.BackgroundColor3 = Ui.COLORS.dark
 		pill.Parent = row
 		Ui.round(pill, 10)
@@ -456,11 +496,15 @@ local function buildShop(kind: string)
 			gradient.Parent = title
 		end
 		local detail = Ui.label(row, 20)
-		detail.Position = UDim2.fromOffset(86, 46)
-		detail.Size = UDim2.new(1, -210, 0, 24)
+		detail.Position = UDim2.fromOffset(86, 54)
+		detail.Size = UDim2.new(1, -98, 0, 26)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
 		detail.TextColor3 = Color3.fromRGB(120, 235, 120)
 		detail.Text = Modifiers.effect(entry)
+		detail.TextScaled = true
+		local detailLimit = Instance.new("UITextSizeConstraint")
+		detailLimit.MaxTextSize = 20
+		detailLimit.Parent = detail
 		-- Crece un poco al pasar el ratón.
 		local grow = Instance.new("UIScale")
 		grow.Parent = row
@@ -537,11 +581,21 @@ local function buildShop(kind: string)
 			end
 		end
 		local equipped = player:GetAttribute("Equipped")
-		for _, copy in Stats.swords(player) do
+		-- De la más rara a la más común; dentro de la misma rareza, de más a menos daño.
+		local copies = Stats.swords(player)
+		table.sort(copies, function(a, b)
+			-- La espada inicial no tiene rareza: cuenta como la más común.
+			local rarityA, rarityB = Config.Swords[a.sword].rarity or 1, Config.Swords[b.sword].rarity or 1
+			if rarityA ~= rarityB then
+				return rarityA > rarityB
+			end
+			return Stats.swordDamage(a) > Stats.swordDamage(b)
+		end)
+		for position, copy in copies do
 			local sword = Config.Swords[copy.sword]
 			local cell = Ui.cell(pickerList, Rarity.tier(sword.rarity).color)
 			cell.Name = "Sword" .. copy.id
-			cell.LayoutOrder = -math.floor(Stats.swordDamage(copy))
+			cell.LayoutOrder = position
 			cell.ZIndex = 7
 			WeaponPreview.attach(cell, copy.sword, Rarity.tier(sword.rarity).color)
 			local current = info.list[copy[info.field]]
@@ -707,6 +761,51 @@ function ModifierShops.start()
 			local wave = (math.sin(now * 4 + phase) + 1) / 2
 			stroke.Thickness = 2.5 + wave * 2.5
 			stroke.Transparency = 0.35 - wave * 0.35
+		end
+		-- Filas de la lista: brillo que cruza, iconos que flotan y laten, chispas en las raras.
+		for gradient, phase in shines do
+			if not gradient.Parent then
+				shines[gradient] = nil
+				continue
+			end
+			local t = (now + phase) % SHINE_EVERY
+			gradient.Offset = Vector2.new(if t < SHINE_TIME then -1 + 2 * t / SHINE_TIME else -1, 0)
+		end
+		for icon, data in bobbing do
+			if not icon.Parent then
+				bobbing[icon] = nil
+				continue
+			end
+			icon.Position = UDim2.fromOffset(12, 17 + math.sin(now * 2 + data.phase) * 3)
+			data.scale.Scale = 1 + math.sin(now * 3 + data.phase) * 0.06
+		end
+		for layer, data in sparkly do
+			if not layer.Parent then
+				sparkly[layer] = nil
+				continue
+			end
+			if not data.window.Visible or now < data.next then
+				continue
+			end
+			data.next = now + SPARKLE_EVERY * (0.6 + random:NextNumber() * 0.8)
+			-- Chispa (rombo blanco con borde del color) que crece y se apaga en un punto al azar.
+			local spark = Instance.new("Frame")
+			spark.AnchorPoint = Vector2.new(0.5, 0.5)
+			spark.Position = UDim2.fromScale(random:NextNumber(0.05, 0.8), random:NextNumber(0.15, 0.85))
+			spark.Size = UDim2.fromOffset(0, 0)
+			spark.Rotation = 45
+			spark.BackgroundColor3 = WHITE
+			spark.BorderSizePixel = 0
+			spark.BackgroundTransparency = 0.4
+			spark.ZIndex = layer.ZIndex
+			spark.Parent = layer
+			Ui.stroke(spark, data.color, 1).Transparency = 0.4
+			local size = random:NextInteger(5, 8)
+			local grow = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, true)
+			TweenService:Create(spark, grow, { Size = UDim2.fromOffset(size, size) }):Play()
+			task.delay(0.5, function()
+				spark:Destroy()
+			end)
 		end
 	end)
 
