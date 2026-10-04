@@ -12,14 +12,26 @@ Config.Test = {
 	InfiniteMoney = true,
 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
+Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
 Config.StartCoins = 0
 Config.AutosaveInterval = 60
 Config.DataStoreName = "PlayerData_v1"
 
--- Ordenadas de común a rara. La primera es la inicial y no sale en el gacha.
+-- Tipos de arma. Cada arma de Config.Swords lleva "kind" (sin él es "sword").
+-- cooldown = multiplica el tiempo entre golpes; arc = cuánto de frente tiene que estar el objeto
+-- (1 = justo delante, 0 = medio círculo, -1 = todo alrededor). El alcance es BaseRange + bladeLength.
+Config.WeaponKinds = {
+	sword = { name = "Espada", cooldown = 1, arc = 0.2 },
+	axe = { name = "Hacha", cooldown = 1.7, arc = -1 }, -- gira y pega a todo lo que le rodea, pero lenta
+	dual = { name = "Espadas dobles", cooldown = 0.55, arc = 0.2 }, -- golpes rápidos y flojos
+	spear = { name = "Lanza", cooldown = 1.1, arc = 0.8 }, -- estocada estrecha desde lejos
+}
+
+-- La primera es la inicial y no sale en el gacha.
 -- "rarity" = 1 entre N de que salga en cada tirada (se prueba de la más rara a la más común).
+-- "bladeLength" = largo del arma: en la lanza es el asta entera y en el hacha el mango.
 -- El jugador puede tener varias copias de cada una, cada copia con su propio rasgo.
--- No cambies el orden: el inventario guardado usa la posición en esta lista.
+-- No cambies el orden: el inventario guardado usa la posición en esta lista. Lo nuevo va al final.
 Config.Swords = {
 	{ name = "Espada de madera", damage = 1, bladeLength = 3, color = Color3.fromRGB(150, 105, 60), material = Enum.Material.Wood },
 	{ name = "Espada de piedra", damage = 3, rarity = 1, bladeLength = 3.4, color = Color3.fromRGB(130, 130, 135), material = Enum.Material.Slate },
@@ -37,6 +49,16 @@ Config.Swords = {
 	{ name = "Espada del cosmos", damage = 2e16, rarity = 1e18, bladeLength = 8.8, color = Color3.fromRGB(20, 20, 40), material = Enum.Material.Glass },
 	{ name = "Espada del origen", damage = 1e19, rarity = 1e21, bladeLength = 9, color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
 	{ name = "Espada del infinito", damage = 1e22, rarity = 1e24, bladeLength = 9.5, color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
+	-- Hachas, espadas dobles y lanzas (añadidas después: por eso no van ordenadas por rareza).
+	{ name = "Hacha de leñador", kind = "axe", damage = 12, rarity = 6, bladeLength = 3.5, color = Color3.fromRGB(170, 175, 185), material = Enum.Material.Metal },
+	{ name = "Dagas gemelas", kind = "dual", damage = 9, rarity = 8, bladeLength = 2.4, color = Color3.fromRGB(190, 200, 215), material = Enum.Material.Metal },
+	{ name = "Lanza de caza", kind = "spear", damage = 45, rarity = 25, bladeLength = 9, color = Color3.fromRGB(205, 210, 220), material = Enum.Material.Metal },
+	{ name = "Hacha de guerra", kind = "axe", damage = 650, rarity = 600, bladeLength = 4.5, color = Color3.fromRGB(200, 70, 60), material = Enum.Material.Metal },
+	{ name = "Sables gemelos", kind = "dual", damage = 450, rarity = 900, bladeLength = 3.6, color = Color3.fromRGB(80, 210, 160), material = Enum.Material.Foil },
+	{ name = "Lanza de jade", kind = "spear", damage = 3000, rarity = 4000, bladeLength = 11, color = Color3.fromRGB(70, 200, 130), material = Enum.Material.Glass },
+	{ name = "Hacha volcánica", kind = "axe", damage = 1.2e5, rarity = 4e5, bladeLength = 5.5, color = Color3.fromRGB(255, 110, 30), material = Enum.Material.Neon },
+	{ name = "Hojas del eclipse", kind = "dual", damage = 2.5e5, rarity = 2e6, bladeLength = 5, color = Color3.fromRGB(150, 80, 255), material = Enum.Material.Neon },
+	{ name = "Lanza del rayo", kind = "spear", damage = 6e6, rarity = 3e7, bladeLength = 13, color = Color3.fromRGB(255, 240, 90), material = Enum.Material.Neon },
 }
 
 -- Niveles de rareza, de menor a mayor: a partir de "1 entre min" se usa ese nombre y color

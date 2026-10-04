@@ -37,6 +37,13 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Velocidad al andar 30 (la normal de Roblox es 16), en `Config.WalkSpeed`.
 - Modo de pruebas en Studio: monedas y gemas infinitas (`Config.Test.InfiniteMoney`). No actúa en el juego publicado.
 - `Stats` (shared) calcula el daño y las suertes finales juntando espada, rasgo, artefactos y mejoras.
+- Espadas con volumen hechas con piezas (`SwordModel`): hoja con filo, nervio y punta, guarda con remates, empuñadura y pomo. Desde la de acero, guarda dorada con cuernos y gema; las de neón brillan y sueltan chispas; desde la de cometa llevan esquirlas flotando. El expositor del hub usa el mismo modelo.
+- Animación del golpe por código (`SwingAnim`), que se adapta a la velocidad de golpe y enciende una estela. La espada alterna tres tajos (diagonal, revés y desde arriba).
+- Tipos de arma (`Config.WeaponKinds`), 9 armas nuevas en el gacha (3 de cada):
+  - **Hachas**: el jugador da una vuelta entera y pega a todo lo que le rodea; golpean x1.7 más lento.
+  - **Espadas dobles**: una en cada mano, tajos alternos casi el doble de rápidos, con menos daño por golpe y menos alcance.
+  - **Lanzas**: estocada al frente, mucho alcance pero solo pega a lo que está justo delante.
+  - Hay un tiempo mínimo entre golpes (`Config.MinCooldown`, 0,1 s).
 - HUD, tabla de clasificación, escombros con físicas, números de daño, barra de vida.
 - Guardado con DataStore (solo funciona con el lugar publicado).
 
@@ -49,6 +56,7 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Precios, vidas, rarezas, gemas por objeto y coste del gacha son una primera estimación; el usuario aún no ha dado su opinión sobre el ritmo. El arranque puede ser lento: con la espada de madera hacen falta 5 Rocas (1 entre 20) para la primera tirada.
 - El gacha, la roca de armas, las mejoras nuevas y los avisos se probaron bajando temporalmente las rarezas en `Config`; con los valores reales no se han visto salir.
 - Los objetos y espadas a partir de Obelisco / Espada solar, y el ritmo de las suertes (x1.5 por nivel, precio x1.55 / x1.6), son números puestos a ojo sin jugar: nadie ha llegado ahí.
+- Armas nuevas: daños, rarezas y cadencias puestos a ojo. Vistos en captura los 9 modelos, la vuelta del hacha y la estocada de la lanza; los tajos de las espadas dobles y los de la espada tras rehacerlos no se han visto. Golpear objetos con cada tipo (área del hacha, alcance de la lanza) sin probar en una parcela. La mochila usa el mismo icono de espada para todos los tipos y "equipar mejor" compara solo el daño por golpe, no la cadencia.
 - Rasgos y artefactos: nombres, multiplicadores y rarezas inventados por Claude sin jugar. Probado con rarezas bajadas: caída de cristal, tirada de rasgo, caída y equipar/quitar artefactos. Sin ver: rasgos raros y las 3 ranuras llenas.
 - Vender una espada da siempre 2 gemas, sea cual sea su rareza. Es a propósito: si el precio subiera con la rareza, con mucha suerte de gacha cada tirada devolvería más gemas de las que cuesta.
 - Gacha gratis probado en Studio con tiradas reales y falsas (Legendaria, Secreta y el aura de Mítica forzadas). Sin probar en móvil ni con varios jugadores viendo auras a la vez.

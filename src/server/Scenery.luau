@@ -7,6 +7,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
+local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
+
+local SHOWCASE_SCALE = 2 -- tamaño de las espadas del expositor respecto a las de mano
 
 local Scenery = {}
 
@@ -173,16 +176,16 @@ local function lamp(parent: Instance, position: Vector3, color: Color3)
 end
 
 -- Expositor: pedestal con una espada gigante flotando y su rareza en un cartel.
-local function showcase(parent: Instance, position: Vector3, sword)
+local function showcase(parent: Instance, position: Vector3, level: number)
+	local sword = Config.Swords[level]
 	local tier = Rarity.tier(sword.rarity)
 	disc(parent, "Pedestal", position, 5, 0.4, 2, Color3.fromRGB(245, 245, 250), Enum.Material.Marble)
 	disc(parent, "PedestalTop", position, 4, 2, 2.6, tier.color, Enum.Material.SmoothPlastic)
 
 	local base = CFrame.new(position + Vector3.new(0, 6, 0)) * CFrame.Angles(0, math.atan2(position.X, position.Z), 0) * CFrame.Angles(0, 0, math.rad(12))
-	local bladeLength = sword.bladeLength * 1.6
-	decor(part(parent, "Handle", Vector3.new(0.9, 3, 0.9), base, Color3.fromRGB(70, 45, 30), Enum.Material.Wood))
-	decor(part(parent, "Guard", Vector3.new(4, 0.7, 0.9), base * CFrame.new(0, 1.8, 0), Color3.fromRGB(235, 190, 60), Enum.Material.Metal))
-	local blade = decor(part(parent, "Blade", Vector3.new(1.5, bladeLength, 0.4), base * CFrame.new(0, 2.1 + bladeLength / 2, 0), sword.color, sword.material))
+	local bladeLength = sword.bladeLength * SHOWCASE_SCALE
+	-- El modelo es ancho en Z: se gira para que enseñe la cara plana hacia el hub.
+	local _, blade = SwordModel.build(level, parent, base * CFrame.Angles(0, math.rad(90), 0), SHOWCASE_SCALE, true)
 
 	local light = Instance.new("PointLight")
 	light.Color = tier.color
@@ -241,8 +244,20 @@ function Scenery.start()
 
 	-- Expositor del hub: las espadas más raras, en círculo alrededor del gacha.
 	local shown = 6
+	local rarest = {}
+	for level, sword in Config.Swords do
+		if sword.rarity then
+			table.insert(rarest, level)
+		end
+	end
+	table.sort(rarest, function(a, b)
+		return Config.Swords[a].rarity < Config.Swords[b].rarity
+	end)
 	ring(shown, cfg.HubRadius * 0.55, 0.5, function(position, index)
-		showcase(folder, position, Config.Swords[#Config.Swords - shown + index])
+		local level = rarest[#rarest - shown + index]
+		if level then
+			showcase(folder, position, level)
+		end
 	end)
 
 	-- Palmeras, arbustos y rocas entre las parcelas (huecos del anillo).

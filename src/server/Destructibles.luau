@@ -88,7 +88,7 @@ local function remove(part: BasePart)
 end
 
 -- Objetos de la parcela del jugador que están a su alcance y delante de él.
-function Destructibles.getInRange(player: Player, origin: CFrame, range: number): { BasePart }
+function Destructibles.getInRange(player: Player, origin: CFrame, range: number, arc: number): { BasePart }
 	local found = {}
 	local plot = Plots.get(player)
 	local position = origin.Position
@@ -107,7 +107,7 @@ function Destructibles.getInRange(player: Player, origin: CFrame, range: number)
 		local offset = closest - position
 		if offset.Magnitude <= range then
 			local flat = Vector3.new(offset.X, 0, offset.Z)
-			if flat.Magnitude < 2 or flat.Unit:Dot(look) > 0.2 then
+			if arc <= -1 or flat.Magnitude < 2 or flat.Unit:Dot(look) >= arc then
 				table.insert(found, part)
 			end
 		end

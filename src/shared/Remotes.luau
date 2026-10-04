@@ -9,6 +9,7 @@ local NAMES = {
 	"SellSword", -- cliente -> servidor: (id) vender una copia que no esté equipada
 	"SetAutoSell", -- cliente -> servidor: (rarity) vender solas las espadas de rareza menor; 0 = no
 	"BuyUpgrade", -- cliente -> servidor: (name) subir un nivel una mejora de Config.Upgrades
+	"SwingFx", -- servidor -> los demás clientes: (player) ese jugador ha dado un espadazo
 	"Hit", -- servidor -> clientes: (player, part, position, damage)
 	"Broken", -- servidor -> clientes: (player, cframe, size, color, material, reward, gems)
 	"GachaRolled", -- servidor -> cliente: (index, kept, luck, source) espada sacada; kept = false si se vendió sola; source = "gacha" o "roca"

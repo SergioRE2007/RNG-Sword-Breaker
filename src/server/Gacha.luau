@@ -13,11 +13,21 @@ local Gacha = {}
 
 local machinePosition = Vector3.new(0, Config.Plot.FloorHeight, 0)
 
+-- Armas que salen en el gacha, de la más rara a la más común (Config.Swords no va ordenada por rareza).
+local pool = {}
+for index, sword in Config.Swords do
+	if sword.rarity then
+		table.insert(pool, index)
+	end
+end
+table.sort(pool, function(a, b)
+	return Config.Swords[a].rarity > Config.Swords[b].rarity
+end)
+
 -- Prueba de la más rara a la más común; la suerte multiplica cada probabilidad.
 local function roll(luck: number): number
-	for index = #Config.Swords, 2, -1 do
-		local rarity = Config.Swords[index].rarity
-		if rarity and Chance.roll(luck / rarity) then
+	for _, index in pool do
+		if Chance.roll(luck / Config.Swords[index].rarity) then
 			return index
 		end
 	end

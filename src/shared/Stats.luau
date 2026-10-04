@@ -55,6 +55,18 @@ local function upgrade(player: Player, name: string): number
 	return Upgrades.value(name, player:GetAttribute("Upgrade_" .. name) or 0)
 end
 
+-- Tipo del arma equipada: su clave ("sword", "axe", "dual", "spear") y sus datos de Config.WeaponKinds.
+function Stats.weapon(player: Player)
+	local key = Config.Swords[Stats.equipped(player).sword].kind or "sword"
+	return key, Config.WeaponKinds[key]
+end
+
+-- Segundos entre golpes: la mejora de velocidad por lo rápida o lenta que sea el arma.
+function Stats.cooldown(player: Player): number
+	local _, kind = Stats.weapon(player)
+	return math.max(upgrade(player, "speed") * kind.cooldown, Config.MinCooldown)
+end
+
 function Stats.damage(player: Player): number
 	return Stats.swordDamage(Stats.equipped(player)) * gear(player, "damage")
 end
