@@ -1122,6 +1122,45 @@ end
 
 local toasts: Frame? = nil
 local MAX_TOASTS = 4
+
+-- Transparencias de todo lo que se ve en `root` (él incluido): fondos, textos, imágenes y bordes.
+-- Sirve para desvanecer el aviso entero a la vez: su GroupTransparency solo apagaba el fondo y dejaba
+-- los textos, los bordes y el icono hasta el final.
+local function transparencies(root: Instance)
+	local list = {}
+	for _, part in { root, table.unpack(root:GetDescendants()) } do
+		local props = {}
+		if part:IsA("GuiObject") then
+			props.BackgroundTransparency = part.BackgroundTransparency
+		end
+		if part:IsA("TextLabel") or part:IsA("TextButton") or part:IsA("TextBox") then
+			props.TextTransparency = part.TextTransparency
+		elseif part:IsA("ImageLabel") or part:IsA("ImageButton") then
+			props.ImageTransparency = part.ImageTransparency
+		elseif part:IsA("UIStroke") then
+			props.Transparency = part.Transparency
+		end
+		if next(props) then
+			table.insert(list, { part = part, props = props })
+		end
+	end
+	return list
+end
+
+-- Lleva cada pieza de `list` a transparente (`shown` = false) o a como estaba, todas con el mismo
+-- tween. Devuelve uno de ellos para esperar a que acabe.
+local function fadeAll(list, info: TweenInfo, shown: boolean): Tween?
+	local last = nil
+	for _, entry in list do
+		local goal = {}
+		for prop, value in entry.props do
+			goal[prop] = if shown then value else 1
+		end
+		last = TweenService:Create(entry.part, info, goal)
+		last:Play()
+	end
+	return last
+end
 local TOAST_WIDTH = 520
 
 -- Icono según de qué habla el aviso (no hay imágenes: se dibuja con marcos). Los rojos llevan "!".
@@ -1183,7 +1222,6 @@ function Ui.toast(text: string, color: Color3)
 	local textHeight = TextService:GetTextSize(text, 23, Ui.FONT, Vector2.new(TOAST_WIDTH - 82, 1000)).Y
 	item.Size = UDim2.new(1, 0, 0, math.max(58, textHeight + 18))
 	item.BackgroundColor3 = WHITE
-	item.GroupTransparency = 1
 	item.ZIndex = 50
 	item.Parent = list
 	Ui.round(item, 14)
@@ -1236,16 +1274,26 @@ function Ui.toast(text: string, color: Color3)
 		end
 	end
 
+	-- Aparece y se va entero a la vez: fondo, textos, bordes, icono y barra.
+	local parts = transparencies(item)
+	for _, entry in parts do
+		for prop in entry.props do
+			(entry.part :: any)[prop] = 1
+		end
+	end
 	local pop = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-	TweenService:Create(item, pop, { GroupTransparency = 0 }):Play()
+	fadeAll(parts, TweenInfo.new(0.2), true)
 	TweenService:Create(scale, pop, { Scale = 1 }):Play()
 	task.delay(3.8, function()
 		if item.Parent then
-			local fade = TweenService:Create(item, TweenInfo.new(0.4), { GroupTransparency = 1 })
-			fade.Completed:Connect(function()
+			local fade = fadeAll(parts, TweenInfo.new(0.4), false)
+			if fade then
+				fade.Completed:Connect(function()
+					item:Destroy()
+				end)
+			else
 				item:Destroy()
-			end)
-			fade:Play()
+			end
 		end
 	end)
 end
