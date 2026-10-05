@@ -49,6 +49,14 @@ local function give(player: Player)
 	local tool = build(player:GetAttribute("SwordLevel") or 1)
 	tool.Parent = player:FindFirstChildOfClass("Backpack")
 	humanoid:EquipTool(tool)
+	-- La espada va siempre en la mano: si se guarda en la mochila (por ejemplo con la tecla 1), se vuelve a equipar.
+	tool.Unequipped:Connect(function()
+		task.defer(function()
+			if humanoid.Health > 0 and tool.Parent == player:FindFirstChildOfClass("Backpack") then
+				humanoid:EquipTool(tool)
+			end
+		end)
+	end)
 
 	-- Espadas dobles: la segunda va soldada a la mano izquierda (la herramienta solo agarra la derecha).
 	local offHand = tool:FindFirstChild("OffHand")

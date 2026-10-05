@@ -714,6 +714,7 @@ end
 
 local tip, tipStroke, tipSource
 local tipBeside = false
+local tipLive: (() -> (string, Color3, boolean?))? = nil
 
 local function ensureTip()
 	if tip then
@@ -754,6 +755,11 @@ local function ensureTip()
 			tip.Visible = false
 			return
 		end
+		if tipLive then
+			local text, color = tipLive()
+			tip.Text = text
+			tipStroke.Color = color
+		end
 		local mouse = UserInputService:GetMouseLocation() -- la pantalla Hud ignora la franja de arriba
 		local view = workspace.CurrentCamera.ViewportSize
 		local size = tip.AbsoluteSize
@@ -782,9 +788,11 @@ end
 function Ui.tip(target: GuiObject, getContent: () -> (string, Color3), beside: boolean?)
 	ensureTip()
 	target.MouseEnter:Connect(function()
-		local text, color = getContent()
+		local text, color, live = getContent()
 		tip.Text = text
 		tipStroke.Color = color
+		-- Con un tercer valor `true`, el cartel se vuelve a pedir cada fotograma (texto animado).
+		tipLive = if live then getContent else nil
 		tipSource = target
 		tipBeside = beside == true
 		tip.Visible = true
