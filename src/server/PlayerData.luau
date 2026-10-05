@@ -152,6 +152,7 @@ local function load(player: Player)
 		totalCoins = 0, -- monedas ganadas en total, sin descontar lo gastado (clasificaciones)
 		robuxSpent = 0, -- Robux gastados en el juego (clasificaciones)
 		missions = {}, -- misiones: { daily = { id, progress, claimed }, weekly = { ... } } (ver server/Missions)
+		gachaRolls = 0, -- tiradas de gacha hechas (para el empujón de las primeras, Config.Gacha.BoostRolls)
 		swords = { { id = 1, sword = 1 } },
 		nextSwordId = 2,
 		equipped = 1,
@@ -181,6 +182,7 @@ local function load(player: Player)
 				data.playTime = math.max(0, tonumber(saved.playTime) or 0)
 				data.totalCoins = math.max(0, tonumber(saved.totalCoins) or 0)
 				data.robuxSpent = math.max(0, math.floor(tonumber(saved.robuxSpent) or 0))
+				data.gachaRolls = math.max(0, math.floor(tonumber(saved.gachaRolls) or 0))
 				if type(saved.missions) == "table" then
 					data.missions = saved.missions
 				end

@@ -67,6 +67,13 @@ local function draw(player: Player, luck: number, source: string)
 	if not data then
 		return
 	end
+	-- Empujón del principio: las primeras tiradas de cada jugador llevan mucha suerte extra.
+	if source == "gacha" then
+		if data.gachaRolls < Config.Gacha.BoostRolls then
+			luck *= Config.Gacha.BoostLuck
+		end
+		data.gachaRolls += 1
+	end
 	local index = roll(luck)
 	local sword = Config.Swords[index]
 	-- Metal y tamaño se tiran a la vez que el arma y son permanentes (Config.Metals, Config.Sizes).
