@@ -71,19 +71,58 @@ function Ui.gradient(instance: GuiObject, from: Color3, to: Color3, rotation: nu
 	gradient.Parent = instance
 end
 
--- Relieve de botón: brillo arriba y una franja oscura abajo, sobre el color de fondo que tenga.
+-- Relieve de botón, sobre el color de fondo que tenga: degradado suave (claro arriba, más oscuro
+-- abajo), un brillo de cristal en la mitad de arriba, un canto claro por dentro del marco y una
+-- franja oscura en el borde de abajo para dar grosor. Va antes que el contenido del botón.
 function Ui.bevel(instance: GuiObject)
 	local gradient = Instance.new("UIGradient")
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, WHITE),
-		ColorSequenceKeypoint.new(0.44, Color3.fromRGB(238, 238, 238)),
-		ColorSequenceKeypoint.new(0.45, Color3.fromRGB(206, 206, 206)),
-		ColorSequenceKeypoint.new(0.85, Color3.fromRGB(190, 190, 190)),
-		ColorSequenceKeypoint.new(0.86, Color3.fromRGB(125, 125, 125)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(115, 115, 115)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(232, 232, 236)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 168)),
 	})
 	gradient.Parent = instance
+
+	local corner = instance:FindFirstChildOfClass("UICorner")
+	local radius = if corner then corner.CornerRadius.Offset else 10
+
+	-- Canto claro por dentro del marco.
+	local rim = Instance.new("Frame")
+	rim.Name = "Rim"
+	rim.Position = UDim2.fromOffset(2, 2)
+	rim.Size = UDim2.new(1, -4, 1, -4)
+	rim.BackgroundTransparency = 1
+	rim.Parent = instance
+	Ui.round(rim, math.max(radius - 2, 2))
+	local rimStroke = Ui.stroke(rim, WHITE, 1.5)
+	rimStroke.Transparency = 0.72
+
+	-- Brillo de cristal: blanco que se apaga hacia abajo.
+	local gloss = Instance.new("Frame")
+	gloss.Name = "Gloss"
+	gloss.Position = UDim2.fromOffset(4, 3)
+	gloss.Size = UDim2.new(1, -8, 0.46, 0)
+	gloss.BackgroundColor3 = WHITE
+	gloss.BorderSizePixel = 0
+	gloss.Parent = instance
+	Ui.round(gloss, math.max(radius - 4, 2))
+	local fade = Instance.new("UIGradient")
+	fade.Rotation = 90
+	fade.Transparency = NumberSequence.new(0.6, 0.95)
+	fade.Parent = gloss
+
+	-- Franja oscura abajo (el "grosor" del botón).
+	local base = Instance.new("Frame")
+	base.Name = "Base"
+	base.AnchorPoint = Vector2.new(0.5, 1)
+	base.Position = UDim2.new(0.5, 0, 1, -3)
+	base.Size = UDim2.new(1, -12, 0, 4)
+	base.BackgroundColor3 = BLACK
+	base.BackgroundTransparency = 0.78
+	base.BorderSizePixel = 0
+	base.Parent = instance
+	Ui.round(base, 2)
 end
 
 function Ui.label(parent: Instance, textSize: number): TextLabel
@@ -280,7 +319,7 @@ local function checker(parent: GuiObject, size: Vector2, cell: number, inset: nu
 				square.Position = UDim2.fromOffset(column * cell, row * cell)
 				square.Size = UDim2.fromOffset(cell, cell)
 				square.BackgroundColor3 = WHITE
-				square.BackgroundTransparency = 0.88
+				square.BackgroundTransparency = 0.93
 				square.BorderSizePixel = 0
 				square.Parent = holder
 			end
@@ -291,7 +330,7 @@ end
 -- Ventana centrada con sombra, cabecera degradada a cuadros con brillo y título que destella,
 -- botón de cerrar y cuerpo con rayas diagonales suaves. Devuelve el marco y el cuerpo (donde
 -- va el contenido). En pantallas pequeñas se encoge sola.
-function Ui.window(name: string, title: string, size: Vector2)
+function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) -> ())?)
 	local frame = Instance.new("Frame")
 	frame.Name = name
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -303,7 +342,7 @@ function Ui.window(name: string, title: string, size: Vector2)
 	frame.Parent = Ui.screen()
 	Ui.round(frame, 16)
 	Ui.stroke(frame, BLACK, 5)
-	Ui.gradient(frame, Color3.fromRGB(52, 56, 74), Color3.fromRGB(24, 25, 34), 90)
+	Ui.gradient(frame, Color3.fromRGB(60, 66, 112), Color3.fromRGB(22, 24, 46), 90)
 
 	-- Sombra detrás de la ventana: va aparte (los hijos se pintan encima) y la sigue.
 	local shadow = Instance.new("Frame")
@@ -371,9 +410,9 @@ function Ui.window(name: string, title: string, size: Vector2)
 	local headerColors = Instance.new("UIGradient")
 	headerColors.Rotation = 8
 	headerColors.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 170, 255)),
-		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(125, 105, 250)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 95, 235)),
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 165, 255)),
+		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(140, 100, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(235, 100, 215)),
 	})
 	headerColors.Parent = header
 	checker(header, Vector2.new(size.X, 58), 14, 14)
@@ -400,9 +439,21 @@ function Ui.window(name: string, title: string, size: Vector2)
 	edge.BorderSizePixel = 0
 	edge.Parent = header
 
+	-- Icono opcional a la izquierda del título (mochila, engranaje...), dibujado con marcos.
+	if icon then
+		local iconBox = Instance.new("Frame")
+		iconBox.Name = "HeaderIcon"
+		iconBox.Position = UDim2.fromOffset(12, 8)
+		iconBox.Size = UDim2.fromOffset(44, 44)
+		iconBox.BackgroundTransparency = 1
+		iconBox.ZIndex = 3
+		iconBox.Parent = header
+		icon(iconBox)
+	end
+
 	local heading = Ui.label(header, 34)
 	heading.Name = "Title"
-	heading.Position = UDim2.fromOffset(22, 0)
+	heading.Position = UDim2.fromOffset(if icon then 68 else 22, 0)
 	heading.Size = UDim2.new(1, -90, 1, 0)
 	heading.TextXAlignment = Enum.TextXAlignment.Left
 	heading.Text = title
@@ -437,7 +488,7 @@ function Ui.window(name: string, title: string, size: Vector2)
 	body.Parent = frame
 	Ui.round(body, 12)
 	Ui.stroke(body, Ui.COLORS.dark, 3)
-	Ui.gradient(body, Color3.fromRGB(62, 66, 86), Color3.fromRGB(34, 36, 48), 90)
+	Ui.gradient(body, Color3.fromRGB(66, 74, 124), Color3.fromRGB(30, 33, 64), 90)
 	Ui.stripes(body, Vector2.new(size.X - 20, size.Y - 78), 26, 0.95)
 
 	windows[name] = frame
@@ -713,6 +764,50 @@ function Ui.boxIcon(parent: Instance, color: Color3)
 	local box = piece(holder, UDim2.fromScale(0.62, 0.62), UDim2.fromScale(0.5, 0.5), color, 5)
 	Ui.gradient(box, WHITE, Color3.fromRGB(170, 160, 150), 90)
 	piece(box, UDim2.fromScale(1, 0.16), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(90, 60, 35), 0)
+end
+
+-- Mochila: asa arriba, cuerpo con solapa, bolsillo, hebilla dorada y correas a los lados. `color` es el
+-- del cuerpo.
+function Ui.backpackIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	local dark = color:Lerp(BLACK, 0.45)
+	local light = color:Lerp(WHITE, 0.35)
+	local handle = piece(holder, UDim2.fromScale(0.34, 0.3), UDim2.fromScale(0.5, 0.15), dark, 100)
+	handle.BackgroundTransparency = 1
+	Ui.stroke(handle, dark, 4)
+	for _, side in { 0.1, 0.9 } do
+		local strap = piece(holder, UDim2.fromScale(0.13, 0.36), UDim2.fromScale(side, 0.64), dark, 4)
+		Ui.gradient(strap, WHITE, Color3.fromRGB(150, 150, 160), 90)
+	end
+	local body = piece(holder, UDim2.fromScale(0.7, 0.7), UDim2.fromScale(0.5, 0.6), color, 12)
+	Ui.gradient(body, WHITE, Color3.fromRGB(160, 160, 175), 90)
+	local flap = piece(body, UDim2.fromScale(1, 0.4), UDim2.fromScale(0.5, 0.2), light, 12)
+	Ui.gradient(flap, WHITE, Color3.fromRGB(190, 190, 200), 90)
+	local pocket = piece(body, UDim2.fromScale(0.62, 0.3), UDim2.fromScale(0.5, 0.76), dark:Lerp(color, 0.5), 8)
+	Ui.gradient(pocket, WHITE, Color3.fromRGB(170, 170, 185), 90)
+	piece(body, UDim2.fromScale(0.22, 0.16), UDim2.fromScale(0.5, 0.42), Color3.fromRGB(245, 200, 60), 4)
+end
+
+-- Mejoras: hexágono (como los nodos del árbol) con una flecha doble hacia arriba.
+function Ui.upgradeIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	local _, outer = Ui.hex(holder, 46, BLACK)
+	local _, middle = Ui.hex(holder, 40, color)
+	local _, inner = Ui.hex(holder, 32, color:Lerp(WHITE, 0.3))
+	for _, group in { outer, middle, inner } do
+		for _, frame in group do
+			frame.ZIndex = 1
+		end
+	end
+	for _, y in { 0.6, 0.38 } do
+		for _, side in { -1, 1 } do
+			local bar = piece(holder, UDim2.fromScale(0.34, 0.12), UDim2.fromScale(0.5 + side * 0.11, y), WHITE, 3)
+			bar.Rotation = side * 38
+			bar.ZIndex = 3
+		end
+	end
 end
 
 -- Hexágono (punta arriba) de `width` de ancho, hecho con tres rectángulos girados.

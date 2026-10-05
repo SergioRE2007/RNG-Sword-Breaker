@@ -326,7 +326,7 @@ function Hud.start()
 	menu.Name = "Menu"
 	menu.AnchorPoint = Vector2.new(0, 0.5)
 	menu.Position = UDim2.new(0, 14, 0.5, 0)
-	menu.Size = UDim2.fromOffset(140, 0)
+	menu.Size = UDim2.fromOffset(124, 0)
 	menu.AutomaticSize = Enum.AutomaticSize.Y
 	menu.BackgroundTransparency = 1
 	menu.Parent = gui
@@ -335,12 +335,33 @@ function Hud.start()
 	menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	menuLayout.Parent = menu
 
-	for order, entry in { { "Backpack", "Mochila", Ui.COLORS.blue }, { "Upgrades", "Mejoras", Ui.COLORS.green } } do
-		local item = Ui.button(menu, entry[2], entry[3])
+	-- Botones grandes con el icono arriba y el nombre debajo (los iconos se dibujan con marcos).
+	local menuItems = {
+		{ "Backpack", "Mochila", Ui.COLORS.blue, function(parent)
+			Ui.backpackIcon(parent, Color3.fromRGB(240, 150, 60))
+		end },
+		{ "Upgrades", "Mejoras", Ui.COLORS.green, function(parent)
+			Ui.upgradeIcon(parent, Color3.fromRGB(255, 205, 60))
+		end },
+	}
+	for order, entry in menuItems do
+		local item = Ui.button(menu, "", entry[3])
 		item.Name = entry[1]
 		item.LayoutOrder = order
-		item.Size = UDim2.new(1, 0, 0, 60)
-		item.TextSize = 24
+		item.Size = UDim2.fromOffset(124, 104)
+		local iconBox = Instance.new("Frame")
+		iconBox.Name = "Icon"
+		iconBox.AnchorPoint = Vector2.new(0.5, 0)
+		iconBox.Position = UDim2.new(0.5, 0, 0, 7)
+		iconBox.Size = UDim2.fromOffset(62, 62)
+		iconBox.BackgroundTransparency = 1
+		iconBox.Parent = item
+		entry[4](iconBox)
+		local label = Ui.label(item, 22)
+		label.AnchorPoint = Vector2.new(0.5, 1)
+		label.Position = UDim2.new(0.5, 0, 1, -7)
+		label.Size = UDim2.new(1, -8, 0, 26)
+		label.Text = entry[2]
 		Ui.sparkle(item, 6)
 		item.Activated:Connect(function()
 			Ui.toggle(entry[1])
