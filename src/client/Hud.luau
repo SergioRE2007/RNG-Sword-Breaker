@@ -45,6 +45,19 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 	text.Position = UDim2.fromOffset(58, 0)
 	text.Size = UDim2.new(1, -66, 1, 0)
 	text.TextXAlignment = Enum.TextXAlignment.Left
+	Ui.sparkle(box, 5)
+	-- Latido del cuadro cada vez que cambia la cantidad, y el icono flota despacio.
+	local pulse = Instance.new("UIScale")
+	pulse.Parent = box
+	local last = ""
+	text:GetPropertyChangedSignal("Text"):Connect(function()
+		if last ~= "" and last ~= text.Text then
+			pulse.Scale = 1.1
+			TweenService:Create(pulse, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		end
+		last = text.Text
+	end)
+	TweenService:Create(iconBox, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromOffset(6, 1) }):Play()
 	return text
 end
 
@@ -136,6 +149,7 @@ function Hud.start()
 		label.Position = UDim2.fromOffset(62, 0)
 		label.Size = UDim2.new(1, -70, 1, 0)
 		label.Text = entry[2]
+		Ui.sparkle(button, 5)
 		button.Activated:Connect(function()
 			Remotes.Teleport:FireServer(entry[1])
 			flash.BackgroundTransparency = 0.2
@@ -219,6 +233,7 @@ function Hud.start()
 		item.LayoutOrder = order
 		item.Size = UDim2.new(1, 0, 0, 60)
 		item.TextSize = 24
+		Ui.sparkle(item, 6)
 		item.Activated:Connect(function()
 			Ui.toggle(entry[1])
 		end)

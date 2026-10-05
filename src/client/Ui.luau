@@ -8,9 +8,12 @@
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Ui = {}
+
+local glints = {} -- [UIGradient del brillo] = { phase, period }
 
 local player = Players.LocalPlayer
 
@@ -106,7 +109,58 @@ function Ui.button(parent: Instance, text: string, color: Color3): TextButton
 	Ui.bevel(item)
 	Ui.stroke(item, BLACK, 3)
 	Ui.textStroke(item, 2)
+	Ui.pressable(item)
 	return item
+end
+
+-- Rebote al pasar el ratón (crece) y al pulsar (se hunde). Vale para cualquier botón o casilla.
+function Ui.pressable(item: GuiButton, grow: number?)
+	local scale = Instance.new("UIScale")
+	scale.Name = "PressScale"
+	scale.Parent = item
+	local big = grow or 1.07
+	local function to(value: number, time: number, style: Enum.EasingStyle)
+		TweenService:Create(scale, TweenInfo.new(time, style, Enum.EasingDirection.Out), { Scale = value }):Play()
+	end
+	local over = false
+	item.MouseEnter:Connect(function()
+		over = true
+		to(big, 0.18, Enum.EasingStyle.Back)
+	end)
+	item.MouseLeave:Connect(function()
+		over = false
+		to(1, 0.15, Enum.EasingStyle.Quad)
+	end)
+	item.MouseButton1Down:Connect(function()
+		to(0.93, 0.07, Enum.EasingStyle.Quad)
+	end)
+	item.MouseButton1Up:Connect(function()
+		to(if over then big else 1, 0.2, Enum.EasingStyle.Back)
+	end)
+end
+
+-- Brillo blanco en diagonal que cruza el botón cada pocos segundos (la hace el bucle de `shines`).
+function Ui.sparkle(item: GuiObject, period: number?)
+	local glint = Instance.new("Frame")
+	glint.Name = "Glint"
+	glint.Size = UDim2.fromScale(1, 1)
+	glint.BackgroundColor3 = WHITE
+	glint.BorderSizePixel = 0
+	glint.ZIndex = item.ZIndex + 1
+	glint.Parent = item
+	Ui.round(glint, 12)
+	local sweep = Instance.new("UIGradient")
+	sweep.Rotation = 20
+	sweep.Color = ColorSequence.new(WHITE)
+	sweep.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.4, 1),
+		NumberSequenceKeypoint.new(0.5, 0.65),
+		NumberSequenceKeypoint.new(0.6, 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	sweep.Parent = glint
+	glints[sweep] = { phase = math.random() * 4, period = period or 4 }
 end
 
 local gui
@@ -137,6 +191,15 @@ RunService.RenderStepped:Connect(function()
 			gradient.Offset = Vector2.new(((now + phase) % 3) / 1.5 - 1, 0)
 		else
 			shines[gradient] = nil
+		end
+	end
+	for gradient, info in glints do
+		if gradient:IsDescendantOf(game) then
+			-- Cruza de izquierda a derecha en el primer tramo del periodo y espera el resto.
+			local t = ((now + info.phase) % info.period) / info.period
+			gradient.Offset = Vector2.new(math.clamp(t * 2.4 - 1.2, -1, 1), 0)
+		else
+			glints[gradient] = nil
 		end
 	end
 end)
@@ -248,16 +311,28 @@ function Ui.window(name: string, title: string, size: Vector2)
 	local shadowScale = Instance.new("UIScale")
 	shadowScale.Parent = shadow
 	local camera = workspace.CurrentCamera
+	local fitted = 1
 	local function fit()
 		local view = camera.ViewportSize
 		-- Deja sitio a la izquierda para el menú y, como va centrada, arriba y abajo para los
 		-- contadores (que llegan a ~100 px del borde).
 		-- Hasta un 22 % más grande que su tamaño de diseño si la pantalla da para ello.
-		scale.Scale = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, MAX_WINDOW_SCALE)
-		shadowScale.Scale = scale.Scale
+		fitted = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, MAX_WINDOW_SCALE)
+		scale.Scale = fitted
+		shadowScale.Scale = fitted
 	end
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 	fit()
+	-- Al abrirse, la ventana sale con un rebote desde un poco más pequeña.
+	frame:GetPropertyChangedSignal("Visible"):Connect(function()
+		if frame.Visible then
+			scale.Scale = fitted * 0.8
+			shadowScale.Scale = fitted * 0.8
+			local info = TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			TweenService:Create(scale, info, { Scale = fitted }):Play()
+			TweenService:Create(shadowScale, info, { Scale = fitted }):Play()
+		end
+	end)
 
 	local header = Instance.new("Frame")
 	header.Name = "Header"
@@ -425,6 +500,7 @@ function Ui.cell(parent: Instance, color: Color3, tier: number?): TextButton
 	cell.BackgroundColor3 = color
 	cell.Parent = parent
 	Ui.round(cell, 10)
+	Ui.pressable(cell, 1.08)
 	-- Fondo teñido del color de la rareza: claro en la esquina de arriba y casi negro abajo.
 	local back = Instance.new("UIGradient")
 	back.Rotation = 115
@@ -744,6 +820,9 @@ function Ui.toast(text: string, color: Color3)
 	toast.Text = text
 	toast.TextColor3 = color
 	toast.Visible = true
+	-- Sube desde abajo con un rebote.
+	toast.Position = UDim2.new(0.5, 0, 1, 60)
+	TweenService:Create(toast, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 1, -24) }):Play()
 	toastId += 1
 	local id = toastId
 	task.delay(4, function()
