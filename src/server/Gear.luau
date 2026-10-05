@@ -1,4 +1,4 @@
--- Artefactos: pueden caer al romper objetos y se equipan en unas pocas ranuras.
+-- Artefactos ("Accesorios" para el jugador): pueden caer al romper objetos y se equipan en unas pocas ranuras.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Chance = require(ReplicatedStorage.Shared.Chance)
@@ -31,7 +31,7 @@ function Gear.onBroken(player: Player)
 			end)
 			Remotes.Notice:FireClient(
 				player,
-				`¡Artefacto: {artifact.name}!\n{Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}`,
+				`¡Accesorio: {artifact.name}!\n{Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}`,
 				artifact.color
 			)
 			if artifact.rarity / luck >= Config.AnnounceOdds then

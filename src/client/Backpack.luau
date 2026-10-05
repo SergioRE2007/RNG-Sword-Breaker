@@ -1,4 +1,5 @@
--- Mochila: ventana con pestañas (Espadas, Objetos, Equipo y Armadura, esta última en ArmorPane). Todo son casillas cuadradas con
+-- Mochila: ventana con pestañas (Espadas, Objetos, Accesorios y Armadura, esta última en ArmorPane).
+-- "Accesorios" es el nombre para el jugador de los artefactos (Config.Artifacts; en el código siguen siendo Gear). Todo son casillas cuadradas con
 -- el borde del color de su rareza; al pasar el ratón sale un cartel con los detalles.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -248,7 +249,7 @@ function Backpack.start()
 			ArmorPane.icon(parent, Color3.fromRGB(200, 210, 230))
 		end,
 	}
-	for order, entry in { { "Swords", "Espadas", Ui.COLORS.red }, { "Items", "Objetos", Ui.COLORS.blue }, { "Gear", "Equipo", Ui.COLORS.purple }, { "Armor", "Armadura", Ui.COLORS.orange } } do
+	for order, entry in { { "Swords", "Espadas", Ui.COLORS.red }, { "Items", "Objetos", Ui.COLORS.blue }, { "Gear", "Accesorios", Ui.COLORS.purple }, { "Armor", "Armadura", Ui.COLORS.orange } } do
 		local name = entry[1]
 		panes[name] = pane(body, name)
 		local tab = Ui.button(window, "", entry[3])
@@ -268,6 +269,12 @@ function Backpack.start()
 		label.Position = UDim2.new(0.5, 0, 1, -4)
 		label.Size = UDim2.new(1, -6, 0, 20)
 		label.Text = entry[2]
+		-- Los nombres largos ("Accesorios") se encogen para caber en la pestaña.
+		label.TextScaled = true
+		local labelLimit = Instance.new("UITextSizeConstraint")
+		labelLimit.MaxTextSize = 17
+		labelLimit.MinTextSize = 11
+		labelLimit.Parent = label
 		tabs[name] = { button = tab, stroke = tab:FindFirstChildOfClass("UIStroke"), y = 66 + (order - 1) * 78 }
 		tab.Activated:Connect(function()
 			show(name)
@@ -544,7 +551,7 @@ function Backpack.start()
 			if index then
 				return artifactTip(index)
 			end
-			return `Ranura {slot}\n<font color="{Ui.SOFT}">Vacía: pulsa un artefacto para equiparlo.</font>`, Ui.COLORS.gray
+			return `Ranura {slot}\n<font color="{Ui.SOFT}">Vacía: pulsa un accesorio para equiparlo.</font>`, Ui.COLORS.gray
 		end)
 		cell.Activated:Connect(function()
 			if slots[slot].index then
@@ -645,7 +652,7 @@ function Backpack.start()
 		local artifacts = Stats.list(player, "Artifacts")
 		local worn = Stats.list(player, "Gear")
 		gearHint.Text = if #artifacts == 0
-			then "Aún no tienes artefactos: caen al romper objetos."
+			then "Aún no tienes accesorios: caen al romper objetos."
 			else `Equipados {#worn}/{Config.GearSlots}. Pulsa para equipar o quitar.`
 		for index, cell in gearCells do
 			cell.Visible = table.find(artifacts, index) ~= nil

@@ -11,6 +11,7 @@ Config.WalkSpeed = 30 -- velocidad al andar (la normal de Roblox es 16)
 Config.Test = {
 	InfiniteMoney = true, -- monedas y gemas infinitas
 	AllWeapons = true, -- una copia de cada arma de Config.Swords en la mochila al entrar
+	AllGear = true, -- todos los accesorios (Config.Artifacts) y una pieza de armadura de cada hueco y cada mazmorra al entrar
 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma

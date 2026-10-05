@@ -3,6 +3,7 @@
 -- al personaje: la vida máxima y el modelo de cada pieza equipada. Los demás stats los suma shared/Stats.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local ArmorModel = require(ReplicatedStorage.Shared.ArmorModel)
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
@@ -28,9 +29,10 @@ local function rolled(stat: string, base: number, quality, power: number): numbe
 end
 
 -- Pieza nueva (sin id) de la dificultad `level`; `luck` divide el "1 entre N" de las calidades.
-function Armor.roll(level: number, luck: number)
-	local slot = cfg.SlotOrder[random:NextInteger(1, #cfg.SlotOrder)]
-	local qualityIndex = math.max(Permanent.roll(cfg.Qualities, luck), 1)
+-- Con `forcedSlot` y `forcedQuality` no se tiran el hueco ni la calidad (modo de pruebas).
+function Armor.roll(level: number, luck: number, forcedSlot: string?, forcedQuality: number?)
+	local slot = forcedSlot or cfg.SlotOrder[random:NextInteger(1, #cfg.SlotOrder)]
+	local qualityIndex = forcedQuality or math.max(Permanent.roll(cfg.Qualities, luck), 1)
 	local quality = cfg.Qualities[qualityIndex]
 	local power = Config.Dungeons[level].power
 	local stats = {}
@@ -153,7 +155,41 @@ local function dress(player: Player)
 	end
 end
 
+-- Modo de pruebas (Config.Test.AllGear, solo en Studio; esa partida no se guarda, ver PlayerData): una pieza de
+-- cada hueco de cada mazmorra, con la calidad subiendo de la primera mazmorra (Común) a la última (la mejor).
+local function giveAll(player: Player)
+	local data = PlayerData.read(player)
+	for _ = 1, 100 do
+		if data or not player.Parent then
+			break
+		end
+		task.wait(0.1)
+		data = PlayerData.read(player)
+	end
+	if not data then
+		return
+	end
+	PlayerData.editArmor(player, function(edited)
+		local levels = #Config.Dungeons
+		for level = 1, levels do
+			local quality = math.clamp(math.ceil(level / levels * #cfg.Qualities), 1, #cfg.Qualities)
+			for _, slot in cfg.SlotOrder do
+				if #edited.armor >= cfg.MaxPieces then
+					return
+				end
+				local piece = Armor.roll(level, 1, slot, quality)
+				piece.id = edited.nextArmorId
+				edited.nextArmorId += 1
+				table.insert(edited.armor, piece)
+			end
+		end
+	end)
+end
+
 local function onPlayer(player: Player)
+	if RunService:IsStudio() and Config.Test.AllGear then
+		task.spawn(giveAll, player)
+	end
 	player.CharacterAdded:Connect(function(character)
 		-- Espera a que el personaje esté montado (las partes del cuerpo llegan después que el Model).
 		character:WaitForChild("Humanoid", 10)

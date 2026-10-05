@@ -298,6 +298,18 @@ local function load(player: Player)
 		canSave = false
 	end
 
+	-- Modo de pruebas (solo en Studio): todos los accesorios, también sin guardar. La armadura de pruebas la da
+	-- server/Armor (con el mismo interruptor), que es quien sabe tirar piezas.
+	if RunService:IsStudio() and Config.Test.AllGear then
+		for index in Config.Artifacts do
+			if not table.find(data.artifacts, index) then
+				table.insert(data.artifacts, index)
+			end
+		end
+		table.sort(data.artifacts)
+		canSave = false
+	end
+
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	local coins = Instance.new("NumberValue") -- un IntValue se desborda con cantidades enormes
