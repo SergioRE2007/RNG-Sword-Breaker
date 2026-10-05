@@ -1,4 +1,4 @@
--- Construye el modelo de un arma con piezas, según su tipo: espada, espadas dobles, hacha o lanza.
+-- Construye el modelo de un arma con piezas, según su tipo: espada, espadas dobles, hacha, lanza o martillo.
 -- Lo usan el servidor (el arma en la mano) y el decorado (expositor del hub).
 -- Ejes de la empuñadura: el arma sube por +Y, es ancha en Z y fina en X; -Z es hacia donde mira el jugador.
 local Config = require(script.Parent.Config)
@@ -165,6 +165,31 @@ local function axe(add: Add, def, style): (BasePart, BasePart)
 	return handle, blade
 end
 
+-- Martillo: mango largo y cabeza de bloque con remates (el golpe lo da el extremo de la cabeza, hacia -Z).
+-- Los que brillan llevan una veta de energía; los raros, pinchos y una gema encima.
+local function hammer(add: Add, def, style): (BasePart, BasePart)
+	local handle = grip(add, "Handle", style)
+	local shaft = def.bladeLength + 1.4
+	local bottom = -0.9
+	local top = bottom + shaft
+	add("Part", "Shaft", Vector3.new(0.26, shaft, 0.26), CFrame.new(0, bottom + shaft / 2, 0), WOOD, Enum.Material.Wood)
+	ball(add, "Pommel", 0.46, bottom, style.trimColor, style.trimMaterial)
+
+	local k = 0.85 + shaft * 0.08 -- tamaño de la cabeza
+	local y = top - 0.35 * k
+	add("Part", "Socket", Vector3.new(0.5, 0.9 * k, 0.5), CFrame.new(0, y, 0), style.trimColor, style.trimMaterial)
+	local head = add("Part", "Blade", Vector3.new(1.0 * k, 1.1 * k, 2.2 * k), CFrame.new(0, y, 0), def.color, def.material)
+	for _, side in { -1, 1 } do
+		add("Part", "Cap", Vector3.new(1.12 * k, 1.22 * k, 0.32 * k), CFrame.new(0, y, side * 1.1 * k), style.trimColor, style.trimMaterial)
+	end
+	add("Part", "Band", Vector3.new(1.06 * k, 0.2 * k, 1.5 * k), CFrame.new(0, y + 0.3 * k, 0), if style.glowing then style.edgeColor else style.darkColor, def.material)
+	if style.fancy then
+		tip(add, "Spike", y + 0.55 * k, 0.4, 0.5, 0.9 * k, style.trimColor, style.trimMaterial)
+		ball(add, "Gem", 0.4 * k, y, def.color, if style.glowing then Enum.Material.Neon else Enum.Material.Glass)
+	end
+	return handle, head
+end
+
 -- Lanza: asta larga agarrada a un tercio, con punta corta arriba.
 local function spear(add: Add, def, style): (BasePart, BasePart)
 	local handle = grip(add, "Handle", style)
@@ -243,6 +268,8 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 		handle, blade = axe(add, def, style)
 	elseif kind == "spear" then
 		handle, blade = spear(add, def, style)
+	elseif kind == "hammer" then
+		handle, blade = hammer(add, def, style)
 	else
 		handle, blade = sword(add, def, style, "Handle")
 	end

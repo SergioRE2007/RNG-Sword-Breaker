@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -50,6 +51,13 @@ local MOVES = {
 		{ -- vuelta entera con el hacha extendida
 			{ 0.18, { spin = -30, turn = -25, raise = 90, swing = -55, elbow = 15, wrist = -70, lraise = 70, lswing = 45, lelbow = 20 } },
 			{ 0.82, { spin = 360, raise = 90, swing = -55, elbow = 15, wrist = -70, lraise = 70, lswing = 45, lelbow = 20 } },
+		},
+	},
+	hammer = {
+		{ -- martillazo: se levanta a dos manos por encima de la cabeza y se deja caer hacia delante
+			{ 0.32, { spin = -6, lean = 16, raise = 172, elbow = 50, wrist = 25, lraise = 165, lelbow = 55 } },
+			{ 0.55, { spin = 6, lean = -34, raise = 38, elbow = 8, wrist = -62, lraise = 40, lelbow = 8 } },
+			{ 0.78, { spin = 6, lean = -34, raise = 38, elbow = 8, wrist = -62, lraise = 40, lelbow = 8 } },
 		},
 	},
 	spear = {
@@ -202,6 +210,43 @@ local function step()
 	end
 end
 
+-- Impacto del martillo (solo para el jugador): la cámara tiembla un momento y una onda de polvo sale del suelo.
+local function slam(character: Model)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not humanoid or not root then
+		return
+	end
+	task.spawn(function()
+		local began = os.clock()
+		while os.clock() - began < 0.3 and humanoid.Parent do
+			local fade = 1 - (os.clock() - began) / 0.3
+			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0) * 0.6 * fade
+			RunService.RenderStepped:Wait()
+		end
+		humanoid.CameraOffset = Vector3.zero
+	end)
+
+	local ring = Instance.new("Part")
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanQuery = false
+	ring.CanTouch = false
+	ring.CastShadow = false
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Material = Enum.Material.SmoothPlastic
+	ring.Color = Color3.fromRGB(235, 225, 200)
+	ring.Transparency = 0.35
+	ring.Size = Vector3.new(0.4, 3, 3)
+	ring.CFrame = CFrame.new(root.Position + root.CFrame.LookVector * 5 - Vector3.new(0, root.Size.Y / 2 + 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Parent = workspace
+	local tween = TweenService:Create(ring, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.4, 22, 22), Transparency = 1 })
+	tween.Completed:Connect(function()
+		ring:Destroy()
+	end)
+	tween:Play()
+end
+
 -- Lanza el golpe de ese tipo de arma en el personaje. Devuelve false si su esqueleto no es R15 (no se puede animar así).
 function SwingAnim.play(character: Model?, cooldown: number, kind: string): boolean
 	if not character then
@@ -230,6 +275,14 @@ function SwingAnim.play(character: Model?, cooldown: number, kind: string): bool
 		joints = joints,
 		trails = findTrails(character),
 	}
+	-- El martillo toca el suelo hacia el 55 % del golpe.
+	if kind == "hammer" then
+		task.delay(duration * 0.55, function()
+			if character.Parent then
+				slam(character)
+			end
+		end)
+	end
 	return true
 end
 
