@@ -589,6 +589,7 @@ local function buildShop(kind: string)
 	padding.PaddingBottom = UDim.new(0, 5)
 	padding.Parent = results
 	local rows = {}
+	local adminPicks = {} -- [índice] = botón invisible sobre la fila (modo admin)
 	for position, item in displayOrder(kind) do
 		if item.header then
 			local header = Ui.label(results, 26)
@@ -712,7 +713,65 @@ local function buildShop(kind: string)
 			TweenService:Create(grow, TweenInfo.new(0.12), { Scale = 1 }):Play()
 		end)
 		rows[index] = row
+		-- Modo admin (pruebas): con él encendido, pulsar la fila pone ese resultado en la espada elegida.
+		local pick = Instance.new("TextButton")
+		pick.Name = "AdminPick"
+		pick.Text = ""
+		pick.Size = UDim2.fromScale(1, 1)
+		pick.BackgroundTransparency = 1
+		pick.Visible = false
+		pick.ZIndex = row.ZIndex
+		pick.Parent = row
+		adminPicks[index] = pick
+		pick.Activated:Connect(function()
+			local id = state.selected or player:GetAttribute("Equipped")
+			Remotes.AdminSetModifier:FireServer(kind, id, index)
+			Sfx.play("buy")
+			Ui.toast(`Admin: {entry.name} puesto`, entry.color)
+		end)
 	end
+
+	-- Botón "Admin" en la cabecera: solo se ve si el servidor dice que este jugador es admin (pruebas en
+	-- Studio, Config.Test.Admin). Encendido, la lista de la derecha se puede pulsar; "Quitar" lo borra.
+	local adminOn = false
+	local adminButton = Ui.button((header or window) :: Instance, "Admin", Ui.COLORS.gray)
+	adminButton.Name = "Admin"
+	adminButton.AnchorPoint = Vector2.new(1, 0.5)
+	adminButton.Position = UDim2.new(1, -86, 0.5, 0)
+	adminButton.Size = UDim2.fromOffset(150, 40)
+	adminButton.TextSize = 20
+	local adminClear = Ui.button((header or window) :: Instance, "Quitar", Ui.COLORS.red)
+	adminClear.Name = "AdminClear"
+	adminClear.AnchorPoint = Vector2.new(1, 0.5)
+	adminClear.Position = UDim2.new(1, -244, 0.5, 0)
+	adminClear.Size = UDim2.fromOffset(96, 40)
+	adminClear.TextSize = 20
+	local function paintAdmin()
+		local allowed = player:GetAttribute("Admin") == true
+		if not allowed then
+			adminOn = false
+		end
+		adminButton.Visible = allowed
+		adminClear.Visible = allowed and adminOn
+		adminButton.Text = if adminOn then "Admin: SÍ" else "Admin: NO"
+		adminButton.BackgroundColor3 = if adminOn then Ui.COLORS.orange else Ui.COLORS.gray
+		for _, pick in adminPicks do
+			pick.Visible = adminOn
+		end
+	end
+	adminButton.Activated:Connect(function()
+		adminOn = not adminOn
+		paintAdmin()
+		if adminOn then
+			Ui.toast(`Admin: pulsa un {if kind == "traits" then "rasgo" else "grado"} de la lista para ponerlo`, Ui.COLORS.orange)
+		end
+	end)
+	adminClear.Activated:Connect(function()
+		Remotes.AdminSetModifier:FireServer(kind, state.selected or player:GetAttribute("Equipped"), 0)
+		Ui.toast("Admin: quitado", Ui.COLORS.red)
+	end)
+	player:GetAttributeChangedSignal("Admin"):Connect(paintAdmin)
+	paintAdmin()
 
 	-- Estado --------------------------------------------------------------------------
 	local function selectedCopy()
@@ -764,7 +823,7 @@ local function buildShop(kind: string)
 		if kind == "traits" then
 			cost.Text = `Cristales de rasgo: {Format.short(player:GetAttribute("Item_traitCrystal") or 0)}  ·  {state.count} por tirada`
 			countButton.Text = `x{state.count}`
-			countButton.BackgroundColor3 = if state.count == 3 then Ui.COLORS.orange else Ui.COLORS.gray
+			countButton.BackgroundColor3 = if state.count > 3 then Ui.COLORS.purple elseif state.count == 3 then Ui.COLORS.orange else Ui.COLORS.gray
 		else
 			cost.Text = `Cristales de grado: {Format.short(player:GetAttribute("Item_gradeCrystal") or 0)}  ·  {Config.GradeCost} por tirada`
 		end
@@ -822,11 +881,18 @@ local function buildShop(kind: string)
 	end
 
 	-- Animación del resultado: pasan nombres al azar y se para en el que ha tocado.
+	-- Pase de juego: las tiradas de grado van más rápido (gradeSpeed; 4 = 400 %). Acorta la animación y la
+	-- espera entre tiradas automáticas; el servidor acorta igual su tiempo mínimo.
+	local function speed(): number
+		return if kind == "grades" then Stats.perk(player, "gradeSpeed") or 1 else 1
+	end
+
 	local function reveal(index: number)
 		local entry = info.list[index]
-		for _ = 1, 4 do
+		local fast = speed()
+		for _ = 1, math.max(1, math.round(4 / fast)) do
 			paintName(nameLabel, info.list[Modifiers.roll(kind, random)])
-			task.wait(0.03)
+			task.wait(0.03 / fast)
 		end
 		paintName(nameLabel, entry)
 		effect.Text = Modifiers.effect(entry)
@@ -953,6 +1019,73 @@ local function buildShop(kind: string)
 		detailLimit.Parent = detail
 	end
 
+	-- Muchas tiradas de golpe (pase de juego): no caben en columnas, así que salen como cartas en una rejilla
+	-- de 5 por fila, una detrás de otra, y al final se destaca la mejor.
+	local function playBurst(rolls: { number }, best: number)
+		local holder = roulette :: Frame
+		local area = rouletteColumns :: Frame
+		;(rouletteTitle :: TextLabel).Text = `¡Mejor de {#rolls}!`
+		;(rouletteTitle :: TextLabel).TextColor3 = WHITE
+		local board = Instance.new("Frame")
+		board.Name = "Column" -- mismo nombre que las columnas: se borra con ellas en la siguiente tirada
+		board.Size = UDim2.fromScale(1, 1)
+		board.BackgroundTransparency = 1
+		board.ZIndex = Z.column
+		board.Parent = area
+		local perRow = 5
+		local rowCount = math.ceil(#rolls / perRow)
+		local grid = Instance.new("UIGridLayout")
+		grid.CellSize = UDim2.fromScale(0.19, math.min(0.42, 0.92 / rowCount))
+		grid.CellPadding = UDim2.fromScale(0.0125, 0.04)
+		grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		grid.VerticalAlignment = Enum.VerticalAlignment.Center
+		grid.SortOrder = Enum.SortOrder.LayoutOrder
+		grid.Parent = board
+
+		local bestCard = table.find(rolls, best) or 1
+		local faces = {}
+		for place, rolled in rolls do
+			traitCard(board, place, info.list[rolled])
+			local card = board:FindFirstChild("TraitCard") :: Frame
+			card.Name = "Card" .. place
+			local pop = Instance.new("UIScale")
+			pop.Scale = 0
+			pop.Parent = card
+			faces[place] = { card = card, pop = pop }
+			TweenService:Create(pop, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+			Sfx.play("tick")
+			local waited = 0
+			while waited < 0.07 and not rouletteSkip do
+				waited += task.wait()
+			end
+		end
+		local settle = 0
+		while settle < 0.25 and not rouletteSkip do
+			settle += task.wait()
+		end
+
+		local entry = info.list[best]
+		Sfx.play(if Modifiers.percent(kind, best) < 1 then "win" else "buy")
+		for place, face in faces do
+			face.pop.Scale = 1
+			if place == bestCard then
+				TweenService:Create(face.pop, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.12 }):Play()
+			else
+				local shade = Instance.new("Frame")
+				shade.Size = UDim2.fromScale(1, 1)
+				shade.BackgroundColor3 = BLACK
+				shade.BackgroundTransparency = 1
+				shade.ZIndex = Z.shade
+				shade.Parent = face.card
+				Ui.round(shade, 8)
+				TweenService:Create(shade, TweenInfo.new(0.3), { BackgroundTransparency = 0.45 }):Play()
+			end
+		end
+		;(rouletteTitle :: TextLabel).Text = entry.name
+		;(rouletteTitle :: TextLabel).TextColor3 = if entry.rainbow then WHITE else entry.color
+		task.wait(if rouletteSkip then 0.25 else 0.7)
+	end
+
 	local function playRoulette(rolls: { number }, best: number)
 		local holder = roulette :: Frame
 		local area = rouletteColumns :: Frame
@@ -965,6 +1098,10 @@ local function buildShop(kind: string)
 		rouletteSkip = false
 		Sfx.play("roll")
 		local count = #rolls
+		if count > 3 then
+			playBurst(rolls, best)
+			return
+		end
 		;(rouletteTitle :: TextLabel).Text = if count > 1 then "¡Mejor de tres!" else "Tirando..."
 		;(rouletteTitle :: TextLabel).TextColor3 = WHITE
 		-- Todas las columnas con el mismo ancho: lo que queda del área tras los huecos, a partes iguales.
@@ -1147,7 +1284,7 @@ local function buildShop(kind: string)
 		while state.auto and window.Visible do
 			if not request() then
 				if not state.waiting then
-					Ui.toast(if canAfford() then "Elige una espada" else (if kind == "traits" then "No te quedan Cristales de rasgo" else "No te quedan gemas"), Ui.COLORS.red)
+					Ui.toast(if canAfford() then "Elige una espada" else (if kind == "traits" then "No te quedan Cristales de rasgo" else "No te quedan Cristales de grado"), Ui.COLORS.red)
 					break
 				end
 			end
@@ -1157,7 +1294,7 @@ local function buildShop(kind: string)
 			if state.last and state.stop[state.last] then
 				break
 			end
-			task.wait(AUTO_DELAY)
+			task.wait(AUTO_DELAY / speed())
 		end
 		state.auto = false
 		if roulette then
@@ -1207,7 +1344,18 @@ local function buildShop(kind: string)
 	end)
 	countButton.Activated:Connect(function()
 		if not state.waiting then
-			state.count = if state.count == 1 then 3 else 1
+			-- x1 -> x3 -> las del pase de juego (si lo tiene) -> x1.
+			local most = Stats.perk(player, "traitCount")
+			if state.count == 1 then
+				state.count = 3
+			elseif state.count == 3 and most and most > 3 then
+				state.count = most
+			else
+				if state.count == 3 then
+					Ui.toast("Con el pase de la Tienda puedes tirar 10 a la vez", Ui.COLORS.purple)
+				end
+				state.count = 1
+			end
 			refresh()
 		end
 	end)
@@ -1234,6 +1382,15 @@ local function buildShop(kind: string)
 		state.priority = Modifiers.priority(player:GetAttribute("TraitPriority"))
 		if kind == "traits" then
 			paintPriority()
+		end
+	end)
+	-- Si pierde (o gana) el pase, la cuenta de rasgos vuelve a lo que puede tirar.
+	player.AttributeChanged:Connect(function(attribute)
+		if string.sub(attribute, 1, 5) == "Pass_" then
+			if state.count > 3 and state.count ~= Stats.perk(player, "traitCount") then
+				state.count = 1
+			end
+			refresh()
 		end
 	end)
 	for _, attribute in { "Swords", "Equipped", "Item_gradeCrystal", "Item_traitCrystal" } do

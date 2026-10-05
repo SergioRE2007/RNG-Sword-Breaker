@@ -72,6 +72,23 @@ function Stats.maxHealth(player: Player): number
 	return Config.Armor.BaseHealth + armor(player, "health")
 end
 
+-- Si el jugador tiene ese pase de juego (clave de Config.Gamepasses; el servidor lo publica en "Pass_<clave>").
+function Stats.pass(player: Player, key: string): boolean
+	return player:GetAttribute("Pass_" .. key) == true
+end
+
+-- Valor de una ventaja de pase ("traitCount", "gradeSpeed"...): el mayor entre los pases que tiene, o nil.
+function Stats.perk(player: Player, name: string): number?
+	local best = nil
+	for key, pass in Config.Gamepasses do
+		local value = pass.perks[name]
+		if value and Stats.pass(player, key) and (not best or value > best) then
+			best = value
+		end
+	end
+	return best
+end
+
 local function upgrade(player: Player, name: string): number
 	return Upgrades.value(name, player:GetAttribute("Upgrade_" .. name) or 0)
 end
