@@ -37,19 +37,24 @@ local function publish(player: Player)
 	player:SetAttribute("Gems", data.gems)
 	player:SetAttribute("Rebirths", data.rebirths)
 
-	-- "Swords" = copias del inventario como "id:espada:rasgo:grado" (0 = ninguno) separadas por comas.
+	-- "Swords" = copias del inventario como "id:espada:rasgo:grado:metal:tamaño" (0 = ninguno) separadas por comas.
 	-- "Equipped" = id de la copia equipada; "SwordLevel" = su tipo (índice de Config.Swords).
 	local swords = {}
 	local equippedType = 1
+	local equippedMetal, equippedSize = 0, 0
 	for _, copy in data.swords do
-		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}:{copy.grade or 0}`)
+		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}`)
 		if copy.id == data.equipped then
 			equippedType = copy.sword
+			equippedMetal, equippedSize = copy.metal or 0, copy.size or 0
 		end
 	end
 	player:SetAttribute("Swords", table.concat(swords, ","))
 	player:SetAttribute("Equipped", data.equipped)
 	player:SetAttribute("SwordLevel", equippedType)
+	-- Metal y tamaño de la espada equipada (Swords los usa para construir la que lleva en la mano).
+	player:SetAttribute("SwordMetal", equippedMetal)
+	player:SetAttribute("SwordSize", equippedSize)
 	player:SetAttribute("AutoSell", data.autoSell)
 
 	for name, count in data.items do
@@ -70,6 +75,14 @@ local function validTrait(trait: unknown): number?
 	return if type(trait) == "number" and Config.Traits[trait] then trait else nil
 end
 
+local function validMetal(metal: unknown): number?
+	return if type(metal) == "number" and Config.Metals[metal] then metal else nil
+end
+
+local function validSize(size: unknown): number?
+	return if type(size) == "number" and Config.Sizes[size] then size else nil
+end
+
 local function validGrade(grade: unknown): number?
 	return if type(grade) == "number" and Config.Grades[grade] then grade else nil
 end
@@ -77,9 +90,9 @@ end
 -- Reconstruye el inventario de espadas a partir de lo guardado, en cualquiera de sus formatos.
 local function loadSwords(data, saved)
 	local swords = {}
-	local function add(sword: number, trait: number?, grade: number?): number
+	local function add(sword: number, trait: number?, grade: number?, metal: number?, size: number?): number
 		local id = #swords + 1
-		table.insert(swords, { id = id, sword = sword, trait = trait, grade = grade })
+		table.insert(swords, { id = id, sword = sword, trait = trait, grade = grade, metal = metal, size = size })
 		return id
 	end
 
@@ -94,7 +107,7 @@ local function loadSwords(data, saved)
 				break
 			end
 			if type(copy) == "table" and type(copy.sword) == "number" and Config.Swords[copy.sword] then
-				local id = add(copy.sword, validTrait(copy.trait), validGrade(copy.grade))
+				local id = add(copy.sword, validTrait(copy.trait), validGrade(copy.grade), validMetal(copy.metal), validSize(copy.size))
 				if copy.id == saved.equipped then
 					equipped = id
 				end

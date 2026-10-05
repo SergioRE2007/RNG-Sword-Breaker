@@ -8,7 +8,7 @@ local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 
 local Swords = {}
 
-local function build(level: number): Tool
+local function build(level: number, metal: number, size: number): Tool
 	local def = Config.Swords[level]
 
 	local tool = Instance.new("Tool")
@@ -16,7 +16,9 @@ local function build(level: number): Tool
 	tool.CanBeDropped = false
 	tool:SetAttribute("Sword", true)
 
-	local handle = SwordModel.build(level, tool, CFrame.identity, 1, false)
+	-- El tamaño agranda el arma (y su alcance, ver Combat); el metal le da su color y material.
+	local scale = if size > 0 then Config.Sizes[size].scale else 1
+	local handle = SwordModel.build(level, tool, CFrame.identity, scale, false, metal)
 	if def.kind == "spear" then
 		-- La lanza se lleva tumbada, apuntando hacia donde apunta el antebrazo.
 		tool.Grip = CFrame.Angles(math.rad(90), 0, 0)
@@ -46,7 +48,7 @@ local function give(player: Player)
 		end
 	end
 
-	local tool = build(player:GetAttribute("SwordLevel") or 1)
+	local tool = build(player:GetAttribute("SwordLevel") or 1, player:GetAttribute("SwordMetal") or 0, player:GetAttribute("SwordSize") or 0)
 	tool.Parent = player:FindFirstChildOfClass("Backpack")
 	humanoid:EquipTool(tool)
 	-- La espada va siempre en la mano: si se guarda en la mochila (por ejemplo con la tecla 1), se vuelve a equipar.
@@ -82,9 +84,21 @@ local function onPlayer(player: Player)
 	player.CharacterAdded:Connect(function()
 		give(player)
 	end)
-	player:GetAttributeChangedSignal("SwordLevel"):Connect(function()
-		give(player)
-	end)
+	-- Tipo, metal y tamaño de la espada equipada cambian casi a la vez: se reconstruye una sola vez.
+	local scheduled = false
+	local function rebuild()
+		if scheduled then
+			return
+		end
+		scheduled = true
+		task.defer(function()
+			scheduled = false
+			give(player)
+		end)
+	end
+	for _, attribute in { "SwordLevel", "SwordMetal", "SwordSize" } do
+		player:GetAttributeChangedSignal(attribute):Connect(rebuild)
+	end
 	if player.Character then
 		give(player)
 	end

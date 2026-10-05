@@ -257,8 +257,15 @@ end
 
 -- Devuelve la empuñadura ("Handle") y la hoja principal ("Blade").
 -- Las espadas dobles llevan la segunda en un Model "OffHand" con raíz "OffHandle", para soldarla a la mano izquierda.
-function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale: number, anchored: boolean): (BasePart, BasePart)
+function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale: number, anchored: boolean, metal: number?): (BasePart, BasePart)
 	local def = Config.Swords[level]
+	-- Con un metal (Config.Metals) el arma toma su color y su material.
+	local metalDef = if metal and metal > 0 then Config.Metals[metal] else nil
+	if metalDef then
+		def = table.clone(def)
+		def.color = metalDef.color
+		def.material = metalDef.material
+	end
 	local kind = def.kind or "sword"
 	local style = look(def)
 	local add = builder(parent, origin, scale, anchored)

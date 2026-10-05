@@ -1,6 +1,7 @@
 -- Estadísticas finales del jugador: junta espada, rasgo, artefactos equipados y mejoras.
 -- Lee los atributos del Player, así que da lo mismo en el servidor y en el cliente.
 local Config = require(script.Parent.Config)
+local Permanent = require(script.Parent.Permanent)
 local Upgrades = require(script.Parent.Upgrades)
 
 local Stats = {}
@@ -14,14 +15,14 @@ function Stats.list(player: Player, attribute: string): { number }
 	return result
 end
 
--- Copias de espada del inventario: { id, sword = índice de Config.Swords, trait = índice de
+-- Copias de espada del inventario: { id, sword = índice de Config.Swords, metal y size = índices de Config.Metals y Sizes (0 = ninguno), trait = índice de
 -- Config.Traits o 0, grade = índice de Config.Grades o 0 }.
 function Stats.swords(player: Player)
 	local result = {}
 	for entry in string.gmatch(player:GetAttribute("Swords") or "", "[^,]+") do
-		local id, sword, trait, grade = string.match(entry, "^(%d+):(%d+):(%d+):?(%d*)$")
+		local id, sword, trait, grade, metal, size = string.match(entry, "^(%d+):(%d+):(%d+):?(%d*):?(%d*):?(%d*)$")
 		if id then
-			table.insert(result, { id = tonumber(id), sword = tonumber(sword), trait = tonumber(trait), grade = tonumber(grade) or 0 })
+			table.insert(result, { id = tonumber(id), sword = tonumber(sword), trait = tonumber(trait), grade = tonumber(grade) or 0, metal = tonumber(metal) or 0, size = tonumber(size) or 0 })
 		end
 	end
 	return result
@@ -35,13 +36,18 @@ function Stats.equipped(player: Player)
 			return copy
 		end
 	end
-	return { id = 0, sword = 1, trait = 0, grade = 0 }
+	return { id = 0, sword = 1, trait = 0, grade = 0, metal = 0, size = 0 }
 end
 
--- Daño de una copia de espada con su rasgo, sin contar artefactos.
+-- Daño de una copia de espada con su rasgo, su metal y su tamaño, sin contar artefactos.
 function Stats.swordDamage(copy): number
 	local trait = Config.Traits[copy.trait]
-	return Config.Swords[copy.sword].damage * (if trait then trait.damage or 1 else 1)
+	return Config.Swords[copy.sword].damage * (if trait then trait.damage or 1 else 1) * Permanent.damageMult(copy)
+end
+
+-- Rareza total ("1 entre N") de una copia: la del arma por las de su metal y su tamaño.
+function Stats.rarity(copy): number
+	return Permanent.rarity(copy.sword, copy.metal, copy.size)
 end
 
 local function gear(player: Player, stat: string): number

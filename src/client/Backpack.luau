@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
+local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -159,10 +160,19 @@ end
 local function swordTip(copy): (string, Color3, boolean)
 	local sword = Config.Swords[copy.sword]
 	local trait = Config.Traits[copy.trait]
-	local tier = Rarity.tier(sword.rarity)
+	local rarity = Stats.rarity(copy)
+	local tier = Rarity.tier(rarity)
 	local lines = { sword.name, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
 	local grade = Config.Grades[copy.grade]
 	local border = tier.color
+	-- Metal y tamaño (permanentes, salen con el arma): lo que son y lo que multiplican.
+	local metal, size = Permanent.metal(copy), Permanent.size(copy)
+	if metal then
+		table.insert(lines, `<font color="{hex(metal.color)}">Metal: {metal.name}</font> (x{Format.multiplier(Permanent.damage(metal.odds))} daño · 1 entre {Format.short(metal.odds)})`)
+	end
+	if size then
+		table.insert(lines, `<font color="{hex(size.color)}">Tamaño: {size.name}</font> (x{Format.multiplier(Permanent.damage(size.odds))} daño, x{size.scale} de largo · 1 entre {Format.short(size.odds)})`)
+	end
 	if trait or grade then
 		table.insert(lines, "") -- aparte: rasgo y grado forman su propio bloque
 	end
@@ -182,7 +192,7 @@ local function swordTip(copy): (string, Color3, boolean)
 		table.insert(lines, "")
 	end
 	table.insert(lines, `Daño {Format.multiplier(Stats.swordDamage(copy))}`)
-	table.insert(lines, `<font color="{Ui.SOFT}">{if sword.rarity then "1 entre " .. Format.short(sword.rarity) else "Espada inicial"}</font>`)
+	table.insert(lines, `<font color="{Ui.SOFT}">{if sword.rarity then "1 entre " .. Format.short(rarity) else "Espada inicial"}</font>`)
 	return table.concat(lines, "\n"), border, trait ~= nil or grade ~= nil
 end
 
@@ -385,7 +395,7 @@ function Backpack.start()
 		local seen = {}
 		for _, copy in copies do
 			seen[copy.id] = true
-			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.id == equippedId}`
+			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{copy.id == equippedId}`
 			if cellKeys[copy.id] == key then
 				continue
 			end
@@ -397,12 +407,11 @@ function Backpack.start()
 
 			local sword = Config.Swords[copy.sword]
 			local trait = Config.Traits[copy.trait]
-			local tier = Rarity.tier(sword.rarity)
+			local tier = Rarity.tier(Stats.rarity(copy))
 			local cell = Ui.cell(swordGrid, tier.color, table.find(Config.RarityTiers, tier))
 			cell.Name = "Sword" .. copy.id
-			-- Las mejores primero: por daño del arma y, a igualdad, por rasgo.
-			cell.LayoutOrder = -(damageRank[copy.sword] * 1000 + copy.trait)
-			WeaponPreview.attach(cell, copy.sword, tier.color)
+			-- (El orden de las casillas, de más a menos daño, se pone al final de syncSwords.)
+			WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
 			-- Daño grande abajo a la izquierda.
 			local damage = Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
 			damage.Position = UDim2.new(0.5, 3, 1, -3)
@@ -413,6 +422,23 @@ function Backpack.start()
 			Ui.gradient(damage, Color3.new(1, 1, 1), tier.color:Lerp(Color3.new(1, 1, 1), 0.45), 90)
 			if copy.id == equippedId then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
+			end
+			-- Metal (círculo de su color) y tamaño (cartelito con su inicial) en el lado izquierdo, bajo la "E".
+			local metalDef, sizeDef = Permanent.metal(copy), Permanent.size(copy)
+			if metalDef then
+				local dot = Instance.new("Frame")
+				dot.Name = "Metal"
+				dot.Position = UDim2.fromOffset(6, 30)
+				dot.Size = UDim2.fromOffset(18, 18)
+				dot.BackgroundColor3 = metalDef.color
+				dot.BorderSizePixel = 0
+				dot.ZIndex = 3
+				dot.Parent = cell
+				Ui.round(dot, 9)
+				Ui.stroke(dot, Color3.new(0, 0, 0), 2)
+			end
+			if sizeDef then
+				Ui.cellTag(cell, string.sub(sizeDef.name, 1, 1), sizeDef.color).Position = UDim2.fromOffset(4, if metalDef then 52 else 30)
 			end
 			if trait then
 				-- Rombo del color del rasgo en la esquina.
@@ -452,6 +478,17 @@ function Backpack.start()
 				cell:Destroy()
 				swordCells[id] = nil
 				cellKeys[id] = nil
+			end
+		end
+		-- Las de más daño primero (con metal, tamaño y rasgo incluidos).
+		local ordered = table.clone(copies)
+		table.sort(ordered, function(a, b)
+			return Stats.swordDamage(a) > Stats.swordDamage(b)
+		end)
+		for position, copy in ordered do
+			local cell = swordCells[copy.id]
+			if cell then
+				cell.LayoutOrder = position
 			end
 		end
 	end

@@ -701,7 +701,7 @@ function Ui.cellLabel(cell: Instance, text: string): TextLabel
 end
 
 -- Etiqueta pequeña en una esquina de la casilla (la "E" de equipada).
-function Ui.cellTag(cell: Instance, text: string, color: Color3)
+function Ui.cellTag(cell: Instance, text: string, color: Color3): TextLabel
 	local tag = Ui.label(cell, 14)
 	tag.Position = UDim2.fromOffset(4, 4)
 	tag.Size = UDim2.fromOffset(22, 22)
@@ -711,6 +711,7 @@ function Ui.cellTag(cell: Instance, text: string, color: Color3)
 	tag.ZIndex = 3
 	Ui.round(tag, 6)
 	Ui.stroke(tag, BLACK, 2)
+	return tag
 end
 
 local function piece(parent: Instance, size: UDim2, position: UDim2, color: Color3, radius: number): Frame

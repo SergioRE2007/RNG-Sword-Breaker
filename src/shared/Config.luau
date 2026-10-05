@@ -100,6 +100,27 @@ Config.RarityTiers = {
 	{ min = 1e21, name = "Divina", color = Color3.fromRGB(120, 255, 240) },
 }
 
+-- Modificadores permanentes: cada arma que sale del gacha puede llevar además UN metal y UN tamaño, tirados
+-- a la vez que ella y que ya no cambian. "odds" = 1 entre N de que salgan (la suerte de gacha divide N, como
+-- con las armas). Cada uno multiplica el daño con la misma regla que las armas (rareza x2 = +50 % de daño,
+-- ver Permanent.damage) y suma su rareza a la del arma (los N se multiplican). El metal cambia el color y el
+-- material del arma; el tamaño la agranda (scale) y con ella su alcance. No cambies el orden: lo guardado usa
+-- la posición. Lo nuevo va al final.
+Config.Metals = {
+	{ name = "Cobre", odds = 10, color = Color3.fromRGB(205, 118, 72), material = Enum.Material.Metal },
+	{ name = "Hierro", odds = 100, color = Color3.fromRGB(150, 156, 168), material = Enum.Material.Metal },
+	{ name = "Oro", odds = 1e3, color = Color3.fromRGB(255, 205, 60), material = Enum.Material.Foil },
+	{ name = "Lunarita", odds = 1e4, color = Color3.fromRGB(190, 215, 255), material = Enum.Material.Glass },
+	{ name = "Solarium", odds = 1e5, color = Color3.fromRGB(255, 140, 70), material = Enum.Material.Neon },
+	{ name = "Etherio", odds = 1e6, color = Color3.fromRGB(130, 255, 225), material = Enum.Material.ForceField },
+}
+Config.Sizes = {
+	{ name = "Grande", odds = 1e2, scale = 1.25, color = Color3.fromRGB(120, 200, 120) },
+	{ name = "Gigante", odds = 1e5, scale = 1.6, color = Color3.fromRGB(90, 160, 255) },
+	{ name = "Titánica", odds = 1e8, scale = 2.1, color = Color3.fromRGB(200, 100, 255) },
+	{ name = "Universal", odds = 1e12, scale = 3, color = Color3.fromRGB(255, 90, 90) },
+}
+
 -- Máximo de espadas en el inventario; con el inventario lleno las nuevas se venden solas.
 Config.MaxSwords = 200
 
