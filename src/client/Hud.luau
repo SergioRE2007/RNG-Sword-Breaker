@@ -5,6 +5,7 @@
 -- El transporte lo hace el servidor (Teleport); aquí solo se pide y se pone un destello.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
 
@@ -92,6 +93,17 @@ end
 function Hud.start()
 	local gui = Ui.screen()
 
+	-- La espada siempre va equipada: se quita la barra de objetos de Roblox (y sus teclas 1, 2...).
+	-- SetCoreGuiEnabled puede fallar si el sistema aún no está listo, así que se reintenta.
+	task.spawn(function()
+		for _ = 1, 10 do
+			if pcall(StarterGui.SetCoreGuiEnabled, StarterGui, Enum.CoreGuiType.Backpack, false) then
+				break
+			end
+			task.wait(0.5)
+		end
+	end)
+
 	-- Monedas y gemas, abajo a la izquierda.
 	local coins = counter(gui, "Coins", 1, Ui.COLORS.coins, function(parent)
 		Ui.orbIcon(parent, Color3.fromRGB(255, 220, 90))
@@ -158,14 +170,38 @@ function Hud.start()
 	end
 
 	-- Estadísticas, abajo a la derecha: daño y suertes, y el nivel de cada mejora.
+	-- Va dentro de un "dock" que se desliza hacia la derecha de la pantalla; solo queda a la vista
+	-- la pestaña con la flecha, pegada al borde.
+	local dock = Instance.new("Frame")
+	dock.Name = "StatsDock"
+	dock.AnchorPoint = Vector2.new(1, 1)
+	dock.Position = UDim2.new(1, -MARGIN, 1, -MARGIN)
+	dock.Size = UDim2.fromOffset(300, 0)
+	dock.AutomaticSize = Enum.AutomaticSize.Y
+	dock.BackgroundTransparency = 1
+	dock.Parent = gui
+
 	local statsBox = Instance.new("Frame")
 	statsBox.Name = "Stats"
-	statsBox.AnchorPoint = Vector2.new(1, 1)
-	statsBox.Position = UDim2.new(1, -MARGIN, 1, -MARGIN)
 	statsBox.Size = UDim2.fromOffset(300, 0)
 	statsBox.AutomaticSize = Enum.AutomaticSize.Y
 	statsBox.BackgroundColor3 = WHITE
-	statsBox.Parent = gui
+	statsBox.Parent = dock
+
+	local statsOpen = true
+	local tab = Ui.button(dock, ">", Ui.COLORS.purple)
+	tab.Name = "StatsTab"
+	tab.AnchorPoint = Vector2.new(1, 1)
+	tab.Position = UDim2.new(0, -4, 1, 0)
+	tab.Size = UDim2.fromOffset(36, 74)
+	tab.TextSize = 30
+	tab.Activated:Connect(function()
+		statsOpen = not statsOpen
+		tab.Text = if statsOpen then ">" else "<"
+		TweenService:Create(dock, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = if statsOpen then UDim2.new(1, -MARGIN, 1, -MARGIN) else UDim2.new(1, 300, 1, -MARGIN),
+		}):Play()
+	end)
 	Ui.round(statsBox, 12)
 	Ui.stroke(statsBox, BLACK, 3)
 	Ui.gradient(statsBox, Color3.fromRGB(58, 48, 110), Color3.fromRGB(18, 18, 40), 90)

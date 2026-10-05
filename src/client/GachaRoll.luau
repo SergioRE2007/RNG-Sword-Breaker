@@ -953,7 +953,7 @@ function GachaRoll.start()
 	local bar = Instance.new("Frame")
 	bar.Name = "Roll"
 	bar.AnchorPoint = Vector2.new(0.5, 1)
-	bar.Position = UDim2.new(0.5, 0, 1, -104)
+	bar.Position = UDim2.new(0.5, 0, 1, -20) -- abajo del todo: ya no hay barra de armas de Roblox
 	bar.Size = UDim2.fromOffset(0, 64)
 	bar.AutomaticSize = Enum.AutomaticSize.X
 	bar.BackgroundTransparency = 1

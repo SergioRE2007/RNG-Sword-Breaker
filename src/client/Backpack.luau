@@ -76,21 +76,56 @@ end
 
 -- Cartel de una copia de espada (nombre, rareza, tipo, rasgo, grado, daño). También lo usan
 -- las tiendas de Rasgos y Grados (Backpack.swordTip).
-local function swordTip(copy): (string, Color3)
+-- Nombre de un rasgo o grado con letras animadas, como en las tiendas: el arcoíris corre por las
+-- letras y los demás llevan un destello blanco que las cruza. Hay que volver a pedirlo cada
+-- fotograma (el cartel lo hace solo si swordTip devuelve `true` como tercer valor).
+local function animatedName(entry): string
+	local now = os.clock()
+	local count = utf8.len(entry.name) or #entry.name
+	local shine = (now * 7) % (count + 10) - 5
+	local letters = {}
+	local index = 0
+	for _, code in utf8.codes(entry.name) do
+		index += 1
+		local color
+		if entry.rainbow then
+			color = Color3.fromHSV((now * 0.6 + index * 0.09) % 1, 0.6, 1)
+		else
+			color = entry.color:Lerp(Color3.new(1, 1, 1), math.max(0, 1 - math.abs(index - shine) / 2.5) * 0.85)
+		end
+		table.insert(letters, `<font color="{hex(color)}">{utf8.char(code)}</font>`)
+	end
+	return table.concat(letters)
+end
+
+local function swordTip(copy): (string, Color3, boolean)
 	local sword = Config.Swords[copy.sword]
 	local trait = Config.Traits[copy.trait]
 	local tier = Rarity.tier(sword.rarity)
 	local lines = { sword.name, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
 	local grade = Config.Grades[copy.grade]
+	local border = tier.color
+	if trait or grade then
+		table.insert(lines, "") -- aparte: rasgo y grado forman su propio bloque
+	end
 	if trait then
-		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo: {trait.name}</font> ({Modifiers.effect(trait)})`)
+		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo:</font> {animatedName(trait)} ({Modifiers.effect(trait)})`)
+		if trait.rainbow then
+			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
+		end
 	end
 	if grade then
-		table.insert(lines, `<font color="{hex(grade.color)}">Grado: {grade.name}</font> ({Modifiers.effect(grade)})`)
+		table.insert(lines, `<font color="{hex(grade.color)}">Grado:</font> {animatedName(grade)} ({Modifiers.effect(grade)})`)
+		if grade.rainbow then
+			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
+		end
+	end
+	if trait or grade then
+		table.insert(lines, "")
 	end
 	table.insert(lines, `Daño {Format.multiplier(Stats.swordDamage(copy))}`)
 	table.insert(lines, `<font color="{Ui.SOFT}">{if sword.rarity then "1 entre " .. Format.short(sword.rarity) else "Espada inicial"}</font>`)
-	return table.concat(lines, "\n"), tier.color
+	return table.concat(lines, "\n"), border, trait ~= nil or grade ~= nil
 end
 
 local function artifactTip(index: number): (string, Color3)
