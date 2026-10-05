@@ -1,5 +1,5 @@
 -- Modificadores de espada que se tiran en las tiendas del hub: rasgos (Config.Traits, con
--- Cristal de rasgo) y grados (Config.Grades, con gemas). Cada entrada tiene un peso "chance";
+-- Cristal de rasgo) y grados (Config.Grades, con Cristal de grado). Cada entrada tiene un peso "chance";
 -- aquí se calcula su % real, se tira al azar y se describe su efecto. Vale en servidor y cliente.
 local Config = require(script.Parent.Config)
 local Format = require(script.Parent.Format)
@@ -8,8 +8,10 @@ local Modifiers = {}
 
 -- kind = "traits" o "grades".
 Modifiers.KINDS = {
-	traits = { list = Config.Traits, field = "trait", title = "Rasgos", label = "RASGO" },
-	grades = { list = Config.Grades, field = "grade", title = "Grados", label = "GRADO" },
+	-- "item" y "cost" = objeto de Config.Items que cuesta cada tirada y cuántos.
+	traits = { list = Config.Traits, field = "trait", title = "Rasgos", label = "RASGO", item = "traitCrystal", cost = 1 },
+	grades = { list = Config.Grades, field = "grade", title = "Grados", label = "GRADO", item = "gradeCrystal", cost = Config.GradeCost },
+	armorMods = { list = Config.Armor.Mods }, -- modificadores extra de la armadura (solo se usa la tirada por pesos)
 }
 
 local totals = {}

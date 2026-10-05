@@ -61,6 +61,17 @@ local function gear(player: Player, stat: string): number
 	return total
 end
 
+-- Total de un stat de la armadura equipada (el servidor lo publica en "Armor_<stat>"; ver Config.Armor.Stats).
+-- La vida se suma; los demás son porcentajes: 0.25 = +25 %.
+local function armor(player: Player, stat: string): number
+	return player:GetAttribute("Armor_" .. stat) or 0
+end
+
+-- Vida máxima del personaje: la base más la que da la armadura.
+function Stats.maxHealth(player: Player): number
+	return Config.Armor.BaseHealth + armor(player, "health")
+end
+
 local function upgrade(player: Player, name: string): number
 	return Upgrades.value(name, player:GetAttribute("Upgrade_" .. name) or 0)
 end
@@ -93,13 +104,13 @@ function Stats.rebirthCost(player: Player): number
 end
 
 function Stats.damage(player: Player): number
-	return Stats.swordDamage(Stats.equipped(player)) * gear(player, "damage") * Stats.rebirthBonus(player, "damage")
+	return Stats.swordDamage(Stats.equipped(player)) * gear(player, "damage") * Stats.rebirthBonus(player, "damage") * (1 + armor(player, "damage"))
 end
 
--- Multiplicador de suerte que dan el rasgo de la espada equipada y los artefactos.
+-- Multiplicador de suerte que dan el rasgo de la espada equipada, los artefactos y la armadura.
 local function luckBonus(player: Player): number
 	local trait = Config.Traits[Stats.equipped(player).trait]
-	return (if trait then trait.luck or 1 else 1) * gear(player, "luck")
+	return (if trait then trait.luck or 1 else 1) * gear(player, "luck") * (1 + armor(player, "luck"))
 end
 
 function Stats.luck(player: Player): number
@@ -111,9 +122,9 @@ function Stats.gachaLuck(player: Player): number
 end
 
 -- Segundos por tirada del gacha: la mejora "Velocidad de tirada" (que ya parte de Config.Gacha.RollTime)
--- con un mínimo. Aquí se multiplicarán también los gamepass.
+-- entre la velocidad de tirada de la armadura, con un mínimo. Aquí se multiplicarán también los gamepass.
 function Stats.rollTime(player: Player): number
-	return math.max(upgrade(player, "rollSpeed"), Config.Gacha.MinRollTime)
+	return math.max(upgrade(player, "rollSpeed") / (1 + armor(player, "rollSpeed")), Config.Gacha.MinRollTime)
 end
 
 -- Monedas: artefactos, y el rasgo y el grado de la espada equipada.

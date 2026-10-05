@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Destructibles = require(script.Parent.Destructibles)
+local Dungeons = require(script.Parent.Dungeons)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Gacha = require(script.Parent.Gacha)
 local Gear = require(script.Parent.Gear)
@@ -63,6 +64,8 @@ local function onSwing(player: Player)
 			Gear.onBroken(player)
 		end
 	end
+	-- Enemigos de la mazmorra, si está en una.
+	Dungeons.strike(player, root.CFrame, range, kind.arc, damage)
 end
 
 function Combat.start()

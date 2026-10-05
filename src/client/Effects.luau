@@ -173,7 +173,10 @@ function Effects.start()
 		popup(position, Format.short(damage), Color3.fromRGB(255, 255, 255))
 		Sfx.play("hit", if hitter == player then 1 else 0.35)
 		if part and part.Parent then
-			shake(part)
+			-- Los enemigos de las mazmorras se mueven solos (no anclados): no se sacuden.
+			if part.Anchored then
+				shake(part)
+			end
 			if hitter == player then
 				showHealth(part)
 			end

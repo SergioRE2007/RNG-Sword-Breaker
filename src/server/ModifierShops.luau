@@ -1,7 +1,7 @@
 -- Tiendas de modificadores del hub: dos puestos (Rasgos y Grados) con toldo de rayas y cartel.
 -- Se abren con la tecla de interacción (ProximityPrompt; la ventana la abre el cliente) y
 -- aquí se validan y se hacen las tiradas: los rasgos gastan un Cristal de rasgo y los grados
--- Config.GradeCost gemas. El resultado sustituye al que tuviera la espada.
+-- Config.GradeCost Cristales de grado. El resultado sustituye al que tuviera la espada.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,22 +14,20 @@ local PlayerData = require(script.Parent.PlayerData)
 
 local ModifierShops = {}
 
-local CRYSTAL = "traitCrystal"
 local random = Random.new()
 local lastRoll = {} -- [player] = os.clock() de su última tirada
 
 -- Paga la tirada; devuelve false si no le llega.
 local function pay(player: Player, kind: string, data, tries: number): boolean
-	if kind == "traits" then
-		if data.items[CRYSTAL] < tries then
-			return false
-		end
-		PlayerData.edit(player, function(edited)
-			edited.items[CRYSTAL] -= tries
-		end)
-		return true
+	local info = Modifiers.KINDS[kind]
+	local cost = info.cost * tries
+	if data.items[info.item] < cost then
+		return false
 	end
-	return PlayerData.trySpendGems(player, Config.GradeCost)
+	PlayerData.edit(player, function(edited)
+		edited.items[info.item] -= cost
+	end)
+	return true
 end
 
 -- `count` = cuántas veces tira el rasgo de golpe (1 o 3, un cristal cada una): se queda con el más raro
