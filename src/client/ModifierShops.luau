@@ -110,7 +110,103 @@ local function displayOrder(kind: string)
 	return result
 end
 
--- Icono de una entrada: la letra del grado, o un dibujo según lo que sube el rasgo.
+-- Insignia de un rasgo: halo de su color detrás, aro de su color con relieve, disco oscuro dentro y
+-- encima el dibujo de lo que sube (moneda, espada, trébol; hexágono en los especiales). Los de nivel
+-- (I, II, III) llevan abajo tantas estrellitas como su nivel, para distinguirlos sin leer.
+local COIN = Color3.fromRGB(255, 205, 60)
+local function circle(parent: Instance, size: number, color: Color3): Frame
+	local frame = Instance.new("Frame")
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
+	frame.Size = UDim2.fromScale(size, size)
+	frame.BackgroundColor3 = color
+	frame.BorderSizePixel = 0
+	frame.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = frame
+	return frame
+end
+local function traitBadge(parent: GuiObject, entry)
+	local badge = Instance.new("Frame")
+	badge.Name = "Badge"
+	badge.AnchorPoint = Vector2.new(0.5, 0.5)
+	badge.Position = UDim2.fromScale(0.5, 0.5)
+	badge.Size = UDim2.fromScale(1, 1)
+	badge.BackgroundTransparency = 1
+	badge.Parent = parent
+	local square = Instance.new("UIAspectRatioConstraint")
+	square.Parent = badge
+	local tint = if entry.rainbow then WHITE else entry.color
+
+	for _, layer in { { 1.3, 0.86 }, { 1.12, 0.74 } } do
+		circle(badge, layer[1], tint).BackgroundTransparency = layer[2]
+	end
+	local ring = circle(badge, 0.94, WHITE)
+	Ui.stroke(ring, BLACK, 2)
+	if entry.rainbow then
+		rainbow(ring)
+	else
+		Ui.gradient(ring, tint:Lerp(WHITE, 0.45), tint:Lerp(BLACK, 0.25), 90)
+	end
+	local disc = circle(ring, 0.8, WHITE)
+	Ui.gradient(disc, tint:Lerp(BLACK, 0.35), tint:Lerp(BLACK, 0.7), 90)
+	Ui.stroke(disc, BLACK, 1.5)
+
+	local art = Instance.new("Frame")
+	art.Name = "Art"
+	art.AnchorPoint = Vector2.new(0.5, 0.5)
+	art.Position = UDim2.fromScale(0.5, 0.56)
+	art.Size = UDim2.fromScale(1.25, 1.25)
+	art.BackgroundTransparency = 1
+	art.Parent = disc
+	if entry.icon == "coins" then
+		Ui.orbIcon(art, COIN)
+	elseif entry.icon == "damage" then
+		Ui.swordIcon(art, WHITE)
+	elseif entry.icon == "luck" then
+		Ui.cloverIcon(art, Color3.fromRGB(120, 235, 90))
+	else
+		local _, pieces = Ui.hex(disc, 22, tint)
+		for _, piece in pieces do
+			if entry.rainbow then
+				rainbow(piece)
+			end
+		end
+	end
+
+	local level = #(string.match(entry.name, " (I+)$") or "")
+	if level > 0 then
+		local pips = Instance.new("Frame")
+		pips.Name = "Level"
+		pips.AnchorPoint = Vector2.new(0.5, 0.5)
+		pips.Position = UDim2.fromScale(0.5, 0.96)
+		pips.Size = UDim2.fromScale(0.9, 0.22)
+		pips.BackgroundTransparency = 1
+		pips.Parent = badge
+		local row = Instance.new("UIListLayout")
+		row.FillDirection = Enum.FillDirection.Horizontal
+		row.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		row.VerticalAlignment = Enum.VerticalAlignment.Center
+		row.Padding = UDim.new(0.04, 0)
+		row.Parent = pips
+		for _ = 1, level do
+			local pip = Instance.new("Frame")
+			pip.Size = UDim2.fromScale(0.62, 0.62)
+			pip.Rotation = 45
+			pip.BackgroundColor3 = WHITE
+			pip.BorderSizePixel = 0
+			pip.Parent = pips
+			local pipSquare = Instance.new("UIAspectRatioConstraint")
+			pipSquare.DominantAxis = Enum.DominantAxis.Height
+			pipSquare.Parent = pip
+			Ui.gradient(pip, COIN:Lerp(WHITE, 0.4), COIN, 90)
+			Ui.stroke(pip, BLACK, 1.5)
+		end
+	end
+end
+
+-- Icono de una entrada: la letra del grado, o la insignia del rasgo.
 local function entryIcon(parent: GuiObject, kind: string, entry)
 	if kind == "grades" then
 		local letter = Ui.label(parent, 34)
@@ -122,20 +218,7 @@ local function entryIcon(parent: GuiObject, kind: string, entry)
 		end
 		return
 	end
-	if entry.icon == "coins" then
-		Ui.orbIcon(parent, entry.color)
-	elseif entry.icon == "damage" then
-		Ui.swordIcon(parent, entry.color)
-	elseif entry.icon == "luck" then
-		Ui.gemIcon(parent, entry.color)
-	else
-		local _, pieces = Ui.hex(parent, 34, if entry.rainbow then WHITE else entry.color)
-		for _, piece in pieces do
-			if entry.rainbow then
-				rainbow(piece)
-			end
-		end
-	end
+	traitBadge(parent, entry)
 end
 
 -- Texto con el nombre de la entrada, en su color (o arcoíris).
@@ -326,6 +409,9 @@ local function buildShop(kind: string)
 		frame.ZIndex = Z.overlay
 		frame.Parent = body
 		Ui.round(frame, 10)
+		frame.BackgroundColor3 = WHITE
+		Ui.gradient(frame, Color3.fromRGB(70, 76, 120), Color3.fromRGB(32, 34, 62), 90)
+		Ui.stripes(frame, Vector2.new(520, 462), 26, 0.95, Z.overlay)
 		local title = Ui.label(frame, 26)
 		title.Position = UDim2.fromOffset(0, 8)
 		title.Size = UDim2.new(1, 0, 0, 30)
@@ -355,7 +441,7 @@ local function buildShop(kind: string)
 		back.Position = UDim2.new(0.5, 0, 1, -10)
 		back.Size = UDim2.fromOffset(180, 54)
 		back.TextSize = 24
-		back.ZIndex = Z.overlay + 4 -- por encima de las casillas de la lista
+		Ui.layer(back, Z.overlay + 4) -- por encima de las casillas de la lista, con su relieve
 		back.Activated:Connect(function()
 			frame.Visible = false
 		end)
@@ -423,7 +509,7 @@ local function buildShop(kind: string)
 			chip.Size = UDim2.fromScale(0.31, 1)
 			chip.TextSize = 24
 			chip.TextColor3 = PRIORITY_COLORS[stat]
-			chip.ZIndex = Z.overlay + 2
+			Ui.layer(chip, Z.overlay + 2)
 			priorityChips[stat] = chip
 			chip.Activated:Connect(function()
 				local rank = table.find(state.priority, stat)
@@ -453,7 +539,7 @@ local function buildShop(kind: string)
 		toggle.Name = "Stop" .. index
 		toggle.LayoutOrder = position
 		toggle.TextSize = 24
-		toggle.ZIndex = Z.overlay + 2
+		Ui.layer(toggle, Z.overlay + 2)
 		toggle.TextColor3 = if entry.rainbow then WHITE else entry.color
 		local function paint()
 			toggle.BackgroundColor3 = if state.stop[index] then Color3.fromRGB(60, 150, 60) else Ui.COLORS.cell
@@ -510,7 +596,7 @@ local function buildShop(kind: string)
 		row.BackgroundColor3 = WHITE
 		row.Parent = results
 		Ui.round(row, 10)
-		Ui.gradient(row, Color3.fromRGB(45, 45, 55), Color3.fromRGB(22, 22, 30), 90)
+		Ui.panel(row, Color3.fromRGB(46, 46, 62), if entry.rainbow then WHITE else entry.color)
 		local stroke = Ui.stroke(row, if entry.rainbow then WHITE else entry.color, 3)
 		if entry.rainbow then
 			rainbow(stroke)
@@ -761,6 +847,7 @@ local function buildShop(kind: string)
 		frame.Parent = main
 		Ui.round(frame, 10)
 		Ui.gradient(frame, Color3.fromRGB(62, 66, 86), Color3.fromRGB(30, 32, 44), 90)
+		Ui.stripes(frame, Vector2.new(492, 347), 26, 0.95, Z.roulette)
 		roulette = frame
 		frame:GetPropertyChangedSignal("Visible"):Connect(function()
 			swordInfo.Visible = not frame.Visible
