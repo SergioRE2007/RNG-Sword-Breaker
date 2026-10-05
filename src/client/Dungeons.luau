@@ -2,6 +2,8 @@
 -- partida (oleada, enemigos, tiempo y vida), cartel con el resultado y animación del portal del hub.
 -- Todo lo decide el servidor (server/Dungeons): aquí solo se pide entrar o salir y se pinta lo que publica
 -- en los atributos Dungeon, DungeonWave, DungeonWaves, DungeonLeft y DungeonEnds.
+-- Para dejarlo solo (AFK): "Repetir" (DungeonLoop, lo lleva el servidor: al superarla empieza otra igual) y
+-- "Auto" (aquí: el personaje anda hacia el enemigo más cercano y le pega, con los mismos espadazos que un clic).
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -12,8 +14,10 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Performance = require(script.Parent.Performance)
+local SwordController = require(script.Parent.SwordController)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 
@@ -110,10 +114,28 @@ local function buildMenu()
 	mine.Position = UDim2.fromOffset(16, 6)
 	mine.Size = UDim2.new(1, -32, 0, 32)
 	mine.TextXAlignment = Enum.TextXAlignment.Left
+	-- Repetir en bucle: arriba a la derecha, vale para la mazmorra en la que se entre.
+	local loopButton = Ui.button(body, "", Ui.COLORS.gray)
+	loopButton.Name = "Loop"
+	loopButton.AnchorPoint = Vector2.new(1, 0)
+	loopButton.Position = UDim2.new(1, -12, 0, 3)
+	loopButton.Size = UDim2.fromOffset(190, 36)
+	loopButton.TextSize = 19
+	local function paintLoop()
+		local on = player:GetAttribute("DungeonLoop") == true
+		loopButton.Text = if on then "Repetir: SÍ" else "Repetir: NO"
+		loopButton.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
+	end
+	loopButton.Activated:Connect(function()
+		Remotes.SetDungeonLoop:FireServer(player:GetAttribute("DungeonLoop") ~= true)
+	end)
+	player:GetAttributeChangedSignal("DungeonLoop"):Connect(paintLoop)
+	paintLoop()
+
 	local note = Ui.label(body, 16)
 	note.AnchorPoint = Vector2.new(1, 0)
-	note.Position = UDim2.new(1, -16, 0, 6)
-	note.Size = UDim2.new(0.5, 0, 0, 32)
+	note.Position = UDim2.new(1, -212, 0, 6)
+	note.Size = UDim2.new(0.45, 0, 0, 32)
 	note.TextXAlignment = Enum.TextXAlignment.Right
 	note.TextColor3 = Color3.fromRGB(190, 195, 215)
 	note.Text = `{#Config.Dungeons} mazmorras · {#cfg.Waves} oleadas · la última con jefe · {math.floor(cfg.TimeLimit / 60)} min`
@@ -282,6 +304,60 @@ local function buildMenu()
 	end)
 end
 
+-- Pelea automática ------------------------------------------------------------------------
+
+local autoFight = false -- lo enciende el botón "Auto" del panel; se queda puesto entre partidas
+
+-- Mientras está encendido y hay partida: va hacia el enemigo más cercano, lo encara y le pega. Es el mismo
+-- espadazo que un clic (SwordController.swing), así que el servidor lo valida igual.
+local function runAutoFight()
+	local moving = false
+	while true do
+		task.wait(0.1)
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local active = autoFight and (player:GetAttribute("Dungeon") or 0) > 0
+		if not active or not root or not humanoid or humanoid.Health <= 0 then
+			if moving and root and humanoid then
+				humanoid:MoveTo(root.Position)
+			end
+			moving = false
+			continue
+		end
+		local nearest: BasePart? = nil
+		local best = math.huge
+		for _, enemy in CollectionService:GetTagged("Enemy") do
+			if enemy:IsA("BasePart") and enemy.Parent then
+				local distance = (enemy.Position - root.Position).Magnitude - enemy.Size.X / 2
+				if distance < best then
+					nearest, best = enemy, distance
+				end
+			end
+		end
+		if not nearest then
+			continue
+		end
+		local copy = Stats.equipped(player)
+		local reach = Config.BaseRange + Config.Swords[copy.sword].bladeLength * Permanent.scale(copy)
+		local target = Vector3.new(nearest.Position.X, root.Position.Y, nearest.Position.Z)
+		if best > reach * 0.7 then
+			moving = true
+			humanoid:MoveTo(target)
+		elseif moving then
+			moving = false
+			humanoid:MoveTo(root.Position)
+		end
+		if best <= reach then
+			-- Quieto no gira solo: se le encara al enemigo para que el golpe le dé.
+			if (target - root.Position).Magnitude > 0.5 then
+				root.CFrame = CFrame.lookAt(root.Position, target)
+			end
+			SwordController.swing()
+		end
+	end
+end
+
 -- Panel de la partida --------------------------------------------------------------------
 
 local function buildRunPanel()
@@ -289,7 +365,7 @@ local function buildRunPanel()
 	panel.Name = "DungeonRun"
 	panel.AnchorPoint = Vector2.new(0.5, 0)
 	panel.Position = UDim2.new(0.5, 0, 0, 84)
-	panel.Size = UDim2.fromOffset(460, 104)
+	panel.Size = UDim2.fromOffset(640, 104)
 	panel.BackgroundColor3 = WHITE
 	panel.BorderSizePixel = 0
 	panel.Visible = false
@@ -303,12 +379,12 @@ local function buildRunPanel()
 	local title = Ui.label(panel, 26)
 	title.Name = "Title"
 	title.Position = UDim2.fromOffset(20, 6)
-	title.Size = UDim2.new(1, -150, 0, 32)
+	title.Size = UDim2.new(1, -370, 0, 32)
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	local detail = Ui.label(panel, 18)
 	detail.Name = "Detail"
 	detail.Position = UDim2.fromOffset(20, 38)
-	detail.Size = UDim2.new(1, -150, 0, 24)
+	detail.Size = UDim2.new(1, -370, 0, 24)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 
 	local leave = Ui.button(panel, "Salir", Ui.COLORS.red)
@@ -320,6 +396,36 @@ local function buildRunPanel()
 	leave.Activated:Connect(function()
 		Remotes.LeaveDungeon:FireServer()
 	end)
+
+	-- Auto (el personaje pelea solo) y Repetir (al superarla empieza otra): para dejarlo sin tocar.
+	local autoButton = Ui.button(panel, "", Ui.COLORS.gray)
+	autoButton.Name = "Auto"
+	autoButton.AnchorPoint = Vector2.new(1, 0)
+	autoButton.Position = UDim2.new(1, -124, 0, 10)
+	autoButton.Size = UDim2.fromOffset(108, 48)
+	autoButton.TextSize = 19
+	local loopButton = Ui.button(panel, "", Ui.COLORS.gray)
+	loopButton.Name = "Loop"
+	loopButton.AnchorPoint = Vector2.new(1, 0)
+	loopButton.Position = UDim2.new(1, -240, 0, 10)
+	loopButton.Size = UDim2.fromOffset(118, 48)
+	loopButton.TextSize = 19
+	local function paintToggles()
+		local loop = player:GetAttribute("DungeonLoop") == true
+		autoButton.Text = if autoFight then "Auto: SÍ" else "Auto: NO"
+		autoButton.BackgroundColor3 = if autoFight then Ui.COLORS.green else Ui.COLORS.gray
+		loopButton.Text = if loop then "Repetir: SÍ" else "Repetir: NO"
+		loopButton.BackgroundColor3 = if loop then Ui.COLORS.green else Ui.COLORS.gray
+	end
+	autoButton.Activated:Connect(function()
+		autoFight = not autoFight
+		paintToggles()
+	end)
+	loopButton.Activated:Connect(function()
+		Remotes.SetDungeonLoop:FireServer(player:GetAttribute("DungeonLoop") ~= true)
+	end)
+	player:GetAttributeChangedSignal("DungeonLoop"):Connect(paintToggles)
+	paintToggles()
 
 	-- Tu vida.
 	local track = Instance.new("Frame")
@@ -585,6 +691,7 @@ function Dungeons.start()
 	buildMenu()
 	buildRunPanel()
 	buildFeedback()
+	task.spawn(runAutoFight)
 	for _, swirl in CollectionService:GetTagged("PortalSwirl") do
 		task.spawn(animatePortal, swirl)
 	end

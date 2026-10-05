@@ -3,7 +3,8 @@
 -- las oleadas de Config.Dungeon.Waves, se mueve a los enemigos, se aplica el daño en los dos sentidos y se
 -- reparten los premios (Loot). Los golpes del jugador llegan por Combat (Dungeons.strike).
 -- Estado para el cliente en atributos del Player: Dungeon (dificultad, 0 = fuera), DungeonWave, DungeonWaves,
--- DungeonLeft (enemigos vivos) y DungeonEnds (hora del servidor a la que se acaba el tiempo).
+-- DungeonLeft (enemigos vivos), DungeonEnds (hora del servidor a la que se acaba el tiempo) y DungeonLoop (si
+-- tiene puesto "repetir": al superarla empieza otra igual sin volver al hub; morir o salir corta el bucle).
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,6 +22,8 @@ local cfg = Config.Dungeon
 local random = Random.new()
 
 local runs = {} -- [Player] = partida en curso
+local looping = {} -- [Player] = true si quiere repetir la mazmorra en bucle
+local begin -- se define más abajo (la usa win para repetir)
 local lastEnter = {} -- [Player] = os.clock() de su última entrada
 local portalPosition: Vector3 -- en el suelo del hub
 local portalFront: CFrame -- donde se deja al jugador al volver
@@ -321,7 +324,15 @@ local function win(run)
 	Loot.roll(run.player, cfg.ClearDrops, run.context, run.summary)
 	result(run, true, "clear")
 	task.delay(cfg.ExitDelay, function()
-		finish(run, true)
+		local player = run.player
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if runs[player] == run and looping[player] and humanoid and humanoid.Health > 0 then
+			-- Repetir: se cambia la arena por una nueva sin sacarlo de ella.
+			finish(run, false)
+			begin(player, run.index)
+		else
+			finish(run, true)
+		end
 	end)
 end
 
@@ -434,22 +445,15 @@ local function step()
 	end
 end
 
-local function onEnter(player: Player, index: unknown)
+-- Empieza una partida en esa dificultad (ya validada por quien llama): arena nueva y jugador dentro.
+function begin(player: Player, index: number)
 	local now = os.clock()
-	local level = if type(index) == "number" then Config.Dungeons[index] else nil
-	if not level or runs[player] or now - (lastEnter[player] or 0) < cfg.EnterCooldown then
-		return
-	end
+	local level = Config.Dungeons[index]
 	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not root or not humanoid or humanoid.Health <= 0 then
+	if not level or runs[player] or not character or not humanoid or humanoid.Health <= 0 then
 		return
 	end
-	if (root.Position - portalPosition).Magnitude > cfg.EnterDistance then
-		return
-	end
-	lastEnter[player] = now
 
 	-- Un hueco por jugador: el de su parcela.
 	local plot = Plots.get(player)
@@ -496,6 +500,30 @@ local function onEnter(player: Player, index: unknown)
 	player:SetAttribute("Dungeon", index)
 end
 
+local function onEnter(player: Player, index: unknown)
+	local now = os.clock()
+	local level = if type(index) == "number" then Config.Dungeons[index] else nil
+	if not level or runs[player] or now - (lastEnter[player] or 0) < cfg.EnterCooldown then
+		return
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or humanoid.Health <= 0 then
+		return
+	end
+	if (root.Position - portalPosition).Magnitude > cfg.EnterDistance then
+		return
+	end
+	lastEnter[player] = now
+	begin(player, index :: number)
+end
+
+local function onLoop(player: Player, enabled: unknown)
+	looping[player] = enabled == true or nil
+	player:SetAttribute("DungeonLoop", enabled == true)
+end
+
 local function onLeave(player: Player)
 	local run = runs[player]
 	if run and run.state ~= "loading" and run.state ~= "won" then
@@ -509,8 +537,10 @@ function Dungeons.start()
 
 	Remotes.EnterDungeon.OnServerEvent:Connect(onEnter)
 	Remotes.LeaveDungeon.OnServerEvent:Connect(onLeave)
+	Remotes.SetDungeonLoop.OnServerEvent:Connect(onLoop)
 	local function onPlayer(player: Player)
 		player:SetAttribute("Dungeon", 0)
+		player:SetAttribute("DungeonLoop", false)
 	end
 	Players.PlayerAdded:Connect(onPlayer)
 	for _, player in Players:GetPlayers() do
@@ -522,6 +552,7 @@ function Dungeons.start()
 			finish(run, false)
 		end
 		lastEnter[player] = nil
+		looping[player] = nil
 	end)
 	RunService.Heartbeat:Connect(step)
 end

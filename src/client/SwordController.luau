@@ -53,6 +53,16 @@ local function watch(container: Instance)
 	end
 end
 
+-- Da un espadazo con la espada que lleva en la mano, como si hubiera hecho clic (lo usa el modo automático de
+-- las mazmorras). Pasa por el mismo tiempo de espera que los clics.
+function SwordController.swing()
+	local character = player.Character
+	local tool = character and character:FindFirstChildWhichIsA("Tool")
+	if tool and tool:GetAttribute("Sword") then
+		swing(tool)
+	end
+end
+
 function SwordController.start()
 	player.CharacterAdded:Connect(function(character)
 		watch(character)
