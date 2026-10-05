@@ -18,6 +18,7 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
+local Sfx = require(script.Parent.Sfx)
 
 local Hud = {}
 
@@ -106,6 +107,9 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 			return
 		end
 		pending += delta
+		if delta > 0 then
+			Sfx.play(if name == "Gems" then "gem" else "coin")
+		end
 		pulse.Scale = 1.1
 		TweenService:Create(pulse, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	end

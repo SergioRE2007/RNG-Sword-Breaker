@@ -8,6 +8,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Performance = require(script.Parent.Performance)
+local Sfx = require(script.Parent.Sfx)
 
 local Effects = {}
 
@@ -170,6 +171,7 @@ function Effects.start()
 
 	Remotes.Hit.OnClientEvent:Connect(function(hitter: Player, part: BasePart?, position: Vector3, damage: number)
 		popup(position, Format.short(damage), Color3.fromRGB(255, 255, 255))
+		Sfx.play("hit", if hitter == player then 1 else 0.35)
 		if part and part.Parent then
 			shake(part)
 			if hitter == player then
@@ -180,6 +182,7 @@ function Effects.start()
 
 	Remotes.Broken.OnClientEvent:Connect(function(breaker: Player, cframe: CFrame, size: Vector3, color: Color3, material: Enum.Material, reward: number, gems: number)
 		shatter(cframe, size, color, material)
+		Sfx.play("break_", if breaker == player then 1 else 0.4)
 		if breaker == player then
 			healthBar.Enabled = false
 			local top = cframe.Position + Vector3.new(0, size.Y / 2 + 1, 0)

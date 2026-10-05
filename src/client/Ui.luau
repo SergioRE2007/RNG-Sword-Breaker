@@ -12,6 +12,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Performance = require(script.Parent.Performance)
+local Sfx = require(script.Parent.Sfx)
 
 local Ui = {}
 
@@ -168,6 +169,9 @@ function Ui.pressable(item: GuiButton, grow: number?)
 		TweenService:Create(scale, TweenInfo.new(time, style, Enum.EasingDirection.Out), { Scale = value }):Play()
 	end
 	local over = false
+	item.Activated:Connect(function()
+		Sfx.play("click")
+	end)
 	item.MouseEnter:Connect(function()
 		over = true
 		to(big, 0.18, Enum.EasingStyle.Back)
@@ -1113,6 +1117,7 @@ function Ui.toast(text: string, color: Color3)
 		toasts = list
 	end
 	local list = toasts :: Frame
+	Sfx.play(if color.R > 0.7 and color.G < 0.5 and color.B < 0.5 then "error" else "toast")
 	local existing = {}
 	for _, child in list:GetChildren() do
 		if child:IsA("CanvasGroup") then

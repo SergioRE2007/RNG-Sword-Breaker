@@ -19,6 +19,7 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local Backpack = require(script.Parent.Backpack)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
+local Sfx = require(script.Parent.Sfx)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local ModifierShops = {}
@@ -662,6 +663,7 @@ local function buildShop(kind: string)
 		end
 		holder.Visible = true
 		rouletteSkip = false
+		Sfx.play("roll")
 		local count = #rolls
 		;(rouletteTitle :: TextLabel).Text = if count > 1 then "¡Mejor de tres!" else "Tirando..."
 		;(rouletteTitle :: TextLabel).TextColor3 = WHITE
@@ -786,6 +788,7 @@ local function buildShop(kind: string)
 
 		-- Resultado: la mejor columna crece y brilla; las demás se apagan.
 		local entry = info.list[best]
+		Sfx.play(if Modifiers.percent(kind, best) < 1 then "win" else "buy")
 		for index, column in columns do
 			if index == bestColumn then
 				column.stroke.Color = if entry.rainbow then WHITE else entry.color

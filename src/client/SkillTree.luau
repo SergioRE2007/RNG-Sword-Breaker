@@ -13,6 +13,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
+local Sfx = require(script.Parent.Sfx)
 
 local SkillTree = {}
 
@@ -467,6 +468,8 @@ function SkillTree.start()
 		local link = lines[name][level]
 		local point = ends[name][level]
 		local color = Config.Upgrades[name].color
+		Sfx.play("buy")
+		Sfx.play("buyPing")
 
 		node.scale.Scale = 1.5
 		TweenService:Create(node.scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
