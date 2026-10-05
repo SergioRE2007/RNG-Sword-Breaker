@@ -1193,13 +1193,17 @@ function Ui.toast(text: string, color: Color3)
 	scale.Scale = 0.85
 	scale.Parent = item
 
-	-- Barra de color a la izquierda y brillo arriba.
+	-- Barra de color a la izquierda y brillo arriba. La barra va metida hacia dentro y redondeada:
+	-- pegada al borde, sus esquinas cuadradas asomaban por fuera de las esquinas redondas del aviso.
 	local bar = Instance.new("Frame")
-	bar.Size = UDim2.new(0, 8, 1, 0)
+	bar.AnchorPoint = Vector2.new(0, 0.5)
+	bar.Position = UDim2.new(0, 6, 0.5, 0)
+	bar.Size = UDim2.new(0, 6, 1, -16)
 	bar.BackgroundColor3 = color
 	bar.BorderSizePixel = 0
 	bar.ZIndex = 51
 	bar.Parent = item
+	Ui.round(bar, 3)
 	local gloss = Instance.new("Frame")
 	gloss.Position = UDim2.fromOffset(10, 3)
 	gloss.Size = UDim2.new(1, -16, 0.4, 0)
