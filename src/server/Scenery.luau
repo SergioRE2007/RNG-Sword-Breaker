@@ -130,11 +130,13 @@ local function setLighting()
 	Lighting.Ambient = Color3.fromRGB(90, 90, 100)
 	Lighting.OutdoorAmbient = Color3.fromRGB(130, 135, 150)
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 240, 210)
+	Lighting.ColorShift_Bottom = Color3.fromRGB(255, 225, 190)
 	Lighting.GlobalShadows = true
 
 	local color = Instance.new("ColorCorrectionEffect")
-	color.Saturation = 0.1
-	color.Contrast = 0.08
+	color.Saturation = 0.16
+	color.Contrast = 0.1
+	color.TintColor = Color3.fromRGB(255, 248, 238)
 	color.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
@@ -145,7 +147,7 @@ local function setLighting()
 
 	-- Niebla suave: lo lejano (montañas, islotes) se pierde en azul claro.
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.32
+	atmosphere.Density = 0.38
 	atmosphere.Offset = 0.12
 	atmosphere.Color = Color3.fromRGB(185, 232, 255)
 	atmosphere.Decay = Color3.fromRGB(120, 195, 255)
@@ -200,7 +202,9 @@ local function buildSea(parent: Instance, islandRadius: number)
 		for column = -12, 11 do
 			local center = Vector3.new((column + 0.5) * cell, 0, (row + 0.5) * cell)
 			if center.Magnitude > islandRadius - cell * 0.4 then
-				decor(part(parent, "Sea", Vector3.new(cell, 0.1, cell), CFrame.new(center + Vector3.new(0, 0.03, 0)), SEA[(row + column) % 2 + 1], Enum.Material.SmoothPlastic))
+				local tile = decor(part(parent, "Sea", Vector3.new(cell, 0.1, cell), CFrame.new(center + Vector3.new(0, 0.03, 0)), SEA[(row + column) % 2 + 1], Enum.Material.SmoothPlastic))
+				tile:SetAttribute("Phase", row * 0.7 + column * 1.1)
+				CollectionService:AddTag(tile, "SeaTile")
 			end
 		end
 	end
@@ -282,6 +286,93 @@ local function lamp(parent: Instance, position: Vector3, color: Color3)
 	part(parent, "Post", Vector3.new(0.8, 6, 0.8), CFrame.new(position + Vector3.new(0, 3, 0)), Color3.fromRGB(250, 250, 255), Enum.Material.SmoothPlastic)
 	local bulb = part(parent, "Bulb", Vector3.one * 2, CFrame.new(position + Vector3.new(0, 6.6, 0)), color, Enum.Material.SmoothPlastic)
 	bulb.Shape = Enum.PartType.Ball
+end
+
+-- Estandarte: mástil con una bandera triangular que ondea (el cliente la mece con la etiqueta Sway).
+local function banner(parent: Instance, position: Vector3, color: Color3)
+	local pole = decor(part(parent, "BannerPole", Vector3.new(0.6, 14, 0.6), CFrame.new(position + Vector3.new(0, 7, 0)), Color3.fromRGB(235, 235, 245), Enum.Material.SmoothPlastic))
+	pole.CanCollide = true
+	local ball = decor(part(parent, "BannerTop", Vector3.one * 1.3, CFrame.new(position + Vector3.new(0, 14.3, 0)), Color3.fromRGB(255, 205, 70), Enum.Material.SmoothPlastic))
+	ball.Shape = Enum.PartType.Ball
+	local facing = CFrame.Angles(0, math.atan2(position.X, position.Z) + math.pi / 2, 0)
+	local top = position + Vector3.new(0, 12.4, 0)
+	for index, tone in { color, color:Lerp(Color3.new(1, 1, 1), 0.35) } do
+		-- Dos tiras de tela, la de abajo más corta, que cuelgan del mástil hacia un lado.
+		local flag = part(parent, "Flag", Vector3.new(0.3, 2.6 - index * 0.6, 7 - index * 1.6), CFrame.new(top - Vector3.new(0, (index - 1) * 2.4, 0)) * facing * CFrame.new(0, 0, -(3.8 - index * 0.8)), tone, Enum.Material.Fabric)
+		decor(flag)
+		flag:SetAttribute("Pivot", top)
+		flag:SetAttribute("Phase", position.X * 0.1)
+		CollectionService:AddTag(flag, "Sway")
+	end
+end
+
+-- Caja de madera con tapa y cantos más oscuros.
+local function crate(parent: Instance, position: Vector3, size: number, turn: number)
+	local cframe = CFrame.new(position + Vector3.new(0, size / 2, 0)) * CFrame.Angles(0, turn, 0)
+	part(parent, "Crate", Vector3.one * size, cframe, Color3.fromRGB(196, 140, 78), Enum.Material.Wood)
+	for _, offset in { -0.5, 0.5 } do
+		part(parent, "CrateBand", Vector3.new(size * 1.04, size * 0.12, size * 1.04), cframe * CFrame.new(0, offset * size * 0.8, 0), Color3.fromRGB(120, 80, 45), Enum.Material.Wood)
+	end
+end
+
+local function barrel(parent: Instance, position: Vector3)
+	local body = disc(parent, "Barrel", position, 1.7, 0.4, 4.4, Color3.fromRGB(170, 112, 62), Enum.Material.Wood)
+	body.CanCollide = true
+	for _, height in { 1.2, 3.6 } do
+		disc(parent, "BarrelBand", position, 1.78, height - 0.15, height + 0.15, Color3.fromRGB(70, 70, 82), Enum.Material.Metal)
+	end
+end
+
+-- Seta grande de colores vivos.
+local function mushroom(parent: Instance, position: Vector3)
+	local height = rng:NextNumber(1.6, 3)
+	decor(disc(parent, "MushroomStem", position, 0.5, 0.3, 0.3 + height, Color3.fromRGB(250, 240, 220), Enum.Material.SmoothPlastic))
+	local capSize = height * rng:NextNumber(1.5, 2.1)
+	local cap = decor(part(parent, "MushroomCap", Vector3.new(capSize, capSize * 0.6, capSize), CFrame.new(position + Vector3.new(0, 0.3 + height, 0)), Color3.fromRGB(235, 70, 80), Enum.Material.SmoothPlastic))
+	cap.Shape = Enum.PartType.Ball
+	for _ = 1, 3 do
+		local dot = decor(part(parent, "MushroomDot", Vector3.one * capSize * 0.2, cap.CFrame * CFrame.new(rng:NextNumber(-0.3, 0.3) * capSize, capSize * 0.22, rng:NextNumber(-0.3, 0.3) * capSize), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic))
+		dot.Shape = Enum.PartType.Ball
+	end
+end
+
+-- Loma suave: bola de césped aplastada que rompe lo plano del suelo.
+local function mound(parent: Instance, position: Vector3)
+	local width = rng:NextNumber(14, 30)
+	local item = decor(part(parent, "Mound", Vector3.new(width, rng:NextNumber(3, 6), width * rng:NextNumber(0.8, 1.3)), CFrame.new(position + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), GRASS[rng:NextInteger(1, 2)]:Lerp(Color3.new(1, 1, 0.8), rng:NextNumber(0, 0.25)), Enum.Material.Grass))
+	item.Shape = Enum.PartType.Ball
+end
+
+-- Embarcadero de tablas hacia el mar, con postes, una barca y boyas.
+local function pier(parent: Instance, angle: number, from: number, length: number)
+	local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+	local facing = CFrame.lookAt(Vector3.zero, direction).Rotation
+	local side = Vector3.new(-direction.Z, 0, direction.X)
+	local planks = math.floor(length / 2)
+	for index = 0, planks - 1 do
+		local center = direction * (from + index * 2 + 1) + Vector3.new(0, 1.2, 0)
+		part(parent, "Plank", Vector3.new(9, 0.5, 1.8), facing + center, if index % 2 == 0 then Color3.fromRGB(176, 128, 78) else Color3.fromRGB(160, 114, 68), Enum.Material.WoodPlanks)
+	end
+	for index = 0, planks - 1, 3 do
+		for _, sign in { 1, -1 } do
+			local base = direction * (from + index * 2 + 1) + side * sign * 4.2
+			decor(part(parent, "PierPost", Vector3.new(0.9, 5.5, 0.9), CFrame.new(base + Vector3.new(0, 0.2, 0)), Color3.fromRGB(110, 76, 46), Enum.Material.Wood))
+		end
+	end
+	-- Barca atada al lado del embarcadero.
+	local boat = direction * (from + length * 0.7) + side * 9 + Vector3.new(0, 0.5, 0)
+	local hull = part(parent, "BoatHull", Vector3.new(4.5, 1.8, 11), CFrame.lookAt(boat, boat + direction), Color3.fromRGB(235, 90, 70), Enum.Material.SmoothPlastic)
+	hull.CanCollide = false
+	local stripe = decor(part(parent, "BoatStripe", Vector3.new(4.7, 0.5, 11.2), hull.CFrame * CFrame.new(0, 0.55, 0), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic))
+	stripe.CanCollide = false
+	decor(part(parent, "BoatMast", Vector3.new(0.4, 9, 0.4), hull.CFrame * CFrame.new(0, 5, -1), Color3.fromRGB(110, 76, 46), Enum.Material.Wood))
+	decor(part(parent, "BoatSail", Vector3.new(0.2, 6.5, 4.5), hull.CFrame * CFrame.new(0, 5.6, 1.4), Color3.fromRGB(255, 250, 235), Enum.Material.Fabric))
+	-- Boyas rojas y blancas flotando.
+	for step = 1, 4 do
+		local at = direction * (from + length + step * 9) + side * ((step % 2) * 2 - 1) * 14 + Vector3.new(0, 0.5, 0)
+		local buoy = decor(part(parent, "Buoy", Vector3.one * 2.4, CFrame.new(at), if step % 2 == 0 then Color3.fromRGB(240, 70, 70) else Color3.new(1, 1, 1), Enum.Material.SmoothPlastic))
+		buoy.Shape = Enum.PartType.Ball
+	end
 end
 
 -- Camino ancho de baldosas de arena en dos tonos, con un bordillo azul a cada lado (como las
@@ -470,6 +561,58 @@ function Scenery.start()
 			end
 		end
 	end
+
+	-- Manchas de arena más clara y oscura sobre la playa y la plaza, para que no sea un color liso.
+	for _ = 1, 160 do
+		local angle = rng:NextNumber(0, math.pi * 2)
+		local distance = rng:NextNumber(cfg.HubRadius - 12, islandRadius + beach - 3)
+		local center = Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
+		local size = rng:NextNumber(3, 9)
+		local patch = decor(disc(folder, "SandPatch", center, size, 0.47, 0.5, SAND:Lerp(if rng:NextNumber() < 0.5 then Color3.new(1, 1, 1) else Color3.fromRGB(205, 170, 105), 0.35), Enum.Material.SmoothPlastic))
+		patch.Transparency = 0.35
+	end
+
+	-- Estandartes de colores en el borde del hub, entre las entradas de los caminos.
+	ring(cfg.Count, cfg.HubRadius - 5, 0.5, function(position, index)
+		banner(folder, position, Color3.fromHSV((index - 0.5) / cfg.Count, 0.7, 1))
+	end)
+
+	-- Cajas y barriles junto al arranque de cada camino.
+	ring(cfg.Count, 1, 0, function(direction, index)
+		local side = Vector3.new(-direction.Z, 0, direction.X)
+		for _, sign in { 1, -1 } do
+			local base = direction * (cfg.HubRadius + 16 + (index % 3) * 6) + side * sign * 15
+			crate(folder, base, 3.4, rng:NextNumber(0, 1))
+			crate(folder, base + side * sign * 3.4 + direction * 1.2, 2.6, rng:NextNumber(0, 1))
+			crate(folder, base + Vector3.new(0, 3.4, 0), 2.2, rng:NextNumber(0, 1))
+			barrel(folder, base - direction * 4.5 + side * sign * 1)
+		end
+	end)
+
+	-- Setas y lomas repartidas por el césped libre.
+	local extras = 0
+	for _ = 1, 600 do
+		if extras >= 70 then
+			break
+		end
+		local angle = rng:NextNumber(0, math.pi * 2)
+		local distance = math.sqrt(rng:NextNumber()) * (islandRadius - 10)
+		local position = Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
+		if isOpen(position, 6) then
+			extras += 1
+			if extras <= 12 then
+				mound(folder, position)
+			else
+				for _ = 1, rng:NextInteger(1, 3) do
+					mushroom(folder, position + Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-3, 3)))
+				end
+			end
+		end
+	end
+
+	-- Embarcaderos con barca en dos puntos de la costa.
+	pier(folder, math.rad(18), islandRadius - 2, beach + 46)
+	pier(folder, math.rad(200), islandRadius - 2, beach + 40)
 
 	-- Islotes en el mar.
 	ring(5, islandRadius + 150, 0.4, function(position)

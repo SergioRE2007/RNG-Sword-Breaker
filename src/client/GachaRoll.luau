@@ -456,6 +456,10 @@ local function teaseIndex(): number
 	return byRarity[math.min(1 + math.floor(math.random() ^ 3 * #byRarity), #byRarity)]
 end
 
+local panelShown = false -- el panel de arriba solo se ve mientras se tira (y un par de segundos después)
+local resultId = 0 -- cuenta las tiradas, para que el cartel solo se apague si no hay una nueva
+local RESULT_STAY = 2 -- segundos que el panel enseña el resultado antes de esconderse
+
 local function showSword(index: number)
 	local sword = Config.Swords[index]
 	title.Text = sword.name
@@ -728,6 +732,8 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 	end
 	spinning = true
 	clearAura()
+	panelScale.Scale = 1
+	panelShown = true
 	local sword = Config.Swords[index]
 	local odds = (sword.rarity or 1) / luck
 	local big = odds >= Config.Gacha.ShowcaseOdds
@@ -767,6 +773,22 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 		machineEffect(Rarity.tier(odds).color)
 	end
 	spinning = false
+
+	-- Pasado un rato, el panel vuelve a su estado de reposo.
+	resultId += 1
+	local mine = resultId
+	task.delay(RESULT_STAY, function()
+		if resultId == mine and not spinning then
+			clearAura()
+			local shrink = TweenService:Create(panelScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0 })
+			shrink:Play()
+			shrink.Completed:Wait()
+			if resultId == mine and not spinning then
+				panelShown = false
+			end
+			panelScale.Scale = 1
+		end
+	end)
 end
 
 local function request()
@@ -1004,7 +1026,7 @@ function GachaRoll.start()
 		rollButton.BackgroundColor3 = if rolling then Ui.COLORS.gray else Ui.COLORS.green
 		local hidden = Ui.anyOpen() or showcasing
 		bar.Visible = not hidden
-		panel.Visible = not hidden
+		panel.Visible = panelShown and not hidden
 		if auto and not rolling and not showcasing then
 			request()
 		end
