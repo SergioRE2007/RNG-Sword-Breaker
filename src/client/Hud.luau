@@ -338,7 +338,7 @@ function Hud.start()
 	menu.BackgroundTransparency = 1
 	menu.Parent = gui
 	local menuLayout = Instance.new("UIListLayout")
-	menuLayout.Padding = UDim.new(0, 12)
+	menuLayout.Padding = UDim.new(0, 8)
 	menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	menuLayout.Parent = menu
 
@@ -356,17 +356,20 @@ function Hud.start()
 		{ "PassShop", "Tienda", Color3.fromRGB(40, 185, 110), function(parent)
 			Ui.gemIcon(parent, Color3.fromRGB(190, 255, 210))
 		end },
+		{ "TradeList", "Comercio", Color3.fromRGB(40, 170, 200), function(parent)
+			Ui.orbIcon(parent, Color3.fromRGB(200, 245, 255))
+		end },
 	}
 	for order, entry in menuItems do
 		local item = Ui.button(menu, "", entry[3])
 		item.Name = entry[1]
 		item.LayoutOrder = order
-		item.Size = UDim2.fromOffset(124, 104)
+		item.Size = UDim2.fromOffset(124, 92)
 		local iconBox = Instance.new("Frame")
 		iconBox.Name = "Icon"
 		iconBox.AnchorPoint = Vector2.new(0.5, 0)
 		iconBox.Position = UDim2.new(0.5, 0, 0, 7)
-		iconBox.Size = UDim2.fromOffset(62, 62)
+		iconBox.Size = UDim2.fromOffset(52, 52)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = item
 		entry[4](iconBox)
