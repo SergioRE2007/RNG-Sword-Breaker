@@ -353,6 +353,9 @@ function Hud.start()
 		{ "Upgrades", "Mejoras", Ui.COLORS.green, function(parent)
 			Ui.upgradeIcon(parent, Color3.fromRGB(255, 205, 60))
 		end },
+		{ "PassShop", "Tienda", Color3.fromRGB(40, 185, 110), function(parent)
+			Ui.gemIcon(parent, Color3.fromRGB(190, 255, 210))
+		end },
 	}
 	for order, entry in menuItems do
 		local item = Ui.button(menu, "", entry[3])

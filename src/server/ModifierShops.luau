@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 
 local ModifierShops = {}
@@ -30,15 +31,22 @@ local function pay(player: Player, kind: string, data, tries: number): boolean
 	return true
 end
 
--- `count` = cuántas veces tira el rasgo de golpe (1 o 3, un cristal cada una): se queda con el más raro
+-- `count` = cuántas veces tira el rasgo de golpe (1, 3 o las del pase de juego, un cristal cada una): se queda con el más raro
 -- y, si empatan en rareza, con el tipo que va antes en `priority` (el orden que ha puesto el jugador en
 -- la tienda; se guarda en sus datos).
 local function onRoll(player: Player, kind: string, id: unknown, count: unknown, priority: unknown)
 	local now = os.clock()
-	if now - (lastRoll[player] or 0) < Config.ModifierCooldown then
+	-- Pase de juego: los grados se tiran más rápido (con un 20 % de margen para el retraso de la red).
+	local speed = if kind == "grades" then Stats.perk(player, "gradeSpeed") or 1 else 1
+	local cooldown = Config.ModifierCooldown / speed * (if speed > 1 then 0.8 else 1)
+	if now - (lastRoll[player] or 0) < cooldown then
 		return
 	end
-	local tries = if kind == "traits" and count == 3 then 3 else 1
+	-- De golpe se pueden tirar 1 o 3 rasgos, o los que dé el pase de juego (traitCount).
+	local tries = 1
+	if kind == "traits" and (count == 3 or (count ~= 1 and count == Stats.perk(player, "traitCount"))) then
+		tries = count :: number
+	end
 	local data = PlayerData.read(player)
 	local copy = data and PlayerData.findSword(data, id)
 	if not copy or not pay(player, kind, data, tries) then

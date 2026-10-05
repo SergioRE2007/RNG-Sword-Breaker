@@ -11,6 +11,7 @@ Config.WalkSpeed = 30 -- velocidad al andar (la normal de Roblox es 16)
 Config.Test = {
 	InfiniteMoney = true, -- monedas y gemas infinitas
 	AllWeapons = true, -- una copia de cada arma de Config.Swords en la mochila al entrar
+	AllGamepasses = true, -- todos los pases de juego de Config.Gamepasses (para probar sus ventajas sin comprarlos)
 	AllGear = true, -- todos los accesorios (Config.Artifacts) y una pieza de armadura de cada hueco y cada mazmorra al entrar
 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
@@ -382,6 +383,23 @@ Config.Enemies = {
 		{ kind = "item", item = "gradeCrystal", chance = 1, min = 2, max = 4 },
 		{ kind = "armor", chance = 1, luck = 5 },
 	} },
+}
+
+-- PASES DE JUEGO (gamepass; tienda del menú, client/PassShop y server/Passes). "id" = id del pase en Roblox
+-- (se crea en la página del juego; con 0 aún no está a la venta y el botón dice "Pronto"). "price" = Robux que se
+-- enseñan hasta que Roblox dice el precio real. "perksText" = lo que se lee en la tienda. "perks" = ventajas que
+-- lee Stats.perk (si varios pases dan la misma, vale la mayor): traitCount = rasgos que se pueden tirar de golpe;
+-- gradeSpeed = por cuánto se multiplica la velocidad de las tiradas de grado (4 = 400 %).
+Config.GamepassOrder = { "forge" }
+Config.Gamepasses = {
+	forge = {
+		id = 0,
+		name = "Maestro de la forja",
+		price = 199,
+		color = Color3.fromRGB(255, 150, 60),
+		perksText = { "Tira 10 rasgos a la vez (se queda el mejor)", "Tiradas de grado al 400 % de velocidad" },
+		perks = { traitCount = 10, gradeSpeed = 4 },
+	},
 }
 
 return Config
