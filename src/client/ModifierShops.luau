@@ -356,7 +356,7 @@ local function buildShop(kind: string)
 
 	local stopper, stopList = overlay("StopAt", "La tirada automática para con:")
 	local stopGrid = Instance.new("UIGridLayout")
-	stopGrid.CellSize = UDim2.fromOffset(136, 46)
+	stopGrid.CellSize = UDim2.fromOffset(136, 54) -- más alto: en pantallas pequeñas la ventana se encoge
 	stopGrid.CellPadding = UDim2.fromOffset(8, 8)
 	stopGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	stopGrid.Parent = stopList

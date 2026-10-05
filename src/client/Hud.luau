@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -251,7 +252,7 @@ function Hud.start()
 	tab.Name = "StatsTab"
 	tab.AnchorPoint = Vector2.new(1, 1)
 	tab.Position = UDim2.new(0, -4, 1, 0)
-	tab.Size = UDim2.fromOffset(36, 74)
+	tab.Size = UDim2.fromOffset(44, 74) -- 44 px: lo mínimo cómodo para el dedo
 	tab.TextSize = 30
 	tab.Activated:Connect(function()
 		statsOpen = not statsOpen
@@ -260,6 +261,12 @@ function Hud.start()
 			Position = if statsOpen then UDim2.new(1, -MARGIN, 1, -MARGIN) else UDim2.new(1, 300, 1, -MARGIN),
 		}):Play()
 	end)
+	-- En móviles la pantalla es pequeña: las estadísticas empiezan plegadas.
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		statsOpen = false
+		tab.Text = "<"
+		dock.Position = UDim2.new(1, 300, 1, -MARGIN)
+	end
 	Ui.round(statsBox, 12)
 	Ui.stroke(statsBox, BLACK, 3)
 	Ui.gradient(statsBox, Color3.fromRGB(58, 48, 110), Color3.fromRGB(18, 18, 40), 90)

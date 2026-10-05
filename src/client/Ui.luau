@@ -785,22 +785,50 @@ end
 -- Al pasar el ratón por `target` muestra un cartel con lo que devuelva getContent(): texto
 -- (RichText, varias líneas) y color del borde. Con `beside` el cartel se pega al lado de `target`
 -- en vez de seguir al ratón.
+-- En pantallas táctiles no hay "pasar el ratón": se enseña con una pulsación larga (0,35 s) y se
+-- quita solo a los 2,5 s de soltar.
 function Ui.tip(target: GuiObject, getContent: () -> (string, Color3), beside: boolean?)
 	ensureTip()
-	target.MouseEnter:Connect(function()
+	local function open(forceBeside: boolean)
 		local text, color, live = getContent()
 		tip.Text = text
 		tipStroke.Color = color
 		-- Con un tercer valor `true`, el cartel se vuelve a pedir cada fotograma (texto animado).
 		tipLive = if live then getContent else nil
 		tipSource = target
-		tipBeside = beside == true
+		tipBeside = forceBeside or beside == true
 		tip.Visible = true
+	end
+	target.MouseEnter:Connect(function()
+		open(false)
 	end)
 	target.MouseLeave:Connect(function()
 		if tipSource == target then
 			tip.Visible = false
 		end
+	end)
+	target.InputBegan:Connect(function(input: InputObject)
+		if input.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+		local pressing = true
+		local watch
+		watch = input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
+				pressing = false
+				watch:Disconnect()
+				task.delay(2.5, function()
+					if tipSource == target and not pressing then
+						tip.Visible = false
+					end
+				end)
+			end
+		end)
+		task.delay(0.35, function()
+			if pressing then
+				open(true)
+			end
+		end)
 	end)
 end
 

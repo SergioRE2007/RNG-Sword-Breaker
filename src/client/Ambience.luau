@@ -4,6 +4,7 @@
 -- círculos. Scenery marca las piezas con etiquetas (Sway, Cloud, Foam, ShowcaseSword).
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Ambience = {}
 
@@ -58,7 +59,41 @@ local function seagull(parent: Instance)
 	}
 end
 
+-- En móviles se aligera: quita 2 de cada 3 matas de hierba y la mitad de las flores (el decorado
+-- tiene miles de piezas), y recorta las partículas y mariposas más abajo. Las piezas son del
+-- servidor, pero quitarlas aquí solo las quita en este cliente.
+local MOBILE = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+Ambience.mobile = MOBILE
+local DETAIL = if MOBILE then 0.4 else 1 -- cuántas partículas salen (en móvil, menos)
+
+function Ambience.lowDetail()
+	local count = 0
+	local function thin(item: Instance)
+		count += 1
+		if count % 3 ~= 0 then
+			item:Destroy()
+		end
+	end
+	for _, item in CollectionService:GetTagged("GrassDetail") do
+		thin(item)
+	end
+	CollectionService:GetInstanceAddedSignal("GrassDetail"):Connect(thin)
+	local function thinFlower(item: Instance)
+		local position = (item :: BasePart).Position
+		if math.floor(position.X * 7 + position.Z * 13) % 2 == 0 then
+			item:Destroy()
+		end
+	end
+	for _, item in CollectionService:GetTagged("FlowerPiece") do
+		thinFlower(item)
+	end
+	CollectionService:GetInstanceAddedSignal("FlowerPiece"):Connect(thinFlower)
+end
+
 function Ambience.start()
+	if MOBILE then
+		Ambience.lowDetail()
+	end
 	local leaves = track("Sway", readPart)
 	local clouds = track("Cloud", readPart)
 	local foam = track("Foam", readPart)
@@ -93,7 +128,7 @@ function Ambience.start()
 	local motes = Instance.new("ParticleEmitter")
 	motes.Shape = Enum.ParticleEmitterShape.Box
 	motes.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
-	motes.Rate = 14
+	motes.Rate = 14 * DETAIL
 	motes.Lifetime = NumberRange.new(6, 10)
 	motes.Speed = NumberRange.new(0.5, 1.6)
 	motes.SpreadAngle = Vector2.new(180, 180)
@@ -124,7 +159,7 @@ function Ambience.start()
 	local airZone = zone("Air", Vector3.new(110, 30, 110))
 	local air = Instance.new("ParticleEmitter")
 	air.Shape = Enum.ParticleEmitterShape.Box
-	air.Rate = 26
+	air.Rate = 26 * DETAIL
 	air.Lifetime = NumberRange.new(5, 9)
 	air.Speed = NumberRange.new(0.3, 1)
 	air.Acceleration = Vector3.new(5, 0.2, 2)
@@ -141,7 +176,7 @@ function Ambience.start()
 	local mist = Instance.new("ParticleEmitter")
 	mist.Texture = "rbxasset://textures/particles/smoke_main.dp"
 	mist.Shape = Enum.ParticleEmitterShape.Box
-	mist.Rate = 2.5
+	mist.Rate = 2.5 * DETAIL
 	mist.Lifetime = NumberRange.new(14, 20)
 	mist.Speed = NumberRange.new(0.5, 1.5)
 	mist.Acceleration = Vector3.new(1.5, 0, 0.6)
@@ -161,7 +196,7 @@ function Ambience.start()
 	local petals = Instance.new("ParticleEmitter")
 	petals.Shape = Enum.ParticleEmitterShape.Box
 	petals.EmissionDirection = Enum.NormalId.Bottom
-	petals.Rate = 3
+	petals.Rate = 3 * DETAIL
 	petals.Lifetime = NumberRange.new(9, 13)
 	petals.Speed = NumberRange.new(0.5, 1.5)
 	petals.Acceleration = Vector3.new(3, -0.6, 1)
@@ -183,7 +218,7 @@ function Ambience.start()
 	local glints = Instance.new("ParticleEmitter")
 	glints.Shape = Enum.ParticleEmitterShape.Box
 	glints.EmissionDirection = Enum.NormalId.Top
-	glints.Rate = 18
+	glints.Rate = 18 * DETAIL
 	glints.Lifetime = NumberRange.new(1, 2)
 	glints.Speed = NumberRange.new(0, 0.3)
 	glints.LightEmission = 1
@@ -196,7 +231,7 @@ function Ambience.start()
 	-- Mariposas: revolotean bajas por el césped cerca de la cámara, cada una de un color.
 	local butterflies = {}
 	local wingColors = { Color3.fromRGB(255, 150, 60), Color3.fromRGB(120, 180, 255), Color3.fromRGB(255, 120, 190), Color3.fromRGB(255, 230, 90), Color3.fromRGB(190, 140, 255) }
-	for index = 1, 28 do
+	for index = 1, (if MOBILE then 10 else 28) do
 		local function wing(): Part
 			local item = zone("Wing", Vector3.new(0.6, 0.04, 0.5))
 			item.Transparency = 0
@@ -287,7 +322,7 @@ function Ambience.start()
 		end
 
 		seaClock += delta
-		if seaClock >= 1 / 15 then
+		if seaClock >= (if MOBILE then 1 / 6 else 1 / 15) then
 			seaClock = 0
 			for tile, base in sea do
 				local glint = (math.sin(now * 0.9 + base.phase) + 1) / 2
