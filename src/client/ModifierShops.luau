@@ -27,7 +27,7 @@ local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
 local SIZE = Vector2.new(1000, 540)
 local LEFT = 520 -- ancho de la parte izquierda del cuerpo
-local AUTO_DELAY = 0.45 -- segundos entre tiradas automáticas
+local AUTO_DELAY = 0.2 -- segundos entre tiradas automáticas
 local CLOSE_DISTANCE = 30 -- se cierra al alejarse del puesto
 
 local random = Random.new()
@@ -639,9 +639,9 @@ local function buildShop(kind: string)
 	-- Animación del resultado: pasan nombres al azar y se para en el que ha tocado.
 	local function reveal(index: number)
 		local entry = info.list[index]
-		for _ = 1, 7 do
+		for _ = 1, 4 do
 			paintName(nameLabel, info.list[Modifiers.roll(kind, random)])
-			task.wait(0.045)
+			task.wait(0.03)
 		end
 		paintName(nameLabel, entry)
 		effect.Text = Modifiers.effect(entry)
@@ -803,7 +803,7 @@ local function buildShop(kind: string)
 
 			-- Frena de golpe al final (Quint): cuanto más a la derecha, más tarda en parar.
 			local final = COLUMN_H / 2 - (LAND - 0.5) * ITEM_H + (random:NextNumber() - 0.5) * ITEM_H * 0.5
-			local tween = TweenService:Create(strip, TweenInfo.new(2.2 + (column - 1) * 0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(0, final) })
+			local tween = TweenService:Create(strip, TweenInfo.new(1.1 + (column - 1) * 0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(0, final) })
 			tween:Play()
 			table.insert(columns, { box = box, strip = strip, tween = tween, final = final, stroke = stroke, scale = scale })
 		end
@@ -843,7 +843,7 @@ local function buildShop(kind: string)
 		end
 		;(rouletteTitle :: TextLabel).Text = entry.name
 		;(rouletteTitle :: TextLabel).TextColor3 = if entry.rainbow then WHITE else entry.color
-		task.wait(if rouletteSkip then 0.3 else 1)
+		task.wait(if rouletteSkip then 0.2 else 0.5)
 	end
 
 	local function request(): boolean
