@@ -348,24 +348,35 @@ Config.Dungeons = {
 	{ name = "Difícil", hp = 1e5, power = 16, count = 1.5, loot = 4, qualityLuck = 10, color = Color3.fromRGB(255, 170, 50), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
 	{ name = "Pesadilla", hp = 1e7, power = 64, count = 1.75, loot = 8, qualityLuck = 30, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
 	{ name = "Abismo", hp = 1e9, power = 256, count = 2, loot = 16, qualityLuck = 100, color = Color3.fromRGB(160, 80, 255), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
+	-- Endgame. La mejor arma posible sin renacer pega ~7e30 por golpe: Espada del infinito (1,6e10) x Paradoja (57,5)
+	-- x Etherio (~2,2e3) x Universal (~7e6) x los tres mejores artefactos de daño (5e8); renacer y la armadura suben más.
+	-- Por eso la escalera sigue de 1e12 a 1e30, de 1000 en 1000.
+	{ name = "Infierno", hp = 1e12, power = 1024, count = 2, loot = 32, qualityLuck = 200, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
+	{ name = "Vacío", hp = 1e15, power = 4096, count = 2, loot = 64, qualityLuck = 400, color = Color3.fromRGB(120, 60, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
+	{ name = "Nebulosa", hp = 1e18, power = 16384, count = 2.25, loot = 128, qualityLuck = 800, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
+	{ name = "Galaxia", hp = 1e21, power = 65536, count = 2.25, loot = 256, qualityLuck = 1500, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
+	{ name = "Cosmos", hp = 1e24, power = 262144, count = 2.5, loot = 512, qualityLuck = 3000, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
+	{ name = "Origen", hp = 1e27, power = 1048576, count = 2.5, loot = 1024, qualityLuck = 6000, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
+	{ name = "Infinito", hp = 1e30, power = 4194304, count = 3, loot = 2048, qualityLuck = 12000, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
 }
 
+-- Daños pensados para que, con el set común de la dificultad anterior, el jefe necesite unos 5 golpes para matarte.
 -- Enemigos. "hp" en golpes (por el hp de la dificultad), "damage" por golpe (por el power de la dificultad),
 -- "speed" al andar, "attackRange" desde su borde, "attackTime" segundos entre golpes. scaleCount = false: su
 -- cantidad no crece con la dificultad. "look" = adornos ("horns", "crown"). "drops" = tabla de premios al morir (ver server/Loot): cada entrada lleva
 -- "kind" ("item" con item, min y max; "armor" con luck que multiplica la suerte de calidad) y "chance".
 Config.Enemies = {
-	grunt = { name = "Esbirro", hp = 6, damage = 6, speed = 17, attackRange = 3.5, attackTime = 1.2, size = Vector3.new(4, 4, 4), color = Color3.fromRGB(120, 200, 90), drops = {
+	grunt = { name = "Esbirro", hp = 6, damage = 3, speed = 17, attackRange = 3.5, attackTime = 1.2, size = Vector3.new(4, 4, 4), color = Color3.fromRGB(120, 200, 90), drops = {
 		{ kind = "item", item = "traitCrystal", chance = 0.12 },
 		{ kind = "item", item = "gradeCrystal", chance = 0.12 },
 		{ kind = "armor", chance = 0.06 },
 	} },
-	brute = { name = "Bruto", hp = 20, damage = 15, speed = 11, attackRange = 4, attackTime = 1.8, look = "horns", size = Vector3.new(6.5, 6.5, 6.5), color = Color3.fromRGB(200, 110, 70), drops = {
+	brute = { name = "Bruto", hp = 20, damage = 7, speed = 11, attackRange = 4, attackTime = 1.8, look = "horns", size = Vector3.new(6.5, 6.5, 6.5), color = Color3.fromRGB(200, 110, 70), drops = {
 		{ kind = "item", item = "traitCrystal", chance = 0.35 },
 		{ kind = "item", item = "gradeCrystal", chance = 0.35 },
 		{ kind = "armor", chance = 0.2, luck = 2 },
 	} },
-	boss = { name = "Guardián", hp = 120, damage = 25, speed = 13, attackRange = 5, attackTime = 2, scaleCount = false, look = "crown", size = Vector3.new(11, 11, 11), color = Color3.fromRGB(150, 80, 220), drops = {
+	boss = { name = "Guardián", hp = 120, damage = 12, speed = 13, attackRange = 5, attackTime = 2, scaleCount = false, look = "crown", size = Vector3.new(11, 11, 11), color = Color3.fromRGB(150, 80, 220), drops = {
 		{ kind = "item", item = "traitCrystal", chance = 1, min = 2, max = 4 },
 		{ kind = "item", item = "gradeCrystal", chance = 1, min = 2, max = 4 },
 		{ kind = "armor", chance = 1, luck = 5 },
