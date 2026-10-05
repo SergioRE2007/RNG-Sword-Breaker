@@ -454,7 +454,86 @@ function SkillTree.start()
 	local nodes = {} -- [mejora] = { [nivel] = nodo }
 	local lines = {} -- [mejora] = { [nivel] = línea que llega a ese nodo }
 	local pulsing = {} -- nodos que se pueden comprar ya: laten
+	local ends = {} -- [mejora] = { [nivel] = { from, to } }: extremos de la línea que llega a ese nodo
+	local flowing = {} -- [línea comprada] = { gradient, phase }: un destello recorre la línea
+	local bursting = 0 -- explosiones en marcha (con "Mejorar todo" salen muchas a la vez: se recortan)
 	local built = false
+
+	-- Compra de un nodo: onda expansiva, chispas, el nodo da un salto y un destello viaja por la línea.
+	local function burst(name: string, level: number)
+		local node = nodes[name][level]
+		local link = lines[name][level]
+		local point = ends[name][level]
+		local color = Config.Upgrades[name].color
+
+		node.scale.Scale = 1.5
+		TweenService:Create(node.scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		link.BackgroundColor3 = WHITE
+		TweenService:Create(link, TweenInfo.new(0.7), { BackgroundColor3 = color:Lerp(WHITE, 0.25) }):Play()
+		if bursting >= 8 then
+			return
+		end
+		bursting += 1
+		task.delay(0.7, function()
+			bursting -= 1
+		end)
+
+		local ring = Instance.new("Frame")
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.Position = UDim2.fromOffset(point.to.X, point.to.Y)
+		ring.Size = UDim2.fromOffset(40, 40)
+		ring.BackgroundTransparency = 1
+		ring.ZIndex = Z_NODE + 1
+		ring.Parent = canvas
+		Ui.round(ring, 200)
+		local stroke = Ui.stroke(ring, color:Lerp(WHITE, 0.4), 7)
+		TweenService:Create(ring, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(320, 320) }):Play()
+		TweenService:Create(stroke, TweenInfo.new(0.6), { Transparency = 1, Thickness = 1 }):Play()
+		task.delay(0.65, function()
+			ring:Destroy()
+		end)
+
+		for index = 1, 10 do
+			local angle = index / 10 * math.pi * 2 + random:NextNumber(-0.2, 0.2)
+			local distance = random:NextNumber(90, 160)
+			local spark = Instance.new("Frame")
+			spark.AnchorPoint = Vector2.new(0.5, 0.5)
+			spark.Position = UDim2.fromOffset(point.to.X, point.to.Y)
+			spark.Size = UDim2.fromOffset(12, 12)
+			spark.Rotation = 45
+			spark.BackgroundColor3 = color:Lerp(WHITE, 0.6)
+			spark.BorderSizePixel = 0
+			spark.ZIndex = Z_NODE + 2
+			spark.Parent = canvas
+			Ui.stroke(spark, BLACK, 1.5)
+			local fly = TweenInfo.new(0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			TweenService:Create(spark, fly, {
+				Position = UDim2.fromOffset(point.to.X + math.cos(angle) * distance, point.to.Y + math.sin(angle) * distance),
+				Size = UDim2.fromOffset(2, 2),
+				BackgroundTransparency = 1,
+			}):Play()
+			task.delay(0.7, function()
+				spark:Destroy()
+			end)
+		end
+
+		-- El destello que va por la línea, del nodo anterior a este.
+		local traveler = Instance.new("Frame")
+		traveler.AnchorPoint = Vector2.new(0.5, 0.5)
+		traveler.Position = UDim2.fromOffset(point.from.X, point.from.Y)
+		traveler.Size = UDim2.fromOffset(16, 16)
+		traveler.BackgroundColor3 = WHITE
+		traveler.BorderSizePixel = 0
+		traveler.ZIndex = Z_NODE + 2
+		traveler.Parent = canvas
+		Ui.round(traveler, 8)
+		Ui.stroke(traveler, color, 3)
+		local run = TweenService:Create(traveler, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), { Position = UDim2.fromOffset(point.to.X, point.to.Y) })
+		run.Completed:Connect(function()
+			traveler:Destroy()
+		end)
+		run:Play()
+	end
 
 	-- Deja el nodo y la línea que llega a él con el aspecto de ese estado. Solo toca lo que cambia.
 	local function apply(name: string, level: number, state: string)
@@ -462,6 +541,7 @@ function SkillTree.start()
 		if node.state == state then
 			return
 		end
+		local previous = node.state
 		node.state = state
 		local upgrade = Config.Upgrades[name]
 		local link = lines[name][level]
@@ -492,6 +572,32 @@ function SkillTree.start()
 		link.BackgroundColor3 = lineColor
 		link.BackgroundTransparency = lineTransparency
 		link.Size = UDim2.fromOffset(link.Size.X.Offset, lineWidth)
+
+		-- Las líneas compradas llevan un destello que las recorre sin parar.
+		local flow = link:FindFirstChild("Flow") :: UIGradient?
+		if state == "owned" then
+			if not flow then
+				flow = Instance.new("UIGradient")
+				flow.Name = "Flow"
+				flow.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0.4),
+					NumberSequenceKeypoint.new(0.4, 0.4),
+					NumberSequenceKeypoint.new(0.5, 0),
+					NumberSequenceKeypoint.new(0.6, 0.4),
+					NumberSequenceKeypoint.new(1, 0.4),
+				})
+				flow.Parent = link
+			end
+			flowing[link] = { gradient = flow, phase = random:NextNumber() }
+		else
+			flowing[link] = nil
+			if flow then
+				flow:Destroy()
+			end
+		end
+		if previous ~= nil and previous ~= "owned" and state == "owned" then
+			burst(name, level)
+		end
 	end
 
 	-- Crea todos los nodos y sus líneas. Se hace la primera vez que se abre la pantalla, no al entrar al juego.
@@ -508,11 +614,13 @@ function SkillTree.start()
 		for branch, name in Config.UpgradeOrder do
 			local upgrade = Config.Upgrades[name]
 			local points = layout(branch, #Config.UpgradeOrder, upgrade.maxLevel)
-			nodes[name], lines[name] = {}, {}
+			nodes[name], lines[name], ends[name] = {}, {}, {}
 			for level = 1, upgrade.maxLevel do
 				local milestone = level % 5 == 0 or level == upgrade.maxLevel
 				extent = math.max(extent, points[level].Magnitude + HEX)
-				lines[name][level] = line(canvas, if level == 1 then Vector2.zero else points[level - 1], points[level])
+				local fromPoint = if level == 1 then Vector2.zero else points[level - 1]
+				ends[name][level] = { from = fromPoint, to = points[level] }
+				lines[name][level] = line(canvas, fromPoint, points[level])
 				local node = buildNode(canvas, `{name}{level}`, points[level], if milestone then BIG else 1, upgrade.icon, upgrade.color)
 				node.label.Text = `{upgrade.short} {roman(level)}`
 				nodes[name][level] = node
@@ -589,6 +697,14 @@ function SkillTree.start()
 			cloud.BackgroundTransparency = 0.55 + 0.12 * math.sin(now * 0.3 + index * 1.7)
 		end
 		space.Rotation = 55 + 12 * math.sin(now * 0.07)
+
+		for link, flow in flowing do
+			if link.Parent then
+				flow.gradient.Offset = Vector2.new((now * 0.6 + flow.phase) % 1 * 2 - 1, 0)
+			else
+				flowing[link] = nil
+			end
+		end
 
 		local beat = 0.5 + 0.5 * math.sin(now * 4)
 		for node in pulsing do
