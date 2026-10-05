@@ -2,6 +2,7 @@
 -- el borde del color de su rareza; al pasar el ratón sale un cartel con los detalles.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -19,6 +20,59 @@ local CELL = 100
 
 local function hex(color: Color3): string
 	return "#" .. color:ToHex()
+end
+
+-- Casilla que aparece con rebote (crece desde pequeña), tras `delay` segundos.
+local function popIn(cell: GuiObject, delay: number)
+	local scale = cell:FindFirstChild("PressScale") :: UIScale?
+	if not scale then
+		return
+	end
+	scale.Scale = 0.3
+	task.delay(delay, function()
+		if scale.Parent then
+			TweenService:Create(scale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		end
+	end)
+end
+
+-- Sacudida corta de una casilla (al equiparla).
+local function wiggle(cell: GuiObject)
+	task.spawn(function()
+		for _, angle in { -9, 8, -5, 3, 0 } do
+			local step = TweenService:Create(cell, TweenInfo.new(0.07, Enum.EasingStyle.Quad), { Rotation = angle })
+			step:Play()
+			step.Completed:Wait()
+		end
+	end)
+end
+
+-- Marca de "recién conseguida": cartelito y borde amarillo que late hasta que se pasa el ratón por encima.
+local function markNew(cell: GuiObject)
+	local glow = Instance.new("Frame")
+	glow.Name = "NewGlow"
+	glow.Position = UDim2.fromOffset(-4, -4)
+	glow.Size = UDim2.new(1, 8, 1, 8)
+	glow.BackgroundTransparency = 1
+	glow.ZIndex = 6
+	glow.Parent = cell
+	Ui.round(glow, 14)
+	local ring = Ui.stroke(glow, Color3.fromRGB(255, 230, 80), 3)
+	TweenService:Create(ring, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.85 }):Play()
+	local banner = Ui.label(glow, 12)
+	banner.AnchorPoint = Vector2.new(0.5, 0)
+	banner.Position = UDim2.new(0.5, 0, 0, 7)
+	banner.Size = UDim2.fromOffset(52, 15)
+	banner.BackgroundTransparency = 0
+	banner.BackgroundColor3 = Color3.fromRGB(255, 190, 30)
+	banner.TextColor3 = Color3.new(1, 1, 1)
+	banner.Text = "NUEVA"
+	banner.ZIndex = 7
+	Ui.round(banner, 6)
+	Ui.stroke(banner, Color3.new(0, 0, 0), 2)
+	cell.MouseEnter:Once(function()
+		glow:Destroy()
+	end)
 end
 
 local function pane(body: Instance, name: string): Frame
@@ -146,8 +200,17 @@ function Backpack.start()
 	local function show(name: string)
 		current = name
 		for key, frame in panes do
+			local opening = key == name and not frame.Visible
 			frame.Visible = key == name
 			tabs[key].stroke.Color = if key == name then Color3.new(1, 1, 1) else Color3.new(0, 0, 0)
+			-- La pestaña elegida se asoma un poco más y el contenido entra deslizándose.
+			TweenService:Create(tabs[key].button, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Position = UDim2.fromOffset(if key == name then -118 else -108, tabs[key].y),
+			}):Play()
+			if opening then
+				frame.Position = UDim2.fromOffset(24, 0)
+				TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(0, 0) }):Play()
+			end
 		end
 		if onShow[name] then
 			onShow[name]()
@@ -161,7 +224,7 @@ function Backpack.start()
 		tab.Position = UDim2.fromOffset(-108, 66 + (order - 1) * 78)
 		tab.Size = UDim2.fromOffset(96, 66)
 		tab.TextSize = 21
-		tabs[name] = { button = tab, stroke = tab:FindFirstChildOfClass("UIStroke") }
+		tabs[name] = { button = tab, stroke = tab:FindFirstChildOfClass("UIStroke"), y = 66 + (order - 1) * 78 }
 		tab.Activated:Connect(function()
 			show(name)
 		end)
@@ -310,6 +373,7 @@ function Backpack.start()
 	-- Deja las casillas como el inventario tocando solo las que han cambiado. Rehacerlas todas en cada
 	-- tirada del gacha daba un tirón, porque cada casilla lleva su vista 3D.
 	local cellKeys = {} -- [id] = de qué depende lo que enseña su casilla
+	local loaded = false -- pasada la primera carga del inventario, lo que llega es nuevo
 	local function syncSwords(copies, equippedId: number)
 		local seen = {}
 		for _, copy in copies do
@@ -318,6 +382,7 @@ function Backpack.start()
 			if cellKeys[copy.id] == key then
 				continue
 			end
+			local known = cellKeys[copy.id] ~= nil
 			if swordCells[copy.id] then
 				swordCells[copy.id]:Destroy()
 			end
@@ -364,13 +429,39 @@ function Backpack.start()
 				refreshSelection(Stats.swords(player), player:GetAttribute("Equipped") or 1)
 			end)
 			swordCells[copy.id] = cell
+			-- Las casillas que llegan después de la carga inicial entran con rebote y, si son una copia nueva, con marca.
+			if loaded then
+				if known then
+					wiggle(cell)
+				else
+					popIn(cell, 0)
+					markNew(cell)
+				end
+			end
 		end
+		loaded = true
 		for id, cell in swordCells do
 			if not seen[id] then
 				cell:Destroy()
 				swordCells[id] = nil
 				cellKeys[id] = nil
 			end
+		end
+	end
+
+	-- Al abrir la pestaña de espadas, las primeras casillas entran una tras otra.
+	onShow.Swords = function()
+		local cells = {}
+		for _, child in swordGrid:GetChildren() do
+			if child:IsA("GuiButton") then
+				table.insert(cells, child)
+			end
+		end
+		table.sort(cells, function(a, b)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		for index = 1, math.min(#cells, 30) do
+			popIn(cells[index], index * 0.018)
 		end
 	end
 
@@ -535,6 +626,8 @@ function Backpack.start()
 		refresh()
 		if window.Visible and current == "Gear" then
 			showCharacter()
+		elseif window.Visible and current == "Swords" then
+			onShow.Swords()
 		end
 	end)
 	show("Swords")
