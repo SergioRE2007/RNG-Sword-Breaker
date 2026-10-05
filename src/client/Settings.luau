@@ -32,7 +32,9 @@ local function musicGroup(): SoundGroup
 end
 
 -- Fila de un ajuste: marco con título y una línea de explicación; devuelve el marco.
-local function row(parent: Instance, order: number, title: string, hint: string): Frame
+-- `withSlider`: la fila lleva una barra abajo y nada a la derecha, así que la descripción usa todo el
+-- ancho en una línea (con el margen de un botón a la derecha bajaría hasta la barra).
+local function row(parent: Instance, order: number, title: string, hint: string, withSlider: boolean?): Frame
 	local frame = Instance.new("Frame")
 	frame.Name = title
 	frame.LayoutOrder = order
@@ -49,7 +51,7 @@ local function row(parent: Instance, order: number, title: string, hint: string)
 	heading.Text = title
 	local detail = Ui.label(frame, 17)
 	detail.Position = UDim2.fromOffset(14, 38)
-	detail.Size = UDim2.new(1, -170, 0, 56)
+	detail.Size = if withSlider then UDim2.new(1, -28, 0, 24) else UDim2.new(1, -170, 0, 56)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.TextYAlignment = Enum.TextYAlignment.Top
 	detail.TextWrapped = true
@@ -59,7 +61,7 @@ local function row(parent: Instance, order: number, title: string, hint: string)
 end
 
 function Settings.start()
-	local gui = Ui.screen()
+	local gui = Ui.hud()
 	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 544), Ui.gearIcon)
 
 	local list = Instance.new("Frame")
@@ -76,7 +78,7 @@ function Settings.start()
 	padding.Parent = list
 
 	-- Modo rendimiento -------------------------------------------------------------------
-	local performanceRow = row(list, 1, "Modo rendimiento", "Quita partículas, auras, estelas, luces, hierba, nubes, sombras y las animaciones de los menús. Úsalo si el juego va lento. En móviles viene activado.")
+	local performanceRow = row(list, 1, "Modo rendimiento", "Quita partículas, auras, luces, nubes, sombras y animaciones de los menús. Úsalo si el juego va lento (en móvil viene activado).")
 	local performanceButton = Ui.button(performanceRow, "", Ui.COLORS.gray)
 	performanceButton.AnchorPoint = Vector2.new(1, 0.5)
 	performanceButton.Position = UDim2.new(1, -14, 0.5, 0)
@@ -94,7 +96,7 @@ function Settings.start()
 	paintPerformance()
 
 	-- Volumen de la música ---------------------------------------------------------------
-	local volumeRow = row(list, 2, "Volumen de la música", "Aún no hay música, pero el volumen ya queda guardado para cuando se añada.")
+	local volumeRow = row(list, 2, "Volumen de la música", "Aún no hay música; el volumen queda guardado para cuando llegue.", true)
 	local group = musicGroup()
 	local percent = Ui.label(volumeRow, 22)
 	percent.AnchorPoint = Vector2.new(1, 0)
@@ -114,7 +116,7 @@ function Settings.start()
 	paintVolume(group.Volume)
 
 	-- Volumen de los efectos ---------------------------------------------------------------
-	local effectsRow = row(list, 3, "Volumen de efectos", "Golpes, monedas, tiradas, mejoras y botones.")
+	local effectsRow = row(list, 3, "Volumen de efectos", "Golpes, monedas, tiradas, mejoras y botones.", true)
 	local effects = Sfx.group()
 	local effectsPercent = Ui.label(effectsRow, 22)
 	effectsPercent.AnchorPoint = Vector2.new(1, 0)

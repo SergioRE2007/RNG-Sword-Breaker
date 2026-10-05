@@ -24,11 +24,14 @@ local BIG = 1.22 -- los nodos de cada 5 niveles y el último de cada brazo son m
 local AHEAD = 3 -- nodos sin comprar que se ven enteros por delante; los demás son estrellas pequeñas
 local FAR_SCALE = 0.5
 
--- Espiral: cada brazo se aleja PITCH por vuelta, con SPACING entre un nodo y el siguiente.
+-- Espiral: los brazos van entrelazados, así que entre un brazo y el de al lado hay ARM_GAP (centro a
+-- centro): cada brazo se aleja ARM_GAP × número de brazos por vuelta. SPACING es lo que hay entre un
+-- nodo y el siguiente del mismo brazo. Los dos dejan aire de sobra para el hexágono grande (HEX × BIG)
+-- y el desorden (JITTER), así que ningún nodo pisa a otro.
 local START_RADIUS = 175
-local PITCH = 560
-local SPACING = 120
-local JITTER = 22 -- desorden de los nodos, para que parezca una constelación y no una regla
+local ARM_GAP = 150
+local SPACING = 140
+local JITTER = 10 -- desorden de los nodos, para que parezca una constelación y no una regla
 
 local ZOOM_MIN, ZOOM_MAX, ZOOM_START = 0.25, 1.6, 0.62
 
@@ -71,7 +74,7 @@ local function layout(branch: number, branches: number, count: number): { Vector
 		local jitter = Vector2.new(math.noise(branch * 7.31, level * 0.83), math.noise(level * 0.71, branch * 3.17)) * JITTER * 2
 		points[level] = Vector2.new(math.cos(angle), math.sin(angle)) * radius + jitter
 		turn += SPACING / radius
-		radius = START_RADIUS + PITCH * turn / (2 * math.pi)
+		radius = START_RADIUS + ARM_GAP * branches * turn / (2 * math.pi)
 	end
 	return points
 end
@@ -296,6 +299,19 @@ function SkillTree.start()
 	canvasScale.Parent = canvas
 
 	local heading = Ui.label(overlay, 30)
+	-- Fondo oscuro detrás del título y la ayuda: sin él, los hexágonos de detrás no dejan leerlos.
+	local titleBack = Instance.new("Frame")
+	titleBack.Name = "TitleBack"
+	titleBack.AnchorPoint = Vector2.new(0.5, 0)
+	titleBack.Position = UDim2.new(0.5, 0, 0, 94)
+	titleBack.Size = UDim2.fromOffset(600, 68)
+	titleBack.BackgroundColor3 = WHITE
+	titleBack.BackgroundTransparency = 0.25
+	titleBack.ZIndex = Z_FRONT - 1
+	titleBack.Parent = overlay
+	Ui.round(titleBack, 14)
+	Ui.stroke(titleBack, Color3.new(0, 0, 0), 3)
+	Ui.gradient(titleBack, Color3.fromRGB(40, 44, 80), Color3.fromRGB(16, 18, 36), 90)
 	heading.AnchorPoint = Vector2.new(0.5, 0)
 	heading.Position = UDim2.new(0.5, 0, 0, 100)
 	heading.Size = UDim2.fromOffset(520, 34)
@@ -747,7 +763,7 @@ function SkillTree.start()
 
 	overlay:GetPropertyChangedSignal("Visible"):Connect(function()
 		-- El resumen de la pantalla ya enseña lo mismo que las estadísticas de abajo a la derecha: se esconden mientras está abierta.
-		local dock = Ui.screen():FindFirstChild("StatsDock")
+		local dock = Ui.hud():FindFirstChild("StatsDock")
 		if dock then
 			dock.Visible = not overlay.Visible
 		end
