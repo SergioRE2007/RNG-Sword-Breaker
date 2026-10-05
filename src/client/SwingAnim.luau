@@ -17,68 +17,136 @@ local MIN_DURATION = 0.26 -- con la velocidad de golpe al máximo el movimiento 
 local COMBO_RESET = 0.7 -- segundos sin golpear (tras acabar el golpe) para volver al primer movimiento
 local BLEND_IN = 0.12 -- parte del golpe que tarda en pasar de la postura normal a la primera postura
 
--- Cada movimiento es una lista de { momento (0 a 1), postura }. Antes del primer momento se entra en la primera
--- postura, entre momentos se pasa de una a otra con suavidad y tras el último se vuelve a la postura normal.
+local HAMMER_IMPACT = 0.5 -- momento del golpe en que el martillo toca el suelo
+local STILL_SPEED = 2 -- por debajo de esta velocidad (studs/s) el personaje está parado y también se le mueven las piernas
+
+-- Cada movimiento es una lista de { momento (0 a 1), postura, paso }. Antes del primer momento se entra en la
+-- primera postura, entre momentos se pasa de una a otra y tras el último se vuelve a la postura normal.
+-- Sin postura se mantiene la anterior. `paso` = cómo se llega a esa postura: nada = suave; "hit" = de golpe y
+-- pasándose un poco (el tajo); "in" y "out" = acelerando y frenando, para enlazar las mitades de una vuelta.
+-- Golpes exagerados a propósito (pedido por el usuario): mucha carga, salto o zancada y cuerpo entero.
 -- Posturas en grados (lo que no se pone vale 0):
 --   spin = girar el cuerpo entero, turn = girar el torso (positivo a la izquierda), lean = inclinarlo (negativo adelante),
+--   head = girar la cabeza (para que siga mirando al frente),
 --   raise = subir el brazo derecho (0 abajo, 90 al frente, 180 arriba), swing = llevarlo a la izquierda,
 --   elbow = doblar el codo, wrist = muñeca (negativo echa la hoja hacia delante).
 --   lraise, lswing, lelbow, lwrist = lo mismo para el brazo izquierdo.
+--   rhip, lhip = pierna adelante; rknee, lknee = doblar la rodilla (las piernas solo se mueven con el personaje parado).
+-- Y en studs: hop = salto, lunge = zancada al frente, drop = agacharse (negativo; solo parado).
 local MOVES = {
 	sword = {
-		{ -- tajo diagonal de derecha a izquierda
-			{ 0.2, { spin = -8, turn = -28, lean = 4, raise = 125, swing = -25, elbow = 85, wrist = 15, lraise = 20 } },
-			{ 0.6, { spin = 10, turn = 38, lean = -13, raise = 45, swing = 45, elbow = 20, wrist = -55, lraise = -25 } },
+		{ -- tajo diagonal de derecha a izquierda, con zancada
+			{ 0.16, { spin = -25, turn = -40, lean = 8, head = 35, raise = 150, swing = -40, elbow = 95, wrist = 25, lraise = 50, lswing = 25, lelbow = 30, hop = 0.4, drop = -0.2, lhip = 20, lknee = 15, rhip = -15, rknee = 20 } },
+			{ 0.36, { spin = 20, turn = 40, lean = -22, head = -30, raise = 35, swing = 70, elbow = 10, wrist = -70, lraise = -45, lswing = 20, lelbow = 20, lunge = 1.4, drop = -0.4, rhip = 35, rknee = 35, lhip = -25, lknee = 15 }, "hit" },
+			{ 0.62 },
 		},
 		{ -- revés horizontal de izquierda a derecha
-			{ 0.2, { spin = 10, turn = 35, lean = -3, raise = 80, swing = 55, elbow = 95, wrist = -20, lraise = -20 } },
-			{ 0.6, { spin = -10, turn = -35, lean = -8, raise = 72, swing = -45, elbow = 15, wrist = -62, lraise = 20 } },
+			{ 0.16, { spin = 20, turn = 40, lean = -5, head = -30, raise = 85, swing = 75, elbow = 105, wrist = -25, lraise = -30, lelbow = 20, drop = -0.2, rhip = 15, rknee = 20, lhip = -15, lknee = 20 } },
+			{ 0.36, { spin = -25, turn = -40, lean = -12, head = 35, raise = 80, swing = -60, elbow = 5, wrist = -65, lraise = 35, lswing = 40, lelbow = 30, lunge = 1.2, drop = -0.4, lhip = 35, lknee = 35, rhip = -25, rknee = 15 }, "hit" },
+			{ 0.62 },
 		},
-		{ -- golpe desde arriba
-			{ 0.22, { lean = 10, raise = 165, elbow = 80, wrist = 20, lraise = 30 } },
-			{ 0.6, { turn = 8, lean = -24, raise = 35, swing = 10, elbow = 15, wrist = -62, lraise = -20 } },
+		{ -- vuelta entera con la espada extendida y un saltito
+			{ 0.14, { spin = -50, turn = -30, lean = -5, raise = 88, swing = -50, elbow = 40, wrist = -60, lraise = 60, lswing = 40, lelbow = 30, drop = -0.5, rhip = 20, rknee = 30, lhip = -15, lknee = 30 } },
+			{ 0.37, { spin = 165, lean = -10, raise = 88, swing = -40, elbow = 5, wrist = -70, lraise = 70, lswing = 50, lelbow = 15, hop = 1.2 }, "in" },
+			{ 0.6, { spin = 360, turn = 15, lean = -8, raise = 85, swing = -10, elbow = 8, wrist = -68, lraise = 50, lswing = 35, lelbow = 15 }, "out" },
+		},
+		{ -- salto y golpe desde arriba a dos manos
+			{ 0.18, { lean = 18, raise = 175, elbow = 70, wrist = 30, lraise = 170, lelbow = 70, hop = 2.6, rhip = 35, rknee = 70, lhip = 10, lknee = 80 } },
+			{ 0.38, { turn = 10, lean = -38, raise = 28, swing = 10, elbow = 8, wrist = -70, lraise = 30, lelbow = 10, lunge = 0.8, drop = -0.5, rhip = 40, rknee = 45, lhip = -25, lknee = 25 }, "hit" },
+			{ 0.66 },
 		},
 	},
 	dual = {
-		{ -- tajo con la derecha, la izquierda en guardia
-			{ 0.2, { turn = -22, raise = 115, swing = -20, elbow = 75, wrist = 10, lraise = 55, lelbow = 15 } },
-			{ 0.65, { turn = 28, lean = -8, raise = 55, swing = 40, elbow = 15, wrist = -55, lraise = 55, lelbow = 15 } },
+		{ -- las dos hojas de fuera adentro, cruzándose
+			{ 0.16, { turn = -15, lean = 10, raise = 95, swing = -70, elbow = 40, wrist = -20, lraise = 95, lswing = 70, lelbow = 40, lwrist = -20, hop = 0.3, drop = -0.3, rhip = 15, rknee = 25, lhip = -15, lknee = 25 } },
+			{ 0.36, { turn = 10, lean = -25, raise = 70, swing = 75, elbow = 15, wrist = -60, lraise = 70, lswing = -75, lelbow = 15, lwrist = -60, lunge = 1.3, drop = -0.4, rhip = 35, rknee = 35, lhip = -25, lknee = 15 }, "hit" },
+			{ 0.6 },
 		},
-		{ -- tajo con la izquierda, la derecha en guardia
-			{ 0.2, { turn = 22, lraise = 115, lswing = 20, lelbow = 75, lwrist = 10, raise = 55, elbow = 15 } },
-			{ 0.65, { turn = -28, lean = -8, lraise = 55, lswing = -40, lelbow = 15, lwrist = -55, raise = 55, elbow = 15 } },
+		{ -- de cruzadas a abiertas, con un saltito
+			{ 0.16, { lean = -15, raise = 80, swing = 80, elbow = 60, wrist = -30, lraise = 80, lswing = -80, lelbow = 60, lwrist = -30, drop = -0.6, rhip = 20, rknee = 40, lhip = 20, lknee = 40 } },
+			{ 0.36, { lean = 12, raise = 85, swing = -75, elbow = 5, wrist = -55, lraise = 85, lswing = 75, lelbow = 5, lwrist = -55, hop = 0.6, lunge = 0.8 }, "hit" },
+			{ 0.6 },
+		},
+		{ -- batidora: vuelta entera con los dos brazos abiertos
+			{ 0.14, { spin = -45, lean = -8, raise = 88, swing = -80, elbow = 5, wrist = -60, lraise = 88, lswing = 80, lelbow = 5, lwrist = -60, drop = -0.4, rhip = 15, rknee = 30, lhip = -15, lknee = 30 } },
+			{ 0.37, { spin = 160, lean = -8, raise = 88, swing = -85, elbow = 5, wrist = -60, lraise = 88, lswing = 85, lelbow = 5, lwrist = -60, hop = 1 }, "in" },
+			{ 0.6, { spin = 360, lean = -8, raise = 88, swing = -80, elbow = 5, wrist = -60, lraise = 88, lswing = 80, lelbow = 5, lwrist = -60 }, "out" },
 		},
 	},
 	axe = {
-		{ -- vuelta entera con el hacha extendida
-			{ 0.18, { spin = -30, turn = -25, raise = 90, swing = -55, elbow = 15, wrist = -70, lraise = 70, lswing = 45, lelbow = 20 } },
-			{ 0.82, { spin = 360, raise = 90, swing = -55, elbow = 15, wrist = -70, lraise = 70, lswing = 45, lelbow = 20 } },
+		{ -- carga hacia atrás y vuelta entera en el aire con el hacha extendida
+			{ 0.16, { spin = -70, turn = -30, lean = -8, raise = 85, swing = -60, elbow = 30, wrist = -60, lraise = 70, lswing = 45, lelbow = 25, drop = -0.6, rhip = 20, rknee = 35, lhip = -20, lknee = 35 } },
+			{ 0.45, { spin = 150, lean = -14, raise = 92, swing = -55, elbow = 8, wrist = -75, lraise = 75, lswing = 50, lelbow = 15, hop = 1.1 }, "in" },
+			{ 0.74, { spin = 360, turn = 15, lean = -10, raise = 88, swing = -40, elbow = 8, wrist = -75, lraise = 70, lswing = 45, lelbow = 15, drop = -0.3 }, "out" },
 		},
 	},
 	hammer = {
-		{ -- martillazo: se levanta a dos manos por encima de la cabeza y se deja caer hacia delante
-			{ 0.32, { spin = -6, lean = 16, raise = 172, elbow = 50, wrist = 25, lraise = 165, lelbow = 55 } },
-			{ 0.55, { spin = 6, lean = -34, raise = 38, elbow = 8, wrist = -62, lraise = 40, lelbow = 8 } },
-			{ 0.78, { spin = 6, lean = -34, raise = 38, elbow = 8, wrist = -62, lraise = 40, lelbow = 8 } },
+		{ -- martillazo: salta con el martillo a dos manos por encima de la cabeza y cae con todo el cuerpo
+			{ 0.3, { spin = -8, lean = 22, raise = 178, elbow = 55, wrist = 30, lraise = 172, lelbow = 60, hop = 2.8, rhip = 30, rknee = 75, lhip = 15, lknee = 85 } },
+			{ HAMMER_IMPACT, { spin = 6, lean = -42, raise = 30, elbow = 5, wrist = -68, lraise = 34, lelbow = 5, lunge = 0.8, drop = -0.6, rhip = 40, rknee = 50, lhip = -25, lknee = 30 }, "hit" },
+			{ 0.78 },
 		},
 	},
 	spear = {
-		{ -- estocada: codo atrás y brazo recto al frente
-			{ 0.25, { spin = -10, turn = -35, lean = 3, raise = -35, elbow = 125, lraise = 55, lelbow = 25 } },
-			{ 0.5, { spin = 12, turn = 35, lean = -14, raise = 88, elbow = 2, lraise = -25, lelbow = 10 } },
-			{ 0.7, { spin = 12, turn = 35, lean = -14, raise = 88, elbow = 2, lraise = -25, lelbow = 10 } },
+		{ -- estocada: se echa atrás con el codo recogido y sale disparado al frente
+			{ 0.2, { spin = -20, turn = -40, lean = 8, head = 30, raise = -45, elbow = 130, lraise = 70, lelbow = 15, lunge = -0.8, drop = -0.3, lhip = 15, lknee = 20, rhip = -20, rknee = 20 } },
+			{ 0.38, { spin = 15, turn = 35, lean = -28, head = -25, raise = 90, elbow = 0, lraise = -45, lelbow = 15, lunge = 2.6, drop = -0.5, rhip = 45, rknee = 45, lhip = -35, lknee = 12 }, "hit" },
+			{ 0.66 },
+		},
+		{ -- barrido: vuelta entera con la lanza extendida
+			{ 0.14, { spin = -50, turn = -25, raise = 80, swing = -50, elbow = 20, wrist = -40, lraise = 60, lswing = 40, drop = -0.5, rhip = 20, rknee = 30, lhip = -15, lknee = 30 } },
+			{ 0.4, { spin = 160, lean = -8, raise = 88, swing = -45, elbow = 5, wrist = -55, lraise = 65, lswing = 45, hop = 0.9 }, "in" },
+			{ 0.66, { spin = 360, turn = 15, raise = 85, swing = -30, elbow = 5, wrist = -55, lraise = 60, lswing = 40 }, "out" },
 		},
 	},
 }
+for _, moves in MOVES do
+	for _, move in moves do
+		for index, key in move do
+			key[2] = key[2] or move[index - 1][2]
+		end
+	end
+end
 
--- Articulaciones: pieza donde está, nombre, valores de la postura que usa y cómo se convierten en giro.
+local DISTANCES = { hop = true, lunge = true, drop = true } -- valores en studs, no en grados
+
+local EASES = {
+	hit = function(t: number): number -- llega enseguida, se pasa un poco y vuelve
+		local back = 1.70158
+		return 1 + (back + 1) * (t - 1) ^ 3 + back * (t - 1) ^ 2
+	end,
+	["in"] = function(t: number): number
+		return t * t
+	end,
+	out = function(t: number): number
+		return 1 - (1 - t) ^ 2
+	end,
+}
+
+-- Articulaciones: pieza donde está, nombre, valores de la postura que usa, cómo se convierten en giro y,
+-- si es true, que solo se mueve con el personaje parado (las piernas: andando mandan sus pasos).
 local JOINTS = {
-	{ "LowerTorso", "Root", { "spin" }, function(p)
-		return CFrame.Angles(0, p.spin, 0)
+	{ "LowerTorso", "Root", { "spin", "hop", "lunge", "drop" }, function(p)
+		return CFrame.new(0, p.hop + p.drop, -p.lunge) * CFrame.Angles(0, p.spin, 0)
 	end },
 	{ "UpperTorso", "Waist", { "turn", "lean" }, function(p)
 		return CFrame.Angles(0, p.turn, 0) * CFrame.Angles(p.lean, 0, 0)
 	end },
+	{ "Head", "Neck", { "head" }, function(p)
+		return CFrame.Angles(0, p.head, 0)
+	end },
+	{ "RightUpperLeg", "RightHip", { "rhip" }, function(p)
+		return CFrame.Angles(p.rhip, 0, 0)
+	end, true },
+	{ "RightLowerLeg", "RightKnee", { "rknee" }, function(p)
+		return CFrame.Angles(-p.rknee, 0, 0)
+	end, true },
+	{ "LeftUpperLeg", "LeftHip", { "lhip" }, function(p)
+		return CFrame.Angles(p.lhip, 0, 0)
+	end, true },
+	{ "LeftLowerLeg", "LeftKnee", { "lknee" }, function(p)
+		return CFrame.Angles(-p.lknee, 0, 0)
+	end, true },
 	{ "RightUpperArm", "RightShoulder", { "raise", "swing" }, function(p)
 		return CFrame.Angles(0, p.swing, 0) * CFrame.Angles(p.raise, 0, 0)
 	end },
@@ -126,7 +194,7 @@ local function findJoints(character: Model, move)
 			if not motor or not (motor:IsA("Motor6D") or motor:IsA("AnimationConstraint")) then
 				return nil
 			end
-			table.insert(found, { motor = motor, cframe = joint[4] })
+			table.insert(found, { motor = motor, cframe = joint[4], still = joint[5] == true })
 		end
 	end
 	return found
@@ -158,7 +226,7 @@ local function sample(move, t: number)
 		for index = 1, #move - 1 do
 			local a, b = move[index], move[index + 1]
 			if t >= a[1] and t < b[1] then
-				from, to, progress = a[2], b[2], smooth((t - a[1]) / (b[1] - a[1]))
+				from, to, progress = a[2], b[2], (EASES[b[3]] or smooth)((t - a[1]) / (b[1] - a[1]))
 				break
 			end
 		end
@@ -166,7 +234,8 @@ local function sample(move, t: number)
 	local pose = {}
 	for _, field in FIELDS do
 		local a, b = from[field] or 0, to[field] or 0
-		pose[field] = math.rad(a + (b - a) * progress)
+		local value = a + (b - a) * progress
+		pose[field] = if DISTANCES[field] then value else math.rad(value)
 	end
 	return pose
 end
@@ -205,9 +274,16 @@ local function step()
 			weight = 1 - smooth((t - last) / (1 - last))
 		end
 
+		-- Parado se mueven también las piernas; al echar a andar se sueltan poco a poco.
+		local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local moving = root ~= nil and (root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude > STILL_SPEED
+		swing.still += ((if moving then 0 else 1) - swing.still) * math.min((now - swing.last) * 12, 1)
+		swing.last = now
+
 		local pose = sample(move, t)
+		pose.drop *= swing.still
 		for _, joint in swing.joints do
-			joint.motor.Transform = joint.motor.Transform:Lerp(joint.cframe(pose), weight)
+			joint.motor.Transform = joint.motor.Transform:Lerp(joint.cframe(pose), if joint.still then weight * swing.still else weight)
 		end
 		setTrails(swing, t >= first and t <= last + 0.05)
 	end
@@ -277,10 +353,11 @@ function SwingAnim.play(character: Model?, cooldown: number, kind: string): bool
 		move = moves[index],
 		joints = joints,
 		trails = findTrails(character),
+		still = 0,
+		last = now,
 	}
-	-- El martillo toca el suelo hacia el 55 % del golpe.
 	if kind == "hammer" then
-		task.delay(duration * 0.55, function()
+		task.delay(duration * HAMMER_IMPACT, function()
 			if character.Parent then
 				slam(character)
 			end
