@@ -1002,6 +1002,23 @@ local tip, tipStroke, tipSource
 local tipBeside = false
 local tipLive: (() -> (string, Color3, boolean?))? = nil
 
+-- ¿Tapa algo a `target` donde está el ratón? Pasa cuando una capa opaca se pone encima (como
+-- "Elige una espada" o los ajustes de las tiendas): la casilla sigue debajo y, sin esto, su cartel
+-- saltaba al pasar el ratón por donde estaba. Se recorre lo que hay en ese punto de arriba abajo: si
+-- antes de llegar a `target` (o a algo suyo) aparece algo con fondo que no lo contiene, está tapado.
+local function covered(target: GuiObject): boolean
+	local point = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
+	for _, object in player:WaitForChild("PlayerGui"):GetGuiObjectsAtPosition(point.X, point.Y) do
+		if object == target or object:IsDescendantOf(target) then
+			return false
+		end
+		if object ~= tip and object.BackgroundTransparency < 1 and not target:IsDescendantOf(object) then
+			return true
+		end
+	end
+	return false
+end
+
 local function ensureTip()
 	if tip then
 		return
@@ -1037,7 +1054,7 @@ local function ensureTip()
 			end
 			ancestor = ancestor.Parent
 		end
-		if not ancestor or not tipSource:IsDescendantOf(game) then
+		if not ancestor or not tipSource:IsDescendantOf(game) or covered(tipSource) then
 			tip.Visible = false
 			return
 		end
@@ -1086,7 +1103,9 @@ function Ui.tip(target: GuiObject, getContent: () -> (string, Color3), beside: b
 		tip.Visible = true
 	end
 	target.MouseEnter:Connect(function()
-		open(false)
+		if not covered(target) then
+			open(false)
+		end
 	end)
 	target.MouseLeave:Connect(function()
 		if tipSource == target then
