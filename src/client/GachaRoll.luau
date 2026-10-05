@@ -156,7 +156,7 @@ local function shake(target: GuiObject, strength: number, seconds: number)
 end
 
 -- Rayos que giran alrededor de `position`, del color dado. Se borran con el contenedor.
-local function rays(parent: Instance, position: UDim2, length: number, width: number, color: Color3, count: number, zIndex: number): Frame
+local function rays(parent: Instance, position: UDim2, length: number, width: number, color: Color3, count: number, zIndex: number, speed: number?): Frame
 	local holder = frame(parent, UDim2.fromOffset(0, 0), position, color)
 	holder.BackgroundTransparency = 1
 	holder.ZIndex = zIndex
@@ -177,7 +177,7 @@ local function rays(parent: Instance, position: UDim2, length: number, width: nu
 	end
 	everyFrame(holder, function(delta)
 		for _, ray in pieces do
-			ray.Rotation += delta * 40
+			ray.Rotation += delta * (speed or 40)
 		end
 	end)
 	return holder
@@ -224,6 +224,86 @@ local function sparkle(area: GuiObject, color: Color3, size: number, zIndex: num
 	TweenService:Create(item, grow, { Size = UDim2.fromOffset(size, size) }):Play()
 	task.delay(0.5, function()
 		item:Destroy()
+	end)
+end
+
+-- Estelas que llegan desde lejos y se meten en `position`: el orbe absorbe energía.
+local function absorb(parent: Instance, position: UDim2, color: Color3, count: number, seconds: number)
+	if skip then
+		return
+	end
+	for _ = 1, count do
+		local angle = math.random() * math.pi * 2
+		local distance = math.random(380, 640)
+		local offset = UDim2.fromOffset(math.cos(angle) * distance, math.sin(angle) * distance)
+		local streak = frame(parent, UDim2.fromOffset(math.random(30, 60), math.random(5, 9)), position + offset, if math.random() < 0.6 then color else WHITE)
+		streak.Rotation = math.deg(angle)
+		streak.ZIndex = 2
+		circle(streak)
+		local travel = TweenInfo.new(seconds * (0.6 + math.random() * 0.4), Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		local move = TweenService:Create(streak, travel, { Position = position, Size = UDim2.fromOffset(8, 3) })
+		move.Completed:Connect(function()
+			streak:Destroy()
+		end)
+		move:Play()
+	end
+end
+
+-- Trozos que salen disparados desde `position` al estallar: giran, caen y se apagan.
+local function shards(parent: Instance, position: UDim2, color: Color3, count: number)
+	if skip then
+		return
+	end
+	local holder = frame(parent, UDim2.fromOffset(0, 0), position, color)
+	holder.BackgroundTransparency = 1
+	holder.ZIndex = 6
+	local pieces = {}
+	for _ = 1, count do
+		local piece = frame(holder, UDim2.fromOffset(math.random(10, 28), math.random(10, 28)), UDim2.fromOffset(0, 0), if math.random() < 0.65 then color else WHITE)
+		piece.ZIndex = 6
+		Ui.stroke(piece, BLACK, 2)
+		local angle = math.random() * math.pi * 2
+		local speed = math.random(450, 1150)
+		table.insert(pieces, { item = piece, x = 0, y = 0, vx = math.cos(angle) * speed, vy = math.sin(angle) * speed - 250, spin = math.random(-720, 720) })
+	end
+	local life = 0
+	everyFrame(holder, function(delta)
+		life += delta
+		for _, piece in pieces do
+			piece.vy += 1500 * delta
+			piece.vx *= 1 - 1.2 * delta
+			piece.x += piece.vx * delta
+			piece.y += piece.vy * delta
+			piece.item.Position = UDim2.fromOffset(piece.x, piece.y)
+			piece.item.Rotation += piece.spin * delta
+			piece.item.BackgroundTransparency = math.clamp((life - 0.9) / 0.6, 0, 1)
+		end
+		if life > 1.5 then
+			holder:Destroy()
+		end
+	end)
+end
+
+-- Confeti que cae por toda la pantalla mientras `parent` siga en ella.
+local function confetti(parent: GuiObject, color: Color3, perSecond: number)
+	local colors = { color, WHITE, Color3.fromRGB(255, 215, 80), color:Lerp(WHITE, 0.5) }
+	task.spawn(function()
+		while parent.Parent do
+			local x = math.random()
+			local piece = frame(parent, UDim2.fromOffset(math.random(8, 14), math.random(14, 22)), UDim2.fromScale(x, -0.05), colors[math.random(#colors)])
+			piece.ZIndex = 29
+			piece.Rotation = math.random(0, 360)
+			local fall = TweenInfo.new(2.2 + math.random() * 1.5, Enum.EasingStyle.Linear)
+			local drop = TweenService:Create(piece, fall, {
+				Position = UDim2.fromScale(x + (math.random() - 0.5) * 0.25, 1.08),
+				Rotation = piece.Rotation + math.random(-900, 900),
+			})
+			drop.Completed:Connect(function()
+				piece:Destroy()
+			end)
+			drop:Play()
+			task.wait(1 / perSecond)
+		end
 	end)
 end
 
@@ -590,6 +670,23 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 	tween(dim, 0.4, { BackgroundTransparency = 0.12 })
 	machineEffect(color)
 
+	-- Bandas negras de cine arriba y abajo; se retiran al destapar la carta.
+	local bars = {}
+	for _, edge in { 0, 1 } do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, edge)
+		bar.Position = UDim2.fromScale(0.5, edge)
+		bar.Size = UDim2.fromScale(1, 0)
+		bar.BackgroundColor3 = BLACK
+		bar.BorderSizePixel = 0
+		bar.ZIndex = 19
+		bar.Parent = overlay
+		tween(bar, 0.45, { Size = UDim2.fromScale(1, 0.12) }, Enum.EasingStyle.Quint)
+		table.insert(bars, bar)
+	end
+	local camera = workspace.CurrentCamera
+	local fov = camera.FieldOfView
+
 	-- 1. El panel pasa a primer plano: una copia vuela de arriba al centro y se hace orbe.
 	local scale = stage:FindFirstChildOfClass("UIScale")
 	local factor = if scale then scale.Scale else 1
@@ -628,12 +725,16 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 
 	local pulses = 4 + math.floor(tier / 2)
 	local charge = 0.9 + tier * 0.15
+	-- La cámara del mundo se va cerrando mientras carga.
+	tween(camera, charge, { FieldOfView = fov - 20 }, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
 	for pulse = 1, pulses do
 		if skip then
 			break
 		end
 		local pulseColor = if pulse > pulses - 2 then color else ORB_COLOR
 		ring(stage, center, 170, 460, pulseColor, 0.5)
+		absorb(stage, center, pulseColor, 3 + tier, charge / pulses * 1.6)
+		Sfx.play("tick")
 		tween(orb, charge / pulses, { Size = UDim2.fromOffset(170 + pulse * 10, 170 + pulse * 10), BackgroundColor3 = pulseColor })
 		for _, ray in glowRays:GetChildren() do
 			tween(ray, charge / pulses, { BackgroundColor3 = pulseColor, BackgroundTransparency = 0.6 - pulse * 0.06 })
@@ -642,8 +743,23 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 		wait(charge / pulses)
 	end
 
-	-- 3. Estalla y sale la carta.
+	-- 3. Estalla y sale la carta. En lo muy raro, antes se apaga todo un momento.
+	if tier >= 6 and not skip then
+		tween(dim, 0.2, { BackgroundTransparency = 0 })
+		for _, ray in glowRays:GetChildren() do
+			tween(ray, 0.2, { BackgroundTransparency = 1 })
+		end
+		wait(0.45)
+		tween(dim, 0.6, { BackgroundTransparency = 0.12 })
+	end
 	flash(WHITE, 0, 0.45)
+	Sfx.play("rare")
+	camera.FieldOfView = fov + 10
+	tween(camera, 0.6, { FieldOfView = fov }, Enum.EasingStyle.Back)
+	shards(stage, center, color, 14 + tier * 4)
+	ring(stage, center, 170, 1400, WHITE, 0.55)
+	task.delay(0.12, ring, stage, center, 170, 1100, color, 0.7)
+	shake(stage, 10 + tier * 2, 0.4)
 	tween(orb, 0.2, { Size = UDim2.fromOffset(340, 340), BackgroundTransparency = 1 })
 	glowRays:Destroy()
 	wait(0.1)
@@ -678,6 +794,18 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 
 	-- 5. Destapada: rayos, anillo, destello, temblor y cartel del nivel de rareza.
 	rays(layer, center, grown.Y * 1.7, 30, color, (fx.rays or 4) + 4, 4)
+	-- Segunda tanda de rayos, anchos y suaves, girando al revés.
+	local wide = rays(layer, center, grown.Y * 2.6, 90, color:Lerp(WHITE, 0.4), 5, 2, -18)
+	for _, ray in wide:GetChildren() do
+		(ray :: GuiObject).BackgroundTransparency = 0.7
+	end
+	for _, bar in bars do
+		tween(bar, 0.5, { Size = UDim2.fromScale(1, 0) }, Enum.EasingStyle.Quint)
+	end
+	if tier >= 5 then
+		Sfx.play("win")
+		confetti(layer, color, 10 + tier * 4)
+	end
 	if fx.rainbow then
 		local halo = frame(layer, UDim2.fromOffset(grown.X + 40, grown.Y + 40), center, WHITE)
 		halo.ZIndex = 4
@@ -715,10 +843,21 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 		Ui.gradient(banner, WHITE, color:Lerp(WHITE, 0.1), 90)
 	end
 	local bannerScale = Instance.new("UIScale")
-	bannerScale.Scale = 3
 	bannerScale.Parent = banner
-	tween(bannerScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
-	task.delay(if skip then 0 else 0.4, function()
+	banner.MaxVisibleGraphemes = 0
+	-- Sale letra a letra, cada una con un golpe; luego respira.
+	task.spawn(function()
+		if not skip then
+			local letters = utf8.len(banner.Text) or 0
+			for shown = 1, letters do
+				banner.MaxVisibleGraphemes = shown
+				bannerScale.Scale = 1.25
+				TweenService:Create(bannerScale, TweenInfo.new(0.08), { Scale = 1 }):Play()
+				Sfx.play("click")
+				task.wait(0.07)
+			end
+		end
+		banner.MaxVisibleGraphemes = -1
 		local clock = 0
 		everyFrame(banner, function(delta)
 			clock += delta
@@ -761,6 +900,10 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 	overlay.Enabled = false
 	footer.Visible = false
 	clearStage()
+	for _, bar in bars do
+		bar:Destroy()
+	end
+	camera.FieldOfView = fov
 	skip = false
 	showcasing = false
 end
@@ -814,7 +957,9 @@ local function spin(index: number, kept: boolean, luck: number, source: string, 
 	TweenService:Create(panelScale, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	-- El aura cuenta la suerte: lo que para este jugador es fácil no brilla.
 	local luckTier = tierIndex(odds)
-	if luckTier >= 5 then
+	if big then
+		-- La animación grande ya ha sonado.
+	elseif luckTier >= 5 then
 		Sfx.play("win")
 	elseif luckTier >= 3 then
 		Sfx.play("rare")
