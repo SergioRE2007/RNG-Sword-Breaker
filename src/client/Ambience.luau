@@ -1,7 +1,7 @@
 -- Pequeñas animaciones del decorado, solo en el cliente (no cuestan red ni servidor): las hojas
 -- de las palmeras se mecen, las nubes van girando despacio alrededor de la isla, la espuma de
 -- la orilla late, las espadas del expositor del hub giran y flotan, y unas gaviotas vuelan en
--- círculos. Scenery marca las piezas con etiquetas (Sway, Cloud, Foam, ShowcaseSword).
+-- círculos. Scenery marca las piezas con etiquetas (Sway, Cloud, Foam).
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
@@ -131,9 +131,6 @@ function Ambience.start()
 	local leaves = track("Sway", readPart)
 	local clouds = track("Cloud", readPart)
 	local foam = track("Foam", readPart)
-	local swords = track("ShowcaseSword", function(item)
-		return { pivot = (item :: Model):GetPivot(), phase = math.random() * math.pi * 2 }
-	end)
 
 	-- Mar: cada baldosa cambia de tono despacio, como reflejos que se mueven.
 	local sea = track("SeaTile", function(item)
@@ -380,14 +377,6 @@ function Ambience.start()
 		for piece, base in foam do
 			local wave = piece :: BasePart
 			wave.Transparency = 0.25 + (math.sin(now * 1.6 + base.phase) + 1) * 0.3
-		end
-
-		-- Espadas del expositor: giran despacio y suben y bajan.
-		for model, base in swords do
-			local position = base.pivot.Position + Vector3.new(0, math.sin(now * 1.2 + base.phase) * 0.8, 0)
-			local spin = CFrame.Angles(0, now * 0.5 + base.phase, 0)
-			local holder = model :: Model
-			holder:PivotTo(CFrame.new(position) * spin * base.pivot.Rotation)
 		end
 	end)
 end
