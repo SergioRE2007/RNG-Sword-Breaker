@@ -86,7 +86,8 @@ local function build(blade: BasePart)
 	if not def or auras[blade] then
 		return
 	end
-	local tier = tierIndex(def.rarity)
+	-- "AuraTier" (si lo pone SwordModel) limita el aura a la de ese nivel de rareza, para que sea más suave.
+	local tier = math.min(tierIndex(def.rarity), blade:GetAttribute("AuraTier") or math.huge)
 	if tier < SPARKLES_FROM then
 		return
 	end
