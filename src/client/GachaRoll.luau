@@ -43,11 +43,25 @@ local TIER_FX = {
 	{ glow = 0.1, rays = 12, sparkles = 16, shake = 7, rainbow = true }, -- Divina
 }
 
+-- Frase de la pantalla grande según lo rara que era la tirada para el jugador (misma posición).
+local EPIC_LINES = {
+	"¡Buena tirada!",
+	"¡La suerte está de tu lado!",
+	"¡Algo poderoso se acerca!",
+	"¡El destino te ha elegido!",
+	"¡Ha despertado una leyenda!",
+	"¡Los cielos se abren ante ti!",
+	"¡Nadie debía encontrar esto!",
+	"¡Los dioses se inclinan ante ti!",
+}
+
 local overlay: ScreenGui
 local stage: Frame -- lo de la animación grande; se mueve entero para temblar
 local dim: TextButton
 local footer: Frame
-local summary: TextLabel
+local summary: TextLabel -- frase épica
+local oddsLabel: TextLabel -- "1 ENTRE …" en grande
+local oddsScale: UIScale
 local skip = false
 local auto = false
 local rolling = false -- esperando a que acabe la tirada (cuenta el tiempo por tirada)
@@ -480,7 +494,7 @@ local function clearStage()
 	end
 end
 
-local function makeCard(parent: Instance, index: number, kept: boolean, odds: number, metal: number?, size: number?)
+local function makeCard(parent: Instance, index: number, kept: boolean, metal: number?, size: number?)
 	local sword = Config.Swords[index]
 	local tier = Rarity.tier(Permanent.rarity(index, metal, size))
 
@@ -525,12 +539,13 @@ local function makeCard(parent: Instance, index: number, kept: boolean, odds: nu
 	name.TextColor3 = (if metal and metal > 0 then Config.Metals[metal].color else sword.color):Lerp(WHITE, 0.35)
 	name.ZIndex = 8
 
-	local info = Ui.label(front, 18)
+	-- La probabilidad va en grande debajo de la carta; aquí solo el nivel de rareza.
+	local info = Ui.label(front, 24)
 	info.AnchorPoint = Vector2.new(0.5, 1)
-	info.Position = UDim2.new(0.5, 0, 1, -8)
-	info.Size = UDim2.new(1, -8, 0.2, 0)
-	info.TextWrapped = true
-	info.Text = `<font color="#{tier.color:ToHex()}">{tier.name}</font>\n1 entre {Format.short(math.max(odds, 1))}`
+	info.Position = UDim2.new(0.5, 0, 1, -10)
+	info.Size = UDim2.new(1, -8, 0.12, 0)
+	info.Text = string.upper(tier.name)
+	info.TextColor3 = tier.color:Lerp(WHITE, 0.25)
 	info.ZIndex = 8
 
 	if not kept then
@@ -636,7 +651,7 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 
 	local layer = frame(stage, UDim2.fromScale(1, 1), UDim2.fromScale(0.5, 0.5), BLACK)
 	layer.BackgroundTransparency = 1
-	local entry = makeCard(layer, index, kept, odds, metal, size)
+	local entry = makeCard(layer, index, kept, metal, size)
 	entry.card.Rotation = -25
 	tween(entry.card, 0.35, { Size = UDim2.fromOffset(CARD_SIZE.X, CARD_SIZE.Y), Rotation = 0 }, Enum.EasingStyle.Back)
 	wait(0.4)
@@ -674,20 +689,42 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 	flash(color, 0.1, 0.8)
 	shake(stage, 6 + (fx.shake or 0) * 2, 0.5)
 
-	local banner = Ui.label(layer, 64)
-	banner.AnchorPoint = Vector2.new(0.5, 0.5)
-	banner.Position = UDim2.new(0.5, 0, 0, 64)
-	banner.Size = UDim2.fromOffset(760, 80)
+	-- Halo del color de la rareza detrás de la carta, que late.
+	for layerIndex, spread in { 1.25, 1.7 } do
+		local glow = frame(layer, UDim2.fromOffset(grown.Y * spread, grown.Y * spread), center, color)
+		glow.BackgroundTransparency = 0.55 + layerIndex * 0.15
+		glow.ZIndex = 3
+		circle(glow)
+		local beat = TweenInfo.new(0.8 + layerIndex * 0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+		TweenService:Create(glow, beat, { Size = UDim2.fromOffset(grown.Y * spread * 1.12, grown.Y * spread * 1.12) }):Play()
+	end
+
+	-- Cartel del nivel de rareza justo encima de la carta: entra de golpe y luego respira.
+	local banner = Ui.label(layer, 72)
+	banner.AnchorPoint = Vector2.new(0.5, 1)
+	banner.Position = UDim2.new(0.5, 0, 0.45, -grown.Y / 2 - 14)
+	banner.Size = UDim2.fromOffset(760, 84)
 	banner.Text = `¡{string.upper(tierInfo.name)}!`
-	banner.TextColor3 = if fx.rainbow then WHITE else color:Lerp(WHITE, 0.2)
+	banner.TextColor3 = WHITE
 	banner.ZIndex = 30
+	local bannerStroke = banner:FindFirstChildOfClass("UIStroke") :: UIStroke
+	bannerStroke.Thickness = 5
 	if fx.rainbow then
 		rainbow(banner)
+	else
+		Ui.gradient(banner, WHITE, color:Lerp(WHITE, 0.1), 90)
 	end
 	local bannerScale = Instance.new("UIScale")
 	bannerScale.Scale = 3
 	bannerScale.Parent = banner
 	tween(bannerScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	task.delay(if skip then 0 else 0.4, function()
+		local clock = 0
+		everyFrame(banner, function(delta)
+			clock += delta
+			bannerScale.Scale = 1 + math.sin(clock * 4) * 0.04
+		end)
+	end)
 
 	if fx.sparkles then
 		task.spawn(function()
@@ -706,8 +743,12 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 		entry.shine.Visible = false
 	end
 
-	summary.Text = `¡1 entre {Format.short(math.max(odds, 1))} con tu suerte de gacha!`
+	summary.Text = EPIC_LINES[tier] or EPIC_LINES[#EPIC_LINES]
+	oddsLabel.Text = `1 ENTRE {Format.short(math.max(odds, 1))}`
+	oddsLabel.TextColor3 = color:Lerp(WHITE, 0.3)
 	footer.Visible = true
+	oddsScale.Scale = 2.5
+	tween(oddsScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
 
 	-- Espera a "Continuar" (en automático sigue sola).
 	local shown = os.clock()
@@ -920,20 +961,31 @@ local function buildOverlay()
 	footer.Name = "Footer"
 	footer.AnchorPoint = Vector2.new(0.5, 1)
 	footer.Position = UDim2.new(0.5, 0, 1, -30)
-	footer.Size = UDim2.fromOffset(460, 110)
+	footer.Size = UDim2.fromOffset(620, 170)
 	footer.BackgroundTransparency = 1
 	footer.Visible = false
 	footer.ZIndex = 20
 	footer.Parent = overlay
 
-	summary = Ui.label(footer, 24)
-	summary.Size = UDim2.new(1, 0, 0, 36)
+	summary = Ui.label(footer, 28)
+	summary.Size = UDim2.new(1, 0, 0, 34)
+	summary.TextColor3 = Color3.fromRGB(255, 220, 100)
 	summary.ZIndex = 21
+
+	oddsLabel = Ui.label(footer, 50)
+	oddsLabel.Name = "Odds"
+	oddsLabel.Position = UDim2.fromOffset(0, 34)
+	oddsLabel.Size = UDim2.new(1, 0, 0, 58)
+	oddsLabel.ZIndex = 21
+	local oddsStroke = oddsLabel:FindFirstChildOfClass("UIStroke") :: UIStroke
+	oddsStroke.Thickness = 4
+	oddsScale = Instance.new("UIScale")
+	oddsScale.Parent = oddsLabel
 
 	local continueButton = Ui.button(footer, "Continuar", Ui.COLORS.green)
 	continueButton.Name = "Continue"
 	continueButton.AnchorPoint = Vector2.new(0.5, 0)
-	continueButton.Position = UDim2.new(0.5, 0, 0, 46)
+	continueButton.Position = UDim2.new(0.5, 0, 0, 104)
 	continueButton.Size = UDim2.fromOffset(300, 62)
 	continueButton.TextSize = 24
 	continueButton.ZIndex = 21
