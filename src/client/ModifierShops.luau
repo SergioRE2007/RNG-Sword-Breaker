@@ -205,7 +205,7 @@ local function buildShop(kind: string)
 		end
 	end
 
-	local state = { selected = nil, auto = false, waiting = false, last = nil, stop = {} }
+	local state = { selected = nil, auto = false, waiting = false, last = nil, stop = {}, count = 1 }
 	for index in info.list do
 		state.stop[index] = Modifiers.percent(kind, index) < 1
 	end
@@ -281,6 +281,19 @@ local function buildShop(kind: string)
 	autoButton.Position = UDim2.fromOffset(230, 362)
 	autoButton.Size = UDim2.fromOffset(200, 74)
 	autoButton.TextSize = 26
+	-- Rasgos: tirar 1 o 3 de golpe (se queda con el más raro). Sirve también para la tirada automática.
+	local countButton = Ui.button(left, "x1", Ui.COLORS.gray)
+	countButton.Name = "Count"
+	countButton.TextSize = 30
+	if kind == "traits" then
+		rollButton.Size = UDim2.fromOffset(150, 74)
+		autoButton.Position = UDim2.fromOffset(176, 362)
+		autoButton.Size = UDim2.fromOffset(150, 74)
+		countButton.Position = UDim2.fromOffset(334, 362)
+		countButton.Size = UDim2.fromOffset(100, 74)
+	else
+		countButton.Visible = false
+	end
 	-- Engranaje: con qué resultados se para la tirada automática.
 	local settingsButton = Ui.button(left, "", Ui.COLORS.gray)
 	settingsButton.Name = "Settings"
@@ -529,7 +542,7 @@ local function buildShop(kind: string)
 
 	local function canAfford(): boolean
 		if kind == "traits" then
-			return (player:GetAttribute("Item_traitCrystal") or 0) >= 1
+			return (player:GetAttribute("Item_traitCrystal") or 0) >= state.count
 		end
 		return (player:GetAttribute("Gems") or 0) >= Config.GradeCost
 	end
@@ -564,7 +577,9 @@ local function buildShop(kind: string)
 			slotHint.Text = "Elige espada"
 		end
 		if kind == "traits" then
-			cost.Text = `Cristales de rasgo: {Format.short(player:GetAttribute("Item_traitCrystal") or 0)}  ·  1 por tirada`
+			cost.Text = `Cristales de rasgo: {Format.short(player:GetAttribute("Item_traitCrystal") or 0)}  ·  {state.count} por tirada`
+			countButton.Text = `x{state.count}`
+			countButton.BackgroundColor3 = if state.count == 3 then Ui.COLORS.orange else Ui.COLORS.gray
 		else
 			cost.Text = `Gemas: {Format.short(player:GetAttribute("Gems") or 0)}  ·  {Config.GradeCost} por tirada`
 		end
@@ -640,6 +655,197 @@ local function buildShop(kind: string)
 		end
 	end
 
+	-- Ruleta vertical (solo rasgos), como las cajas de CS2: una o tres columnas de rasgos que giran
+	-- muy rápido y frenan hasta parar cada una en su resultado; luego se destaca la mejor. Un clic
+	-- en la ruleta la salta.
+	local roulette: Frame? = nil
+	local rouletteTitle: TextLabel? = nil
+	local rouletteSkip = false
+	local ITEM_H = 60
+	local STRIP_ITEMS = 36
+	local LAND = 30 -- posición de la tira donde se para (la tira es larga para que haya recorrido)
+	local COLUMN_H = ITEM_H * 5
+	if kind == "traits" then
+		local frame = Instance.new("Frame")
+		frame.Name = "Roulette"
+		frame.Size = UDim2.new(0, LEFT, 0, 346)
+		frame.BackgroundColor3 = Ui.COLORS.body
+		frame.Visible = false
+		frame.ZIndex = 5
+		frame.Parent = body
+		Ui.round(frame, 10)
+		Ui.gradient(frame, Color3.fromRGB(62, 66, 86), Color3.fromRGB(30, 32, 44), 90)
+		roulette = frame
+		rouletteTitle = Ui.label(frame, 26)
+		rouletteTitle.Position = UDim2.fromOffset(0, 4)
+		rouletteTitle.Size = UDim2.new(1, 0, 0, 32)
+		rouletteTitle.ZIndex = 6
+		local skip = Instance.new("TextButton")
+		skip.Name = "Skip"
+		skip.Text = ""
+		skip.Size = UDim2.fromScale(1, 1)
+		skip.BackgroundTransparency = 1
+		skip.ZIndex = 20
+		skip.Parent = frame
+		skip.Activated:Connect(function()
+			rouletteSkip = true
+		end)
+	end
+
+	local function playRoulette(rolls: { number }, best: number)
+		local holder = roulette :: Frame
+		for _, child in holder:GetChildren() do
+			if child.Name == "Column" then
+				child:Destroy()
+			end
+		end
+		holder.Visible = true
+		rouletteSkip = false
+		local count = #rolls
+		;(rouletteTitle :: TextLabel).Text = if count > 1 then "¡Mejor de tres!" else "Tirando..."
+		;(rouletteTitle :: TextLabel).TextColor3 = WHITE
+		local width = if count == 1 then 230 else 150
+		local gap = 14
+		local start = (LEFT - (count * width + (count - 1) * gap)) / 2
+
+		local columns = {}
+		local bestColumn = table.find(rolls, best) or 1
+		for column = 1, count do
+			local box = Instance.new("Frame")
+			box.Name = "Column"
+			box.Position = UDim2.fromOffset(start + (column - 1) * (width + gap), 40)
+			box.Size = UDim2.fromOffset(width, COLUMN_H)
+			box.BackgroundColor3 = Ui.COLORS.dark
+			box.ClipsDescendants = true
+			box.ZIndex = 6
+			box.Parent = holder
+			Ui.round(box, 10)
+			local stroke = Ui.stroke(box, BLACK, 4)
+			local scale = Instance.new("UIScale")
+			scale.Parent = box
+
+			local strip = Instance.new("Frame")
+			strip.Name = "Strip"
+			strip.Size = UDim2.new(1, 0, 0, STRIP_ITEMS * ITEM_H)
+			strip.BackgroundTransparency = 1
+			strip.ZIndex = 6
+			strip.Parent = box
+			for place = 1, STRIP_ITEMS do
+				local entry = info.list[if place == LAND then rolls[column] else Modifiers.roll(kind, random)]
+				local item = Instance.new("Frame")
+				item.Position = UDim2.fromOffset(4, (place - 1) * ITEM_H + 3)
+				item.Size = UDim2.new(1, -8, 0, ITEM_H - 6)
+				item.BackgroundColor3 = WHITE
+				item.ZIndex = 7
+				item.Parent = strip
+				Ui.round(item, 8)
+				Ui.gradient(item, entry.color:Lerp(BLACK, 0.55), entry.color:Lerp(BLACK, 0.8), 90)
+				local edge = Ui.stroke(item, if entry.rainbow then WHITE else entry.color, 2)
+				if entry.rainbow then
+					rainbow(edge)
+				end
+				local name = Ui.label(item, 24)
+				name.Position = UDim2.fromScale(0, 0.04)
+				name.Size = UDim2.fromScale(1, 0.55)
+				name.TextScaled = true
+				name.ZIndex = 8
+				paintName(name, entry)
+				local limit = Instance.new("UITextSizeConstraint")
+				limit.MaxTextSize = 26
+				limit.Parent = name
+				local detail = Ui.label(item, 15)
+				detail.Position = UDim2.fromScale(0, 0.58)
+				detail.Size = UDim2.fromScale(1, 0.36)
+				detail.TextScaled = true
+				detail.TextColor3 = Color3.fromRGB(150, 240, 150)
+				detail.Text = Modifiers.effect(entry)
+				detail.ZIndex = 8
+				local detailLimit = Instance.new("UITextSizeConstraint")
+				detailLimit.MaxTextSize = 16
+				detailLimit.Parent = detail
+			end
+			-- Se funden arriba y abajo y una marca blanca señala la fila del centro.
+			for _, top in { true, false } do
+				local fade = Instance.new("Frame")
+				fade.AnchorPoint = Vector2.new(0, if top then 0 else 1)
+				fade.Position = UDim2.fromScale(0, if top then 0 else 1)
+				fade.Size = UDim2.new(1, 0, 0, ITEM_H * 1.4)
+				fade.BackgroundColor3 = Ui.COLORS.dark
+				fade.BorderSizePixel = 0
+				fade.ZIndex = 9
+				fade.Parent = box
+				local gradient = Instance.new("UIGradient")
+				gradient.Rotation = if top then 90 else -90
+				gradient.Transparency = NumberSequence.new(0.05, 1)
+				gradient.Parent = fade
+			end
+			local marker = Instance.new("Frame")
+			marker.Name = "Marker"
+			marker.Position = UDim2.fromOffset(0, COLUMN_H / 2 - ITEM_H / 2)
+			marker.Size = UDim2.new(1, 0, 0, ITEM_H)
+			marker.BackgroundTransparency = 1
+			marker.ZIndex = 10
+			marker.Parent = box
+			Ui.round(marker, 8)
+			Ui.stroke(marker, WHITE, 3)
+			for _, side in { 0, 1 } do
+				local arrow = Instance.new("Frame")
+				arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+				arrow.Position = UDim2.new(side, 0, 0.5, 0)
+				arrow.Size = UDim2.fromOffset(16, 16)
+				arrow.Rotation = 45
+				arrow.BackgroundColor3 = WHITE
+				arrow.BorderSizePixel = 0
+				arrow.ZIndex = 11
+				arrow.Parent = marker
+				Ui.stroke(arrow, BLACK, 2)
+			end
+
+			-- Frena de golpe al final (Quint): cuanto más a la derecha, más tarda en parar.
+			local final = COLUMN_H / 2 - (LAND - 0.5) * ITEM_H + (random:NextNumber() - 0.5) * ITEM_H * 0.5
+			local tween = TweenService:Create(strip, TweenInfo.new(2.2 + (column - 1) * 0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(0, final) })
+			tween:Play()
+			table.insert(columns, { box = box, strip = strip, tween = tween, final = final, stroke = stroke, scale = scale })
+		end
+
+		local finished = false
+		while not finished and not rouletteSkip do
+			finished = true
+			for _, column in columns do
+				if column.tween.PlaybackState == Enum.PlaybackState.Playing then
+					finished = false
+				end
+			end
+			task.wait()
+		end
+		for _, column in columns do
+			column.tween:Cancel()
+			column.strip.Position = UDim2.fromOffset(0, column.final)
+		end
+
+		-- Resultado: la mejor columna crece y brilla; las demás se apagan.
+		local entry = info.list[best]
+		for index, column in columns do
+			if index == bestColumn then
+				column.stroke.Color = if entry.rainbow then WHITE else entry.color
+				column.stroke.Thickness = 6
+				column.scale.Scale = 1.1
+				TweenService:Create(column.scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.04 }):Play()
+			else
+				local shade = Instance.new("Frame")
+				shade.Size = UDim2.fromScale(1, 1)
+				shade.BackgroundColor3 = BLACK
+				shade.BackgroundTransparency = 1
+				shade.ZIndex = 12
+				shade.Parent = column.box
+				TweenService:Create(shade, TweenInfo.new(0.3), { BackgroundTransparency = 0.45 }):Play()
+			end
+		end
+		;(rouletteTitle :: TextLabel).Text = entry.name
+		;(rouletteTitle :: TextLabel).TextColor3 = if entry.rainbow then WHITE else entry.color
+		task.wait(if rouletteSkip then 0.3 else 1)
+	end
+
 	local function request(): boolean
 		if state.waiting or not selectedCopy() or not canAfford() then
 			return false
@@ -647,7 +853,7 @@ local function buildShop(kind: string)
 		state.waiting = true
 		state.last = nil
 		if kind == "traits" then
-			Remotes.RollTrait:FireServer(state.selected)
+			Remotes.RollTrait:FireServer(state.selected, state.count)
 		else
 			Remotes.RollGrade:FireServer(state.selected)
 		end
@@ -677,14 +883,30 @@ local function buildShop(kind: string)
 			task.wait(AUTO_DELAY)
 		end
 		state.auto = false
+		if roulette then
+			roulette.Visible = false
+		end
 		refresh()
 	end
 
-	Remotes.ModifierRolled.OnClientEvent:Connect(function(rolledKind: string, id: number, index: number)
+	Remotes.ModifierRolled.OnClientEvent:Connect(function(rolledKind: string, id: number, index: number, rolls: { number }?)
 		if rolledKind ~= kind then
 			return
 		end
 		state.last = index
+		-- Rasgos: ruleta con todas las tiradas y, al acabar, el resultado de siempre.
+		if roulette and rolls and id == state.selected and window.Visible then
+			task.spawn(function()
+				playRoulette(rolls, index)
+				if not state.auto then
+					(roulette :: Frame).Visible = false
+				end
+				reveal(index)
+				state.waiting = false
+				refresh()
+			end)
+			return
+		end
 		if id == state.selected then
 			reveal(index)
 		end
@@ -706,6 +928,12 @@ local function buildShop(kind: string)
 			request()
 		end
 	end)
+	countButton.Activated:Connect(function()
+		if not state.waiting then
+			state.count = if state.count == 1 then 3 else 1
+			refresh()
+		end
+	end)
 	autoButton.Activated:Connect(function()
 		state.auto = not state.auto
 		refresh()
@@ -718,6 +946,9 @@ local function buildShop(kind: string)
 			state.auto = false
 			picker.Visible = false
 			stopper.Visible = false
+			if roulette then
+				roulette.Visible = false
+			end
 		end
 		refresh()
 	end)

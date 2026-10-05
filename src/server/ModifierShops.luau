@@ -19,37 +19,48 @@ local random = Random.new()
 local lastRoll = {} -- [player] = os.clock() de su última tirada
 
 -- Paga la tirada; devuelve false si no le llega.
-local function pay(player: Player, kind: string, data): boolean
+local function pay(player: Player, kind: string, data, tries: number): boolean
 	if kind == "traits" then
-		if data.items[CRYSTAL] < 1 then
+		if data.items[CRYSTAL] < tries then
 			return false
 		end
 		PlayerData.edit(player, function(edited)
-			edited.items[CRYSTAL] -= 1
+			edited.items[CRYSTAL] -= tries
 		end)
 		return true
 	end
 	return PlayerData.trySpendGems(player, Config.GradeCost)
 end
 
-local function onRoll(player: Player, kind: string, id: unknown)
+-- `count` = cuántas veces tira el rasgo de golpe (1 o 3, un cristal cada una): se queda con el más raro.
+local function onRoll(player: Player, kind: string, id: unknown, count: unknown)
 	local now = os.clock()
 	if now - (lastRoll[player] or 0) < Config.ModifierCooldown then
 		return
 	end
+	local tries = if kind == "traits" and count == 3 then 3 else 1
 	local data = PlayerData.read(player)
 	local copy = data and PlayerData.findSword(data, id)
-	if not copy or not pay(player, kind, data) then
+	if not copy or not pay(player, kind, data, tries) then
 		return
 	end
 	lastRoll[player] = now
 
 	local info = Modifiers.KINDS[kind]
-	local index = Modifiers.roll(kind, random)
+	local rolls = {}
+	local index = nil
+	for _ = 1, tries do
+		local rolled = Modifiers.roll(kind, random)
+		table.insert(rolls, rolled)
+		if not index or Modifiers.odds(kind, rolled) > Modifiers.odds(kind, index) then
+			index = rolled
+		end
+	end
 	PlayerData.edit(player, function()
 		copy[info.field] = index
 	end)
-	Remotes.ModifierRolled:FireClient(player, kind, id, index)
+	-- `rolls` = todas las tiradas, en orden, para que el cliente las enseñe en la ruleta.
+	Remotes.ModifierRolled:FireClient(player, kind, id, index, rolls)
 
 	local entry = info.list[index]
 	local odds = Modifiers.odds(kind, index)
@@ -152,8 +163,8 @@ function ModifierShops.start()
 	buildStall(map, "traits", at(112.5), { Color3.fromRGB(255, 90, 140), Color3.fromRGB(80, 200, 255), Color3.fromRGB(255, 220, 80), Color3.fromRGB(150, 110, 255) })
 	buildStall(map, "grades", at(157.5), { Color3.fromRGB(170, 90, 255), Color3.fromRGB(245, 245, 250) })
 
-	Remotes.RollTrait.OnServerEvent:Connect(function(player, id)
-		onRoll(player, "traits", id)
+	Remotes.RollTrait.OnServerEvent:Connect(function(player, id, count)
+		onRoll(player, "traits", id, count)
 	end)
 	Remotes.RollGrade.OnServerEvent:Connect(function(player, id)
 		onRoll(player, "grades", id)
