@@ -27,6 +27,8 @@ local GOLD = Color3.fromRGB(255, 215, 90)
 local GOOD = Color3.fromRGB(110, 230, 120)
 local BAD = Color3.fromRGB(255, 110, 110)
 local CLOSE_DISTANCE = 34 -- la ventana se cierra al alejarse del portal
+local CARD_WIDTH = 172 -- ancho de cada tarjeta de dificultad
+local CARD_GAP = 10
 
 -- Capas (la interfaz ordena el ZIndex globalmente; valores absolutos de este módulo).
 local Z_HURT = 40 -- destello rojo al recibir un golpe
@@ -114,27 +116,38 @@ local function buildMenu()
 	note.Size = UDim2.new(0.5, 0, 0, 32)
 	note.TextXAlignment = Enum.TextXAlignment.Right
 	note.TextColor3 = Color3.fromRGB(190, 195, 215)
-	note.Text = `{#cfg.Waves} oleadas · la última con jefe · {math.floor(cfg.TimeLimit / 60)} min`
+	note.Text = `{#Config.Dungeons} mazmorras · {#cfg.Waves} oleadas · la última con jefe · {math.floor(cfg.TimeLimit / 60)} min`
 
-	local row = Instance.new("Frame")
+	-- Las tarjetas van en una fila que se desliza de lado: caben CARDS_SHOWN a la vez.
+	local row = Instance.new("ScrollingFrame")
 	row.Name = "Cards"
 	row.Position = UDim2.fromOffset(10, 44)
-	row.Size = UDim2.new(1, -20, 1, -54)
+	row.Size = UDim2.new(1, -20, 1, -50)
 	row.BackgroundTransparency = 1
+	row.BorderSizePixel = 0
+	row.ScrollingDirection = Enum.ScrollingDirection.X
+	row.ScrollBarThickness = 10
+	row.ScrollBarImageColor3 = Color3.fromRGB(150, 130, 255)
+	row.CanvasSize = UDim2.new()
+	row.AutomaticCanvasSize = Enum.AutomaticSize.X
 	row.Parent = body
+	local rowPadding = Instance.new("UIPadding")
+	rowPadding.PaddingLeft = UDim.new(0, 4)
+	rowPadding.PaddingRight = UDim.new(0, 4)
+	rowPadding.PaddingTop = UDim.new(0, 4)
+	rowPadding.Parent = row
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.Padding = UDim.new(0, 10)
+	layout.Padding = UDim.new(0, CARD_GAP)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = row
 
-	local count = #Config.Dungeons
 	local cards = {}
 	for index, level in Config.Dungeons do
 		local card = Instance.new("Frame")
 		card.Name = "Card" .. index
 		card.LayoutOrder = index
-		card.Size = UDim2.new(1 / count, -10 * (count - 1) / count, 1, 0)
+		card.Size = UDim2.new(0, CARD_WIDTH, 1, -22) -- deja sitio a la barra de desplazamiento
 		card.BackgroundColor3 = WHITE
 		card.BorderSizePixel = 0
 		card.Parent = row
@@ -232,7 +245,19 @@ local function buildMenu()
 			card.enter.BackgroundColor3 = if strong and tough then Ui.COLORS.green elseif strong or tough then Ui.COLORS.orange else Ui.COLORS.red
 		end
 	end
-	window:GetPropertyChangedSignal("Visible"):Connect(refresh)
+	window:GetPropertyChangedSignal("Visible"):Connect(function()
+		refresh()
+		if window.Visible then
+			-- Se abre enseñando la dificultad más alta para la que te llega el daño (con una más fácil a su izquierda).
+			local best = 1
+			for index, level in Config.Dungeons do
+				if Stats.damage(player) >= level.hp then
+					best = index
+				end
+			end
+			row.CanvasPosition = Vector2.new(math.max(0, (best - 2) * (CARD_WIDTH + CARD_GAP)), 0)
+		end
+	end)
 	player.AttributeChanged:Connect(refresh)
 
 	-- Abrir junto al portal y cerrar al alejarse.
