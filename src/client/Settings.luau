@@ -59,7 +59,7 @@ end
 
 function Settings.start()
 	local gui = Ui.screen()
-	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 436))
+	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 436), Ui.gearIcon)
 
 	local list = Instance.new("Frame")
 	list.Size = UDim2.fromScale(1, 1)

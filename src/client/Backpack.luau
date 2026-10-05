@@ -194,7 +194,9 @@ local function artifactTip(index: number): (string, Color3)
 end
 
 function Backpack.start()
-	local window, body = Ui.window("Backpack", "Mochila", Vector2.new(740, 560))
+	local window, body = Ui.window("Backpack", "Mochila", Vector2.new(740, 560), function(parent)
+		Ui.backpackIcon(parent, Color3.fromRGB(240, 150, 60))
+	end)
 
 	-- Pestañas, pegadas al lado izquierdo de la ventana.
 	local panes = {}
@@ -220,14 +222,38 @@ function Backpack.start()
 			onShow[name]()
 		end
 	end
+	-- Cada pestaña lleva su icono (dibujado con marcos) encima del nombre.
+	local tabIcons = {
+		Swords = function(parent)
+			Ui.swordIcon(parent, Color3.fromRGB(235, 240, 250))
+		end,
+		Items = function(parent)
+			Ui.boxIcon(parent, Color3.fromRGB(255, 210, 90))
+		end,
+		Gear = function(parent)
+			Ui.gemIcon(parent, Color3.fromRGB(230, 170, 255))
+		end,
+	}
 	for order, entry in { { "Swords", "Espadas", Ui.COLORS.red }, { "Items", "Objetos", Ui.COLORS.blue }, { "Gear", "Equipo", Ui.COLORS.purple } } do
 		local name = entry[1]
 		panes[name] = pane(body, name)
-		local tab = Ui.button(window, entry[2], entry[3])
+		local tab = Ui.button(window, "", entry[3])
 		tab.Name = "Tab" .. name
 		tab.Position = UDim2.fromOffset(-108, 66 + (order - 1) * 78)
 		tab.Size = UDim2.fromOffset(96, 66)
-		tab.TextSize = 21
+		local iconBox = Instance.new("Frame")
+		iconBox.Name = "Icon"
+		iconBox.AnchorPoint = Vector2.new(0.5, 0)
+		iconBox.Position = UDim2.new(0.5, 0, 0, 3)
+		iconBox.Size = UDim2.fromOffset(36, 36)
+		iconBox.BackgroundTransparency = 1
+		iconBox.Parent = tab
+		tabIcons[name](iconBox)
+		local label = Ui.label(tab, 17)
+		label.AnchorPoint = Vector2.new(0.5, 1)
+		label.Position = UDim2.new(0.5, 0, 1, -4)
+		label.Size = UDim2.new(1, -6, 0, 20)
+		label.Text = entry[2]
 		tabs[name] = { button = tab, stroke = tab:FindFirstChildOfClass("UIStroke"), y = 66 + (order - 1) * 78 }
 		tab.Activated:Connect(function()
 			show(name)
