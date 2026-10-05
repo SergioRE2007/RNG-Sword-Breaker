@@ -710,6 +710,116 @@ function Ui.hex(parent: Instance, width: number, color: Color3)
 	return holder, pieces
 end
 
+-- Engranaje hecho con marcos (la fuente no tiene el icono): dientes, aro y agujero.
+function Ui.gearIcon(parent: GuiObject)
+	local holder = Instance.new("Frame")
+	holder.Name = "Gear"
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.Position = UDim2.fromScale(0.5, 0.5)
+	holder.Size = UDim2.fromOffset(40, 40)
+	holder.BackgroundTransparency = 1
+	holder.Parent = parent
+	local metal = Color3.fromRGB(230, 233, 240)
+	for tooth = 0, 3 do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Position = UDim2.fromScale(0.5, 0.5)
+		bar.Size = UDim2.fromOffset(44, 9)
+		bar.Rotation = tooth * 45
+		bar.BackgroundColor3 = metal
+		bar.BorderSizePixel = 0
+		bar.Parent = holder
+		Ui.round(bar, 3)
+	end
+	local wheel = Instance.new("Frame")
+	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
+	wheel.Position = UDim2.fromScale(0.5, 0.5)
+	wheel.Size = UDim2.fromOffset(28, 28)
+	wheel.BackgroundColor3 = metal
+	wheel.Parent = holder
+	Ui.round(wheel, 14)
+	Ui.stroke(wheel, BLACK, 2)
+	local hole = Instance.new("Frame")
+	hole.AnchorPoint = Vector2.new(0.5, 0.5)
+	hole.Position = UDim2.fromScale(0.5, 0.5)
+	hole.Size = UDim2.fromOffset(12, 12)
+	hole.BackgroundColor3 = Color3.fromRGB(80, 84, 98)
+	hole.Parent = wheel
+	Ui.round(hole, 6)
+	Ui.stroke(hole, BLACK, 2)
+	return holder
+end
+
+
+-- Deslizador horizontal (0 a 1): barra con relleno en degradado y un botón redondo que se arrastra
+-- con el ratón o el dedo. `onChange` recibe el valor al moverlo. Devuelve el marco y una función
+-- para ponerle un valor sin avisar.
+function Ui.slider(parent: Instance, initial: number, onChange: (number) -> ()): (Frame, (number) -> ())
+	local track = Instance.new("Frame")
+	track.Name = "Slider"
+	track.Size = UDim2.fromOffset(300, 22)
+	track.BackgroundColor3 = Ui.COLORS.dark
+	track.Parent = parent
+	Ui.round(track, 11)
+	Ui.stroke(track, BLACK, 3)
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.fromScale(initial, 1)
+	fill.BackgroundColor3 = WHITE
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	Ui.round(fill, 11)
+	Ui.gradient(fill, Color3.fromRGB(120, 235, 110), Color3.fromRGB(40, 170, 70), 90)
+	local knob = Instance.new("Frame")
+	knob.AnchorPoint = Vector2.new(0.5, 0.5)
+	knob.Position = UDim2.fromScale(initial, 0.5)
+	knob.Size = UDim2.fromOffset(34, 34)
+	knob.BackgroundColor3 = WHITE
+	knob.ZIndex = 3
+	knob.Parent = track
+	Ui.round(knob, 17)
+	Ui.stroke(knob, BLACK, 3)
+	Ui.gradient(knob, WHITE, Color3.fromRGB(190, 195, 215), 90)
+	-- Zona de agarre más alta que la barra (cómoda para el dedo).
+	local grab = Instance.new("TextButton")
+	grab.Text = ""
+	grab.AutoButtonColor = false
+	grab.BackgroundTransparency = 1
+	grab.AnchorPoint = Vector2.new(0.5, 0.5)
+	grab.Position = UDim2.fromScale(0.5, 0.5)
+	grab.Size = UDim2.new(1, 40, 0, 48)
+	grab.ZIndex = 4
+	grab.Parent = track
+
+	local function set(value: number)
+		value = math.clamp(value, 0, 1)
+		fill.Size = UDim2.fromScale(value, 1)
+		knob.Position = UDim2.fromScale(value, 0.5)
+	end
+	local dragging = false
+	local function drag(x: number)
+		local value = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+		set(value)
+		onChange(value)
+	end
+	grab.InputBegan:Connect(function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			drag(input.Position.X)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input: InputObject)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			drag(input.Position.X)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+	return track, set
+end
+
 -- Cartel flotante --------------------------------------------------------------------------
 
 local tip, tipStroke, tipSource

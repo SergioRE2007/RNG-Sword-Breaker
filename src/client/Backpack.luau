@@ -233,35 +233,12 @@ function Backpack.start()
 	-- Espadas ---------------------------------------------------------------------------
 	local swordsPane = panes.Swords
 
-	local autoText = Ui.label(swordsPane, 19)
-	autoText.Position = UDim2.fromOffset(12, 8)
-	autoText.Size = UDim2.fromOffset(330, 34)
-	autoText.TextXAlignment = Enum.TextXAlignment.Left
-	autoText.Text = "Vender solas las menos raras que 1 entre:"
-
-	local autoBox = Instance.new("TextBox")
-	autoBox.Name = "AutoSell"
-	autoBox.Position = UDim2.fromOffset(346, 8)
-	autoBox.Size = UDim2.fromOffset(130, 34)
-	autoBox.BackgroundColor3 = Ui.COLORS.dark
-	autoBox.TextColor3 = Color3.new(1, 1, 1)
-	autoBox.PlaceholderColor3 = Color3.fromRGB(140, 145, 165)
-	autoBox.PlaceholderText = "no vender"
-	autoBox.Font = Ui.FONT
-	autoBox.TextSize = 20
-	autoBox.ClearTextOnFocus = false
-	autoBox.Parent = swordsPane
-	Ui.round(autoBox, 8)
-	Ui.stroke(autoBox, Color3.new(0, 0, 0), 2)
-	autoBox.FocusLost:Connect(function()
-		-- Vacío = no vender. Admite "1000", "1.5K", "2M"...
-		local value = if autoBox.Text == "" then 0 else Format.parse(autoBox.Text)
-		if value then
-			Remotes.SetAutoSell:FireServer(value)
-		end
-		local shown = value or player:GetAttribute("AutoSell") or 0
-		autoBox.Text = if shown > 0 then Format.short(shown) else ""
-	end)
+	-- (La venta automática se cambia ahora en Ajustes.)
+	local title = Ui.label(swordsPane, 24)
+	title.Position = UDim2.fromOffset(14, 6)
+	title.Size = UDim2.fromOffset(300, 40)
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Text = "Tus espadas"
 
 	local count = Ui.label(swordsPane, 24)
 	count.Name = "Count"
@@ -583,11 +560,6 @@ function Backpack.start()
 			syncSwords(copies, equippedId)
 		end
 		refreshSelection(copies, equippedId)
-		if not autoBox:IsFocused() then
-			local autoSell = player:GetAttribute("AutoSell") or 0
-			autoBox.Text = if autoSell > 0 then Format.short(autoSell) else ""
-		end
-
 		for name, text in itemLabels do
 			text.Text = "x" .. Format.short(player:GetAttribute("Item_" .. name) or 0)
 		end

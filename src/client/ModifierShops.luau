@@ -89,46 +89,6 @@ local function displayOrder(kind: string)
 	return result
 end
 
--- Engranaje hecho con marcos (la fuente no tiene el icono): dientes, aro y agujero.
-local function gearIcon(parent: GuiObject)
-	local holder = Instance.new("Frame")
-	holder.Name = "Gear"
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.5)
-	holder.Size = UDim2.fromOffset(40, 40)
-	holder.BackgroundTransparency = 1
-	holder.Parent = parent
-	local metal = Color3.fromRGB(230, 233, 240)
-	for tooth = 0, 3 do
-		local bar = Instance.new("Frame")
-		bar.AnchorPoint = Vector2.new(0.5, 0.5)
-		bar.Position = UDim2.fromScale(0.5, 0.5)
-		bar.Size = UDim2.fromOffset(44, 9)
-		bar.Rotation = tooth * 45
-		bar.BackgroundColor3 = metal
-		bar.BorderSizePixel = 0
-		bar.Parent = holder
-		Ui.round(bar, 3)
-	end
-	local wheel = Instance.new("Frame")
-	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
-	wheel.Position = UDim2.fromScale(0.5, 0.5)
-	wheel.Size = UDim2.fromOffset(28, 28)
-	wheel.BackgroundColor3 = metal
-	wheel.Parent = holder
-	Ui.round(wheel, 14)
-	Ui.stroke(wheel, BLACK, 2)
-	local hole = Instance.new("Frame")
-	hole.AnchorPoint = Vector2.new(0.5, 0.5)
-	hole.Position = UDim2.fromScale(0.5, 0.5)
-	hole.Size = UDim2.fromOffset(12, 12)
-	hole.BackgroundColor3 = Color3.fromRGB(80, 84, 98)
-	hole.Parent = wheel
-	Ui.round(hole, 6)
-	Ui.stroke(hole, BLACK, 2)
-	return holder
-end
-
 -- Icono de una entrada: la letra del grado, o un dibujo según lo que sube el rasgo.
 local function entryIcon(parent: GuiObject, kind: string, entry)
 	if kind == "grades" then
@@ -299,7 +259,7 @@ local function buildShop(kind: string)
 	settingsButton.Name = "Settings"
 	settingsButton.Position = UDim2.fromOffset(442, 362)
 	settingsButton.Size = UDim2.fromOffset(66, 74)
-	gearIcon(settingsButton)
+	Ui.gearIcon(settingsButton)
 
 	-- Capas que tapan la parte izquierda: elegir espada y elegir con qué se para el automático.
 	local function overlay(name: string, titleText: string): (Frame, ScrollingFrame)
