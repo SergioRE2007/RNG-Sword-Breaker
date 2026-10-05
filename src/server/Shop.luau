@@ -5,6 +5,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local PlayerData = require(script.Parent.PlayerData)
+local Missions = require(script.Parent.Missions)
 
 local Shop = {}
 
@@ -23,6 +24,7 @@ local function buy(player: Player, name: string): boolean
 		return false
 	end
 	PlayerData.setUpgrade(player, name, level + 1)
+	Missions.add(player, "upgrades")
 	return true
 end
 

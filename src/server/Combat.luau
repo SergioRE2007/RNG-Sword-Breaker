@@ -10,6 +10,7 @@ local Gacha = require(script.Parent.Gacha)
 local Gear = require(script.Parent.Gear)
 local Traits = require(script.Parent.Traits)
 local PlayerData = require(script.Parent.PlayerData)
+local Missions = require(script.Parent.Missions)
 
 local Combat = {}
 
@@ -49,6 +50,7 @@ local function onSwing(player: Player)
 		local broken, coins, gems = Destructibles.damage(part, damage, player)
 		if broken then
 			PlayerData.addCoins(player, coins)
+			Missions.add(player, "breaks")
 			if gems > 0 then
 				PlayerData.addGems(player, gems)
 			end

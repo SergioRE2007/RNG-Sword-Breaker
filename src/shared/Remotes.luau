@@ -24,6 +24,7 @@ local NAMES = {
 	"Notice", -- servidor -> cliente: (text, color) aviso en pantalla solo para él
 	"Announce", -- servidor -> clientes: (text, color) aviso de algo muy raro
 	"Rebirth", -- cliente -> servidor: pagar el siguiente renacimiento (solo monedas, no quita nada)
+	"ClaimMission", -- cliente -> servidor: (periodo "daily" o "weekly", id de la misión) cobrar la recompensa de una misión cumplida
 }
 
 local Remotes = {}

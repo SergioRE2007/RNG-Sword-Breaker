@@ -110,9 +110,11 @@ Config.Gacha = {
 
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
 -- (los que dan gemas) al romperse.
-Config.ItemOrder = { "traitCrystal" }
+Config.ItemOrder = { "traitCrystal", "missionToken" }
 Config.Items = {
 	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.2, color = Color3.fromRGB(90, 230, 255) },
+	-- Moneda gratuita (f2p) que dan las misiones diarias y semanales. De momento no se gasta en nada: en el futuro servirá para comprar cosas difíciles o pases. No cae de los objetos (sin dropChance).
+	missionToken = { name = "Ficha de misión", description = "La dan las misiones diarias y semanales. Más adelante servirá para comprar cosas difíciles de conseguir.", color = Color3.fromRGB(255, 190, 60) },
 }
 
 -- Rasgos de espada (tienda de Rasgos del hub). Se tiran con un Cristal de rasgo; "chance" = peso
