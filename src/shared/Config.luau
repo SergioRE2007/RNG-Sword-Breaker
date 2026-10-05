@@ -157,6 +157,11 @@ Config.Grades = {
 Config.GradeCost = 25 -- gemas por tirada de grado
 Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grado
 
+-- Renacimiento: solo cuesta monedas y no quita nada (ni monedas ganadas, ni espadas, ni mejoras). Cada uno
+-- multiplica para siempre (por cada renacimiento, ese número elevado a los renacimientos que lleve).
+-- El precio del siguiente = cost * growth ^ renacimientos. Números puestos a ojo, sin equilibrar.
+Config.Rebirth = { cost = 2e5, growth = 12, coins = 2, damage = 2, luck = 1.5, gachaLuck = 1.5 }
+
 -- Artefactos (equipo). Pueden caer al romper cualquier objeto ("rarity" = 1 entre N, la
 -- suerte de parcela multiplica la probabilidad). "stat": damage, luck (parcela y gacha),
 -- coins o gems. No cambies el orden: el guardado usa la posición en la lista.

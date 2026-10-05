@@ -793,6 +793,19 @@ function Ui.backpackIcon(parent: Instance, color: Color3)
 	piece(body, UDim2.fromScale(0.22, 0.16), UDim2.fromScale(0.5, 0.42), Color3.fromRGB(245, 200, 60), 4)
 end
 
+
+-- Estrella dorada de ocho puntas (dos cuadrados, uno girado) con brillo: icono del renacimiento.
+function Ui.starIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	for _, turn in { 0, 45 } do
+		local square = piece(holder, UDim2.fromScale(0.62, 0.62), UDim2.fromScale(0.5, 0.5), color, 6)
+		square.Rotation = turn
+		Ui.gradient(square, WHITE, Color3.fromRGB(190, 170, 120), 90)
+	end
+	local core = piece(holder, UDim2.fromScale(0.34, 0.34), UDim2.fromScale(0.5, 0.5), color:Lerp(WHITE, 0.55), 100)
+	core.ZIndex = 3
+end
 -- Mejoras: hexágono (como los nodos del árbol) con una flecha doble hacia arriba.
 function Ui.upgradeIcon(parent: Instance, color: Color3)
 	local holder = iconHolder(parent, 0)

@@ -344,6 +344,9 @@ function Hud.start()
 		{ "Backpack", "Mochila", Ui.COLORS.blue, function(parent)
 			Ui.backpackIcon(parent, Color3.fromRGB(240, 150, 60))
 		end },
+		{ "Rebirth", "Renacer", Ui.COLORS.orange, function(parent)
+			Ui.starIcon(parent, Color3.fromRGB(255, 235, 120))
+		end },
 		{ "Upgrades", "Mejoras", Ui.COLORS.green, function(parent)
 			Ui.upgradeIcon(parent, Color3.fromRGB(255, 205, 60))
 		end },

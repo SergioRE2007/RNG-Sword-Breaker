@@ -23,6 +23,7 @@ local NAMES = {
 	"ToggleGear", -- cliente -> servidor: (artifactIndex) equipar o quitar un artefacto
 	"Notice", -- servidor -> cliente: (text, color) aviso en pantalla solo para él
 	"Announce", -- servidor -> clientes: (text, color) aviso de algo muy raro
+	"Rebirth", -- cliente -> servidor: pagar el siguiente renacimiento (solo monedas, no quita nada)
 }
 
 local Remotes = {}
