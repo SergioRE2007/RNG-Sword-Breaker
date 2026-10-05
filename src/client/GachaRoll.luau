@@ -419,51 +419,6 @@ local function characterAura(who: Player?, _index: number, odds: number)
 	end)
 end
 
--- Máquina del hub: el orbe se hincha, brilla y suelta chispas (solo lo ve quien tira) -------
-
-local sparks: ParticleEmitter?
-local orbRest -- tamaño, color y luz del orbe en reposo, para volver siempre a ellos
-
-local function machineEffect(color: Color3)
-	local map = workspace:FindFirstChild("Map")
-	local machine = map and map:FindFirstChild("Gacha")
-	local orb = machine and machine:FindFirstChild("Orb") :: BasePart?
-	if not orb then
-		return
-	end
-	if not sparks then
-		local emitter = Instance.new("ParticleEmitter")
-		emitter.Enabled = false
-		emitter.Lifetime = NumberRange.new(0.6, 1.2)
-		emitter.Speed = NumberRange.new(14, 26)
-		emitter.SpreadAngle = Vector2.new(180, 180)
-		emitter.Drag = 3
-		emitter.LightEmission = 1
-		emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0) })
-		emitter.Parent = orb
-		sparks = emitter
-	end
-	local emitter = sparks :: ParticleEmitter
-	emitter.Color = ColorSequence.new(WHITE, color)
-	emitter:Emit(30)
-	local light = orb:FindFirstChildOfClass("PointLight")
-	-- Se parte siempre del reposo para que dos tiradas seguidas no lo dejen hinchado.
-	if not orbRest then
-		orbRest = { size = orb.Size, color = orb.Color, brightness = light and light.Brightness, range = light and light.Range }
-	end
-	orb.Size = orbRest.size
-	orb.Color = orbRest.color
-	if light then
-		light.Brightness = orbRest.brightness
-		light.Range = orbRest.range
-	end
-	local info = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, true)
-	TweenService:Create(orb, info, { Size = orbRest.size * 1.4, Color = color }):Play()
-	if light then
-		TweenService:Create(light, info, { Brightness = 6, Range = 40 }):Play()
-	end
-end
-
 -- Panel del gacha (arriba) --------------------------------------------------------------
 
 local panel: Frame -- contenedor (no tiembla)
@@ -668,8 +623,6 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 	overlay.Enabled = true
 	dim.BackgroundTransparency = 1
 	tween(dim, 0.4, { BackgroundTransparency = 0.12 })
-	machineEffect(color)
-
 	-- Bandas negras de cine arriba y abajo; se retiran al destapar la carta.
 	local bars = {}
 	for _, edge in { 0, 1 } do
@@ -965,9 +918,6 @@ local function spin(index: number, kept: boolean, luck: number, source: string, 
 		Sfx.play("rare")
 	end
 	panelAura(luckTier, Rarity.tier(odds).color)
-	if luckTier >= 3 and not big then
-		machineEffect(Rarity.tier(odds).color)
-	end
 	spinning = false
 
 	-- Pasado un rato, el panel vuelve a su estado de reposo.

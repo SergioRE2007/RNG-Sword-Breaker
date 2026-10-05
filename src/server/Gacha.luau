@@ -1,5 +1,5 @@
--- Gacha de espadas: tiradas gratis desde cualquier sitio (una cada Stats.rollTime segundos),
--- máquina decorativa en el centro del hub e inventario (equipar, vender y venta automática).
+-- Gacha de espadas: tiradas gratis desde cualquier sitio (una cada Stats.rollTime segundos)
+-- e inventario (equipar, vender y venta automática). No hay nada suyo en el mapa.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Chance = require(ReplicatedStorage.Shared.Chance)
@@ -12,8 +12,6 @@ local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
 
 local Gacha = {}
-
-local machinePosition = Vector3.new(0, Config.Plot.FloorHeight, 0)
 
 -- Armas que salen en el gacha, de la más rara a la más común (Config.Swords no va ordenada por rareza).
 local pool = {}
@@ -179,56 +177,7 @@ local function onSetAutoSell(player: Player, rarity: unknown)
 	end)
 end
 
-local function buildMachine(parent: Instance)
-	local model = Instance.new("Model")
-	model.Name = "Gacha"
-
-	local base = Instance.new("Part")
-	base.Name = "Base"
-	base.Shape = Enum.PartType.Cylinder
-	base.Anchored = true
-	base.Size = Vector3.new(3, 7, 7)
-	base.CFrame = CFrame.new(machinePosition + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	base.Color = Color3.fromRGB(60, 50, 90)
-	base.Material = Enum.Material.Metal
-	base.Parent = model
-
-	local orb = Instance.new("Part")
-	orb.Name = "Orb"
-	orb.Shape = Enum.PartType.Ball
-	orb.Anchored = true
-	orb.Size = Vector3.new(5, 5, 5)
-	orb.Position = machinePosition + Vector3.new(0, 5.5, 0)
-	orb.Color = Color3.fromRGB(190, 110, 255)
-	orb.Material = Enum.Material.Neon
-	orb.Parent = model
-
-	local light = Instance.new("PointLight")
-	light.Color = orb.Color
-	light.Range = 24
-	light.Parent = orb
-
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(320, 76)
-	gui.StudsOffset = Vector3.new(0, 5.5, 0)
-	gui.MaxDistance = 250
-	gui.Parent = orb
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.fromRGB(255, 225, 60)
-	label.TextStrokeTransparency = 0
-	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 28
-	label.Text = "Gacha de espadas\n¡Gratis!"
-	label.Parent = gui
-
-	model.Parent = parent
-end
-
 function Gacha.start()
-	buildMachine(workspace:WaitForChild("Map"))
 	Remotes.RollGacha.OnServerEvent:Connect(onRoll)
 	Remotes.GachaRevealed.OnServerEvent:Connect(onRevealed)
 	Remotes.EquipSword.OnServerEvent:Connect(onEquip)

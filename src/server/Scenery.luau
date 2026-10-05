@@ -1,16 +1,11 @@
 -- Ambiente y decorado: una isla tropical. Mar turquesa a cuadros, playa, césped a cuadros,
--- palmeras, rocas, colinas y nubes de fondo, caminos con balizas, plaza del hub y un expositor con
--- las espadas más raras. Todo es decoración: no afecta al juego.
+-- palmeras, rocas, colinas y nubes de fondo, caminos con balizas y la plaza del hub (vacía en el
+-- centro, a petición del usuario). Todo es decoración: no afecta al juego.
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Format = require(ReplicatedStorage.Shared.Format)
-local Rarity = require(ReplicatedStorage.Shared.Rarity)
-local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
-
-local SHOWCASE_SCALE = 2 -- tamaño de las espadas del expositor respecto a las de mano
 
 local Scenery = {}
 
@@ -429,46 +424,6 @@ local function plaza(parent: Instance, radius: number)
 	end
 end
 
--- Expositor: pedestal con una espada gigante flotando y su rareza en un cartel.
-local function showcase(parent: Instance, position: Vector3, level: number)
-	local sword = Config.Swords[level]
-	local tier = Rarity.tier(sword.rarity)
-	disc(parent, "Pedestal", position, 5, 0.4, 2, Color3.fromRGB(245, 245, 250), Enum.Material.Marble)
-	disc(parent, "PedestalTop", position, 4, 2, 2.6, tier.color, Enum.Material.SmoothPlastic)
-
-	local base = CFrame.new(position + Vector3.new(0, 6, 0)) * CFrame.Angles(0, math.atan2(position.X, position.Z), 0) * CFrame.Angles(0, 0, math.rad(12))
-	local bladeLength = sword.bladeLength * SHOWCASE_SCALE
-	-- El modelo es ancho en Z: se gira para que enseñe la cara plana hacia el hub.
-	-- En un modelo propio para que el cliente (Ambience) la haga girar y flotar.
-	local holder = Instance.new("Model")
-	holder.Name = "ShowcaseSword"
-	holder.Parent = parent
-	local _, blade = SwordModel.build(level, holder, base * CFrame.Angles(0, math.rad(90), 0), SHOWCASE_SCALE, true)
-	holder.WorldPivot = CFrame.new(base.Position)
-	CollectionService:AddTag(holder, "ShowcaseSword")
-
-	local light = Instance.new("PointLight")
-	light.Color = tier.color
-	light.Range = 16
-	light.Parent = blade
-
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(280, 70)
-	gui.StudsOffset = Vector3.new(0, bladeLength / 2 + 4, 0)
-	gui.MaxDistance = 220
-	gui.Parent = blade
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.RichText = true
-	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 24
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.TextStrokeTransparency = 0
-	label.Text = `<font color="#{tier.color:ToHex()}">1 entre {Format.short(sword.rarity)}</font>\n{sword.name}`
-	label.Parent = gui
-end
-
 local function ring(count: number, radius: number, phase: number, callback: (Vector3, number) -> ())
 	for index = 1, count do
 		local angle = (index - 1 + phase) / count * math.pi * 2
@@ -495,24 +450,6 @@ function Scenery.start()
 	ring(cfg.Count, 1, 0, function(direction, index)
 		local color = Color3.fromHSV((index - 1) / cfg.Count, 0.65, 1)
 		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, color)
-	end)
-
-	-- Expositor del hub: las espadas más raras, en círculo alrededor del gacha.
-	local shown = 6
-	local rarest = {}
-	for level, sword in Config.Swords do
-		if sword.rarity then
-			table.insert(rarest, level)
-		end
-	end
-	table.sort(rarest, function(a, b)
-		return Config.Swords[a].rarity < Config.Swords[b].rarity
-	end)
-	ring(shown, cfg.HubRadius * 0.55, 0.5, function(position, index)
-		local level = rarest[#rarest - shown + index]
-		if level then
-			showcase(folder, position, level)
-		end
 	end)
 
 	-- Palmeras, arbustos y rocas entre las parcelas (huecos del anillo).
