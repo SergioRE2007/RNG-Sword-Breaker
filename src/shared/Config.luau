@@ -32,8 +32,10 @@ Config.WeaponKinds = {
 -- REGLA DE EQUILIBRIO (rareza -> daño): cada vez que la rareza se multiplica por 2, el daño sube un 50 %
 -- (rareza 2 = daño 1, rareza 4 = 1,5, rareza 8 = 2,25...), o sea daño = 1.5 ^ log2(rareza / 2), multiplicado
 -- por la cadencia del tipo de arma (hacha x1.7, dobles x0.55, lanza x1.1, martillo x2.2) para que el daño por
--- segundo sea parecido entre tipos. Las 40 armas del gacha van en escalera, cada una ~x2.8 más rara que la
--- anterior (de 5.5 a 1e18): no hay saltos grandes. Los objetos (Config.Destructibles) tienen la vida
+-- segundo sea parecido entre tipos. Las 40 armas del gacha van en una escalera que se va abriendo (curva de
+-- dificultad pedida: muy rápida al principio para enganchar y cada vez más cuesta): la primera es solo ~x1.6 más
+-- rara que la anterior (una nueva cada pocas tiradas) y la última ~x4.9. Va de 3 a 6e17, sin saltos grandes.
+-- Los objetos (Config.Destructibles) tienen la vida
 -- reescalada a esta curva (vida = vida anterior ^ 0.47). Al añadir un arma, calcula su daño con la regla.
 -- La primera es la inicial y no sale en el gacha.
 -- "rarity" = 1 entre N de que salga en cada tirada (se prueba de la más rara a la más común).
@@ -42,49 +44,49 @@ Config.WeaponKinds = {
 -- No cambies el orden: el inventario guardado usa la posición en esta lista. Lo nuevo va al final.
 Config.Swords = {
 	{ name = "Espada de madera", damage = 1, bladeLength = 3, color = Color3.fromRGB(150, 105, 60), material = Enum.Material.Wood },
-	{ name = "Espada de piedra", damage = 1.81, rarity = 5.54, bladeLength = 3.4, color = Color3.fromRGB(130, 130, 135), material = Enum.Material.Slate },
-	{ name = "Espada de hierro", damage = 3.29, rarity = 15.3, bladeLength = 3.8, color = Color3.fromRGB(200, 205, 210), material = Enum.Material.Metal },
-	{ name = "Espada de acero", damage = 19.7, rarity = 326, bladeLength = 4.3, color = Color3.fromRGB(120, 160, 200), material = Enum.Material.Metal },
-	{ name = "Espada de oro", damage = 118, rarity = 6930, bladeLength = 4.8, color = Color3.fromRGB(255, 200, 50), material = Enum.Material.Foil },
-	{ name = "Espada de diamante", damage = 214, rarity = 19200, bladeLength = 5.4, color = Color3.fromRGB(90, 230, 255), material = Enum.Material.Glass },
-	{ name = "Espada de plasma", damage = 1280, rarity = 408000, bladeLength = 6.2, color = Color3.fromRGB(255, 70, 220), material = Enum.Material.Neon },
-	{ name = "Espada del vacío", damage = 7630, rarity = 8.67e6, bladeLength = 7.5, color = Color3.fromRGB(120, 60, 255), material = Enum.Material.Neon },
-	{ name = "Espada solar", damage = 13800, rarity = 2.4e7, bladeLength = 7.8, color = Color3.fromRGB(255, 150, 30), material = Enum.Material.Neon },
-	{ name = "Espada de cometa", damage = 150000, rarity = 1.41e9, bladeLength = 8, color = Color3.fromRGB(170, 240, 255), material = Enum.Material.Ice },
-	{ name = "Espada nebulosa", damage = 898000, rarity = 3.01e10, bladeLength = 8.2, color = Color3.fromRGB(230, 90, 160), material = Enum.Material.ForceField },
-	{ name = "Espada galáctica", damage = 1.77e7, rarity = 4.9e12, bladeLength = 8.4, color = Color3.fromRGB(60, 90, 255), material = Enum.Material.Neon },
-	{ name = "Espada cuántica", damage = 3.21e7, rarity = 1.36e13, bladeLength = 8.6, color = Color3.fromRGB(60, 255, 170), material = Enum.Material.ForceField },
-	{ name = "Espada del cosmos", damage = 6.31e8, rarity = 2.21e15, bladeLength = 8.8, color = Color3.fromRGB(20, 20, 40), material = Enum.Material.Glass },
-	{ name = "Espada del origen", damage = 1.15e9, rarity = 6.13e15, bladeLength = 9, color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
-	{ name = "Espada del infinito", damage = 2.26e10, rarity = 1e18, bladeLength = 9.5, color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
+	{ name = "Espada de piedra", damage = 1.27, rarity = 3, bladeLength = 3.4, color = Color3.fromRGB(130, 130, 135), material = Enum.Material.Slate },
+	{ name = "Espada de hierro", damage = 1.65, rarity = 4.7, bladeLength = 3.8, color = Color3.fromRGB(200, 205, 210), material = Enum.Material.Metal },
+	{ name = "Espada de acero", damage = 4.03, rarity = 21.7, bladeLength = 4.3, color = Color3.fromRGB(120, 160, 200), material = Enum.Material.Metal },
+	{ name = "Espada de oro", damage = 11.5, rarity = 131, bladeLength = 4.8, color = Color3.fromRGB(255, 200, 50), material = Enum.Material.Foil },
+	{ name = "Espada de diamante", damage = 17, rarity = 254, bladeLength = 5.4, color = Color3.fromRGB(90, 230, 255), material = Enum.Material.Glass },
+	{ name = "Espada de plasma", damage = 60.3, rarity = 2210, bladeLength = 6.2, color = Color3.fromRGB(255, 70, 220), material = Enum.Material.Neon },
+	{ name = "Espada del vacío", damage = 249, rarity = 25000, bladeLength = 7.5, color = Color3.fromRGB(120, 60, 255), material = Enum.Material.Neon },
+	{ name = "Espada solar", damage = 415, rarity = 59800, bladeLength = 7.8, color = Color3.fromRGB(255, 150, 30), material = Enum.Material.Neon },
+	{ name = "Espada de cometa", damage = 3790, rarity = 2.62e6, bladeLength = 8, color = Color3.fromRGB(170, 240, 255), material = Enum.Material.Ice },
+	{ name = "Espada nebulosa", damage = 23900, rarity = 6.11e7, bladeLength = 8.2, color = Color3.fromRGB(230, 90, 160), material = Enum.Material.ForceField },
+	{ name = "Espada galáctica", damage = 732000, rarity = 2.12e10, bladeLength = 8.4, color = Color3.fromRGB(60, 90, 255), material = Enum.Material.Neon },
+	{ name = "Espada cuántica", damage = 1.53e6, rarity = 7.48e10, bladeLength = 8.6, color = Color3.fromRGB(60, 255, 170), material = Enum.Material.ForceField },
+	{ name = "Espada del cosmos", damage = 7.94e7, rarity = 6.39e13, bladeLength = 8.8, color = Color3.fromRGB(20, 20, 40), material = Enum.Material.Glass },
+	{ name = "Espada del origen", damage = 1.84e8, rarity = 2.7e14, bladeLength = 9, color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
+	{ name = "Espada del infinito", damage = 1.62e10, rarity = 5.67e17, bladeLength = 9.5, color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
 	-- Hachas, espadas dobles y lanzas (añadidas después: por eso no van ordenadas por rareza).
-	{ name = "Hacha de leñador", kind = "axe", damage = 10.2, rarity = 42.5, bladeLength = 3.5, color = Color3.fromRGB(170, 175, 185), material = Enum.Material.Metal },
-	{ name = "Dagas gemelas", kind = "dual", damage = 5.97, rarity = 118, bladeLength = 2.4, color = Color3.fromRGB(190, 200, 215), material = Enum.Material.Metal },
-	{ name = "Lanza de caza", kind = "spear", damage = 39.3, rarity = 903, bladeLength = 9, color = Color3.fromRGB(205, 210, 220), material = Enum.Material.Metal },
-	{ name = "Hacha de guerra", kind = "axe", damage = 659, rarity = 53200, bladeLength = 4.5, color = Color3.fromRGB(200, 70, 60), material = Enum.Material.Metal },
-	{ name = "Sables gemelos", kind = "dual", damage = 386, rarity = 147000, bladeLength = 3.6, color = Color3.fromRGB(80, 210, 160), material = Enum.Material.Foil },
-	{ name = "Lanza de jade", kind = "spear", damage = 4620, rarity = 3.13e6, bladeLength = 11, color = Color3.fromRGB(70, 200, 130), material = Enum.Material.Glass },
-	{ name = "Hacha volcánica", kind = "axe", damage = 77400, rarity = 1.84e8, bladeLength = 5.5, color = Color3.fromRGB(255, 110, 30), material = Enum.Material.Neon },
-	{ name = "Hojas del eclipse", kind = "dual", damage = 45500, rarity = 5.11e8, bladeLength = 5, color = Color3.fromRGB(150, 80, 255), material = Enum.Material.Neon },
-	{ name = "Lanza del rayo", kind = "spear", damage = 300000, rarity = 3.92e9, bladeLength = 13, color = Color3.fromRGB(255, 240, 90), material = Enum.Material.Neon },
+	{ name = "Hacha de leñador", kind = "axe", damage = 3.71, rarity = 7.6, bladeLength = 3.5, color = Color3.fromRGB(170, 175, 185), material = Enum.Material.Metal },
+	{ name = "Dagas gemelas", kind = "dual", damage = 1.62, rarity = 12.7, bladeLength = 2.4, color = Color3.fromRGB(190, 200, 215), material = Enum.Material.Metal },
+	{ name = "Lanza de caza", kind = "spear", damage = 6.2, rarity = 38.4, bladeLength = 9, color = Color3.fromRGB(205, 210, 220), material = Enum.Material.Metal },
+	{ name = "Hacha de guerra", kind = "axe", damage = 43.3, rarity = 507, bladeLength = 4.5, color = Color3.fromRGB(200, 70, 60), material = Enum.Material.Metal },
+	{ name = "Sables gemelos", kind = "dual", damage = 21.3, rarity = 1040, bladeLength = 3.6, color = Color3.fromRGB(80, 210, 160), material = Enum.Material.Foil },
+	{ name = "Lanza de jade", kind = "spear", damage = 168, rarity = 10800, bladeLength = 11, color = Color3.fromRGB(70, 200, 130), material = Enum.Material.Glass },
+	{ name = "Hacha volcánica", kind = "axe", damage = 2060, rarity = 373000, bladeLength = 5.5, color = Color3.fromRGB(255, 110, 30), material = Enum.Material.Neon },
+	{ name = "Hojas del eclipse", kind = "dual", damage = 1170, rarity = 973000, bladeLength = 5, color = Color3.fromRGB(150, 80, 255), material = Enum.Material.Neon },
+	{ name = "Lanza del rayo", kind = "spear", damage = 7570, rarity = 7.27e6, bladeLength = 13, color = Color3.fromRGB(255, 240, 90), material = Enum.Material.Neon },
 	-- Martillos (tipo nuevo: lentos, golpe en área; daño por golpe ~2,5 veces el de una espada de su rareza).
-	{ name = "Mazo de piedra", kind = "hammer", damage = 143, rarity = 2500, bladeLength = 3.2, color = Color3.fromRGB(135, 138, 145), material = Enum.Material.Slate },
-	{ name = "Martillo de guerra", kind = "hammer", damage = 5100, rarity = 1.13e6, bladeLength = 3.8, color = Color3.fromRGB(120, 150, 190), material = Enum.Material.Metal },
-	{ name = "Martillo del trueno", kind = "hammer", damage = 55300, rarity = 6.65e7, bladeLength = 4.4, color = Color3.fromRGB(255, 225, 70), material = Enum.Material.Neon },
-	{ name = "Martillo magmático", kind = "hammer", damage = 1.09e6, rarity = 1.09e10, bladeLength = 5, color = Color3.fromRGB(255, 90, 30), material = Enum.Material.Neon },
-	{ name = "Martillo glacial", kind = "hammer", damage = 2.14e7, rarity = 1.77e12, bladeLength = 5.4, color = Color3.fromRGB(150, 225, 255), material = Enum.Material.Ice },
-	{ name = "Martillo cósmico", kind = "hammer", damage = 1.28e8, rarity = 3.76e13, bladeLength = 5.8, color = Color3.fromRGB(150, 70, 255), material = Enum.Material.ForceField },
-	{ name = "Martillo del fin del mundo", kind = "hammer", damage = 4.58e9, rarity = 1.7e16, bladeLength = 6.2, color = Color3.fromRGB(230, 255, 255), material = Enum.Material.Neon },
+	{ name = "Mazo de piedra", kind = "hammer", damage = 17.6, rarity = 70, bladeLength = 3.2, color = Color3.fromRGB(135, 138, 145), material = Enum.Material.Slate },
+	{ name = "Martillo de guerra", kind = "hammer", damage = 209, rarity = 4810, bladeLength = 3.8, color = Color3.fromRGB(120, 150, 190), material = Enum.Material.Metal },
+	{ name = "Martillo del trueno", kind = "hammer", damage = 1550, rarity = 147000, bladeLength = 4.4, color = Color3.fromRGB(255, 225, 70), material = Enum.Material.Neon },
+	{ name = "Martillo magmático", kind = "hammer", damage = 28000, rarity = 2.08e7, bladeLength = 5, color = Color3.fromRGB(255, 90, 30), material = Enum.Material.Neon },
+	{ name = "Martillo glacial", kind = "hammer", damage = 784000, rarity = 6.2e9, bladeLength = 5.4, color = Color3.fromRGB(150, 225, 255), material = Enum.Material.Ice },
+	{ name = "Martillo cósmico", kind = "hammer", damage = 7.16e6, rarity = 2.72e11, bladeLength = 5.8, color = Color3.fromRGB(150, 70, 255), material = Enum.Material.ForceField },
+	{ name = "Martillo del fin del mundo", kind = "hammer", damage = 9.56e8, rarity = 1.17e15, bladeLength = 6.2, color = Color3.fromRGB(230, 255, 255), material = Enum.Material.Neon },
 	-- Hachas, espadas dobles y lanzas de las rarezas altas (Mítica, Secreta y Divina).
-	{ name = "Hacha del abismo", kind = "axe", damage = 5.03e6, rarity = 2.31e11, bladeLength = 6, color = Color3.fromRGB(70, 60, 200), material = Enum.Material.Neon },
-	{ name = "Colmillos de sombra", kind = "dual", damage = 896000, rarity = 8.33e10, bladeLength = 5.4, color = Color3.fromRGB(110, 40, 160), material = Enum.Material.Glass },
-	{ name = "Lanza abisal", kind = "spear", damage = 5.9e6, rarity = 6.39e11, bladeLength = 14, color = Color3.fromRGB(40, 90, 230), material = Enum.Material.Neon },
-	{ name = "Hacha estelar", kind = "axe", damage = 3.26e8, rarity = 2.89e14, bladeLength = 6.4, color = Color3.fromRGB(255, 110, 200), material = Enum.Material.Neon },
-	{ name = "Sables de aurora", kind = "dual", damage = 5.8e7, rarity = 1.04e14, bladeLength = 5.8, color = Color3.fromRGB(90, 255, 210), material = Enum.Material.ForceField },
-	{ name = "Lanza de nova", kind = "spear", damage = 3.83e8, rarity = 7.99e14, bladeLength = 15, color = Color3.fromRGB(255, 130, 220), material = Enum.Material.Neon },
-	{ name = "Hacha del amanecer", kind = "axe", damage = 1.16e10, rarity = 1.3e17, bladeLength = 6.8, color = Color3.fromRGB(255, 235, 170), material = Enum.Material.Neon },
-	{ name = "Hojas del alba eterna", kind = "dual", damage = 2.08e9, rarity = 4.71e16, bladeLength = 6.2, color = Color3.fromRGB(250, 255, 255), material = Enum.Material.Neon },
-	{ name = "Lanza del big bang", kind = "spear", damage = 1.37e10, rarity = 3.61e17, bladeLength = 16, color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
+	{ name = "Hacha del abismo", kind = "axe", damage = 152000, rarity = 5.8e8, bladeLength = 6, color = Color3.fromRGB(70, 60, 200), material = Enum.Material.Neon },
+	{ name = "Colmillos de sombra", kind = "dual", damage = 25200, rarity = 1.86e8, bladeLength = 5.4, color = Color3.fromRGB(110, 40, 160), material = Enum.Material.Glass },
+	{ name = "Lanza abisal", kind = "spear", damage = 195000, rarity = 1.87e9, bladeLength = 14, color = Color3.fromRGB(40, 90, 230), material = Enum.Material.Neon },
+	{ name = "Hacha estelar", kind = "axe", damage = 2.64e7, rarity = 3.93e12, bladeLength = 6.4, color = Color3.fromRGB(255, 110, 200), material = Enum.Material.Neon },
+	{ name = "Sables de aurora", kind = "dual", damage = 3.88e6, rarity = 1.02e12, bladeLength = 5.8, color = Color3.fromRGB(90, 255, 210), material = Enum.Material.ForceField },
+	{ name = "Lanza de nova", kind = "spear", damage = 3.83e7, rarity = 1.56e13, bladeLength = 15, color = Color3.fromRGB(255, 130, 220), material = Enum.Material.Neon },
+	{ name = "Hacha del amanecer", kind = "axe", damage = 4.36e9, rarity = 2.43e16, bladeLength = 6.8, color = Color3.fromRGB(255, 235, 170), material = Enum.Material.Neon },
+	{ name = "Hojas del alba eterna", kind = "dual", damage = 5.76e8, rarity = 5.26e15, bladeLength = 6.2, color = Color3.fromRGB(250, 255, 255), material = Enum.Material.Neon },
+	{ name = "Lanza del big bang", kind = "spear", damage = 7.04e9, rarity = 1.16e17, bladeLength = 16, color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
 }
 
 -- Niveles de rareza, de menor a mayor: a partir de "1 entre min" se usa ese nombre y color
@@ -133,6 +135,9 @@ Config.Gacha = {
 	AuraOdds = 100, -- desde "1 entre N" real (rareza / suerte de gacha) el aura se ve en el personaje (también para los demás)
 	SellValue = 2, -- gemas por vender una espada (a mano o con la venta automática)
 	RockLuck = 10, -- la tirada gratis de la "Roca de armas" multiplica por esto la suerte de gacha
+	-- Empujón del principio (para enganchar): las primeras BoostRolls tiradas de cada jugador tienen la suerte multiplicada por BoostLuck.
+	BoostRolls = 15,
+	BoostLuck = 30,
 }
 
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
