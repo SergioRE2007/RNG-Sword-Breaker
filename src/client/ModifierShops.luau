@@ -18,6 +18,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Backpack = require(script.Parent.Backpack)
 local Ui = require(script.Parent.Ui)
+local Performance = require(script.Parent.Performance)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local ModifierShops = {}
@@ -922,6 +923,7 @@ end
 function ModifierShops.start()
 	-- Los arcoíris de las especiales giran.
 	game:GetService("RunService").RenderStepped:Connect(function(delta)
+		if Performance.get() then return end -- modo rendimiento
 		for gradient in spinning do
 			if gradient.Parent then
 				gradient.Rotation = (gradient.Rotation + delta * 120) % 360

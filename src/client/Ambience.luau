@@ -5,7 +5,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local Performance = require(script.Parent.Performance)
 
 local Ambience = {}
 
@@ -59,62 +59,36 @@ local function seagull(parent: Instance)
 		offset = math.random() * math.pi * 2,
 	}
 end
-
--- Modo rendimiento (también automático en móviles: táctil y sin teclado). Quita 2 de cada 3 matas de
--- hierba y la mitad de las flores (el decorado tiene miles de piezas), reduce las partículas al 40 %,
--- usa 10 mariposas en vez de 28, refresca menos el mar y apaga sombras y efectos de pantalla. Todo es
--- reversible y solo afecta a este cliente: las piezas quitadas se guardan y se devuelven a su sitio.
-local MOBILE = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-Ambience.mobile = MOBILE
-local PERFORMANCE_RATE = 0.4
-local PERFORMANCE_BUTTERFLIES = 10
-
-local performance = MOBILE
+-- Modo rendimiento (ver Performance): aquí se quita lo que es decorado puro. Hierba, flores, nubes y
+-- bancos de niebla se sacan del mundo, desaparecen las gaviotas, las mariposas y todas las zonas de
+-- partículas, se paran las animaciones del decorado y se apagan las sombras, los efectos de pantalla
+-- y la atmósfera. Es reversible: las piezas quitadas se guardan con su padre y se devuelven.
+local PERFORMANCE_TAGS = { "GrassDetail", "FlowerPiece", "Cloud", "FogBank" }
 local removed: { [Instance]: Instance } = {} -- pieza quitada -> su padre
-local rates: { { any } } = {} -- { emisor, partículas por segundo normales }
-local extraWings: { BasePart } = {} -- alas de las mariposas que sobran en modo rendimiento
-local grassCount = 0
-local butterfliesFolder: Folder? = nil
-
-local function detail(): number
-	return if performance then PERFORMANCE_RATE else 1
-end
+local ambienceFolder: Folder? = nil
+local savedLighting: { [Instance]: { [string]: any } } = {}
 
 local function remove(item: Instance)
-	removed[item] = item.Parent
-	item.Parent = nil
-end
-
-local function thinGrass(item: Instance)
-	grassCount += 1
-	if grassCount % 3 ~= 0 then
-		remove(item)
-	end
-end
-
-local function thinFlower(item: Instance)
-	local position = (item :: BasePart).Position
-	if math.floor(position.X * 7 + position.Z * 13) % 2 == 0 then
-		remove(item)
+	if item.Parent and removed[item] == nil then
+		removed[item] = item.Parent
+		item.Parent = nil
 	end
 end
 
 function Ambience.isPerformance(): boolean
-	return performance
+	return Performance.get()
 end
 
 function Ambience.setPerformance(on: boolean)
-	if on == performance and (on == false or next(removed) ~= nil) then
-		return
-	end
-	performance = on
+	Performance.set(on)
+end
+
+local function applyPerformance(on: boolean)
 	if on then
-		grassCount = 0
-		for _, item in CollectionService:GetTagged("GrassDetail") do
-			thinGrass(item)
-		end
-		for _, item in CollectionService:GetTagged("FlowerPiece") do
-			thinFlower(item)
+		for _, tag in PERFORMANCE_TAGS do
+			for _, item in CollectionService:GetTagged(tag) do
+				remove(item)
+			end
 		end
 	else
 		for item, parent in removed do
@@ -122,31 +96,36 @@ function Ambience.setPerformance(on: boolean)
 		end
 		table.clear(removed)
 	end
-	for _, entry in rates do
-		entry[1].Rate = entry[2] * detail()
+	if ambienceFolder then
+		ambienceFolder.Parent = if on then nil else workspace
 	end
-	for _, wing in extraWings do
-		wing.Parent = if on then nil else butterfliesFolder
-	end
+
 	Lighting.GlobalShadows = not on
 	for _, child in Lighting:GetChildren() do
-		if child:IsA("DepthOfFieldEffect") or child:IsA("SunRaysEffect") or child:IsA("BloomEffect") then
+		if child:IsA("PostEffect") then
 			child.Enabled = not on
+		elseif child:IsA("Atmosphere") then
+			if on then
+				savedLighting[child] = { Density = child.Density, Haze = child.Haze, Glare = child.Glare }
+				child.Density, child.Haze, child.Glare = 0, 0, 0
+			elseif savedLighting[child] then
+				for property, value in savedLighting[child] do
+					(child :: any)[property] = value
+				end
+			end
 		end
 	end
 end
 
--- Piezas que llegan después (con StreamingEnabled) también se aligeran.
-CollectionService:GetInstanceAddedSignal("GrassDetail"):Connect(function(item)
-	if performance then
-		thinGrass(item)
-	end
-end)
-CollectionService:GetInstanceAddedSignal("FlowerPiece"):Connect(function(item)
-	if performance then
-		thinFlower(item)
-	end
-end)
+-- Piezas que llegan después (con StreamingEnabled) también se quitan.
+for _, tag in PERFORMANCE_TAGS do
+	CollectionService:GetInstanceAddedSignal(tag):Connect(function(item)
+		if Performance.get() then
+			remove(item)
+		end
+	end)
+end
+Performance.Changed:Connect(applyPerformance)
 
 function Ambience.start()
 	local leaves = track("Sway", readPart)
@@ -183,7 +162,7 @@ function Ambience.start()
 	local motes = Instance.new("ParticleEmitter")
 	motes.Shape = Enum.ParticleEmitterShape.Box
 	motes.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
-	motes.Rate = 14 * detail()
+	motes.Rate = 14
 	motes.Lifetime = NumberRange.new(6, 10)
 	motes.Speed = NumberRange.new(0.5, 1.6)
 	motes.SpreadAngle = Vector2.new(180, 180)
@@ -214,7 +193,7 @@ function Ambience.start()
 	local airZone = zone("Air", Vector3.new(110, 30, 110))
 	local air = Instance.new("ParticleEmitter")
 	air.Shape = Enum.ParticleEmitterShape.Box
-	air.Rate = 26 * detail()
+	air.Rate = 26
 	air.Lifetime = NumberRange.new(5, 9)
 	air.Speed = NumberRange.new(0.3, 1)
 	air.Acceleration = Vector3.new(5, 0.2, 2)
@@ -231,7 +210,7 @@ function Ambience.start()
 	local mist = Instance.new("ParticleEmitter")
 	mist.Texture = "rbxasset://textures/particles/smoke_main.dp"
 	mist.Shape = Enum.ParticleEmitterShape.Box
-	mist.Rate = 2.5 * detail()
+	mist.Rate = 2.5
 	mist.Lifetime = NumberRange.new(14, 20)
 	mist.Speed = NumberRange.new(0.5, 1.5)
 	mist.Acceleration = Vector3.new(1.5, 0, 0.6)
@@ -251,7 +230,7 @@ function Ambience.start()
 	local petals = Instance.new("ParticleEmitter")
 	petals.Shape = Enum.ParticleEmitterShape.Box
 	petals.EmissionDirection = Enum.NormalId.Bottom
-	petals.Rate = 3 * detail()
+	petals.Rate = 3
 	petals.Lifetime = NumberRange.new(9, 13)
 	petals.Speed = NumberRange.new(0.5, 1.5)
 	petals.Acceleration = Vector3.new(3, -0.6, 1)
@@ -273,7 +252,7 @@ function Ambience.start()
 	local glints = Instance.new("ParticleEmitter")
 	glints.Shape = Enum.ParticleEmitterShape.Box
 	glints.EmissionDirection = Enum.NormalId.Top
-	glints.Rate = 18 * detail()
+	glints.Rate = 18
 	glints.Lifetime = NumberRange.new(1, 2)
 	glints.Speed = NumberRange.new(0, 0.3)
 	glints.LightEmission = 1
@@ -295,11 +274,6 @@ function Ambience.start()
 			return item
 		end
 		local leftWing, rightWing = wing(), wing()
-		if index > PERFORMANCE_BUTTERFLIES then
-			-- Las que sobran en modo rendimiento se quitan del mundo (y se devuelven al apagarlo).
-			table.insert(extraWings, leftWing)
-			table.insert(extraWings, rightWing)
-		end
 		table.insert(butterflies, {
 			left = leftWing,
 			right = rightWing,
@@ -312,12 +286,10 @@ function Ambience.start()
 		})
 	end
 
-	rates = { { motes, 14 }, { air, 26 }, { mist, 2.5 }, { petals, 3 }, { glints, 18 } }
-	butterfliesFolder = folder
+	ambienceFolder = folder
 	-- Si el modo rendimiento ya estaba activo (móvil), se aplica ahora que existe todo.
-	if performance then
-		performance = false
-		Ambience.setPerformance(true)
+	if Performance.get() then
+		applyPerformance(true)
 	end
 
 	local parts: { BasePart } = {}
@@ -325,6 +297,10 @@ function Ambience.start()
 	local swayClock = 0
 
 	RunService.RenderStepped:Connect(function(delta)
+		-- Modo rendimiento: ninguna animación del decorado (hojas, nubes, gaviotas, mar, espadas del expositor).
+		if Performance.get() then
+			return
+		end
 		local now = os.clock()
 		local camera = workspace.CurrentCamera.CFrame.Position
 		table.clear(parts)
@@ -336,10 +312,7 @@ function Ambience.start()
 		glintZone.Position = Vector3.new(camera.X, 0.6, camera.Z)
 
 		-- Mariposas: cada una da vueltas lentas alrededor de su rincón.
-		for number, fly in butterflies do
-			if performance and number > PERFORMANCE_BUTTERFLIES then
-				continue
-			end
+		for _, fly in butterflies do
 			local angle = now * fly.speed + fly.offset
 			local position = fly.home + Vector3.new(math.cos(angle) * fly.radius, fly.height + math.sin(now * 2.3 + fly.offset) * 1.2, math.sin(angle * 1.3) * fly.radius)
 			local ahead = Vector3.new(-math.sin(angle), 0, math.cos(angle * 1.3)) * math.sign(fly.speed)
@@ -394,7 +367,7 @@ function Ambience.start()
 		end
 
 		seaClock += delta
-		if seaClock >= (if performance then 1 / 6 else 1 / 15) then
+		if seaClock >= 1 / 15 then
 			seaClock = 0
 			for tile, base in sea do
 				local glint = (math.sin(now * 0.9 + base.phase) + 1) / 2

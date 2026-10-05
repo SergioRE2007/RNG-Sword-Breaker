@@ -11,6 +11,7 @@ local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
+local Performance = require(script.Parent.Performance)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local Backpack = {}
@@ -24,6 +25,7 @@ end
 
 -- Casilla que aparece con rebote (crece desde pequeña), tras `delay` segundos.
 local function popIn(cell: GuiObject, delay: number)
+	if Performance.get() then return end -- modo rendimiento
 	local scale = cell:FindFirstChild("PressScale") :: UIScale?
 	if not scale then
 		return
@@ -38,6 +40,7 @@ end
 
 -- Sacudida corta de una casilla (al equiparla).
 local function wiggle(cell: GuiObject)
+	if Performance.get() then return end -- modo rendimiento
 	task.spawn(function()
 		for _, angle in { -9, 8, -5, 3, 0 } do
 			local step = TweenService:Create(cell, TweenInfo.new(0.07, Enum.EasingStyle.Quad), { Rotation = angle })
@@ -49,6 +52,7 @@ end
 
 -- Marca de "recién conseguida": cartelito y borde amarillo que late hasta que se pasa el ratón por encima.
 local function markNew(cell: GuiObject)
+	if Performance.get() then return end -- modo rendimiento
 	local glow = Instance.new("Frame")
 	glow.Name = "NewGlow"
 	glow.Position = UDim2.fromOffset(-4, -4)

@@ -9,7 +9,7 @@ local SoundService = game:GetService("SoundService")
 
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Ambience = require(script.Parent.Ambience)
+local Performance = require(script.Parent.Performance)
 local Ui = require(script.Parent.Ui)
 
 local Settings = {}
@@ -75,19 +75,19 @@ function Settings.start()
 	padding.Parent = list
 
 	-- Modo rendimiento -------------------------------------------------------------------
-	local performanceRow = row(list, 1, "Modo rendimiento", "Menos hierba, partículas, mariposas y efectos de pantalla. Úsalo si el juego va lento. En móviles viene activado.")
+	local performanceRow = row(list, 1, "Modo rendimiento", "Quita partículas, auras, estelas, luces, hierba, nubes, sombras y las animaciones de los menús. Úsalo si el juego va lento. En móviles viene activado.")
 	local performanceButton = Ui.button(performanceRow, "", Ui.COLORS.gray)
 	performanceButton.AnchorPoint = Vector2.new(1, 0.5)
 	performanceButton.Position = UDim2.new(1, -14, 0.5, 0)
 	performanceButton.Size = UDim2.fromOffset(130, 60)
 	performanceButton.TextSize = 26
 	local function paintPerformance()
-		local on = Ambience.isPerformance()
+		local on = Performance.get()
 		performanceButton.Text = if on then "SÍ" else "NO"
 		performanceButton.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
 	end
 	performanceButton.Activated:Connect(function()
-		Ambience.setPerformance(not Ambience.isPerformance())
+		Performance.set(not Performance.get())
 		paintPerformance()
 	end)
 	paintPerformance()

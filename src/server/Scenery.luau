@@ -641,6 +641,7 @@ function Scenery.start()
 			local fog = decor(part(folder, "Fog", Vector3.new(rng:NextNumber(260, 380), rng:NextNumber(30, 44), rng:NextNumber(90, 130)), CFrame.lookAt(position, Vector3.zero) * CFrame.new(rng:NextNumber(-120, 120), rng:NextNumber(14, 26), rng:NextNumber(-60, -10)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic))
 			fog.Shape = Enum.PartType.Ball
 			fog.Transparency = 0.2
+			CollectionService:AddTag(fog, "FogBank") -- el modo rendimiento (cliente) los quita
 		end
 	end)
 	ring(12, 600, 0.2, function(position)

@@ -12,6 +12,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
+local Performance = require(script.Parent.Performance)
 
 local SkillTree = {}
 
@@ -461,6 +462,7 @@ function SkillTree.start()
 
 	-- Compra de un nodo: onda expansiva, chispas, el nodo da un salto y un destello viaja por la línea.
 	local function burst(name: string, level: number)
+		if Performance.get() then return end -- modo rendimiento
 		local node = nodes[name][level]
 		local link = lines[name][level]
 		local point = ends[name][level]
@@ -683,6 +685,7 @@ function SkillTree.start()
 	local animation: RBXScriptConnection? = nil
 	local nextMeteor = 0
 	local function animate()
+		if Performance.get() then return end -- modo rendimiento
 		local now = os.clock()
 		local view = overlay.AbsoluteSize
 		for _, layer in layers do

@@ -9,6 +9,8 @@ local TweenService = game:GetService("TweenService")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 
+local Performance = require(script.Parent.Performance)
+
 local SwingAnim = {}
 
 local MIN_DURATION = 0.26 -- con la velocidad de golpe al máximo el movimiento aún se tiene que ver
@@ -170,6 +172,7 @@ local function sample(move, t: number)
 end
 
 local function setTrails(swing, enabled: boolean)
+	if Performance.get() then enabled = false end -- modo rendimiento: sin estela
 	for _, trail in swing.trails do
 		trail.Enabled = enabled
 	end

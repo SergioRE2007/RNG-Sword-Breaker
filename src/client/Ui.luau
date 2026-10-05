@@ -11,6 +11,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local Performance = require(script.Parent.Performance)
+
 local Ui = {}
 
 local glints = {} -- [UIGradient del brillo] = { phase, period }
@@ -120,6 +122,10 @@ function Ui.pressable(item: GuiButton, grow: number?)
 	scale.Parent = item
 	local big = grow or 1.07
 	local function to(value: number, time: number, style: Enum.EasingStyle)
+		if Performance.get() then
+			scale.Scale = 1 -- modo rendimiento: sin rebotes
+			return
+		end
 		TweenService:Create(scale, TweenInfo.new(time, style, Enum.EasingDirection.Out), { Scale = value }):Play()
 	end
 	local over = false
@@ -147,6 +153,7 @@ function Ui.sparkle(item: GuiObject, period: number?)
 	glint.BackgroundColor3 = WHITE
 	glint.BorderSizePixel = 0
 	glint.ZIndex = item.ZIndex + 1
+	glint.Visible = not Performance.get()
 	glint.Parent = item
 	Ui.round(glint, 12)
 	local sweep = Instance.new("UIGradient")
@@ -183,7 +190,27 @@ local MAX_WINDOW_SCALE = 1.22 -- las ventanas crecen hasta aquí en pantallas gr
 
 -- Brillos que cruzan los títulos de las ventanas (los mueve un solo bucle).
 local shines = {}
+local glintsHidden = false
 RunService.RenderStepped:Connect(function()
+	-- Modo rendimiento: ni brillos en los títulos ni destellos en los botones (se esconden y se devuelven al apagarlo).
+	if Performance.get() then
+		if not glintsHidden then
+			glintsHidden = true
+			for gradient in glints do
+				if gradient.Parent then
+					(gradient.Parent :: GuiObject).Visible = false
+				end
+			end
+		end
+		return
+	elseif glintsHidden then
+		glintsHidden = false
+		for gradient in glints do
+			if gradient.Parent then
+				(gradient.Parent :: GuiObject).Visible = true
+			end
+		end
+	end
 	local now = os.clock()
 	for gradient, phase in shines do
 		if gradient.Parent then
@@ -325,7 +352,7 @@ function Ui.window(name: string, title: string, size: Vector2)
 	fit()
 	-- Al abrirse, la ventana sale con un rebote desde un poco más pequeña.
 	frame:GetPropertyChangedSignal("Visible"):Connect(function()
-		if frame.Visible then
+		if frame.Visible and not Performance.get() then
 			scale.Scale = fitted * 0.8
 			shadowScale.Scale = fitted * 0.8
 			local info = TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
@@ -457,6 +484,9 @@ local shines = {} -- [UIGradient del borde] = { speed, halo, phase }
 local shining = false
 
 local function animateShines(dt: number)
+	if Performance.get() then
+		return -- modo rendimiento: los marcos de las casillas se quedan quietos
+	end
 	local now = os.clock()
 	for gradient, info in shines do
 		gradient.Rotation = (gradient.Rotation + info.speed * dt) % 360
@@ -865,7 +895,7 @@ local function ensureTip()
 			tip.Visible = false
 			return
 		end
-		if tipLive then
+		if tipLive and not Performance.get() then
 			local text, color = tipLive()
 			tip.Text = text
 			tipStroke.Color = color

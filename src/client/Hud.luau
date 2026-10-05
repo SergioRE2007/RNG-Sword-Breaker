@@ -17,6 +17,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
+local Performance = require(script.Parent.Performance)
 
 local Hud = {}
 
@@ -83,6 +84,12 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 		end)
 	end
 	local function setAmount(value: number)
+		if Performance.get() then
+			-- Modo rendimiento: el número cambia de golpe, sin rodar, sin latido y sin "+N".
+			shown, target = value, value
+			show(value)
+			return
+		end
 		if target == nil or value == target then
 			if target == nil then
 				shown, target = value, value
