@@ -53,7 +53,7 @@ local function broadcast(player: Player, entry)
 		Remotes.GachaAura:FireAllClients(player, entry.index, entry.odds)
 	end
 	if entry.odds >= Config.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)} (1 entre {Format.short(entry.odds)} con su suerte)!`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
+		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)} (1 entre {Format.short(entry.odds)})!`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
 	end
 end
 
