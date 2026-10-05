@@ -26,6 +26,7 @@ Config.WeaponKinds = {
 	axe = { name = "Hacha", cooldown = 1.7, arc = -1 }, -- gira y pega a todo lo que le rodea, pero lenta
 	dual = { name = "Espadas dobles", cooldown = 0.55, arc = 0.2 }, -- golpes rápidos y flojos
 	spear = { name = "Lanza", cooldown = 1.1, arc = 0.8 }, -- estocada estrecha desde lejos
+	hammer = { name = "Martillo", cooldown = 2.2, arc = -0.3 }, -- muy lento, golpe en área ancha por delante y a los lados
 }
 
 -- La primera es la inicial y no sale en el gacha.
@@ -60,6 +61,24 @@ Config.Swords = {
 	{ name = "Hacha volcánica", kind = "axe", damage = 1.2e5, rarity = 4e5, bladeLength = 5.5, color = Color3.fromRGB(255, 110, 30), material = Enum.Material.Neon },
 	{ name = "Hojas del eclipse", kind = "dual", damage = 2.5e5, rarity = 2e6, bladeLength = 5, color = Color3.fromRGB(150, 80, 255), material = Enum.Material.Neon },
 	{ name = "Lanza del rayo", kind = "spear", damage = 6e6, rarity = 3e7, bladeLength = 13, color = Color3.fromRGB(255, 240, 90), material = Enum.Material.Neon },
+	-- Martillos (tipo nuevo: lentos, golpe en área; daño por golpe ~2,5 veces el de una espada de su rareza).
+	{ name = "Mazo de piedra", kind = "hammer", damage = 150, rarity = 40, bladeLength = 3.2, color = Color3.fromRGB(135, 138, 145), material = Enum.Material.Slate },
+	{ name = "Martillo de guerra", kind = "hammer", damage = 4500, rarity = 2500, bladeLength = 3.8, color = Color3.fromRGB(120, 150, 190), material = Enum.Material.Metal },
+	{ name = "Martillo del trueno", kind = "hammer", damage = 2.5e5, rarity = 3e5, bladeLength = 4.4, color = Color3.fromRGB(255, 225, 70), material = Enum.Material.Neon },
+	{ name = "Martillo magmático", kind = "hammer", damage = 1.4e8, rarity = 5e8, bladeLength = 5, color = Color3.fromRGB(255, 90, 30), material = Enum.Material.Neon },
+	{ name = "Martillo glacial", kind = "hammer", damage = 6.5e10, rarity = 5e11, bladeLength = 5.4, color = Color3.fromRGB(150, 225, 255), material = Enum.Material.Ice },
+	{ name = "Martillo cósmico", kind = "hammer", damage = 3e15, rarity = 5e16, bladeLength = 5.8, color = Color3.fromRGB(150, 70, 255), material = Enum.Material.ForceField },
+	{ name = "Martillo del fin del mundo", kind = "hammer", damage = 1.2e21, rarity = 5e22, bladeLength = 6.2, color = Color3.fromRGB(230, 255, 255), material = Enum.Material.Neon },
+	-- Hachas, espadas dobles y lanzas de las rarezas altas (Mítica, Secreta y Divina).
+	{ name = "Hacha del abismo", kind = "axe", damage = 1e10, rarity = 5e10, bladeLength = 6, color = Color3.fromRGB(70, 60, 200), material = Enum.Material.Neon },
+	{ name = "Colmillos de sombra", kind = "dual", damage = 4e8, rarity = 1e10, bladeLength = 5.4, color = Color3.fromRGB(110, 40, 160), material = Enum.Material.Glass },
+	{ name = "Lanza abisal", kind = "spear", damage = 1.4e10, rarity = 2e11, bladeLength = 14, color = Color3.fromRGB(40, 90, 230), material = Enum.Material.Neon },
+	{ name = "Hacha estelar", kind = "axe", damage = 7e15, rarity = 1e17, bladeLength = 6.4, color = Color3.fromRGB(255, 110, 200), material = Enum.Material.Neon },
+	{ name = "Sables de aurora", kind = "dual", damage = 6e14, rarity = 5e16, bladeLength = 5.8, color = Color3.fromRGB(90, 255, 210), material = Enum.Material.ForceField },
+	{ name = "Lanza de nova", kind = "spear", damage = 5e15, rarity = 2e17, bladeLength = 15, color = Color3.fromRGB(255, 130, 220), material = Enum.Material.Neon },
+	{ name = "Hacha del amanecer", kind = "axe", damage = 3e21, rarity = 1e23, bladeLength = 6.8, color = Color3.fromRGB(255, 235, 170), material = Enum.Material.Neon },
+	{ name = "Hojas del alba eterna", kind = "dual", damage = 2.5e20, rarity = 5e22, bladeLength = 6.2, color = Color3.fromRGB(250, 255, 255), material = Enum.Material.Neon },
+	{ name = "Lanza del big bang", kind = "spear", damage = 2.4e21, rarity = 2e23, bladeLength = 16, color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
 }
 
 -- Niveles de rareza, de menor a mayor: a partir de "1 entre min" se usa ese nombre y color

@@ -58,6 +58,8 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
   - **Hachas**: el jugador da una vuelta entera y pega a todo lo que le rodea; golpean x1.7 más lento.
   - **Espadas dobles**: una en cada mano, tajos alternos casi el doble de rápidos, con menos daño por golpe y menos alcance.
   - **Lanzas**: estocada al frente, mucho alcance pero solo pega a lo que está justo delante.
+  - **Martillos** (tipo nuevo, 7 armas): se levanta a dos manos y se deja caer; x2.2 más lento, golpe en área ancha (`arc` -0.3), daño por golpe ~2,5 veces el de una espada de su rareza. Al golpear tiembla la cámara y sale una onda de polvo (`SwingAnim`, solo en el cliente). Probado en Studio: modelo, daño y onda; sin ver el golpe en movimiento ni el área real contra objetos.
+  - Otras 9 armas de rareza alta (3 hachas, 3 dobles, 3 lanzas, de Mítica a Divina): hasta ahora las raras eran solo espadas. Daños puestos a ojo siguiendo la curva de las espadas.
   - Hay un tiempo mínimo entre golpes (`Config.MinCooldown`, 0,1 s).
 - HUD, tabla de clasificación, escombros con físicas, números de daño, barra de vida.
 - Guardado con DataStore (solo funciona con el lugar publicado).
