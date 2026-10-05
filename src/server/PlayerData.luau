@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local PlayerData = {}
@@ -32,7 +33,8 @@ local function getStore()
 end
 
 local function publish(player: Player)
-	local data = sessions[player].data
+	local session = sessions[player]
+	local data = session.data
 	player:SetAttribute("Coins", data.coins)
 	player:SetAttribute("Gems", data.gems)
 	player:SetAttribute("Rebirths", data.rebirths)
@@ -63,6 +65,15 @@ local function publish(player: Player)
 	end
 	player:SetAttribute("Artifacts", table.concat(data.artifacts, ","))
 	player:SetAttribute("Gear", table.concat(data.gear, ","))
+	-- Armadura: "Armor" = inventario en JSON (ver ArmorStats.encode) y "Armor_<stat>" = total de lo equipado.
+	-- Solo se vuelve a escribir cuando cambia (editArmor), no en cada moneda.
+	if session.armorDirty then
+		session.armorDirty = false
+		player:SetAttribute("Armor", ArmorStats.encode(data.armor, data.armorWorn))
+		for stat, total in ArmorStats.total(data.armor, data.armorWorn) do
+			player:SetAttribute("Armor_" .. stat, total)
+		end
+	end
 	for name, level in data.upgrades do
 		player:SetAttribute("Upgrade_" .. name, level)
 	end
@@ -140,11 +151,40 @@ local function loadSwords(data, saved)
 	data.equipped = equipped or swords[1].id
 end
 
+-- Armadura guardada: se revisa cada pieza (hueco, calidad y stats que existan) y los ids se renumeran.
+local function loadArmor(data, saved)
+	if type(saved.armor) ~= "table" then
+		return
+	end
+	local worn = if type(saved.armorWorn) == "table" then saved.armorWorn else {}
+	for _, piece in saved.armor do
+		if #data.armor >= Config.Armor.MaxPieces then
+			break
+		end
+		if type(piece) == "table" and Config.Armor.Slots[piece.slot] and Config.Armor.Qualities[piece.quality] and type(piece.stats) == "table" then
+			local stats = {}
+			for _, entry in piece.stats do
+				-- value == value descarta NaN.
+				if type(entry) == "table" and Config.Armor.Stats[entry.stat] and type(entry.value) == "number" and entry.value == entry.value and entry.value >= 0 then
+					table.insert(stats, { stat = entry.stat, value = entry.value, bonus = if entry.bonus == true then true else nil })
+				end
+			end
+			local id = #data.armor + 1
+			table.insert(data.armor, { id = id, slot = piece.slot, quality = piece.quality, level = if Config.Dungeons[piece.level] then piece.level else 1, stats = stats })
+			if piece.id ~= nil and worn[piece.slot] == piece.id then
+				data.armorWorn[piece.slot] = id
+			end
+		end
+	end
+	data.nextArmorId = #data.armor + 1
+end
+
 local function load(player: Player)
 	-- swords = copias { id, sword = índice de Config.Swords, trait = índice de Config.Traits o nil,
 	-- grade = índice de Config.Grades o nil };
 	-- equipped = id de la copia equipada; autoSell = se venden solas las espadas de rareza menor (0 = no);
 	-- items = { [nombre] = cantidad }; artifacts = índices de Config.Artifacts que tiene; gear = los equipados.
+	-- armor = piezas de armadura (ver shared/ArmorStats); armorWorn = { [hueco] = id de la pieza equipada }.
 	local data = {
 		coins = Config.StartCoins,
 		gems = 0,
@@ -163,6 +203,9 @@ local function load(player: Player)
 		items = {},
 		artifacts = {},
 		gear = {},
+		armor = {},
+		nextArmorId = 1,
+		armorWorn = {},
 	}
 	for name in Config.Upgrades do
 		data.upgrades[name] = 0
@@ -212,6 +255,7 @@ local function load(player: Player)
 						end
 					end
 				end
+				loadArmor(data, saved)
 				if type(saved.upgrades) == "table" then
 					for name, upgrade in Config.Upgrades do
 						data.upgrades[name] = math.clamp(tonumber(saved.upgrades[name]) or 0, 0, upgrade.maxLevel)
@@ -261,7 +305,7 @@ local function load(player: Player)
 	coins.Parent = leaderstats
 	leaderstats.Parent = player
 
-	sessions[player] = { data = data, canSave = canSave }
+	sessions[player] = { data = data, canSave = canSave, armorDirty = true }
 	publish(player)
 end
 
@@ -287,6 +331,16 @@ end
 function PlayerData.edit(player: Player, callback)
 	local session = sessions[player]
 	if session then
+		callback(session.data)
+		publish(player)
+	end
+end
+
+-- Como edit, para cambios que tocan la armadura (data.armor o data.armorWorn): vuelve a publicarla.
+function PlayerData.editArmor(player: Player, callback)
+	local session = sessions[player]
+	if session then
+		session.armorDirty = true
 		callback(session.data)
 		publish(player)
 	end

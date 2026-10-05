@@ -87,29 +87,32 @@ local function remove(part: BasePart)
 	part:Destroy()
 end
 
+-- Si un golpe dado desde `origin` llega a la pieza: a `range` de su punto más cercano y dentro del arco del
+-- arma (lo usan también los enemigos de las mazmorras).
+function Destructibles.reaches(part: BasePart, origin: CFrame, range: number, arc: number): boolean
+	local position = origin.Position
+	local half = part.Size / 2
+	local localPoint = part.CFrame:PointToObjectSpace(position)
+	local closest = part.CFrame * Vector3.new(
+		math.clamp(localPoint.X, -half.X, half.X),
+		math.clamp(localPoint.Y, -half.Y, half.Y),
+		math.clamp(localPoint.Z, -half.Z, half.Z)
+	)
+	local offset = closest - position
+	if offset.Magnitude > range then
+		return false
+	end
+	local flat = Vector3.new(offset.X, 0, offset.Z)
+	return arc <= -1 or flat.Magnitude < 2 or flat.Unit:Dot(origin.LookVector) >= arc
+end
+
 -- Objetos de la parcela del jugador que están a su alcance y delante de él.
 function Destructibles.getInRange(player: Player, origin: CFrame, range: number, arc: number): { BasePart }
 	local found = {}
 	local plot = Plots.get(player)
-	local position = origin.Position
-	local look = origin.LookVector
 	for part, object in objects do
-		if object.plot ~= plot then
-			continue
-		end
-		local half = part.Size / 2
-		local localPoint = part.CFrame:PointToObjectSpace(position)
-		local closest = part.CFrame * Vector3.new(
-			math.clamp(localPoint.X, -half.X, half.X),
-			math.clamp(localPoint.Y, -half.Y, half.Y),
-			math.clamp(localPoint.Z, -half.Z, half.Z)
-		)
-		local offset = closest - position
-		if offset.Magnitude <= range then
-			local flat = Vector3.new(offset.X, 0, offset.Z)
-			if arc <= -1 or flat.Magnitude < 2 or flat.Unit:Dot(look) >= arc then
-				table.insert(found, part)
-			end
+		if object.plot == plot and Destructibles.reaches(part, origin, range, arc) then
+			table.insert(found, part)
 		end
 	end
 	return found
@@ -131,7 +134,11 @@ function Destructibles.damage(part: BasePart, amount: number, player: Player)
 
 	local def = object.def
 	local coins = def.reward * Stats.coins(player)
-	local gems = def.gems * Stats.gems(player)
+	-- Gemas: probabilidad propia del objeto y cantidad con algo de azar (Config.GemDrop).
+	local gems = 0
+	if def.gems > 0 and Chance.roll(def.gemChance or 1) then
+		gems = math.max(1, math.round(def.gems * Stats.gems(player) * rng:NextNumber(Config.GemDrop.min, Config.GemDrop.max)))
+	end
 	Remotes.Broken:FireAllClients(player, part.CFrame, part.Size, part.Color, part.Material, coins, gems)
 	remove(part)
 	return def, coins, gems

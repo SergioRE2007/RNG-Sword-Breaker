@@ -728,7 +728,7 @@ local function buildShop(kind: string)
 		if kind == "traits" then
 			return (player:GetAttribute("Item_traitCrystal") or 0) >= state.count
 		end
-		return (player:GetAttribute("Gems") or 0) >= Config.GradeCost
+		return (player:GetAttribute("Item_gradeCrystal") or 0) >= Config.GradeCost
 	end
 
 	local function refresh()
@@ -766,7 +766,7 @@ local function buildShop(kind: string)
 			countButton.Text = `x{state.count}`
 			countButton.BackgroundColor3 = if state.count == 3 then Ui.COLORS.orange else Ui.COLORS.gray
 		else
-			cost.Text = `Gemas: {Format.short(player:GetAttribute("Gems") or 0)}  ·  {Config.GradeCost} por tirada`
+			cost.Text = `Cristales de grado: {Format.short(player:GetAttribute("Item_gradeCrystal") or 0)}  ·  {Config.GradeCost} por tirada`
 		end
 		cost.TextColor3 = if canAfford() then WHITE else Ui.COLORS.red
 		rollButton.BackgroundColor3 = if canAfford() and copy then Ui.COLORS.blue else Ui.COLORS.gray
@@ -1236,7 +1236,7 @@ local function buildShop(kind: string)
 			paintPriority()
 		end
 	end)
-	for _, attribute in { "Swords", "Equipped", "Gems", "Item_traitCrystal" } do
+	for _, attribute in { "Swords", "Equipped", "Item_gradeCrystal", "Item_traitCrystal" } do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()

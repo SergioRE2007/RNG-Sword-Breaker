@@ -133,7 +133,7 @@ Config.Gacha = {
 	ShowcaseOdds = 200, -- desde "1 entre N" real (rareza / suerte de gacha) la tirada pasa a pantalla completa
 	RevealTimeout = 30, -- si el cliente no avisa de que ha destapado una tirada rara, su aura y aviso salen igual a los N segundos
 	AuraOdds = 100, -- desde "1 entre N" real (rareza / suerte de gacha) el aura se ve en el personaje (también para los demás)
-	SellValue = 2, -- gemas por vender una espada (a mano o con la venta automática)
+	SellValue = 0, -- gemas por vender una espada (a mano o con la venta automática). 0: las gemas salen de la parcela
 	RockLuck = 10, -- la tirada gratis de la "Roca de armas" multiplica por esto la suerte de gacha
 	-- Empujón del principio (para enganchar): las primeras BoostRolls tiradas de cada jugador tienen la suerte multiplicada por BoostLuck.
 	BoostRolls = 15,
@@ -142,11 +142,13 @@ Config.Gacha = {
 
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
 -- (los que dan gemas) al romperse.
-Config.ItemOrder = { "traitCrystal", "missionToken" }
+Config.ItemOrder = { "traitCrystal", "missionToken", "gradeCrystal" }
 Config.Items = {
-	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.2, color = Color3.fromRGB(90, 230, 255) },
+	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.05, color = Color3.fromRGB(90, 230, 255) },
 	-- Moneda gratuita (f2p) que dan las misiones diarias y semanales. De momento no se gasta en nada: en el futuro servirá para comprar cosas difíciles o pases. No cae de los objetos (sin dropChance).
 	missionToken = { name = "Ficha de misión", description = "La dan las misiones diarias y semanales. Más adelante servirá para comprar cosas difíciles de conseguir.", color = Color3.fromRGB(255, 190, 60) },
+	-- Lo sueltan los enemigos de las mazmorras y se saca al desmontar armadura. No cae de los objetos (sin dropChance).
+	gradeCrystal = { name = "Cristal de grado", description = "Se gasta en la tienda de Grados del hub: da un grado al azar a la espada que elijas. Lo sueltan los enemigos de las mazmorras.", color = Color3.fromRGB(200, 120, 255) },
 }
 
 -- Rasgos de espada (tienda de Rasgos del hub). Se tiran con un Cristal de rasgo; "chance" = peso
@@ -172,7 +174,7 @@ Config.Traits = {
 	{ name = "Paradoja", coins = 57.5, damage = 57.5, luck = 57.5, chance = 0.0019, icon = "all", color = Color3.fromRGB(235, 235, 245) },
 }
 
--- Grados de espada (tienda de Grados del hub). Se tiran con gemas (GradeCost cada vez) y
+-- Grados de espada (tienda de Grados del hub). Se tiran con Cristales de grado (GradeCost cada vez) y
 -- multiplican las monedas mientras la espada está equipada. "chance" como en los rasgos.
 -- No cambies el orden: el guardado usa la posición en la lista.
 Config.Grades = {
@@ -188,7 +190,7 @@ Config.Grades = {
 	{ name = "X", coins = 40, chance = 0.0057, color = Color3.fromRGB(230, 40, 40), rainbow = true },
 	{ name = "∞", coins = 100, chance = 0.0016, color = Color3.fromRGB(190, 150, 255), rainbow = true },
 }
-Config.GradeCost = 25 -- gemas por tirada de grado
+Config.GradeCost = 1 -- Cristales de grado por tirada de grado
 Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grado
 
 -- Renacimiento: solo cuesta monedas y no quita nada (ni monedas ganadas, ni espadas, ni mejoras). Cada uno
@@ -246,6 +248,10 @@ Config.Destructibles = {
 	{ name = "Infinito", rarity = 1e24, hp = 5.6e11, reward = 6e25, gems = 5e20, size = Vector3.new(14, 26, 14), color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
 }
 
+-- Gemas de los objetos de la parcela: cada objeto con "gems" las suelta con probabilidad "gemChance" (1 si no
+-- lo pone) y la cantidad es gems * azar entre min y max (con el multiplicador de gemas del jugador).
+Config.GemDrop = { min = 0.7, max = 1.3 }
+
 -- Mejoras. Valor: "add" = base + perLevel * nivel; "mul" = base * perLevel ^ nivel (exponencial).
 -- Precio: cost * growth ^ nivel, en monedas o en gemas (currency = "gems").
 -- Los cálculos están en shared/Upgrades.
@@ -261,6 +267,109 @@ Config.Upgrades = {
 	gachaLuck = { name = "Suerte de gacha", short = "Gacha", icon = "gem", color = Color3.fromRGB(180, 100, 255), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 10, growth = 4.1, currency = "gems", display = "x%s" },
 	-- Segundos por tirada del gacha (lo lee Stats.rollTime): 2 s al principio, -12 % por nivel, ~0,56 s al final. Base = Config.Gacha.RollTime.
 	rollSpeed = { name = "Velocidad de tirada", short = "Tirada", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = 2, perLevel = 0.88, maxLevel = 10, cost = 300, growth = 3.4, display = "%.2fs" },
+}
+
+-- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Números a ojo, sin equilibrar.
+-- Cada pieza guarda sus valores ya tirados, así que cambiar esto no toca las piezas que ya tiene la gente.
+-- Valor de un stat = base del hueco * azar (Roll) * mult de la calidad * power de la dificultad (Config.Dungeons)
+-- (los stats con scales = false no se multiplican por power). "health" es vida que se suma; el resto son
+-- porcentajes (0.05 = +5 %) que se suman entre piezas y luego multiplican el stat final (ver shared/Stats).
+Config.Armor = {
+	MaxPieces = 60, -- con el inventario lleno, las piezas nuevas se desmontan solas
+	BaseHealth = 100, -- vida del personaje sin armadura
+	Roll = { min = 0.8, max = 1.2 },
+	SlotOrder = { "helmet", "chest", "legs", "boots" },
+	Slots = {
+		helmet = { name = "Casco", stats = { health = 40, luck = 0.05 } },
+		chest = { name = "Pechera", stats = { health = 100 } },
+		legs = { name = "Grebas", stats = { health = 60, rollSpeed = 0.04 } },
+		boots = { name = "Botas", stats = { health = 30, damage = 0.03, luck = 0.03 } },
+	},
+	StatOrder = { "health", "damage", "luck", "rollSpeed" },
+	Stats = {
+		health = { name = "Vida máxima", flat = true, color = Color3.fromRGB(255, 110, 110) },
+		damage = { name = "Ataque", color = Color3.fromRGB(255, 154, 106) },
+		luck = { name = "Suerte", color = Color3.fromRGB(126, 224, 122) },
+		rollSpeed = { name = "Velocidad de tirada", scales = false, color = Color3.fromRGB(255, 200, 90) },
+	},
+	-- Calidades, de peor a mejor: "odds" = 1 entre N de que salga (la suerte de la dificultad y del enemigo divide N),
+	-- "mods" = modificadores extra que trae, "value" = Cristales de grado al desmontarla (por el loot de su dificultad).
+	-- Son propias de la armadura (no las rarezas de las espadas). No cambies el orden: lo nuevo, al final.
+	Qualities = {
+		{ name = "Común", odds = 1, mult = 1, mods = 0, value = 1, color = Color3.fromRGB(190, 195, 205) },
+		{ name = "Poco común", odds = 4, mult = 1.4, mods = 0, value = 2, color = Color3.fromRGB(90, 220, 100) },
+		{ name = "Rara", odds = 20, mult = 2, mods = 1, value = 4, color = Color3.fromRGB(70, 150, 255) },
+		{ name = "Épica", odds = 150, mult = 3, mods = 1, value = 10, color = Color3.fromRGB(180, 90, 255) },
+		{ name = "Legendaria", odds = 2000, mult = 5, mods = 2, value = 30, color = Color3.fromRGB(255, 190, 40) },
+		{ name = "Mítica", odds = 50000, mult = 8, mods = 3, value = 100, color = Color3.fromRGB(255, 70, 70) },
+	},
+	-- Modificadores extra: "chance" = peso de salir, "value" = base (se escala como los stats del hueco).
+	Mods = {
+		{ stat = "health", value = 30, chance = 40 },
+		{ stat = "luck", value = 0.04, chance = 25 },
+		{ stat = "damage", value = 0.04, chance = 25 },
+		{ stat = "rollSpeed", value = 0.03, chance = 10 },
+	},
+}
+
+-- MAZMORRAS (portal del hub). Cada jugador entra solo a su arena. Números a ojo, sin equilibrar.
+Config.Dungeon = {
+	PortalAngle = 67.5, -- grados alrededor del hub (hueco libre entre dos caminos), a HubRadius - 18
+	EnterDistance = 30, -- hay que estar así de cerca del portal para entrar
+	EnterCooldown = 3, -- segundos mínimos entre entradas
+	TimeLimit = 300, -- segundos para terminar la mazmorra
+	WaveDelay = 2, -- pausa entre oleadas
+	ExitDelay = 4, -- segundos en la arena tras ganar, antes de volver al hub
+	Origin = Vector3.new(0, 200, 3000), -- centro de la primera arena, lejos de la isla
+	Spacing = 400, -- separación entre las arenas de cada jugador
+	ArenaRadius = 60,
+	-- Oleadas: lista de { enemigo (clave de Config.Enemies), cantidad }. La cantidad se multiplica por "count" de la dificultad.
+	Waves = {
+		{ { "grunt", 4 } },
+		{ { "grunt", 4 }, { "brute", 1 } },
+		{ { "grunt", 5 }, { "brute", 2 } },
+		{ { "boss", 1 }, { "grunt", 3 } },
+	},
+	-- Premio por terminar la última oleada (mismo formato que los drops de los enemigos).
+	ClearDrops = {
+		{ kind = "item", item = "traitCrystal", chance = 1, min = 1, max = 2 },
+		{ kind = "item", item = "gradeCrystal", chance = 1, min = 1, max = 2 },
+	},
+}
+
+-- Dificultades, de menor a mayor. "hp" = daño por golpe recomendado: la vida de un enemigo es su hp (en golpes) por
+-- este número. "power" multiplica el daño de los enemigos Y los stats de la armadura que cae: cada dificultad pide
+-- la armadura de la anterior. "count" = más enemigos, "loot" = más cristales, "qualityLuck" = mejor calidad de armadura.
+-- "set", "armorColor" y "armorMaterial" = nombre y aspecto de la armadura que cae ahí ("Casco de cuero").
+-- No cambies el orden: las piezas de armadura guardan la posición. Lo nuevo, al final.
+Config.Dungeons = {
+	{ name = "Fácil", hp = 10, power = 1, count = 1, loot = 1, qualityLuck = 1, color = Color3.fromRGB(90, 210, 110), set = "de cuero", armorColor = Color3.fromRGB(150, 105, 65), armorMaterial = Enum.Material.Leather },
+	{ name = "Normal", hp = 1e3, power = 4, count = 1.25, loot = 2, qualityLuck = 3, color = Color3.fromRGB(70, 160, 255), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
+	{ name = "Difícil", hp = 1e5, power = 16, count = 1.5, loot = 4, qualityLuck = 10, color = Color3.fromRGB(255, 170, 50), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
+	{ name = "Pesadilla", hp = 1e7, power = 64, count = 1.75, loot = 8, qualityLuck = 30, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
+	{ name = "Abismo", hp = 1e9, power = 256, count = 2, loot = 16, qualityLuck = 100, color = Color3.fromRGB(160, 80, 255), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
+}
+
+-- Enemigos. "hp" en golpes (por el hp de la dificultad), "damage" por golpe (por el power de la dificultad),
+-- "speed" al andar, "attackRange" desde su borde, "attackTime" segundos entre golpes. scaleCount = false: su
+-- cantidad no crece con la dificultad. "look" = adornos ("horns", "crown"). "drops" = tabla de premios al morir (ver server/Loot): cada entrada lleva
+-- "kind" ("item" con item, min y max; "armor" con luck que multiplica la suerte de calidad) y "chance".
+Config.Enemies = {
+	grunt = { name = "Esbirro", hp = 6, damage = 6, speed = 17, attackRange = 3.5, attackTime = 1.2, size = Vector3.new(4, 4, 4), color = Color3.fromRGB(120, 200, 90), drops = {
+		{ kind = "item", item = "traitCrystal", chance = 0.12 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.12 },
+		{ kind = "armor", chance = 0.06 },
+	} },
+	brute = { name = "Bruto", hp = 20, damage = 15, speed = 11, attackRange = 4, attackTime = 1.8, look = "horns", size = Vector3.new(6.5, 6.5, 6.5), color = Color3.fromRGB(200, 110, 70), drops = {
+		{ kind = "item", item = "traitCrystal", chance = 0.35 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.35 },
+		{ kind = "armor", chance = 0.2, luck = 2 },
+	} },
+	boss = { name = "Guardián", hp = 120, damage = 25, speed = 13, attackRange = 5, attackTime = 2, scaleCount = false, look = "crown", size = Vector3.new(11, 11, 11), color = Color3.fromRGB(150, 80, 220), drops = {
+		{ kind = "item", item = "traitCrystal", chance = 1, min = 2, max = 4 },
+		{ kind = "item", item = "gradeCrystal", chance = 1, min = 2, max = 4 },
+		{ kind = "armor", chance = 1, luck = 5 },
+	} },
 }
 
 return Config

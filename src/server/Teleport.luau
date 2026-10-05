@@ -1,5 +1,5 @@
 -- Transporte desde la barra de arriba (Hub, Casa, Tiendas): el cliente pide un destino con el
--- remote Teleport y aquí se valida y se mueve al personaje. "home" es la parcela del jugador
+-- remote Teleport y aquí se valida y se mueve al personaje. "dungeon" es el portal de mazmorras, "home" es la parcela del jugador
 -- (Plots), "hub" el centro junto al gacha y "shops" delante de los puestos de Rasgos y Grados
 -- (ModifierShops los pone entre los caminos de 112.5° y 157.5°, a HubRadius - 18).
 local Players = game:GetService("Players")
@@ -25,6 +25,12 @@ local function destination(player: Player, where: unknown): CFrame?
 		local angle = math.rad(135)
 		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
 		local stand = direction * (Config.Plot.HubRadius - 40) + Vector3.new(0, floor, 0)
+		return CFrame.lookAt(stand, stand + direction)
+	elseif where == "dungeon" then
+		-- Delante del portal de mazmorras (Dungeons lo pone a HubRadius - 18), mirándolo.
+		local angle = math.rad(Config.Dungeon.PortalAngle)
+		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+		local stand = direction * (Config.Plot.HubRadius - 32) + Vector3.new(0, floor, 0)
 		return CFrame.lookAt(stand, stand + direction)
 	elseif where == "home" then
 		local plot = Plots.get(player)

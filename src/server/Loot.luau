@@ -1,0 +1,63 @@
+-- Premios por tabla: recorre una lista de drops (Config.Enemies[...].drops, Config.Dungeon.ClearDrops) y
+-- entrega lo que toque. Cada drop lleva "kind" y "chance"; lo que hace cada kind está en `handlers`, así
+-- que un premio nuevo es una entrada más aquí (o Loot.register desde otro módulo), sin tocar a quien llama.
+-- `context` = { level = índice de Config.Dungeons, loot = multiplicador de cantidades, qualityLuck = suerte de
+-- calidad de la armadura }. `summary` (opcional) va acumulando lo entregado: { items = { [nombre] = cantidad },
+-- armor = { { name, quality, kept } } }.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
+local Chance = require(ReplicatedStorage.Shared.Chance)
+local Config = require(ReplicatedStorage.Shared.Config)
+local Format = require(ReplicatedStorage.Shared.Format)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Armor = require(script.Parent.Armor)
+local PlayerData = require(script.Parent.PlayerData)
+
+local Loot = {}
+
+local random = Random.new()
+local handlers = {}
+
+-- Objeto de Config.Items: entre min y max (1 si no lo pone), por el multiplicador de la dificultad.
+function handlers.item(player: Player, drop, context, summary)
+	local item = Config.Items[drop.item]
+	if not item then
+		return
+	end
+	local amount = math.max(1, math.round(random:NextInteger(drop.min or 1, drop.max or 1) * (context.loot or 1)))
+	PlayerData.edit(player, function(data)
+		data.items[drop.item] += amount
+	end)
+	Remotes.Notice:FireClient(player, `+{Format.short(amount)} {item.name}`, item.color)
+	if summary then
+		summary.items[drop.item] = (summary.items[drop.item] or 0) + amount
+	end
+end
+
+-- Pieza de armadura de la dificultad; "luck" del drop multiplica la suerte de calidad.
+function handlers.armor(player: Player, drop, context, summary)
+	local piece, kept = Armor.give(player, context.level, (context.qualityLuck or 1) * (drop.luck or 1))
+	if piece and summary then
+		table.insert(summary.armor, { name = ArmorStats.name(piece), quality = piece.quality, kept = kept })
+	end
+end
+
+function Loot.register(kind: string, handler)
+	handlers[kind] = handler
+end
+
+function Loot.summary()
+	return { items = {}, armor = {} }
+end
+
+function Loot.roll(player: Player, drops, context, summary)
+	for _, drop in drops do
+		local handler = handlers[drop.kind]
+		if handler and Chance.roll(drop.chance or 1) then
+			handler(player, drop, context, summary)
+		end
+	end
+end
+
+return Loot

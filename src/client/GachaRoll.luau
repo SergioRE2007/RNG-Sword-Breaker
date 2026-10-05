@@ -637,7 +637,7 @@ local function makeCard(parent: Instance, index: number, kept: boolean, metal: n
 		tag.Position = UDim2.fromScale(0.5, 0.32)
 		tag.AnchorPoint = Vector2.new(0.5, 0.5)
 		tag.Rotation = -12
-		tag.Text = `Vendida\n+{Config.Gacha.SellValue} gemas`
+		tag.Text = if Config.Gacha.SellValue > 0 then `Vendida\n+{Config.Gacha.SellValue} gemas` else "Vendida"
 		tag.TextColor3 = Ui.COLORS.orange
 		tag.ZIndex = 10
 	end
@@ -948,7 +948,7 @@ local function spin(index: number, kept: boolean, luck: number, source: string, 
 	showSword(index, metal, size)
 	local text = `<font color="#{color:ToHex()}">{tierInfo.name}</font>  ·  1 entre {Format.short(math.max(odds, 1))}`
 	if not kept then
-		text ..= `  ·  <font color="#{Ui.COLORS.orange:ToHex()}">vendida +{Config.Gacha.SellValue}</font>`
+		text ..= `  ·  <font color="#{Ui.COLORS.orange:ToHex()}">vendida{if Config.Gacha.SellValue > 0 then ` +{Config.Gacha.SellValue}` else ""}</font>`
 	elseif source == "roca" then
 		text ..= "  ·  roca de armas"
 	end

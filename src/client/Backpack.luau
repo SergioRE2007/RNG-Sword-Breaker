@@ -1,4 +1,4 @@
--- Mochila: ventana con pestañas (Espadas, Objetos, Equipo). Todo son casillas cuadradas con
+-- Mochila: ventana con pestañas (Espadas, Objetos, Equipo y Armadura, esta última en ArmorPane). Todo son casillas cuadradas con
 -- el borde del color de su rareza; al pasar el ratón sale un cartel con los detalles.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,6 +14,7 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
 local WeaponPreview = require(script.Parent.WeaponPreview)
+local ArmorPane = require(script.Parent.ArmorPane)
 
 local Backpack = {}
 
@@ -243,8 +244,11 @@ function Backpack.start()
 		Gear = function(parent)
 			Ui.gemIcon(parent, Color3.fromRGB(230, 170, 255))
 		end,
+		Armor = function(parent)
+			ArmorPane.icon(parent, Color3.fromRGB(200, 210, 230))
+		end,
 	}
-	for order, entry in { { "Swords", "Espadas", Ui.COLORS.red }, { "Items", "Objetos", Ui.COLORS.blue }, { "Gear", "Equipo", Ui.COLORS.purple } } do
+	for order, entry in { { "Swords", "Espadas", Ui.COLORS.red }, { "Items", "Objetos", Ui.COLORS.blue }, { "Gear", "Equipo", Ui.COLORS.purple }, { "Armor", "Armadura", Ui.COLORS.orange } } do
 		local name = entry[1]
 		panes[name] = pane(body, name)
 		local tab = Ui.button(window, "", entry[3])
@@ -323,7 +327,7 @@ function Backpack.start()
 		return item
 	end
 	local bestButton = action("Best", "Equipar mejor", Ui.COLORS.green, 12, 176)
-	local sellButton = action("Sell", `Vender\n+{Config.Gacha.SellValue} gemas`, Ui.COLORS.red, 198, 100)
+	local sellButton = action("Sell", if Config.Gacha.SellValue > 0 then `Vender\n+{Config.Gacha.SellValue} gemas` else "Vender", Ui.COLORS.red, 198, 100)
 	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 308, 104)
 	bestButton.TextSize = 23
 	equipButton.TextSize = 20
@@ -559,7 +563,7 @@ function Backpack.start()
 	viewport.LightColor = Color3.new(1, 1, 1)
 	viewport.Parent = gearPane
 
-	local function showCharacter()
+	local function renderCharacter(viewport: ViewportFrame)
 		viewport:ClearAllChildren()
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -586,7 +590,14 @@ function Backpack.start()
 		camera.Parent = viewport
 		viewport.CurrentCamera = camera
 	end
+	local function showCharacter()
+		renderCharacter(viewport)
+	end
 	onShow.Gear = showCharacter
+
+	-- Armadura (ver ArmorPane) ------------------------------------------------------------
+	local armorPane = ArmorPane.build(panes.Armor, { grid = grid, character = renderCharacter, popIn = popIn })
+	onShow.Armor = armorPane.show
 
 	local gearHint = Ui.label(gearPane, 18)
 	gearHint.Position = UDim2.fromOffset(400, 8)
@@ -658,6 +669,7 @@ function Backpack.start()
 			entry.stroke.Color = color
 			entry.label.Text = if artifact then artifact.name else "Ranura " .. slot
 		end
+		armorPane.refresh()
 	end
 
 	player.AttributeChanged:Connect(refresh)
@@ -665,6 +677,8 @@ function Backpack.start()
 		refresh()
 		if window.Visible and current == "Gear" then
 			showCharacter()
+		elseif window.Visible and current == "Armor" then
+			armorPane.show()
 		elseif window.Visible and current == "Swords" then
 			onShow.Swords()
 		end

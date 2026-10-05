@@ -215,12 +215,15 @@ function Hud.start()
 		{ "shops", "Tiendas", Color3.fromRGB(70, 200, 90), function(parent)
 			Ui.boxIcon(parent, Color3.fromRGB(255, 210, 90))
 		end },
+		{ "dungeon", "Mazmorra", Ui.COLORS.purple, function(parent)
+			Ui.starIcon(parent, Color3.fromRGB(235, 200, 255))
+		end, 236 },
 	}
 	for order, entry in destinations do
 		local button = Ui.button(travel, "", entry[3])
 		button.Name = "Travel_" .. entry[1]
 		button.LayoutOrder = order
-		button.Size = UDim2.fromOffset(if order == 2 then 200 else 186, 62)
+		button.Size = UDim2.fromOffset(entry[5] or if order == 2 then 200 else 186, 62)
 		local iconBox = Instance.new("Frame")
 		iconBox.Position = UDim2.fromOffset(10, 7)
 		iconBox.Size = UDim2.fromOffset(48, 48)
@@ -381,7 +384,7 @@ function Hud.start()
 
 		setCoins(amount)
 		setGems(gemAmount)
-		damageText.Text = `Daño <font color="#ff9a6a">{Format.multiplier(Stats.damage(player))}</font>`
+		damageText.Text = `Daño <font color="#ff9a6a">{Format.multiplier(Stats.damage(player))}</font>  ·  Vida <font color="#ff6e6e">{Format.short(Stats.maxHealth(player))}</font>`
 		luckText.Text = `Suerte <font color="#7ee07a">x{Format.multiplier(Stats.luck(player))}</font>`
 		gachaText.Text = `Suerte de gacha <font color="#c9a0ff">x{Format.multiplier(Stats.gachaLuck(player))}</font>`
 		for name, text in upgradeRows do
