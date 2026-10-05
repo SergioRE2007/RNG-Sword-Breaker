@@ -517,16 +517,17 @@ local function buildShop(kind: string)
 		end
 		if copy then
 			local sword = Config.Swords[copy.sword]
-			local tierColor = Rarity.tier(sword.rarity).color
-			if state.shown ~= copy.sword then
-				state.shown = copy.sword
+			local tierColor = Rarity.tier(Stats.rarity(copy)).color
+			local look = `{copy.sword}:{copy.metal or 0}`
+			if state.shown ~= look then
+				state.shown = look
 				for _, name in { "Glow", "Preview" } do
 					local old = slot:FindFirstChild(name)
 					if old then
 						old:Destroy()
 					end
 				end
-				WeaponPreview.attach(slot, copy.sword, tierColor)
+				WeaponPreview.attach(slot, copy.sword, tierColor, copy.metal)
 			end
 			slot:FindFirstChildOfClass("UIStroke").Color = tierColor
 			slotHint.Text = sword.name
@@ -570,11 +571,11 @@ local function buildShop(kind: string)
 		end)
 		for position, copy in copies do
 			local sword = Config.Swords[copy.sword]
-			local cell = Ui.cell(pickerList, Rarity.tier(sword.rarity).color)
+			local cell = Ui.cell(pickerList, Rarity.tier(Stats.rarity(copy)).color)
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = position
 			cell.ZIndex = 7
-			WeaponPreview.attach(cell, copy.sword, Rarity.tier(sword.rarity).color)
+			WeaponPreview.attach(cell, copy.sword, Rarity.tier(Stats.rarity(copy)).color, copy.metal)
 			local current = info.list[copy[info.field]]
 			if current then
 				Ui.cellLabel(cell, current.name)

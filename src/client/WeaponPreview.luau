@@ -23,19 +23,20 @@ local SWAP = {
 	[Enum.Material.Glass] = Enum.Material.SmoothPlastic,
 }
 
-local templates = {} -- [nivel] = { model, distance }
+local templates = {} -- ["nivel:metal"] = { model, distance }
 local active = {} -- vistas que se están moviendo: [vista] = true
 local connected = false
 
 -- Modelo del arma centrado en el origen y sin luces, partículas ni estelas (no se ven en un ViewportFrame).
 -- Se construye una vez por tipo de arma y luego se clona.
-local function template(level: number)
-	local cached = templates[level]
+local function template(level: number, metal: number?)
+	local key = `{level}:{metal or 0}`
+	local cached = templates[key]
 	if cached then
 		return cached
 	end
 	local model = Instance.new("Model")
-	SwordModel.build(level, model, CFrame.identity, 1, true)
+	SwordModel.build(level, model, CFrame.identity, 1, true, metal)
 	for _, item in model:GetDescendants() do
 		if item:IsA("BasePart") then
 			item:RemoveTag("WeaponAura")
@@ -54,7 +55,7 @@ local function template(level: number)
 	-- En diagonal, el largo y el ancho se reparten entre los dos lados de la casilla.
 	local extent = (size.Y + math.max(size.X, size.Z)) * 0.7071 / 2
 	cached = { model = model, distance = extent / math.tan(math.rad(FOV / 2)) * 0.96 }
-	templates[level] = cached
+	templates[key] = cached
 	return cached
 end
 
@@ -116,8 +117,8 @@ end
 
 -- Pone la vista 3D del arma de ese nivel (índice de Config.Swords) dentro de la casilla, con un brillo del color
 -- que se le pase detrás. Gira mientras el ratón esté sobre la casilla.
-function WeaponPreview.attach(cell: GuiObject, level: number, glowColor: Color3): ViewportFrame
-	local info = template(level)
+function WeaponPreview.attach(cell: GuiObject, level: number, glowColor: Color3, metal: number?): ViewportFrame
+	local info = template(level, metal)
 
 	local glow = Instance.new("Frame")
 	glow.Name = "Glow"
@@ -163,25 +164,26 @@ function WeaponPreview.view(parent: GuiObject, spin: boolean, zIndex: number)
 		active[view] = true
 	end
 
-	local models = {} -- [nivel] = copia del modelo; solo la que se enseña está dentro del ViewportFrame
-	local shown: number? = nil
+	local models = {} -- ["nivel:metal"] = copia del modelo; solo la que se enseña está dentro del ViewportFrame
+	local shown: string? = nil
 	view.viewport.Destroying:Connect(function()
 		for _, model in models do
 			model:Destroy()
 		end
 	end)
 
-	local function set(level: number)
-		if shown == level then
+	local function set(level: number, metal: number?)
+		local key = `{level}:{metal or 0}`
+		if shown == key then
 			return
 		end
 		if shown then
 			models[shown].Parent = nil
 		end
-		local info = template(level)
-		models[level] = models[level] or info.model:Clone()
-		models[level].Parent = view.viewport
-		shown = level
+		local info = template(level, metal)
+		models[key] = models[key] or info.model:Clone()
+		models[key].Parent = view.viewport
+		shown = key
 		view.distance = info.distance
 		place(view)
 	end

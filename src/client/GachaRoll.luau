@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
+local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
@@ -385,11 +386,11 @@ local auraId = 0
 
 -- El arma del panel en 3D, girando despacio (la misma vista que las casillas de la mochila).
 local iconView
-local function setIcon(index: number)
+local function setIcon(index: number, metal: number?)
 	if not iconView then
 		iconView = WeaponPreview.view(iconSlot, true, 4)
 	end
-	iconView.set(index)
+	iconView.set(index, metal)
 end
 
 local function clearAura()
@@ -461,12 +462,12 @@ local panelShown = false -- el panel de arriba solo se ve mientras se tira (y un
 local resultId = 0 -- cuenta las tiradas, para que el cartel solo se apague si no hay una nueva
 local RESULT_STAY = 2 -- segundos que el panel enseña el resultado antes de esconderse
 
-local function showSword(index: number)
+local function showSword(index: number, metal: number?, size: number?)
 	local sword = Config.Swords[index]
-	title.Text = sword.name
-	title.TextColor3 = sword.color:Lerp(WHITE, 0.35)
-	setIcon(index)
-	iconSlot.BackgroundColor3 = Rarity.tier(sword.rarity).color:Lerp(Ui.COLORS.cell, 0.6)
+	title.Text = Permanent.name(index, metal, size)
+	title.TextColor3 = (if metal and metal > 0 then Config.Metals[metal].color else sword.color):Lerp(WHITE, 0.35)
+	setIcon(index, metal)
+	iconSlot.BackgroundColor3 = Rarity.tier(Permanent.rarity(index, metal, size)).color:Lerp(Ui.COLORS.cell, 0.6)
 end
 
 -- Animación grande ----------------------------------------------------------------------
@@ -479,9 +480,9 @@ local function clearStage()
 	end
 end
 
-local function makeCard(parent: Instance, index: number, kept: boolean, odds: number)
+local function makeCard(parent: Instance, index: number, kept: boolean, odds: number, metal: number?, size: number?)
 	local sword = Config.Swords[index]
-	local tier = Rarity.tier(sword.rarity)
+	local tier = Rarity.tier(Permanent.rarity(index, metal, size))
 
 	local card = frame(parent, UDim2.fromOffset(0, 0), UDim2.fromScale(0.5, 0.45), WHITE)
 	card.BackgroundTransparency = 1
@@ -513,15 +514,15 @@ local function makeCard(parent: Instance, index: number, kept: boolean, odds: nu
 	iconBox.ZIndex = 6
 	local aspect = Instance.new("UIAspectRatioConstraint")
 	aspect.Parent = iconBox
-	WeaponPreview.view(iconBox, true, 7).set(index)
+	WeaponPreview.view(iconBox, true, 7).set(index, metal)
 
 	local name = Ui.label(front, 26)
 	name.AnchorPoint = Vector2.new(0.5, 0)
 	name.Position = UDim2.fromScale(0.5, 0.6)
 	name.Size = UDim2.new(1, -10, 0.18, 0)
 	name.TextWrapped = true
-	name.Text = sword.name
-	name.TextColor3 = sword.color:Lerp(WHITE, 0.35)
+	name.Text = Permanent.name(index, metal, size)
+	name.TextColor3 = (if metal and metal > 0 then Config.Metals[metal].color else sword.color):Lerp(WHITE, 0.35)
 	name.ZIndex = 8
 
 	local info = Ui.label(front, 18)
@@ -557,9 +558,9 @@ end
 -- El panel de arriba vuela al centro de la pantalla, se convierte en el orbe, se carga con el
 -- color de la rareza, estalla y destapa la carta. Acaba cuando el jugador pulsa "Continuar"
 -- (o sola en automático).
-local function showcase(index: number, kept: boolean, odds: number)
+local function showcase(index: number, kept: boolean, odds: number, metal: number?, size: number?)
 	local sword = Config.Swords[index]
-	local tierInfo = Rarity.tier(sword.rarity)
+	local tierInfo = Rarity.tier(Permanent.rarity(index, metal, size))
 	-- La carta y el cartel son de la rareza de la espada; cuántos efectos, de la probabilidad real.
 	local tier = tierIndex(odds)
 	local fx = TIER_FX[tier] or {}
@@ -635,7 +636,7 @@ local function showcase(index: number, kept: boolean, odds: number)
 
 	local layer = frame(stage, UDim2.fromScale(1, 1), UDim2.fromScale(0.5, 0.5), BLACK)
 	layer.BackgroundTransparency = 1
-	local entry = makeCard(layer, index, kept, odds)
+	local entry = makeCard(layer, index, kept, odds, metal, size)
 	entry.card.Rotation = -25
 	tween(entry.card, 0.35, { Size = UDim2.fromOffset(CARD_SIZE.X, CARD_SIZE.Y), Rotation = 0 }, Enum.EasingStyle.Back)
 	wait(0.4)
@@ -727,7 +728,7 @@ end
 
 -- Pasa espadas en el panel y se para en la que ha tocado. Si es muy buena para la suerte del
 -- jugador, antes de pararse la enseña en grande.
-local function spin(index: number, kept: boolean, luck: number, source: string)
+local function spin(index: number, kept: boolean, luck: number, source: string, metal: number?, size: number?)
 	while spinning or showcasing do
 		task.wait(0.1)
 	end
@@ -737,9 +738,10 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 	panelScale.Scale = 1
 	panelShown = true
 	local sword = Config.Swords[index]
-	local odds = (sword.rarity or 1) / luck
+	local rarity = Permanent.rarity(index, metal, size)
+	local odds = rarity / luck
 	local big = odds >= Config.Gacha.ShowcaseOdds
-	local tierInfo = Rarity.tier(sword.rarity)
+	local tierInfo = Rarity.tier(rarity)
 	local color = tierInfo.color
 
 	-- Pasan espadas, cada vez más despacio (deja un poco de tiempo para ver el resultado).
@@ -755,11 +757,11 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 	end
 
 	if big then
-		showcase(index, kept, odds)
+		showcase(index, kept, odds, metal, size)
 	end
 
 	-- Se para en la que ha tocado.
-	showSword(index)
+	showSword(index, metal, size)
 	local text = `<font color="#{color:ToHex()}">{tierInfo.name}</font>  ·  1 entre {Format.short(math.max(odds, 1))}`
 	if not kept then
 		text ..= `  ·  <font color="#{Ui.COLORS.orange:ToHex()}">vendida +{Config.Gacha.SellValue}</font>`
@@ -994,10 +996,10 @@ function GachaRoll.start()
 	end)
 	refreshAuto()
 
-	Remotes.GachaRolled.OnClientEvent:Connect(function(index: number, kept: boolean, luck: number, source: string)
+	Remotes.GachaRolled.OnClientEvent:Connect(function(index: number, kept: boolean, luck: number, source: string, metal: number?, size: number?)
 		task.spawn(function()
 			-- Si algo falla a mitad, que no se quede atascado el gacha (ni la tirada automática).
-			local ok, problem = pcall(spin, index, kept, luck, source)
+			local ok, problem = pcall(spin, index, kept, luck, source, metal, size)
 			if not ok then
 				warn(`[GachaRoll] {problem}`)
 				overlay.Enabled = false

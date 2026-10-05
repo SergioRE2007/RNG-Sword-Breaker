@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Chance = require(ReplicatedStorage.Shared.Chance)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
@@ -52,7 +53,7 @@ local function broadcast(player: Player, entry)
 		Remotes.GachaAura:FireAllClients(player, entry.index, entry.odds)
 	end
 	if entry.odds >= Config.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {sword.name} (1 entre {Format.short(entry.odds)} con su suerte)!`, sword.color)
+		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)} (1 entre {Format.short(entry.odds)} con su suerte)!`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
 	end
 end
 
@@ -68,14 +69,19 @@ local function draw(player: Player, luck: number, source: string)
 	end
 	local index = roll(luck)
 	local sword = Config.Swords[index]
-	local odds = sword.rarity / luck
-	local kept = sword.rarity >= data.autoSell and #data.swords < Config.MaxSwords
+	-- Metal y tamaño se tiran a la vez que el arma y son permanentes (Config.Metals, Config.Sizes).
+	local metal = Permanent.roll(Config.Metals, luck)
+	local size = Permanent.roll(Config.Sizes, luck)
+	local rarity = Permanent.rarity(index, metal, size)
+	local odds = rarity / luck
+	local kept = rarity >= data.autoSell and #data.swords < Config.MaxSwords
 	if kept then
-		local better = sword.damage > Stats.swordDamage(Stats.equipped(player))
+		local candidate = { sword = index, trait = 0, grade = 0, metal = metal, size = size }
+		local better = Stats.swordDamage(candidate) > Stats.swordDamage(Stats.equipped(player))
 		PlayerData.edit(player, function(edited)
 			local id = edited.nextSwordId
 			edited.nextSwordId += 1
-			table.insert(edited.swords, { id = id, sword = index })
+			table.insert(edited.swords, { id = id, sword = index, metal = if metal > 0 then metal else nil, size = if size > 0 then size else nil })
 			if better then
 				edited.equipped = id
 			end
@@ -83,16 +89,16 @@ local function draw(player: Player, luck: number, source: string)
 	else
 		PlayerData.addGems(player, Config.Gacha.SellValue)
 	end
-	Remotes.GachaRolled:FireClient(player, index, kept, luck, source)
+	Remotes.GachaRolled:FireClient(player, index, kept, luck, source, metal, size)
 	if source == "gacha" then
 		Missions.add(player, "gacha")
 	end
-	if sword.rarity >= 1e6 then
+	if rarity >= 1e6 then
 		Missions.add(player, "rareSword")
 	end
 	-- Cuenta la suerte: con mucha suerte de gacha, una espada rara ya no tiene aura ni aviso.
 	if odds >= revealOdds() then
-		local entry = { index = index, odds = odds }
+		local entry = { index = index, odds = odds, metal = metal, size = size }
 		local queue = pendingReveals[player] or {}
 		pendingReveals[player] = queue
 		table.insert(queue, entry)

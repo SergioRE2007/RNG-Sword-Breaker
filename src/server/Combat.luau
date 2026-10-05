@@ -11,6 +11,7 @@ local Gear = require(script.Parent.Gear)
 local Traits = require(script.Parent.Traits)
 local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
+local Permanent = require(ReplicatedStorage.Shared.Permanent)
 
 local Combat = {}
 
@@ -42,7 +43,8 @@ local function onSwing(player: Player)
 	end
 
 	local sword = Config.Swords[PlayerData.getSwordLevel(player)]
-	local range = Config.BaseRange + sword.bladeLength
+	-- El tamaño del arma (Permanent) alarga su hoja y con ella el alcance.
+	local range = Config.BaseRange + sword.bladeLength * Permanent.scale(Stats.equipped(player))
 	local damage = Stats.damage(player)
 	local _, kind = Stats.weapon(player)
 	for _, part in Destructibles.getInRange(player, root.CFrame, range, kind.arc) do
