@@ -5,6 +5,7 @@
 -- El transporte lo hace el servidor (Teleport); aquí solo se pide y se pone un destello.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
@@ -24,7 +25,7 @@ local WHITE = Color3.new(1, 1, 1)
 local MARGIN = 14
 
 -- Contador grande (monedas o gemas) con su icono, abajo a la izquierda.
-local function counter(gui: Instance, name: string, row: number, color: Color3, icon: (Instance, Color3) -> ()): TextLabel
+local function counter(gui: Instance, name: string, row: number, color: Color3, icon: (Instance, Color3) -> ()): (TextLabel, (number) -> ())
 	local box = Instance.new("Frame")
 	box.Name = name
 	box.AnchorPoint = Vector2.new(0, 1)
@@ -47,19 +48,76 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 	text.Size = UDim2.new(1, -66, 1, 0)
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	Ui.sparkle(box, 5)
-	-- Latido del cuadro cada vez que cambia la cantidad, y el icono flota despacio.
+	-- El icono flota despacio.
+	TweenService:Create(iconBox, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromOffset(6, 1) }):Play()
+
+	-- Al cambiar la cantidad el cuadro late, el número sube (o baja) rodando hasta el valor nuevo y
+	-- sale un "+N" (o "-N") flotando. Las ganancias seguidas se juntan en un solo número cada 0,4 s.
 	local pulse = Instance.new("UIScale")
 	pulse.Parent = box
-	local last = ""
-	text:GetPropertyChangedSignal("Text"):Connect(function()
-		if last ~= "" and last ~= text.Text then
-			pulse.Scale = 1.1
-			TweenService:Create(pulse, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	local shown: number? = nil
+	local target: number? = nil
+	local pending = 0
+	local lastFloat = 0
+	local function show(value: number)
+		text.Text = Format.short(if math.abs(value) < 2 ^ 52 then math.floor(value + 0.5) else value)
+	end
+	local function floatText(delta: number)
+		local float = Ui.label(box, 26)
+		float.AnchorPoint = Vector2.new(0, 0.5)
+		float.Position = UDim2.new(1, 10, 0.5, 0)
+		float.Size = UDim2.fromOffset(150, 30)
+		float.TextXAlignment = Enum.TextXAlignment.Left
+		float.Text = (if delta > 0 then "+" else "-") .. Format.short(math.abs(delta))
+		float.TextColor3 = if delta > 0 then Color3.fromRGB(130, 255, 140) else Ui.COLORS.red
+		float.ZIndex = 20
+		local rise = TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TweenService:Create(float, rise, { Position = UDim2.new(1, 10, 0.5, if delta > 0 then -38 else 38), TextTransparency = 1 }):Play()
+		local stroke = float:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			TweenService:Create(stroke, rise, { Transparency = 1 }):Play()
 		end
-		last = text.Text
+		task.delay(1, function()
+			float:Destroy()
+		end)
+	end
+	local function setAmount(value: number)
+		if target == nil or value == target then
+			if target == nil then
+				shown, target = value, value
+				show(value)
+			end
+			return
+		end
+		local delta = value - target
+		target = value
+		-- Con números infinitos (modo de pruebas) o que se salen de la escala, sin animación.
+		if delta ~= delta or math.abs(delta) == math.huge or math.abs(value) == math.huge then
+			shown = value
+			show(value)
+			return
+		end
+		pending += delta
+		pulse.Scale = 1.1
+		TweenService:Create(pulse, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	end
+	RunService.RenderStepped:Connect(function(dt)
+		local goal, current = target, shown
+		if goal and current and current ~= goal then
+			current += (goal - current) * math.min(1, dt * 9)
+			if math.abs(goal - current) <= math.max(0.5, math.abs(goal) * 1e-4) then
+				current = goal
+			end
+			shown = current
+			show(current)
+		end
+		if pending ~= 0 and os.clock() - lastFloat > 0.4 then
+			floatText(pending)
+			pending = 0
+			lastFloat = os.clock()
+		end
 	end)
-	TweenService:Create(iconBox, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromOffset(6, 1) }):Play()
-	return text
+	return text, setAmount
 end
 
 -- Casita hecha con marcos para el botón de Casa: tejado (cuadrado girado) y paredes con puerta.
@@ -105,10 +163,10 @@ function Hud.start()
 	end)
 
 	-- Monedas y gemas, abajo a la izquierda.
-	local coins = counter(gui, "Coins", 1, Ui.COLORS.coins, function(parent)
+	local _, setCoins = counter(gui, "Coins", 1, Ui.COLORS.coins, function(parent)
 		Ui.orbIcon(parent, Color3.fromRGB(255, 220, 90))
 	end)
-	local gems = counter(gui, "Gems", 2, Ui.COLORS.purple, function(parent)
+	local _, setGems = counter(gui, "Gems", 2, Ui.COLORS.purple, function(parent)
 		Ui.gemIcon(parent, Color3.fromRGB(220, 160, 255))
 	end)
 
@@ -279,8 +337,8 @@ function Hud.start()
 		local amount = player:GetAttribute("Coins") or 0
 		local gemAmount = player:GetAttribute("Gems") or 0
 
-		coins.Text = Format.short(amount)
-		gems.Text = Format.short(gemAmount)
+		setCoins(amount)
+		setGems(gemAmount)
 		damageText.Text = `Daño <font color="#ff9a6a">{Format.multiplier(Stats.damage(player))}</font>`
 		luckText.Text = `Suerte <font color="#7ee07a">x{Format.multiplier(Stats.luck(player))}</font>`
 		gachaText.Text = `Suerte de gacha <font color="#c9a0ff">x{Format.multiplier(Stats.gachaLuck(player))}</font>`

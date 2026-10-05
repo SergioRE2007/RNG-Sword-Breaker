@@ -806,36 +806,123 @@ end
 
 -- Avisos ----------------------------------------------------------------------------------
 
-local toast
-local toastId = 0
+local toasts: Frame? = nil
+local MAX_TOASTS = 4
 
-function Ui.toast(text: string, color: Color3)
-	if not toast then
-		toast = Ui.label(Ui.screen(), 24)
-		toast.Name = "Toast"
-		toast.AnchorPoint = Vector2.new(0.5, 1)
-		toast.Position = UDim2.new(0.5, 0, 1, -24)
-		toast.Size = UDim2.fromOffset(500, 70)
-		toast.BackgroundTransparency = 0
-		toast.BackgroundColor3 = Ui.COLORS.panel
-		toast.TextWrapped = true
-		toast.RichText = false
-		toast.ZIndex = 50
-		Ui.round(toast, 14)
-		Ui.stroke(toast, BLACK, 4)
-		Ui.gradient(toast, WHITE, Color3.fromRGB(170, 170, 190), 90)
+-- Icono según de qué habla el aviso (no hay imágenes: se dibuja con marcos). Los rojos llevan "!".
+local function toastIcon(parent: Frame, text: string, color: Color3)
+	local lower = string.lower(text)
+	if string.find(lower, "gema", 1, true) or string.find(lower, "cristal", 1, true) then
+		Ui.gemIcon(parent, color)
+	elseif string.find(lower, "moneda", 1, true) then
+		Ui.orbIcon(parent, color)
+	elseif string.find(lower, "espada", 1, true) or string.find(lower, "hacha", 1, true) or string.find(lower, "lanza", 1, true) or string.find(lower, "martillo", 1, true) or string.find(lower, "arma", 1, true) then
+		Ui.swordIcon(parent, color)
+	elseif color.R > 0.7 and color.G < 0.5 and color.B < 0.5 then
+		local mark = Ui.label(parent, 34)
+		mark.Size = UDim2.fromScale(1, 1)
+		mark.Text = "!"
+		mark.TextColor3 = color
+	else
+		Ui.boxIcon(parent, color)
 	end
-	toast.Text = text
-	toast.TextColor3 = color
-	toast.Visible = true
-	-- Sube desde abajo con un rebote.
-	toast.Position = UDim2.new(0.5, 0, 1, 60)
-	TweenService:Create(toast, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 1, -24) }):Play()
-	toastId += 1
-	local id = toastId
-	task.delay(4, function()
-		if toastId == id then
-			toast.Visible = false
+end
+
+-- Aviso en pantalla: se apilan hasta MAX_TOASTS (los nuevos entran por abajo con rebote, los viejos
+-- suben), con el icono de lo que cuentan, una barra de su color y desvanecido al final.
+function Ui.toast(text: string, color: Color3)
+	if not toasts then
+		local list = Instance.new("Frame")
+		list.Name = "Toasts"
+		list.AnchorPoint = Vector2.new(0.5, 1)
+		list.Position = UDim2.new(0.5, 0, 1, -96) -- por encima de los botones de tirar
+		list.Size = UDim2.fromOffset(470, 0)
+		list.AutomaticSize = Enum.AutomaticSize.Y
+		list.BackgroundTransparency = 1
+		list.ZIndex = 50
+		list.Parent = Ui.screen()
+		local layout = Instance.new("UIListLayout")
+		layout.Padding = UDim.new(0, 8)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+		layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		layout.Parent = list
+		toasts = list
+	end
+	local list = toasts :: Frame
+	local existing = {}
+	for _, child in list:GetChildren() do
+		if child:IsA("CanvasGroup") then
+			table.insert(existing, child)
+		end
+	end
+	if #existing >= MAX_TOASTS then
+		existing[1]:Destroy()
+	end
+
+	local item = Instance.new("CanvasGroup")
+	item.Name = "Toast"
+	item.LayoutOrder = os.clock() * 1000
+	item.Size = UDim2.new(1, 0, 0, 58)
+	item.BackgroundColor3 = WHITE
+	item.GroupTransparency = 1
+	item.ZIndex = 50
+	item.Parent = list
+	Ui.round(item, 14)
+	Ui.stroke(item, BLACK, 4)
+	Ui.gradient(item, Color3.fromRGB(70, 74, 98), Color3.fromRGB(28, 29, 40), 90)
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.85
+	scale.Parent = item
+
+	-- Barra de color a la izquierda y brillo arriba.
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.new(0, 8, 1, 0)
+	bar.BackgroundColor3 = color
+	bar.BorderSizePixel = 0
+	bar.ZIndex = 51
+	bar.Parent = item
+	local gloss = Instance.new("Frame")
+	gloss.Position = UDim2.fromOffset(10, 3)
+	gloss.Size = UDim2.new(1, -16, 0.4, 0)
+	gloss.BackgroundColor3 = WHITE
+	gloss.BackgroundTransparency = 0.88
+	gloss.BorderSizePixel = 0
+	gloss.ZIndex = 51
+	gloss.Parent = item
+	Ui.round(gloss, 8)
+	local iconBox = Instance.new("Frame")
+	iconBox.Position = UDim2.fromOffset(16, 5)
+	iconBox.Size = UDim2.fromOffset(48, 48)
+	iconBox.BackgroundTransparency = 1
+	iconBox.ZIndex = 52
+	iconBox.Parent = item
+	toastIcon(iconBox, text, color)
+	local label = Ui.label(item, 23)
+	label.Position = UDim2.fromOffset(72, 0)
+	label.Size = UDim2.new(1, -82, 1, 0)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextWrapped = true
+	label.RichText = false
+	label.TextColor3 = color:Lerp(WHITE, 0.35)
+	label.Text = text
+	label.ZIndex = 52
+	for _, descendant in item:GetDescendants() do
+		if descendant:IsA("GuiObject") and descendant.ZIndex < 52 and descendant ~= bar and descendant ~= gloss then
+			descendant.ZIndex = 52
+		end
+	end
+
+	local pop = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	TweenService:Create(item, pop, { GroupTransparency = 0 }):Play()
+	TweenService:Create(scale, pop, { Scale = 1 }):Play()
+	task.delay(3.8, function()
+		if item.Parent then
+			local fade = TweenService:Create(item, TweenInfo.new(0.4), { GroupTransparency = 1 })
+			fade.Completed:Connect(function()
+				item:Destroy()
+			end)
+			fade:Play()
 		end
 	end)
 end
