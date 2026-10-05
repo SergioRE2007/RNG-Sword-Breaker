@@ -56,6 +56,7 @@ local function publish(player: Player)
 	player:SetAttribute("SwordMetal", equippedMetal)
 	player:SetAttribute("SwordSize", equippedSize)
 	player:SetAttribute("AutoSell", data.autoSell)
+	player:SetAttribute("TraitPriority", data.traitPriority)
 
 	for name, count in data.items do
 		player:SetAttribute("Item_" .. name, count)
@@ -157,6 +158,7 @@ local function load(player: Player)
 		nextSwordId = 2,
 		equipped = 1,
 		autoSell = 0,
+		traitPriority = "luck,coins,damage", -- desempate de rasgos igual de raros (ver Modifiers.priority)
 		upgrades = {},
 		items = {},
 		artifacts = {},
@@ -187,6 +189,9 @@ local function load(player: Player)
 					data.missions = saved.missions
 				end
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
+				if type(saved.traitPriority) == "string" then
+					data.traitPriority = saved.traitPriority
+				end
 				loadSwords(data, saved)
 				if type(saved.items) == "table" then
 					for name in Config.Items do

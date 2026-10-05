@@ -47,6 +47,9 @@ local Z = {
 }
 local AUTO_DELAY = 0.2 -- segundos entre tiradas automáticas
 local CLOSE_DISTANCE = 30 -- se cierra al alejarse del puesto
+-- Tipos de rasgo en el orden de desempate (los colores, los de sus rasgos de nivel I).
+local PRIORITY_NAMES = { luck = "Suerte", coins = "Monedas", damage = "Daño" }
+local PRIORITY_COLORS = { luck = Color3.fromRGB(150, 230, 90), coins = Color3.fromRGB(110, 220, 120), damage = Color3.fromRGB(90, 210, 230) }
 
 local random = Random.new()
 
@@ -184,6 +187,7 @@ local function buildShop(kind: string)
 	end
 
 	local state = { selected = nil, auto = false, waiting = false, last = nil, stop = {}, count = 1 }
+	state.priority = Modifiers.priority(player:GetAttribute("TraitPriority"))
 	for index in info.list do
 		state.stop[index] = Modifiers.percent(kind, index) < 1
 	end
@@ -365,12 +369,80 @@ local function buildShop(kind: string)
 	pickerGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	pickerGrid.Parent = pickerList
 
-	local stopper, stopList = overlay("StopAt", "La tirada automática para con:")
+	local stopper, stopList = overlay("StopAt", if kind == "traits" then "Ajustes" else "La tirada automática para con:")
 	local stopGrid = Instance.new("UIGridLayout")
 	stopGrid.CellSize = UDim2.fromOffset(136, 54) -- más alto: en pantallas pequeñas la ventana se encoge
 	stopGrid.CellPadding = UDim2.fromOffset(8, 8)
 	stopGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	stopGrid.Parent = stopList
+
+	-- Rasgos: arriba del todo, el orden de desempate. Si en "mejor de tres" salen dos igual de raros
+	-- (Monedas II y Suerte II), se queda el tipo que va antes. Pulsar uno lo sube un puesto. Se manda
+	-- con cada tirada y el servidor lo guarda.
+	local priorityChips = {}
+	local function paintPriority()
+		for rank, stat in state.priority do
+			local chip = priorityChips[stat]
+			chip.LayoutOrder = rank
+			chip.Text = `{rank}º {PRIORITY_NAMES[stat]}`
+		end
+	end
+	if kind == "traits" then
+		local section = Instance.new("Frame")
+		section.Name = "Priority"
+		section.Position = UDim2.fromOffset(12, 44)
+		section.Size = UDim2.new(1, -24, 0, 92)
+		section.BackgroundTransparency = 1
+		section.ZIndex = Z.overlay + 1
+		section.Parent = stopper
+		local hint = Ui.label(section, 18)
+		hint.Size = UDim2.fromScale(1, 0.3)
+		hint.TextColor3 = Color3.fromRGB(200, 200, 210)
+		hint.Text = "Si en \"mejor de tres\" empatan en rareza, gana la primera (pulsa una para subirla):"
+		hint.TextScaled = true
+		hint.ZIndex = Z.overlay + 1
+		local hintLimit = Instance.new("UITextSizeConstraint")
+		hintLimit.MaxTextSize = 18
+		hintLimit.Parent = hint
+		local row = Instance.new("Frame")
+		row.Name = "Order"
+		row.Position = UDim2.fromScale(0, 0.36)
+		row.Size = UDim2.fromScale(1, 0.64)
+		row.BackgroundTransparency = 1
+		row.ZIndex = Z.overlay + 1
+		row.Parent = section
+		local rowLayout = Instance.new("UIListLayout")
+		rowLayout.FillDirection = Enum.FillDirection.Horizontal
+		rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		rowLayout.Padding = UDim.new(0.03, 0)
+		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		rowLayout.Parent = row
+		for _, stat in Modifiers.PRIORITY do
+			local chip = Ui.button(row, "", Ui.COLORS.cell)
+			chip.Name = stat
+			chip.Size = UDim2.fromScale(0.31, 1)
+			chip.TextSize = 24
+			chip.TextColor3 = PRIORITY_COLORS[stat]
+			chip.ZIndex = Z.overlay + 2
+			priorityChips[stat] = chip
+			chip.Activated:Connect(function()
+				local rank = table.find(state.priority, stat)
+				if rank and rank > 1 then
+					state.priority[rank], state.priority[rank - 1] = state.priority[rank - 1], stat
+					paintPriority()
+				end
+			end)
+		end
+		paintPriority()
+		-- La lista de "parar con" va debajo, con su propio título.
+		local stopTitle = Ui.label(stopper, 20)
+		stopTitle.Position = UDim2.fromOffset(12, 142)
+		stopTitle.Size = UDim2.new(1, -24, 0, 26)
+		stopTitle.Text = "La tirada automática para con:"
+		stopTitle.ZIndex = Z.overlay + 1
+		stopList.Position = UDim2.fromOffset(12, 172)
+		stopList.Size = UDim2.new(1, -24, 1, -252)
+	end
 	for position, item in displayOrder(kind) do
 		local index = item.index
 		if not index then
@@ -880,17 +952,31 @@ local function buildShop(kind: string)
 
 			-- Frena de golpe al final (Quint): cuanto más a la derecha, más tarda en parar. Todo en
 			-- Scale de la columna: cada TraitCard mide 1 / VISIBLE.
-			local final = 0.5 - (LAND - 0.5) / VISIBLE + (random:NextNumber() - 0.5) * 0.5 / VISIBLE
-			local tween = TweenService:Create(strip, TweenInfo.new(1.1 + (column - 1) * 0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0, final) })
-			tween:Play()
-			table.insert(columns, { box = box, strip = strip, tween = tween, final = final, stroke = stroke, scale = scale })
+			-- Frena un poco desviada (como si fuera a caer en la de al lado) y luego se recoloca justo
+			-- en el selector.
+			local final = 0.5 - (LAND - 0.5) / VISIBLE
+			local landing = final + (random:NextNumber() - 0.5) * 0.5 / VISIBLE
+			local entry = { box = box, strip = strip, final = final, stroke = stroke, scale = scale, done = false }
+			entry.tween = TweenService:Create(strip, TweenInfo.new(1.1 + (column - 1) * 0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0, landing) })
+			entry.tween.Completed:Connect(function(playback)
+				if playback ~= Enum.PlaybackState.Completed then
+					return
+				end
+				entry.tween = TweenService:Create(strip, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { Position = UDim2.fromScale(0, final) })
+				entry.tween.Completed:Connect(function(settled)
+					entry.done = settled == Enum.PlaybackState.Completed
+				end)
+				entry.tween:Play()
+			end)
+			entry.tween:Play()
+			table.insert(columns, entry)
 		end
 
 		local finished = false
 		while not finished and not rouletteSkip do
 			finished = true
 			for _, column in columns do
-				if column.tween.PlaybackState == Enum.PlaybackState.Playing then
+				if not column.done then
 					finished = false
 				end
 			end
@@ -942,7 +1028,7 @@ local function buildShop(kind: string)
 		state.waiting = true
 		state.last = nil
 		if kind == "traits" then
-			Remotes.RollTrait:FireServer(state.selected, state.count)
+			Remotes.RollTrait:FireServer(state.selected, state.count, table.concat(state.priority, ","))
 		else
 			Remotes.RollGrade:FireServer(state.selected)
 		end
@@ -1040,6 +1126,13 @@ local function buildShop(kind: string)
 			end
 		end
 		refresh()
+	end)
+	-- El orden guardado llega al entrar (o al cambiarlo desde otra partida).
+	player:GetAttributeChangedSignal("TraitPriority"):Connect(function()
+		state.priority = Modifiers.priority(player:GetAttribute("TraitPriority"))
+		if kind == "traits" then
+			paintPriority()
+		end
 	end)
 	for _, attribute in { "Swords", "Equipped", "Gems", "Item_traitCrystal" } do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)

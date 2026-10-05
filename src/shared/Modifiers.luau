@@ -54,6 +54,41 @@ function Modifiers.roll(kind: string, random: Random): number
 	return 1
 end
 
+-- Prioridad de los tipos de rasgo cuando dos tiradas son igual de raras (Monedas II y Suerte II):
+-- gana el tipo que va antes. Se guarda como texto ("luck,coins,damage") en los datos del jugador.
+Modifiers.PRIORITY = { "luck", "coins", "damage" }
+
+-- Lee una prioridad guardada o recibida del cliente: tienen que ser los tres tipos sin repetir; si
+-- no, la de por defecto.
+function Modifiers.priority(text: unknown): { string }
+	if type(text) ~= "string" then
+		return table.clone(Modifiers.PRIORITY)
+	end
+	local order = string.split(text, ",")
+	if #order ~= #Modifiers.PRIORITY then
+		return table.clone(Modifiers.PRIORITY)
+	end
+	for _, stat in Modifiers.PRIORITY do
+		if not table.find(order, stat) then
+			return table.clone(Modifiers.PRIORITY)
+		end
+	end
+	return order
+end
+
+-- ¿Es la tirada `a` mejor que `b`? Primero la más rara; si son igual de raras, la de un tipo que
+-- vaya antes en `priority` (los especiales no empatan nunca: cada uno tiene su probabilidad).
+function Modifiers.better(kind: string, a: number, b: number, priority: { string }): boolean
+	local oddsA, oddsB = Modifiers.odds(kind, a), Modifiers.odds(kind, b)
+	if oddsA ~= oddsB then
+		return oddsA > oddsB
+	end
+	local list = Modifiers.KINDS[kind].list
+	local rankA = table.find(priority, list[a].icon) or math.huge
+	local rankB = table.find(priority, list[b].icon) or math.huge
+	return rankA < rankB
+end
+
 -- "x1.5 Monedas · x1.5 Daño" (solo lo que sube).
 function Modifiers.effect(entry): string
 	local parts = {}
