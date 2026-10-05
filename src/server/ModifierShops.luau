@@ -32,8 +32,10 @@ local function pay(player: Player, kind: string, data, tries: number): boolean
 	return PlayerData.trySpendGems(player, Config.GradeCost)
 end
 
--- `count` = cuántas veces tira el rasgo de golpe (1 o 3, un cristal cada una): se queda con el más raro.
-local function onRoll(player: Player, kind: string, id: unknown, count: unknown)
+-- `count` = cuántas veces tira el rasgo de golpe (1 o 3, un cristal cada una): se queda con el más raro
+-- y, si empatan en rareza, con el tipo que va antes en `priority` (el orden que ha puesto el jugador en
+-- la tienda; se guarda en sus datos).
+local function onRoll(player: Player, kind: string, id: unknown, count: unknown, priority: unknown)
 	local now = os.clock()
 	if now - (lastRoll[player] or 0) < Config.ModifierCooldown then
 		return
@@ -50,13 +52,24 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown)
 		require(script.Parent.Missions).add(player, "traitRolls", tries)
 	end
 
+	local order = Modifiers.priority(data.traitPriority)
+	if kind == "traits" and type(priority) == "string" then
+		order = Modifiers.priority(priority)
+		local text = table.concat(order, ",")
+		if text ~= data.traitPriority then
+			PlayerData.edit(player, function(edited)
+				edited.traitPriority = text
+			end)
+		end
+	end
+
 	local info = Modifiers.KINDS[kind]
 	local rolls = {}
 	local index = nil
 	for _ = 1, tries do
 		local rolled = Modifiers.roll(kind, random)
 		table.insert(rolls, rolled)
-		if not index or Modifiers.odds(kind, rolled) > Modifiers.odds(kind, index) then
+		if not index or Modifiers.better(kind, rolled, index, order) then
 			index = rolled
 		end
 	end
@@ -171,8 +184,8 @@ function ModifierShops.start()
 	buildStall(map, "traits", at(112.5), { Color3.fromRGB(255, 90, 140), Color3.fromRGB(80, 200, 255), Color3.fromRGB(255, 220, 80), Color3.fromRGB(150, 110, 255) })
 	buildStall(map, "grades", at(157.5), { Color3.fromRGB(170, 90, 255), Color3.fromRGB(245, 245, 250) })
 
-	Remotes.RollTrait.OnServerEvent:Connect(function(player, id, count)
-		onRoll(player, "traits", id, count)
+	Remotes.RollTrait.OnServerEvent:Connect(function(player, id, count, priority)
+		onRoll(player, "traits", id, count, priority)
 	end)
 	Remotes.RollGrade.OnServerEvent:Connect(function(player, id)
 		onRoll(player, "grades", id)
