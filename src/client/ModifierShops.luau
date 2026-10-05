@@ -39,8 +39,9 @@ local Z = {
 	card = 12, -- TraitCards de la tira
 	cardText = 13,
 	fade = 14, -- fundido arriba y abajo de cada columna
-	selector = 15, -- marco blanco y flechas, una capa aparte por encima de los TraitCards
-	shade = 16, -- oscurecido de las columnas que no ganan (también apaga su selector)
+	shade = 15, -- oscurecido de las columnas que no ganan
+	selector = 16, -- marco blanco y flechas, una capa aparte por encima de todo lo de la columna
+	-- (sobresale de la columna, así que no lo tapa el oscurecido: se apaga él solo)
 	skip = 20, -- botón invisible para saltar la ruleta
 	overlay = 30, -- "Elige una espada" y "Parar con" (tapan toda la izquierda)
 }
@@ -918,6 +919,15 @@ local function buildShop(kind: string)
 				shade.Parent = column.box
 				Ui.round(shade, 10)
 				TweenService:Create(shade, TweenInfo.new(0.3), { BackgroundTransparency = 0.45 }):Play()
+				-- El selector entero (marco y flechas) se apaga a la vez, sin medias flechas oscuras.
+				local fade = TweenInfo.new(0.3)
+				for _, part in column.box.Selector:GetDescendants() do
+					if part:IsA("UIStroke") then
+						TweenService:Create(part, fade, { Transparency = 0.6 }):Play()
+					elseif part:IsA("Frame") then
+						TweenService:Create(part, fade, { BackgroundTransparency = 0.6 }):Play()
+					end
+				end
 			end
 		end
 		;(rouletteTitle :: TextLabel).Text = entry.name
