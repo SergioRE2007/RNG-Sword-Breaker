@@ -25,6 +25,7 @@ local NAMES = {
 	"Announce", -- servidor -> clientes: (text, color) aviso de algo muy raro
 	"Rebirth", -- cliente -> servidor: pagar el siguiente renacimiento (solo monedas, no quita nada)
 	"ClaimMission", -- cliente -> servidor: (periodo "daily" o "weekly", id de la misión) cobrar la recompensa de una misión cumplida
+	"AdminSetModifier", -- cliente -> servidor: (kind "traits" o "grades", id de la copia, índice o 0 = quitar) modo admin de pruebas, solo en Studio
 	"EnterDungeon", -- cliente -> servidor: (índice de Config.Dungeons) entrar a la mazmorra desde el portal del hub
 	"LeaveDungeon", -- cliente -> servidor: salir de la mazmorra en la que está
 	"DungeonEvent", -- servidor -> cliente: (tipo, datos) "hurt" (daño recibido) o "result" ({ won, level, loot })

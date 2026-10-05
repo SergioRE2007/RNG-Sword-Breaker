@@ -589,6 +589,7 @@ local function buildShop(kind: string)
 	padding.PaddingBottom = UDim.new(0, 5)
 	padding.Parent = results
 	local rows = {}
+	local adminPicks = {} -- [índice] = botón invisible sobre la fila (modo admin)
 	for position, item in displayOrder(kind) do
 		if item.header then
 			local header = Ui.label(results, 26)
@@ -712,7 +713,65 @@ local function buildShop(kind: string)
 			TweenService:Create(grow, TweenInfo.new(0.12), { Scale = 1 }):Play()
 		end)
 		rows[index] = row
+		-- Modo admin (pruebas): con él encendido, pulsar la fila pone ese resultado en la espada elegida.
+		local pick = Instance.new("TextButton")
+		pick.Name = "AdminPick"
+		pick.Text = ""
+		pick.Size = UDim2.fromScale(1, 1)
+		pick.BackgroundTransparency = 1
+		pick.Visible = false
+		pick.ZIndex = row.ZIndex
+		pick.Parent = row
+		adminPicks[index] = pick
+		pick.Activated:Connect(function()
+			local id = state.selected or player:GetAttribute("Equipped")
+			Remotes.AdminSetModifier:FireServer(kind, id, index)
+			Sfx.play("buy")
+			Ui.toast(`Admin: {entry.name} puesto`, entry.color)
+		end)
 	end
+
+	-- Botón "Admin" en la cabecera: solo se ve si el servidor dice que este jugador es admin (pruebas en
+	-- Studio, Config.Test.Admin). Encendido, la lista de la derecha se puede pulsar; "Quitar" lo borra.
+	local adminOn = false
+	local adminButton = Ui.button((header or window) :: Instance, "Admin", Ui.COLORS.gray)
+	adminButton.Name = "Admin"
+	adminButton.AnchorPoint = Vector2.new(1, 0.5)
+	adminButton.Position = UDim2.new(1, -86, 0.5, 0)
+	adminButton.Size = UDim2.fromOffset(150, 40)
+	adminButton.TextSize = 20
+	local adminClear = Ui.button((header or window) :: Instance, "Quitar", Ui.COLORS.red)
+	adminClear.Name = "AdminClear"
+	adminClear.AnchorPoint = Vector2.new(1, 0.5)
+	adminClear.Position = UDim2.new(1, -244, 0.5, 0)
+	adminClear.Size = UDim2.fromOffset(96, 40)
+	adminClear.TextSize = 20
+	local function paintAdmin()
+		local allowed = player:GetAttribute("Admin") == true
+		if not allowed then
+			adminOn = false
+		end
+		adminButton.Visible = allowed
+		adminClear.Visible = allowed and adminOn
+		adminButton.Text = if adminOn then "Admin: SÍ" else "Admin: NO"
+		adminButton.BackgroundColor3 = if adminOn then Ui.COLORS.orange else Ui.COLORS.gray
+		for _, pick in adminPicks do
+			pick.Visible = adminOn
+		end
+	end
+	adminButton.Activated:Connect(function()
+		adminOn = not adminOn
+		paintAdmin()
+		if adminOn then
+			Ui.toast(`Admin: pulsa un {if kind == "traits" then "rasgo" else "grado"} de la lista para ponerlo`, Ui.COLORS.orange)
+		end
+	end)
+	adminClear.Activated:Connect(function()
+		Remotes.AdminSetModifier:FireServer(kind, state.selected or player:GetAttribute("Equipped"), 0)
+		Ui.toast("Admin: quitado", Ui.COLORS.red)
+	end)
+	player:GetAttributeChangedSignal("Admin"):Connect(paintAdmin)
+	paintAdmin()
 
 	-- Estado --------------------------------------------------------------------------
 	local function selectedCopy()

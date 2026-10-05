@@ -5,6 +5,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -91,6 +92,27 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 		local what = if kind == "traits" then "el rasgo" else "el grado"
 		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha sacado {what} {entry.name} ({Modifiers.formatPercent(Modifiers.percent(kind, index))}, 1 entre {Format.short(odds)})!`, entry.color)
 	end
+end
+
+-- Modo admin de pruebas (Config.Test.Admin): solo existe al darle a Jugar en Studio, nunca en el juego publicado.
+local function isAdmin(): boolean
+	return RunService:IsStudio() and Config.Test.Admin == true
+end
+
+-- Admin: pone a mano el rasgo o grado `index` (0 = quitarlo) en esa copia, sin tirar ni gastar nada.
+local function onAdminSet(player: Player, kind: unknown, id: unknown, index: unknown)
+	local info = if kind == "traits" or kind == "grades" then Modifiers.KINDS[kind] else nil
+	if not isAdmin() or not info or type(index) ~= "number" or (index ~= 0 and not info.list[index]) then
+		return
+	end
+	local data = PlayerData.read(player)
+	local copy = data and PlayerData.findSword(data, id)
+	if not copy then
+		return
+	end
+	PlayerData.edit(player, function()
+		copy[info.field] = if index == 0 then nil else index
+	end)
 end
 
 -- Puesto: mostrador, cuatro postes, toldo de rayas inclinado, cartel flotante y el aviso de
@@ -196,6 +218,15 @@ function ModifierShops.start()
 	Remotes.RollGrade.OnServerEvent:Connect(function(player, id)
 		onRoll(player, "grades", id)
 	end)
+	Remotes.AdminSetModifier.OnServerEvent:Connect(onAdminSet)
+	-- El cliente enseña el botón "Admin" de las tiendas si lleva este atributo.
+	local function onPlayer(player: Player)
+		player:SetAttribute("Admin", isAdmin())
+	end
+	Players.PlayerAdded:Connect(onPlayer)
+	for _, player in Players:GetPlayers() do
+		onPlayer(player)
+	end
 	Players.PlayerRemoving:Connect(function(player)
 		lastRoll[player] = nil
 	end)

@@ -11,6 +11,7 @@ Config.WalkSpeed = 30 -- velocidad al andar (la normal de Roblox es 16)
 Config.Test = {
 	InfiniteMoney = true, -- monedas y gemas infinitas
 	AllWeapons = true, -- una copia de cada arma de Config.Swords en la mochila al entrar
+	Admin = true, -- botón "Admin" en las tiendas de Rasgos y Grados: eliges a mano el rasgo o grado de la espada, sin tirar ni gastar
 	AllGamepasses = true, -- todos los pases de juego de Config.Gamepasses (para probar sus ventajas sin comprarlos)
 	AllGear = true, -- todos los accesorios (Config.Artifacts) y una pieza de armadura de cada hueco y cada mazmorra al entrar
 }
