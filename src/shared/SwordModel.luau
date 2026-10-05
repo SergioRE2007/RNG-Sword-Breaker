@@ -1,7 +1,10 @@
 -- Construye el modelo de un arma con piezas, según su tipo: espada, espadas dobles, hacha, lanza o martillo.
 -- Lo usan el servidor (el arma en la mano) y el decorado (expositor del hub).
 -- Ejes de la empuñadura: el arma sube por +Y, es ancha en Z y fina en X; -Z es hacia donde mira el jugador.
+local RunService = game:GetService("RunService")
+
 local Config = require(script.Parent.Config)
+local MeshWeapon = require(script.Parent.MeshWeapon)
 
 local SwordModel = {}
 
@@ -204,6 +207,28 @@ local function spear(add: Add, def, style): (BasePart, BasePart)
 	return handle, blade
 end
 
+-- Arma con malla propia (`mesh` en Config.Swords): aquí solo van la empuñadura y un bloque del tamaño de la hoja,
+-- invisibles (sirven para agarrarla, la estela y el aura). La malla la pone MeshWeapon en cada cliente.
+local function meshed(add: Add, def, scale: number, anchored: boolean, metal: number?): (BasePart, BasePart)
+	local proxy = MeshWeapon.data(def.mesh).proxy
+	local handle = add("Part", "Handle", proxy.grip, CFrame.identity, LEATHER, Enum.Material.Fabric)
+	local blade = add("Part", "Blade", proxy.blade, CFrame.new(0, proxy.bladeY, 0), def.color, def.material)
+	for _, part in { handle, blade } do
+		part.Transparency = 1
+		part.CastShadow = false
+		part:SetAttribute("MeshProxy", true)
+	end
+	handle:SetAttribute("Mesh", def.mesh)
+	handle:SetAttribute("MeshScale", scale)
+	handle:SetAttribute("MeshMetal", metal or 0)
+	if RunService:IsClient() then
+		MeshWeapon.attach(handle, anchored)
+	else
+		handle:AddTag(MeshWeapon.TAG)
+	end
+	return handle, blade
+end
+
 -- Luz y chispas en las armas que brillan, y la estela del tajo (el cliente la enciende mientras dura el golpe).
 local function effects(blade: BasePart, level: number, def, style, scale: number, anchored: boolean)
 	-- El aura la pone cada cliente (client/WeaponAura) en las hojas marcadas con esta etiqueta.
@@ -271,7 +296,9 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 	local add = builder(parent, origin, scale, anchored)
 
 	local handle, blade
-	if kind == "axe" then
+	if def.mesh then
+		handle, blade = meshed(add, def, scale, anchored, metal)
+	elseif kind == "axe" then
 		handle, blade = axe(add, def, style)
 	elseif kind == "spear" then
 		handle, blade = spear(add, def, style)

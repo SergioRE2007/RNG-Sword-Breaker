@@ -91,6 +91,9 @@ Config.Swords = {
 	{ name = "Hacha del amanecer", kind = "axe", damage = 4.36e9, rarity = 2.43e16, bladeLength = 6.8, color = Color3.fromRGB(255, 235, 170), material = Enum.Material.Neon },
 	{ name = "Hojas del alba eterna", kind = "dual", damage = 5.76e8, rarity = 5.26e15, bladeLength = 6.2, color = Color3.fromRGB(250, 255, 255), material = Enum.Material.Neon },
 	{ name = "Lanza del big bang", kind = "spear", damage = 7.04e9, rarity = 1.16e17, bladeLength = 16, color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
+	-- La más rara: mandoble modelado en Blender (colmillo con muescas, canal de energía y aura turquesa y magenta).
+	-- `mesh` = módulo de shared/Meshes con su forma (la dibuja shared/MeshWeapon en vez de las piezas de SwordModel).
+	{ name = "Colmillo astral", mesh = "ColmilloAstral", damage = 4.29e10, rarity = 3e18, bladeLength = 10, color = Color3.fromRGB(60, 230, 215), material = Enum.Material.Neon },
 }
 
 -- Niveles de rareza, de menor a mayor: a partir de "1 entre min" se usa ese nombre y color
