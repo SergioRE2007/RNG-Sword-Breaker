@@ -6,6 +6,8 @@ local RunService = game:GetService("RunService")
 
 local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 
+local Performance = require(script.Parent.Performance)
+
 local WeaponPreview = {}
 
 local FOV = 30
@@ -61,6 +63,7 @@ local function place(view)
 end
 
 local function step(dt: number)
+	if Performance.get() then return end -- modo rendimiento
 	for view in active do
 		if view.always then
 			view.angle = (view.angle + SLOW_SPIN * dt) % (2 * math.pi)

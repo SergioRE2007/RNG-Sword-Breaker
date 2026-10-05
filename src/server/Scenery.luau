@@ -58,6 +58,8 @@ local function wedge(parent: Instance, size: Vector3, cframe: CFrame, color: Col
 	item.Material = Enum.Material.SmoothPlastic
 	item.Parent = parent
 	decor(item)
+	-- El cliente (Ambience) quita parte de estas piezas en móviles.
+	CollectionService:AddTag(item, "GrassDetail")
 	return item
 end
 
@@ -98,9 +100,12 @@ end
 -- Flor: tallo y una bola de color.
 local function flower(parent: Instance, position: Vector3)
 	local height = rng:NextNumber(0.9, 1.5)
-	decor(part(parent, "Stem", Vector3.new(0.15, height, 0.15), CFrame.new(position + Vector3.new(0, 0.3 + height / 2, 0)), GRASS_TUFT[1], Enum.Material.SmoothPlastic))
+	local stem = decor(part(parent, "Stem", Vector3.new(0.15, height, 0.15), CFrame.new(position + Vector3.new(0, 0.3 + height / 2, 0)), GRASS_TUFT[1], Enum.Material.SmoothPlastic))
 	local head = decor(part(parent, "Petals", Vector3.one * 0.75, CFrame.new(position + Vector3.new(0, 0.3 + height, 0)), FLOWERS[rng:NextInteger(1, #FLOWERS)], Enum.Material.SmoothPlastic))
 	head.Shape = Enum.PartType.Ball
+	-- Tallo y flor comparten posición: el cliente (Ambience) quita en móviles las mismas por posición.
+	CollectionService:AddTag(stem, "FlowerPiece")
+	CollectionService:AddTag(head, "FlowerPiece")
 end
 
 -- Montaña lejana: un cubo con una esquina hacia arriba, medio hundido, con la punta nevada.
@@ -636,6 +641,7 @@ function Scenery.start()
 			local fog = decor(part(folder, "Fog", Vector3.new(rng:NextNumber(260, 380), rng:NextNumber(30, 44), rng:NextNumber(90, 130)), CFrame.lookAt(position, Vector3.zero) * CFrame.new(rng:NextNumber(-120, 120), rng:NextNumber(14, 26), rng:NextNumber(-60, -10)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic))
 			fog.Shape = Enum.PartType.Ball
 			fog.Transparency = 0.2
+			CollectionService:AddTag(fog, "FogBank") -- el modo rendimiento (cliente) los quita
 		end
 	end)
 	ring(12, 600, 0.2, function(position)

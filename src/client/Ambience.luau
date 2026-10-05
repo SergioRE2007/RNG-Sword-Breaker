@@ -3,7 +3,9 @@
 -- la orilla late, las espadas del expositor del hub giran y flotan, y unas gaviotas vuelan en
 -- círculos. Scenery marca las piezas con etiquetas (Sway, Cloud, Foam, ShowcaseSword).
 local CollectionService = game:GetService("CollectionService")
+local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+local Performance = require(script.Parent.Performance)
 
 local Ambience = {}
 
@@ -57,6 +59,73 @@ local function seagull(parent: Instance)
 		offset = math.random() * math.pi * 2,
 	}
 end
+-- Modo rendimiento (ver Performance): aquí se quita lo que es decorado puro. Hierba, flores, nubes y
+-- bancos de niebla se sacan del mundo, desaparecen las gaviotas, las mariposas y todas las zonas de
+-- partículas, se paran las animaciones del decorado y se apagan las sombras, los efectos de pantalla
+-- y la atmósfera. Es reversible: las piezas quitadas se guardan con su padre y se devuelven.
+local PERFORMANCE_TAGS = { "GrassDetail", "FlowerPiece", "Cloud", "FogBank" }
+local removed: { [Instance]: Instance } = {} -- pieza quitada -> su padre
+local ambienceFolder: Folder? = nil
+local savedLighting: { [Instance]: { [string]: any } } = {}
+
+local function remove(item: Instance)
+	if item.Parent and removed[item] == nil then
+		removed[item] = item.Parent
+		item.Parent = nil
+	end
+end
+
+function Ambience.isPerformance(): boolean
+	return Performance.get()
+end
+
+function Ambience.setPerformance(on: boolean)
+	Performance.set(on)
+end
+
+local function applyPerformance(on: boolean)
+	if on then
+		for _, tag in PERFORMANCE_TAGS do
+			for _, item in CollectionService:GetTagged(tag) do
+				remove(item)
+			end
+		end
+	else
+		for item, parent in removed do
+			item.Parent = parent
+		end
+		table.clear(removed)
+	end
+	if ambienceFolder then
+		ambienceFolder.Parent = if on then nil else workspace
+	end
+
+	Lighting.GlobalShadows = not on
+	for _, child in Lighting:GetChildren() do
+		if child:IsA("PostEffect") then
+			child.Enabled = not on
+		elseif child:IsA("Atmosphere") then
+			if on then
+				savedLighting[child] = { Density = child.Density, Haze = child.Haze, Glare = child.Glare }
+				child.Density, child.Haze, child.Glare = 0, 0, 0
+			elseif savedLighting[child] then
+				for property, value in savedLighting[child] do
+					(child :: any)[property] = value
+				end
+			end
+		end
+	end
+end
+
+-- Piezas que llegan después (con StreamingEnabled) también se quitan.
+for _, tag in PERFORMANCE_TAGS do
+	CollectionService:GetInstanceAddedSignal(tag):Connect(function(item)
+		if Performance.get() then
+			remove(item)
+		end
+	end)
+end
+Performance.Changed:Connect(applyPerformance)
 
 function Ambience.start()
 	local leaves = track("Sway", readPart)
@@ -204,9 +273,10 @@ function Ambience.start()
 			item.Material = Enum.Material.SmoothPlastic
 			return item
 		end
+		local leftWing, rightWing = wing(), wing()
 		table.insert(butterflies, {
-			left = wing(),
-			right = wing(),
+			left = leftWing,
+			right = rightWing,
 			-- Cada una tiene su rincón fijo de la isla (no sigue a la cámara).
 			home = Vector3.new(math.cos(index * 2.4) * (60 + index * 9), 0, math.sin(index * 2.4) * (60 + index * 9)),
 			radius = math.random(6, 14),
@@ -216,11 +286,21 @@ function Ambience.start()
 		})
 	end
 
+	ambienceFolder = folder
+	-- Si el modo rendimiento ya estaba activo (móvil), se aplica ahora que existe todo.
+	if Performance.get() then
+		applyPerformance(true)
+	end
+
 	local parts: { BasePart } = {}
 	local cframes: { CFrame } = {}
 	local swayClock = 0
 
 	RunService.RenderStepped:Connect(function(delta)
+		-- Modo rendimiento: ninguna animación del decorado (hojas, nubes, gaviotas, mar, espadas del expositor).
+		if Performance.get() then
+			return
+		end
 		local now = os.clock()
 		local camera = workspace.CurrentCamera.CFrame.Position
 		table.clear(parts)

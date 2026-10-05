@@ -7,6 +7,8 @@ local TweenService = game:GetService("TweenService")
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local Performance = require(script.Parent.Performance)
+
 local Effects = {}
 
 local FRAGMENT_LIFETIME = 2.5
@@ -120,6 +122,7 @@ local function shake(part: BasePart)
 end
 
 local function shatter(cframe: CFrame, size: Vector3, color: Color3, material: Enum.Material)
+	if Performance.get() then return end -- modo rendimiento
 	-- Entre 2 y 3 trozos por eje: máximo 27 piezas por objeto.
 	local cell = math.max(size.X, size.Y, size.Z) / 3
 	local nx = math.clamp(math.round(size.X / cell), 2, 3)

@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -16,6 +17,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
+local Performance = require(script.Parent.Performance)
 
 local Hud = {}
 
@@ -82,6 +84,12 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 		end)
 	end
 	local function setAmount(value: number)
+		if Performance.get() then
+			-- Modo rendimiento: el número cambia de golpe, sin rodar, sin latido y sin "+N".
+			shown, target = value, value
+			show(value)
+			return
+		end
 		if target == nil or value == target then
 			if target == nil then
 				shown, target = value, value
@@ -251,7 +259,7 @@ function Hud.start()
 	tab.Name = "StatsTab"
 	tab.AnchorPoint = Vector2.new(1, 1)
 	tab.Position = UDim2.new(0, -4, 1, 0)
-	tab.Size = UDim2.fromOffset(36, 74)
+	tab.Size = UDim2.fromOffset(44, 74) -- 44 px: lo mínimo cómodo para el dedo
 	tab.TextSize = 30
 	tab.Activated:Connect(function()
 		statsOpen = not statsOpen
@@ -260,6 +268,12 @@ function Hud.start()
 			Position = if statsOpen then UDim2.new(1, -MARGIN, 1, -MARGIN) else UDim2.new(1, 300, 1, -MARGIN),
 		}):Play()
 	end)
+	-- En móviles la pantalla es pequeña: las estadísticas empiezan plegadas.
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		statsOpen = false
+		tab.Text = "<"
+		dock.Position = UDim2.new(1, 300, 1, -MARGIN)
+	end
 	Ui.round(statsBox, 12)
 	Ui.stroke(statsBox, BLACK, 3)
 	Ui.gradient(statsBox, Color3.fromRGB(58, 48, 110), Color3.fromRGB(18, 18, 40), 90)

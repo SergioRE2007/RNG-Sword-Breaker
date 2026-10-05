@@ -11,6 +11,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local Performance = require(script.Parent.Performance)
+
 local Ui = {}
 
 local glints = {} -- [UIGradient del brillo] = { phase, period }
@@ -120,6 +122,10 @@ function Ui.pressable(item: GuiButton, grow: number?)
 	scale.Parent = item
 	local big = grow or 1.07
 	local function to(value: number, time: number, style: Enum.EasingStyle)
+		if Performance.get() then
+			scale.Scale = 1 -- modo rendimiento: sin rebotes
+			return
+		end
 		TweenService:Create(scale, TweenInfo.new(time, style, Enum.EasingDirection.Out), { Scale = value }):Play()
 	end
 	local over = false
@@ -147,6 +153,7 @@ function Ui.sparkle(item: GuiObject, period: number?)
 	glint.BackgroundColor3 = WHITE
 	glint.BorderSizePixel = 0
 	glint.ZIndex = item.ZIndex + 1
+	glint.Visible = not Performance.get()
 	glint.Parent = item
 	Ui.round(glint, 12)
 	local sweep = Instance.new("UIGradient")
@@ -183,7 +190,27 @@ local MAX_WINDOW_SCALE = 1.22 -- las ventanas crecen hasta aquí en pantallas gr
 
 -- Brillos que cruzan los títulos de las ventanas (los mueve un solo bucle).
 local shines = {}
+local glintsHidden = false
 RunService.RenderStepped:Connect(function()
+	-- Modo rendimiento: ni brillos en los títulos ni destellos en los botones (se esconden y se devuelven al apagarlo).
+	if Performance.get() then
+		if not glintsHidden then
+			glintsHidden = true
+			for gradient in glints do
+				if gradient.Parent then
+					(gradient.Parent :: GuiObject).Visible = false
+				end
+			end
+		end
+		return
+	elseif glintsHidden then
+		glintsHidden = false
+		for gradient in glints do
+			if gradient.Parent then
+				(gradient.Parent :: GuiObject).Visible = true
+			end
+		end
+	end
 	local now = os.clock()
 	for gradient, phase in shines do
 		if gradient.Parent then
@@ -325,7 +352,7 @@ function Ui.window(name: string, title: string, size: Vector2)
 	fit()
 	-- Al abrirse, la ventana sale con un rebote desde un poco más pequeña.
 	frame:GetPropertyChangedSignal("Visible"):Connect(function()
-		if frame.Visible then
+		if frame.Visible and not Performance.get() then
 			scale.Scale = fitted * 0.8
 			shadowScale.Scale = fitted * 0.8
 			local info = TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
@@ -457,6 +484,9 @@ local shines = {} -- [UIGradient del borde] = { speed, halo, phase }
 local shining = false
 
 local function animateShines(dt: number)
+	if Performance.get() then
+		return -- modo rendimiento: los marcos de las casillas se quedan quietos
+	end
 	local now = os.clock()
 	for gradient, info in shines do
 		gradient.Rotation = (gradient.Rotation + info.speed * dt) % 360
@@ -710,6 +740,116 @@ function Ui.hex(parent: Instance, width: number, color: Color3)
 	return holder, pieces
 end
 
+-- Engranaje hecho con marcos (la fuente no tiene el icono): dientes, aro y agujero.
+function Ui.gearIcon(parent: GuiObject)
+	local holder = Instance.new("Frame")
+	holder.Name = "Gear"
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.Position = UDim2.fromScale(0.5, 0.5)
+	holder.Size = UDim2.fromOffset(40, 40)
+	holder.BackgroundTransparency = 1
+	holder.Parent = parent
+	local metal = Color3.fromRGB(230, 233, 240)
+	for tooth = 0, 3 do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Position = UDim2.fromScale(0.5, 0.5)
+		bar.Size = UDim2.fromOffset(44, 9)
+		bar.Rotation = tooth * 45
+		bar.BackgroundColor3 = metal
+		bar.BorderSizePixel = 0
+		bar.Parent = holder
+		Ui.round(bar, 3)
+	end
+	local wheel = Instance.new("Frame")
+	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
+	wheel.Position = UDim2.fromScale(0.5, 0.5)
+	wheel.Size = UDim2.fromOffset(28, 28)
+	wheel.BackgroundColor3 = metal
+	wheel.Parent = holder
+	Ui.round(wheel, 14)
+	Ui.stroke(wheel, BLACK, 2)
+	local hole = Instance.new("Frame")
+	hole.AnchorPoint = Vector2.new(0.5, 0.5)
+	hole.Position = UDim2.fromScale(0.5, 0.5)
+	hole.Size = UDim2.fromOffset(12, 12)
+	hole.BackgroundColor3 = Color3.fromRGB(80, 84, 98)
+	hole.Parent = wheel
+	Ui.round(hole, 6)
+	Ui.stroke(hole, BLACK, 2)
+	return holder
+end
+
+
+-- Deslizador horizontal (0 a 1): barra con relleno en degradado y un botón redondo que se arrastra
+-- con el ratón o el dedo. `onChange` recibe el valor al moverlo. Devuelve el marco y una función
+-- para ponerle un valor sin avisar.
+function Ui.slider(parent: Instance, initial: number, onChange: (number) -> ()): (Frame, (number) -> ())
+	local track = Instance.new("Frame")
+	track.Name = "Slider"
+	track.Size = UDim2.fromOffset(300, 22)
+	track.BackgroundColor3 = Ui.COLORS.dark
+	track.Parent = parent
+	Ui.round(track, 11)
+	Ui.stroke(track, BLACK, 3)
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.fromScale(initial, 1)
+	fill.BackgroundColor3 = WHITE
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	Ui.round(fill, 11)
+	Ui.gradient(fill, Color3.fromRGB(120, 235, 110), Color3.fromRGB(40, 170, 70), 90)
+	local knob = Instance.new("Frame")
+	knob.AnchorPoint = Vector2.new(0.5, 0.5)
+	knob.Position = UDim2.fromScale(initial, 0.5)
+	knob.Size = UDim2.fromOffset(34, 34)
+	knob.BackgroundColor3 = WHITE
+	knob.ZIndex = 3
+	knob.Parent = track
+	Ui.round(knob, 17)
+	Ui.stroke(knob, BLACK, 3)
+	Ui.gradient(knob, WHITE, Color3.fromRGB(190, 195, 215), 90)
+	-- Zona de agarre más alta que la barra (cómoda para el dedo).
+	local grab = Instance.new("TextButton")
+	grab.Text = ""
+	grab.AutoButtonColor = false
+	grab.BackgroundTransparency = 1
+	grab.AnchorPoint = Vector2.new(0.5, 0.5)
+	grab.Position = UDim2.fromScale(0.5, 0.5)
+	grab.Size = UDim2.new(1, 40, 0, 48)
+	grab.ZIndex = 4
+	grab.Parent = track
+
+	local function set(value: number)
+		value = math.clamp(value, 0, 1)
+		fill.Size = UDim2.fromScale(value, 1)
+		knob.Position = UDim2.fromScale(value, 0.5)
+	end
+	local dragging = false
+	local function drag(x: number)
+		local value = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+		set(value)
+		onChange(value)
+	end
+	grab.InputBegan:Connect(function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			drag(input.Position.X)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input: InputObject)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			drag(input.Position.X)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+	return track, set
+end
+
 -- Cartel flotante --------------------------------------------------------------------------
 
 local tip, tipStroke, tipSource
@@ -755,7 +895,7 @@ local function ensureTip()
 			tip.Visible = false
 			return
 		end
-		if tipLive then
+		if tipLive and not Performance.get() then
 			local text, color = tipLive()
 			tip.Text = text
 			tipStroke.Color = color
@@ -785,22 +925,50 @@ end
 -- Al pasar el ratón por `target` muestra un cartel con lo que devuelva getContent(): texto
 -- (RichText, varias líneas) y color del borde. Con `beside` el cartel se pega al lado de `target`
 -- en vez de seguir al ratón.
+-- En pantallas táctiles no hay "pasar el ratón": se enseña con una pulsación larga (0,35 s) y se
+-- quita solo a los 2,5 s de soltar.
 function Ui.tip(target: GuiObject, getContent: () -> (string, Color3), beside: boolean?)
 	ensureTip()
-	target.MouseEnter:Connect(function()
+	local function open(forceBeside: boolean)
 		local text, color, live = getContent()
 		tip.Text = text
 		tipStroke.Color = color
 		-- Con un tercer valor `true`, el cartel se vuelve a pedir cada fotograma (texto animado).
 		tipLive = if live then getContent else nil
 		tipSource = target
-		tipBeside = beside == true
+		tipBeside = forceBeside or beside == true
 		tip.Visible = true
+	end
+	target.MouseEnter:Connect(function()
+		open(false)
 	end)
 	target.MouseLeave:Connect(function()
 		if tipSource == target then
 			tip.Visible = false
 		end
+	end)
+	target.InputBegan:Connect(function(input: InputObject)
+		if input.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+		local pressing = true
+		local watch
+		watch = input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
+				pressing = false
+				watch:Disconnect()
+				task.delay(2.5, function()
+					if tipSource == target and not pressing then
+						tip.Visible = false
+					end
+				end)
+			end
+		end)
+		task.delay(0.35, function()
+			if pressing then
+				open(true)
+			end
+		end)
 	end)
 end
 

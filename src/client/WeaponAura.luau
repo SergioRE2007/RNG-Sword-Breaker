@@ -7,6 +7,8 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
+local Performance = require(script.Parent.Performance)
+
 local WeaponAura = {}
 
 local TAG = "WeaponAura"
@@ -205,6 +207,7 @@ local function build(blade: BasePart)
 end
 
 local function step()
+	if Performance.get() then return end -- modo rendimiento
 	local now = os.clock()
 	for blade, aura in auras do
 		if not blade:IsDescendantOf(workspace) then
