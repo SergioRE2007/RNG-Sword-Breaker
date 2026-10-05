@@ -397,4 +397,8 @@ function ArmorPane.build(pane: Frame, helpers)
 	}
 end
 
+-- Para otras ventanas que enseñan piezas de armadura (el comercio).
+ArmorPane.preview = preview
+ArmorPane.tip = pieceTip
+
 return ArmorPane

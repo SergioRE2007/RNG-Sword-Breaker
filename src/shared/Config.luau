@@ -12,6 +12,7 @@ Config.Test = {
 	InfiniteMoney = true, -- monedas y gemas infinitas
 	AllWeapons = true, -- una copia de cada arma de Config.Swords en la mochila al entrar
 	Admin = true, -- botón "Admin" en las tiendas de Rasgos y Grados: eliges a mano el rasgo o grado de la espada, sin tirar ni gastar
+	TradeBot = true, -- "Bot de pruebas" en la lista de Comercio: acepta y confirma solo, para probar un trato sin otro jugador
 	AllGamepasses = true, -- todos los pases de juego de Config.Gamepasses (para probar sus ventajas sin comprarlos)
 	AllGear = true, -- todos los accesorios (Config.Artifacts) y una pieza de armadura de cada hueco y cada mazmorra al entrar
 }
@@ -385,6 +386,10 @@ Config.Enemies = {
 		{ kind = "armor", chance = 1, luck = 5 },
 	} },
 }
+
+-- COMERCIO entre jugadores (server/Trade). Countdown = segundos de la cuenta atrás final, en los que aún se puede
+-- cancelar; InviteTime = lo que dura una invitación; RequestCooldown = espera entre invitaciones.
+Config.Trade = { Countdown = 3, InviteTime = 20, RequestCooldown = 3 }
 
 -- PASES DE JUEGO (gamepass; tienda del menú, client/PassShop y server/Passes). "id" = id del pase en Roblox
 -- (se crea en la página del juego; con 0 aún no está a la venta y el botón dice "Pronto"). "price" = Robux que se

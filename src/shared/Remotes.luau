@@ -26,6 +26,14 @@ local NAMES = {
 	"Rebirth", -- cliente -> servidor: pagar el siguiente renacimiento (solo monedas, no quita nada)
 	"ClaimMission", -- cliente -> servidor: (periodo "daily" o "weekly", id de la misión) cobrar la recompensa de una misión cumplida
 	"AdminSetModifier", -- cliente -> servidor: (kind "traits" o "grades", id de la copia, índice o 0 = quitar) modo admin de pruebas, solo en Studio
+	"TradeRequest", -- cliente -> servidor: (userId) invitar a comerciar a ese jugador (0 = bot de pruebas, solo en Studio)
+	"TradeRespond", -- cliente -> servidor: (userId de quien invitó, true o false) aceptar o rechazar la invitación
+	"TradeOffer", -- cliente -> servidor: (categoría, clave, cantidad) cambiar mi oferta: "coins"/"gems" (cantidad), "items" (nombre, cantidad), "swords"/"armor"/"artifacts" (id o índice, 1 = poner, 0 = quitar)
+	"TradeAccept", -- cliente -> servidor: (true o false) aceptar las ofertas; false en el paso de confirmar = volver a editar
+	"TradeConfirm", -- cliente -> servidor: confirmar el trato (segundo paso)
+	"TradeCancel", -- cliente -> servidor: cancelar el trato (también durante la cuenta atrás)
+	"TradeInvite", -- servidor -> cliente: (userId, nombre) ese jugador te invita a comerciar
+	"TradeState", -- servidor -> cliente: ({ state, ends, you, them }) estado del trato, o nil si se ha cerrado
 	"EnterDungeon", -- cliente -> servidor: (índice de Config.Dungeons) entrar a la mazmorra desde el portal del hub
 	"SetDungeonLoop", -- cliente -> servidor: (true o false) repetir la mazmorra sola cada vez que la supere
 	"LeaveDungeon", -- cliente -> servidor: salir de la mazmorra en la que está
