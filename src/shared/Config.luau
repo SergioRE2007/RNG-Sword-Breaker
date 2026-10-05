@@ -99,7 +99,8 @@ Config.MaxSwords = 200
 
 -- Gacha de espadas: gratis, se tira desde cualquier sitio, una tirada cada RollTime segundos.
 Config.Gacha = {
-	RollTime = 2, -- segundos por tirada (lo que bajarán la rama "Velocidad de tirada" y los gamepass)
+	RollTime = 2, -- segundos por tirada sin mejoras (la rama "Velocidad de tirada" lo baja; un gamepass lo bajará más)
+	MinRollTime = 0.5, -- nunca se tira más rápido que esto
 	ShowcaseOdds = 200, -- desde "1 entre N" real (rareza / suerte de gacha) la tirada pasa a pantalla completa
 	RevealTimeout = 30, -- si el cliente no avisa de que ha destapado una tirada rara, su aura y aviso salen igual a los N segundos
 	AuraOdds = 100, -- desde "1 entre N" real (rareza / suerte de gacha) el aura se ve en el personaje (también para los demás)
@@ -211,7 +212,7 @@ Config.Destructibles = {
 -- Los cálculos están en shared/Upgrades.
 -- En el árbol de mejoras cada mejora es una rama y cada nivel un nodo: "short" es el nombre
 -- del nodo, "icon" su dibujo (box, orb, sword, gem) y "color" el de la rama.
-Config.UpgradeOrder = { "capacity", "luck", "speed", "gachaLuck" }
+Config.UpgradeOrder = { "capacity", "luck", "speed", "gachaLuck", "rollSpeed" }
 Config.Upgrades = {
 	-- Menos niveles y cada uno da más (pedido por el usuario: el árbol era demasiado largo). Llegan al mismo
 	-- tope que antes: la suerte a ~x7e23 (antes 150 niveles de x1.5) y el golpe a 0,14 s.
@@ -219,6 +220,8 @@ Config.Upgrades = {
 	luck = { name = "Suerte", short = "Suerte", icon = "orb", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 40, growth = 3.7, display = "x%s" },
 	speed = { name = "Velocidad de golpe", short = "Velocidad", icon = "sword", color = Color3.fromRGB(60, 170, 255), mode = "mul", base = 0.35, perLevel = 0.912, maxLevel = 10, cost = 200, growth = 3.3, display = "%.2fs" },
 	gachaLuck = { name = "Suerte de gacha", short = "Gacha", icon = "gem", color = Color3.fromRGB(180, 100, 255), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 10, growth = 4.1, currency = "gems", display = "x%s" },
+	-- Segundos por tirada del gacha (lo lee Stats.rollTime): 2 s al principio, -12 % por nivel, ~0,56 s al final. Base = Config.Gacha.RollTime.
+	rollSpeed = { name = "Velocidad de tirada", short = "Tirada", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = 2, perLevel = 0.88, maxLevel = 10, cost = 300, growth = 3.4, display = "%.2fs" },
 }
 
 return Config

@@ -84,12 +84,12 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Sin probar: varios jugadores a la vez, liberar la parcela al salir, la mejora de suerte, los objetos raros, el guardado y el sonido del espadazo.
 - Al publicar: máximo 8 jugadores por servidor (un noveno se queda sin parcela) y activar el acceso de Studio a los servicios de API para probar el guardado.
 
-## Pendiente: velocidad de tirada y gamepass (pedido por el usuario, sin hacer)
+## Velocidad de tirada (hecha) y gamepass (pendiente)
 
 Como el gacha es gratis y se tira todo el rato, lo que se mejora es lo rápido que se tira:
 
-- **Rama "Velocidad de tirada"** en el árbol de mejoras: irá en `Config.Upgrades` y `Config.UpgradeOrder` (el árbol reparte solo los brazos) y bajará `Stats.rollTime` nivel a nivel desde 2 s. Hoy `Stats.rollTime` devuelve siempre `Config.Gacha.RollTime`.
-- **Gamepass** (Robux): tirada más rápida, doble tirada (dos espadas por tirada), más suerte de gacha. La tirada automática se queda gratis.
+- **Hecho: mejora "Velocidad de tirada"** (`rollSpeed` en `Config.Upgrades`, se paga con monedas, 10 niveles): `Stats.rollTime` baja de 2 s a ~0,56 s (-12 % por nivel, mínimo `Config.Gacha.MinRollTime` = 0,5 s). Probado: comprados los 10 niveles caben 4 tiradas en 2,4 s. Mientras el árbol está abierto se esconden las estadísticas de abajo a la derecha (el resumen de la pantalla ya las enseña).
+- **Pendiente: gamepass** (Robux): tirada más rápida, doble tirada (dos espadas por tirada), más suerte de gacha. La tirada automática se queda gratis.
 
 ## Ideas para más adelante
 
