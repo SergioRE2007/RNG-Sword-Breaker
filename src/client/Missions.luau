@@ -97,16 +97,16 @@ function Missions.start()
 			row.Parent = body
 			Ui.round(row, 10)
 			Ui.stroke(row, BLACK, 3)
-			Ui.gradient(row, Color3.fromRGB(70, 78, 130), Color3.fromRGB(36, 40, 76), 90)
+			Ui.panel(row, Color3.fromRGB(62, 68, 118), color)
 
 			local text = Ui.label(row, 21)
-			text.Position = UDim2.fromOffset(14, 4)
+			text.Position = UDim2.fromOffset(20, 4)
 			text.Size = UDim2.new(1, -250, 0, 28)
 			text.TextXAlignment = Enum.TextXAlignment.Left
 			text.TextTruncate = Enum.TextTruncate.AtEnd
 
 			local track = Instance.new("Frame")
-			track.Position = UDim2.fromOffset(14, 38)
+			track.Position = UDim2.fromOffset(20, 38)
 			track.Size = UDim2.new(1, -262, 0, 18)
 			track.BackgroundColor3 = Ui.COLORS.dark
 			track.Parent = row

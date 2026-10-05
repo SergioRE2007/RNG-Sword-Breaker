@@ -34,7 +34,8 @@ end
 -- Fila de un ajuste: marco con título y una línea de explicación; devuelve el marco.
 -- `withSlider`: la fila lleva una barra abajo y nada a la derecha, así que la descripción usa todo el
 -- ancho en una línea (con el margen de un botón a la derecha bajaría hasta la barra).
-local function row(parent: Instance, order: number, title: string, hint: string, withSlider: boolean?): Frame
+-- `accent`: color de la franja de la izquierda (cada ajuste el suyo, para distinguirlos de un vistazo).
+local function row(parent: Instance, order: number, title: string, hint: string, withSlider: boolean?, accent: Color3?): Frame
 	local frame = Instance.new("Frame")
 	frame.Name = title
 	frame.LayoutOrder = order
@@ -43,14 +44,14 @@ local function row(parent: Instance, order: number, title: string, hint: string,
 	frame.Parent = parent
 	Ui.round(frame, 12)
 	Ui.stroke(frame, BLACK, 3)
-	Ui.gradient(frame, Color3.fromRGB(52, 56, 74), Color3.fromRGB(34, 36, 50), 90)
+	Ui.panel(frame, Color3.fromRGB(50, 54, 78), accent)
 	local heading = Ui.label(frame, 24)
-	heading.Position = UDim2.fromOffset(14, 8)
+	heading.Position = UDim2.fromOffset(18, 8)
 	heading.Size = UDim2.new(1, -170, 0, 30)
 	heading.TextXAlignment = Enum.TextXAlignment.Left
 	heading.Text = title
 	local detail = Ui.label(frame, 17)
-	detail.Position = UDim2.fromOffset(14, 38)
+	detail.Position = UDim2.fromOffset(18, 38)
 	detail.Size = if withSlider then UDim2.new(1, -28, 0, 24) else UDim2.new(1, -170, 0, 56)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.TextYAlignment = Enum.TextYAlignment.Top
@@ -78,7 +79,7 @@ function Settings.start()
 	padding.Parent = list
 
 	-- Modo rendimiento -------------------------------------------------------------------
-	local performanceRow = row(list, 1, "Modo rendimiento", "Quita partículas, auras, luces, nubes, sombras y animaciones de los menús. Úsalo si el juego va lento (en móvil viene activado).")
+	local performanceRow = row(list, 1, "Modo rendimiento", "Quita partículas, auras, luces, nubes, sombras y animaciones de los menús. Úsalo si el juego va lento (en móvil viene activado).", false, Ui.COLORS.orange)
 	local performanceButton = Ui.button(performanceRow, "", Ui.COLORS.gray)
 	performanceButton.AnchorPoint = Vector2.new(1, 0.5)
 	performanceButton.Position = UDim2.new(1, -14, 0.5, 0)
@@ -96,7 +97,7 @@ function Settings.start()
 	paintPerformance()
 
 	-- Volumen de la música ---------------------------------------------------------------
-	local volumeRow = row(list, 2, "Volumen de la música", "Aún no hay música; el volumen queda guardado para cuando llegue.", true)
+	local volumeRow = row(list, 2, "Volumen de la música", "Aún no hay música; el volumen queda guardado para cuando llegue.", true, Color3.fromRGB(190, 120, 255))
 	local group = musicGroup()
 	local percent = Ui.label(volumeRow, 22)
 	percent.AnchorPoint = Vector2.new(1, 0)
@@ -116,7 +117,7 @@ function Settings.start()
 	paintVolume(group.Volume)
 
 	-- Volumen de los efectos ---------------------------------------------------------------
-	local effectsRow = row(list, 3, "Volumen de efectos", "Golpes, monedas, tiradas, mejoras y botones.", true)
+	local effectsRow = row(list, 3, "Volumen de efectos", "Golpes, monedas, tiradas, mejoras y botones.", true, Ui.COLORS.blue)
 	local effects = Sfx.group()
 	local effectsPercent = Ui.label(effectsRow, 22)
 	effectsPercent.AnchorPoint = Vector2.new(1, 0)
@@ -136,7 +137,7 @@ function Settings.start()
 	paintEffects(effects.Volume)
 
 	-- Venta automática -------------------------------------------------------------------
-	local sellRow = row(list, 4,"Venta automática", "Las espadas nuevas menos raras que 1 entre N se venden solas. Admite 1000, 1.5K, 2M... Déjalo vacío para no vender.")
+	local sellRow = row(list, 4,"Venta automática", "Las espadas nuevas menos raras que 1 entre N se venden solas. Admite 1000, 1.5K, 2M... Déjalo vacío para no vender.", false, Ui.COLORS.green)
 	local sellBox = Instance.new("TextBox")
 	sellBox.Name = "AutoSell"
 	sellBox.AnchorPoint = Vector2.new(1, 0.5)

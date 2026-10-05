@@ -90,9 +90,9 @@ function Rebirth.start()
 		row.Parent = list
 		Ui.round(row, 10)
 		Ui.stroke(row, BLACK, 3)
-		Ui.gradient(row, Color3.fromRGB(70, 78, 130), Color3.fromRGB(36, 40, 76), 90)
+		Ui.panel(row, Color3.fromRGB(62, 68, 118), entry[3])
 		local name = Ui.label(row, 22)
-		name.Position = UDim2.fromOffset(14, 0)
+		name.Position = UDim2.fromOffset(18, 0)
 		name.Size = UDim2.new(0.42, 0, 1, 0)
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		name.TextColor3 = entry[3]

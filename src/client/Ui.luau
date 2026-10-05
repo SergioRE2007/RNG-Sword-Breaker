@@ -156,6 +156,79 @@ function Ui.button(parent: Instance, text: string, color: Color3): TextButton
 	return item
 end
 
+-- Superficie de fila o tarjeta con profundidad (el "nada plano" del juego): degradado de `base` (más
+-- claro arriba, más oscuro abajo), brillo de cristal arriba y canto claro por dentro. Con `accent`,
+-- una franja de ese color a la izquierda y un resplandor suave que sale de ella: dice de un vistazo de
+-- qué es la fila (su rareza, su tipo...). El borde negro lo pone quien la llama. Va antes que el
+-- contenido, para quedar por debajo.
+function Ui.panel(frame: GuiObject, base: Color3, accent: Color3?)
+	frame.BackgroundColor3 = WHITE
+	Ui.gradient(frame, base:Lerp(WHITE, 0.14), base:Lerp(BLACK, 0.38), 90)
+	local corner = frame:FindFirstChildOfClass("UICorner")
+	local radius = if corner then corner.CornerRadius.Offset else 10
+
+	local rim = Instance.new("Frame")
+	rim.Name = "Rim"
+	rim.Position = UDim2.fromOffset(2, 2)
+	rim.Size = UDim2.new(1, -4, 1, -4)
+	rim.BackgroundTransparency = 1
+	rim.ZIndex = frame.ZIndex
+	rim.Parent = frame
+	Ui.round(rim, math.max(radius - 2, 2))
+	Ui.stroke(rim, WHITE, 1.5).Transparency = 0.86
+
+	local gloss = Instance.new("Frame")
+	gloss.Name = "Gloss"
+	gloss.Position = UDim2.fromOffset(4, 3)
+	gloss.Size = UDim2.new(1, -8, 0.45, 0)
+	gloss.BackgroundColor3 = WHITE
+	gloss.BorderSizePixel = 0
+	gloss.ZIndex = frame.ZIndex
+	gloss.Parent = frame
+	Ui.round(gloss, math.max(radius - 4, 2))
+	local fade = Instance.new("UIGradient")
+	fade.Rotation = 90
+	fade.Transparency = NumberSequence.new(0.84, 1)
+	fade.Parent = gloss
+
+	if accent then
+		local glow = Instance.new("Frame")
+		glow.Name = "AccentGlow"
+		glow.Size = UDim2.fromScale(0.45, 1)
+		glow.BackgroundColor3 = accent
+		glow.BorderSizePixel = 0
+		glow.ZIndex = frame.ZIndex
+		glow.Parent = frame
+		Ui.round(glow, radius)
+		local spread = Instance.new("UIGradient")
+		spread.Transparency = NumberSequence.new(0.72, 1)
+		spread.Parent = glow
+		local stripe = Instance.new("Frame")
+		stripe.Name = "Accent"
+		stripe.AnchorPoint = Vector2.new(0, 0.5)
+		stripe.Position = UDim2.new(0, 5, 0.5, 0)
+		stripe.Size = UDim2.new(0, 5, 1, -14)
+		stripe.BackgroundColor3 = WHITE
+		stripe.BorderSizePixel = 0
+		stripe.ZIndex = frame.ZIndex
+		stripe.Parent = frame
+		Ui.round(stripe, 3)
+		Ui.gradient(stripe, accent:Lerp(WHITE, 0.45), accent, 90)
+	end
+end
+
+-- Pone `root` y todo lo suyo en la capa `z`. La interfaz ordena el ZIndex globalmente: un botón con
+-- relieve (Ui.button) subido de capa dejaba su brillo, su canto y su icono por debajo, y se veía plano.
+-- Con todo en la misma capa manda el orden del árbol y el relieve vuelve a quedar encima.
+function Ui.layer(root: GuiObject, z: number)
+	root.ZIndex = z
+	for _, part in root:GetDescendants() do
+		if part:IsA("GuiObject") then
+			part.ZIndex = z
+		end
+	end
+end
+
 -- Rebote al pasar el ratón (crece) y al pulsar (se hunde). Vale para cualquier botón o casilla.
 function Ui.pressable(item: GuiButton, grow: number?)
 	local scale = Instance.new("UIScale")
@@ -527,6 +600,18 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	Ui.stroke(body, Ui.COLORS.dark, 3)
 	Ui.gradient(body, Color3.fromRGB(66, 74, 124), Color3.fromRGB(30, 33, 64), 90)
 	Ui.stripes(body, Vector2.new(size.X - 20, size.Y - 78), 26, 0.95)
+	-- Sombra de la cabecera sobre el cuerpo: da la sensación de capas (la cabecera "encima").
+	local shade = Instance.new("Frame")
+	shade.Name = "HeaderShade"
+	shade.Size = UDim2.new(1, 0, 0, 26)
+	shade.BackgroundColor3 = BLACK
+	shade.BorderSizePixel = 0
+	shade.Parent = body
+	Ui.round(shade, 12)
+	local shadeFade = Instance.new("UIGradient")
+	shadeFade.Rotation = 90
+	shadeFade.Transparency = NumberSequence.new(0.55, 1)
+	shadeFade.Parent = shade
 
 	windows[name] = frame
 	return frame, body
@@ -795,6 +880,18 @@ function Ui.orbIcon(parent: Instance, color: Color3)
 	Ui.gradient(ring, WHITE, Color3.fromRGB(170, 150, 120), 90)
 	local orb = piece(ring, UDim2.fromScale(0.66, 0.66), UDim2.fromScale(0.5, 0.5), color, 100)
 	Ui.gradient(orb, WHITE, Color3.fromRGB(150, 150, 170), 60)
+end
+
+-- Trébol de cuatro hojas (suerte): cuatro hojas redondas en cruz, centro claro y tallo.
+function Ui.cloverIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	piece(holder, UDim2.fromScale(0.1, 0.3), UDim2.fromScale(0.58, 0.82), color:Lerp(BLACK, 0.35), 3).Rotation = -28
+	for _, offset in { Vector2.new(0, -0.18), Vector2.new(0.18, 0), Vector2.new(0, 0.18), Vector2.new(-0.18, 0) } do
+		local leaf = piece(holder, UDim2.fromScale(0.44, 0.44), UDim2.fromScale(0.5 + offset.X, 0.46 + offset.Y), color, 100)
+		Ui.gradient(leaf, WHITE, Color3.fromRGB(160, 175, 160), 90)
+	end
+	local heart = piece(holder, UDim2.fromScale(0.16, 0.16), UDim2.fromScale(0.5, 0.46), color:Lerp(WHITE, 0.6), 100)
+	heart.ZIndex = holder.ZIndex
 end
 
 function Ui.boxIcon(parent: Instance, color: Color3)
