@@ -70,7 +70,7 @@ local METRICS = {
 	},
 }
 
-local boards = {} -- [key] = { rows = { rank, avatar, name, value }, footer }
+local boards = {} -- [key] = { rows = { rank, avatar, name, value } }
 local names = {} -- [userId] = nombre (caché de GetNameFromUserIdAsync)
 
 -- Panel -----------------------------------------------------------------------------------
@@ -206,13 +206,8 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 		rows[index] = { rank = rank, avatar = avatar, name = name, value = value, row = row }
 	end
 
-	local footer = label(back, 26, Color3.fromRGB(190, 195, 215))
-	footer.Position = UDim2.new(0, 0, 1, -50)
-	footer.Size = UDim2.new(1, 0, 0, 40)
-	footer.Text = "Cargando..."
-
 	model.Parent = parent
-	boards[metric.key] = { rows = rows, footer = footer }
+	boards[metric.key] = { rows = rows }
 end
 
 -- Rellena el panel con una lista { { userId, name, score } } ya ordenada de mayor a menor.
@@ -236,7 +231,6 @@ local function render(metric, entries, isGlobal: boolean)
 			row.avatar.Visible = false
 		end
 	end
-	board.footer.Text = if isGlobal then "Clasificación global · se actualiza cada minuto" else "Solo jugadores de este servidor"
 end
 
 -- Datos --------------------------------------------------------------------------------------
