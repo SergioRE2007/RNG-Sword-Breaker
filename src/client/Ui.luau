@@ -8,6 +8,7 @@
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -1089,6 +1090,7 @@ end
 
 local toasts: Frame? = nil
 local MAX_TOASTS = 4
+local TOAST_WIDTH = 520
 
 -- Icono según de qué habla el aviso (no hay imágenes: se dibuja con marcos). Los rojos llevan "!".
 local function toastIcon(parent: Frame, text: string, color: Color3)
@@ -1117,7 +1119,7 @@ function Ui.toast(text: string, color: Color3)
 		list.Name = "Toasts"
 		list.AnchorPoint = Vector2.new(0.5, 1)
 		list.Position = UDim2.new(0.5, 0, 1, -96) -- por encima de los botones de tirar
-		list.Size = UDim2.fromOffset(470, 0)
+		list.Size = UDim2.fromOffset(TOAST_WIDTH, 0)
 		list.AutomaticSize = Enum.AutomaticSize.Y
 		list.BackgroundTransparency = 1
 		list.ZIndex = 50
@@ -1145,7 +1147,9 @@ function Ui.toast(text: string, color: Color3)
 	local item = Instance.new("CanvasGroup")
 	item.Name = "Toast"
 	item.LayoutOrder = os.clock() * 1000
-	item.Size = UDim2.new(1, 0, 0, 58)
+	-- Alto según el texto, para que los avisos largos no se corten.
+	local textHeight = TextService:GetTextSize(text, 23, Ui.FONT, Vector2.new(TOAST_WIDTH - 82, 1000)).Y
+	item.Size = UDim2.new(1, 0, 0, math.max(58, textHeight + 18))
 	item.BackgroundColor3 = WHITE
 	item.GroupTransparency = 1
 	item.ZIndex = 50
@@ -1174,7 +1178,8 @@ function Ui.toast(text: string, color: Color3)
 	gloss.Parent = item
 	Ui.round(gloss, 8)
 	local iconBox = Instance.new("Frame")
-	iconBox.Position = UDim2.fromOffset(16, 5)
+	iconBox.AnchorPoint = Vector2.new(0, 0.5)
+	iconBox.Position = UDim2.new(0, 16, 0.5, 0)
 	iconBox.Size = UDim2.fromOffset(48, 48)
 	iconBox.BackgroundTransparency = 1
 	iconBox.ZIndex = 52

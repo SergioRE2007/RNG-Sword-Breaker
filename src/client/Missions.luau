@@ -47,7 +47,7 @@ local function readState()
 end
 
 function Missions.start()
-	local window, body = Ui.window("Missions", "Misiones", Vector2.new(660, 610), function(parent)
+	local window, body = Ui.window("Missions", "Misiones", Vector2.new(660, 652), function(parent)
 		Ui.orbIcon(parent, GOLD)
 	end)
 
@@ -180,8 +180,11 @@ function Missions.start()
 				row.progress.Text = `{Format.short(math.floor(done))} / {Format.short(mission.goal)}`
 				local isClaimed = claimed[mission.id] == true
 				local ready = not isClaimed and done >= mission.goal
+				-- Verde = se puede cobrar; gris apagado = aún no; oscuro con texto verde = ya cobrada.
 				row.claim.Text = if isClaimed then "Cobrada" else "Cobrar"
-				row.claim.BackgroundColor3 = if ready then Ui.COLORS.green else Ui.COLORS.gray
+				row.claim.BackgroundColor3 = if ready then Ui.COLORS.green elseif isClaimed then Ui.COLORS.dark else Ui.COLORS.gray
+				row.claim.TextColor3 = if isClaimed then Ui.COLORS.green:Lerp(WHITE, 0.3) elseif ready then WHITE else Color3.fromRGB(175, 178, 190)
+				row.claim.AutoButtonColor = ready
 			end
 		end
 	end
