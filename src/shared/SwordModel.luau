@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 
 local Config = require(script.Parent.Config)
 local MeshWeapon = require(script.Parent.MeshWeapon)
+local Rarity = require(script.Parent.Rarity)
 
 local SwordModel = {}
 
@@ -22,14 +23,17 @@ local SHARDS_FROM = 1e7 -- rareza desde la que flotan esquirlas junto a la hoja
 
 local BLADE_BASE = 0.84 -- altura a la que empieza la hoja de una espada sobre el centro de la empuñadura
 
-type Add = (className: string, name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material) -> BasePart
+local AURA_TIER = "Secreta" -- única rareza con aura
+local AURA_STRENGTH = 4 -- el aura que lleva es la de este nivel de Config.RarityTiers (4 = Épica)
+
+type Add = (className: string, name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material, template: BasePart?) -> BasePart
 
 -- Devuelve la función que va añadiendo piezas. La primera es la raíz y las demás se sueldan a ella.
--- `anchored` = pieza de decorado: ancladas y sin soldar.
+-- `anchored` = pieza de decorado: ancladas y sin soldar. Con `template` se copia esa pieza (una malla importada).
 local function builder(parent: Instance, origin: CFrame, scale: number, anchored: boolean): Add
 	local root: BasePart? = nil
-	return function(className, name, size, offset, color, material)
-		local part = Instance.new(className) :: BasePart
+	return function(className, name, size, offset, color, material, template)
+		local part = if template then template:Clone() else Instance.new(className) :: BasePart
 		part.Name = name
 		part.Size = size * scale
 		part.CFrame = origin * (CFrame.new(offset.Position * scale) * offset.Rotation)
@@ -229,18 +233,131 @@ local function meshed(add: Add, def, scale: number, anchored: boolean, metal: nu
 	return handle, blade
 end
 
+-- Modelos de Blender (tools/blender/crear_armas.py), importados en Studio y guardados en Shared.WeaponMeshes:
+-- piezas "W<índice>_<Papel>" y "W<índice>_Origin" (centro de la empuñadura). Las marcas Axis_* dan la escala y
+-- los ejes con los que se importaron. Se leen una vez; sin el archivo, las armas se siguen haciendo con piezas.
+local meshTemplates: { [number]: { { part: BasePart, role: string, offset: CFrame, size: Vector3 } } }? = nil
+
+local function loadMeshes()
+	if meshTemplates then
+		return meshTemplates
+	end
+	meshTemplates = {}
+	local folder = script.Parent:FindFirstChild("WeaponMeshes")
+	local axis = folder and folder:FindFirstChild("Axis_Origin", true) :: BasePart?
+	local up = folder and folder:FindFirstChild("Axis_Up", true) :: BasePart?
+	local front = folder and folder:FindFirstChild("Axis_Front", true) :: BasePart?
+	if not (axis and up and front) then
+		return meshTemplates
+	end
+	local upVector = up.Position - axis.Position
+	local studs = upVector.Magnitude / 2 -- lo que mide un stud en la importación
+	local back = (axis.Position - front.Position).Unit
+	local frame = CFrame.fromMatrix(Vector3.zero, upVector.Unit:Cross(back), upVector.Unit, back)
+
+	local origins = {}
+	for _, item in folder:GetDescendants() do
+		local index = item:IsA("BasePart") and tonumber(string.match(item.Name, "^W(%d+)_Origin$"))
+		if index then
+			origins[index] = item
+		end
+	end
+	for _, item in folder:GetDescendants() do
+		local index, role = string.match(item.Name, "^W(%d+)_(%a+)$")
+		index = tonumber(index)
+		if item:IsA("BasePart") and index and role ~= "Origin" and origins[index] then
+			local list = meshTemplates[index] or {}
+			meshTemplates[index] = list
+			table.insert(list, {
+				part = item,
+				role = role,
+				offset = CFrame.new(frame:VectorToObjectSpace(item.Position - origins[index].Position) / studs)
+					* (frame.Rotation:Inverse() * item.CFrame.Rotation),
+				size = item.Size / studs,
+			})
+		end
+	end
+	-- La hoja va primero: la pieza "Blade" es la que lleva aura y estela.
+	for _, list in meshTemplates do
+		table.sort(list, function(a, b)
+			return (a.role == "Blade") and not (b.role == "Blade")
+		end)
+	end
+	return meshTemplates
+end
+
+-- Las mallas tienen mucha más superficie que las piezas: en neón deslumbran (pedido por el usuario bajarlo),
+-- así que solo brilla el filo y los adornos de luz van medio transparentes.
+local GLOW_TRANSPARENCY = 0.4
+
+local function calm(material: Enum.Material): Enum.Material
+	return if material == Enum.Material.Neon then Enum.Material.SmoothPlastic else material
+end
+
+-- Color y material de cada papel de las mallas, con el mismo estilo que las armas hechas con piezas.
+local function roleLook(role: string, def, style): (Color3, Enum.Material)
+	if role == "Blade" then
+		return def.color, calm(def.material)
+	elseif role == "Edge" then
+		return style.edgeColor, def.material
+	elseif role == "Dark" then
+		return if style.glowing then style.edgeColor else style.darkColor, calm(def.material)
+	elseif role == "Trim" then
+		return style.trimColor, style.trimMaterial
+	elseif role == "Grip" then
+		return LEATHER, style.gripMaterial
+	elseif role == "Wood" then
+		return WOOD, Enum.Material.Wood
+	elseif role == "Gem" then
+		return def.color, Enum.Material.Glass
+	elseif role == "Glow" then
+		return style.edgeColor, Enum.Material.Neon
+	elseif role == "Cloth" then
+		return def.color, Enum.Material.Fabric
+	end
+	return def.color, def.material
+end
+
+-- Arma hecha con las mallas de Blender: una empuñadura invisible como raíz y las mallas soldadas a ella.
+local function imported(add: Add, def, style, pieces, rootName: string): (BasePart, BasePart)
+	local handle = add("Part", rootName, Vector3.new(0.32, 1.2, 0.32), CFrame.identity, LEATHER, Enum.Material.Fabric)
+	handle.Transparency = 1
+	local blade: BasePart? = nil
+	for _, piece in pieces do
+		local color, material = roleLook(piece.role, def, style)
+		local name = if piece.role == "Blade" and not blade then "Blade" else piece.role
+		local part = add("MeshPart", name, piece.size, piece.offset, color, material, piece.part) :: MeshPart
+		-- Lo que traiga de la importación (texturas, apariencia) taparía el color del arma.
+		part.TextureID = ""
+		if piece.role == "Glow" then
+			part.Transparency = GLOW_TRANSPARENCY
+		end
+		for _, child in part:GetChildren() do
+			if child:IsA("SurfaceAppearance") then
+				child:Destroy()
+			end
+		end
+		blade = blade or part
+	end
+	return handle, blade or handle
+end
+
 -- Luz y chispas en las armas que brillan, y la estela del tajo (el cliente la enciende mientras dura el golpe).
 local function effects(blade: BasePart, level: number, def, style, scale: number, anchored: boolean)
-	-- El aura la pone cada cliente (client/WeaponAura) en las hojas marcadas con esta etiqueta.
+	-- El aura la pone cada cliente (client/WeaponAura) en las hojas con la etiqueta "WeaponAura". Pedido por el
+	-- usuario: solo las armas Secretas, y suave (la de una Épica: chispas, llamas y una cinta de luz).
 	blade:SetAttribute("Level", level)
 	blade:SetAttribute("Scale", scale)
-	blade:AddTag("WeaponAura")
+	if Rarity.tier(Config.Swords[level].rarity).name == AURA_TIER then
+		blade:SetAttribute("AuraTier", AURA_STRENGTH)
+		blade:AddTag("WeaponAura")
+	end
 
 	if style.glowing then
 		local light = Instance.new("PointLight")
 		light.Color = def.color
-		light.Range = 9 * scale
-		light.Brightness = 1.2
+		light.Range = 7 * scale
+		light.Brightness = 0.7
 		light.Parent = blade
 
 		local sparks = Instance.new("ParticleEmitter")
@@ -295,9 +412,12 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 	local style = look(def)
 	local add = builder(parent, origin, scale, anchored)
 
+	local pieces = loadMeshes()[level]
 	local handle, blade
 	if def.mesh then
 		handle, blade = meshed(add, def, scale, anchored, metal)
+	elseif pieces then
+		handle, blade = imported(add, def, style, pieces, "Handle")
 	elseif kind == "axe" then
 		handle, blade = axe(add, def, style)
 	elseif kind == "spear" then
@@ -315,7 +435,13 @@ function SwordModel.build(level: number, parent: Instance, origin: CFrame, scale
 		offHand.Parent = parent
 		-- En el expositor se enseña al lado de la primera; en la mano la coloca la soldadura.
 		local offOrigin = origin * CFrame.new(0, 0, 2.2 * scale) * CFrame.Angles(math.rad(12), 0, 0)
-		local _, offBlade = sword(builder(offHand, offOrigin, scale, anchored), def, style, "OffHandle")
+		local offAdd = builder(offHand, offOrigin, scale, anchored)
+		local _, offBlade
+		if pieces then
+			_, offBlade = imported(offAdd, def, style, pieces, "OffHandle")
+		else
+			_, offBlade = sword(offAdd, def, style, "OffHandle")
+		end
 		effects(offBlade, level, def, style, scale, anchored)
 	end
 
