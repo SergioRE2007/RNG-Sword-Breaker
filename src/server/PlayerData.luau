@@ -35,6 +35,7 @@ local function publish(player: Player)
 	local data = sessions[player].data
 	player:SetAttribute("Coins", data.coins)
 	player:SetAttribute("Gems", data.gems)
+	player:SetAttribute("Rebirths", data.rebirths)
 
 	-- "Swords" = copias del inventario como "id:espada:rasgo:grado" (0 = ninguno) separadas por comas.
 	-- "Equipped" = id de la copia equipada; "SwordLevel" = su tipo (índice de Config.Swords).
@@ -133,6 +134,7 @@ local function load(player: Player)
 	local data = {
 		coins = Config.StartCoins,
 		gems = 0,
+		rebirths = 0,
 		swords = { { id = 1, sword = 1 } },
 		nextSwordId = 2,
 		equipped = 1,
@@ -158,6 +160,7 @@ local function load(player: Player)
 			if type(saved) == "table" then
 				data.coins = tonumber(saved.coins) or data.coins
 				data.gems = tonumber(saved.gems) or 0
+				data.rebirths = math.max(0, math.floor(tonumber(saved.rebirths) or 0))
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
 				loadSwords(data, saved)
 				if type(saved.items) == "table" then
@@ -308,6 +311,15 @@ function PlayerData.trySpendGems(player: Player, cost: number): boolean
 	session.data.gems -= cost
 	publish(player)
 	return true
+end
+
+-- Suma un renacimiento (el cobro lo hace quien llama, con trySpend).
+function PlayerData.addRebirth(player: Player)
+	local session = sessions[player]
+	if session then
+		session.data.rebirths += 1
+		publish(player)
+	end
 end
 
 -- Tipo (índice de Config.Swords) de la espada equipada.

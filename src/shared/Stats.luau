@@ -71,8 +71,23 @@ function Stats.cooldown(player: Player): number
 	return math.max(upgrade(player, "speed") * kind.cooldown, Config.MinCooldown)
 end
 
+-- Renacimientos que lleva el jugador (el servidor los publica en el atributo "Rebirths").
+function Stats.rebirths(player: Player): number
+	return player:GetAttribute("Rebirths") or 0
+end
+
+-- Multiplicador permanente de un renacimiento para esa estadística ("coins", "damage", "luck" o "gachaLuck").
+function Stats.rebirthBonus(player: Player, stat: string): number
+	return Config.Rebirth[stat] ^ Stats.rebirths(player)
+end
+
+-- Precio en monedas del siguiente renacimiento.
+function Stats.rebirthCost(player: Player): number
+	return math.floor(Config.Rebirth.cost * Config.Rebirth.growth ^ Stats.rebirths(player))
+end
+
 function Stats.damage(player: Player): number
-	return Stats.swordDamage(Stats.equipped(player)) * gear(player, "damage")
+	return Stats.swordDamage(Stats.equipped(player)) * gear(player, "damage") * Stats.rebirthBonus(player, "damage")
 end
 
 -- Multiplicador de suerte que dan el rasgo de la espada equipada y los artefactos.
@@ -82,11 +97,11 @@ local function luckBonus(player: Player): number
 end
 
 function Stats.luck(player: Player): number
-	return upgrade(player, "luck") * luckBonus(player)
+	return upgrade(player, "luck") * luckBonus(player) * Stats.rebirthBonus(player, "luck")
 end
 
 function Stats.gachaLuck(player: Player): number
-	return upgrade(player, "gachaLuck") * luckBonus(player)
+	return upgrade(player, "gachaLuck") * luckBonus(player) * Stats.rebirthBonus(player, "gachaLuck")
 end
 
 -- Segundos por tirada del gacha: la mejora "Velocidad de tirada" (que ya parte de Config.Gacha.RollTime)
@@ -100,7 +115,7 @@ function Stats.coins(player: Player): number
 	local copy = Stats.equipped(player)
 	local trait = Config.Traits[copy.trait]
 	local grade = Config.Grades[copy.grade]
-	return gear(player, "coins") * (if trait then trait.coins or 1 else 1) * (if grade then grade.coins else 1)
+	return gear(player, "coins") * (if trait then trait.coins or 1 else 1) * (if grade then grade.coins else 1) * Stats.rebirthBonus(player, "coins")
 end
 
 function Stats.gems(player: Player): number
