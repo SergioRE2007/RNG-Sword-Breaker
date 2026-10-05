@@ -17,6 +17,7 @@ local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
+local Sfx = require(script.Parent.Sfx)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local GachaRoll = {}
@@ -731,6 +732,7 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 		task.wait(0.1)
 	end
 	spinning = true
+	Sfx.play("roll")
 	clearAura()
 	panelScale.Scale = 1
 	panelShown = true
@@ -746,6 +748,7 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 	local steps = 12
 	for step = 1, steps do
 		showSword(teaseIndex())
+		Sfx.play("tick")
 		panelScale.Scale = 1.04
 		TweenService:Create(panelScale, TweenInfo.new(0.08), { Scale = 1 }):Play()
 		task.wait(total * 2 * step / (steps * (steps + 1)))
@@ -768,6 +771,11 @@ local function spin(index: number, kept: boolean, luck: number, source: string)
 	TweenService:Create(panelScale, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	-- El aura cuenta la suerte: lo que para este jugador es fácil no brilla.
 	local luckTier = tierIndex(odds)
+	if luckTier >= 5 then
+		Sfx.play("win")
+	elseif luckTier >= 3 then
+		Sfx.play("rare")
+	end
 	panelAura(luckTier, Rarity.tier(odds).color)
 	if luckTier >= 3 and not big then
 		machineEffect(Rarity.tier(odds).color)

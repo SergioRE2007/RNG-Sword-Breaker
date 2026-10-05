@@ -11,6 +11,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Performance = require(script.Parent.Performance)
 local Ui = require(script.Parent.Ui)
+local Sfx = require(script.Parent.Sfx)
 
 local Settings = {}
 
@@ -59,7 +60,7 @@ end
 
 function Settings.start()
 	local gui = Ui.screen()
-	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 436), Ui.gearIcon)
+	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 544), Ui.gearIcon)
 
 	local list = Instance.new("Frame")
 	list.Size = UDim2.fromScale(1, 1)
@@ -112,8 +113,28 @@ function Settings.start()
 	slider.Size = UDim2.new(1, -60, 0, 22)
 	paintVolume(group.Volume)
 
+	-- Volumen de los efectos ---------------------------------------------------------------
+	local effectsRow = row(list, 3, "Volumen de efectos", "Golpes, monedas, tiradas, mejoras y botones.")
+	local effects = Sfx.group()
+	local effectsPercent = Ui.label(effectsRow, 22)
+	effectsPercent.AnchorPoint = Vector2.new(1, 0)
+	effectsPercent.Position = UDim2.new(1, -14, 0, 8)
+	effectsPercent.Size = UDim2.fromOffset(110, 30)
+	effectsPercent.TextXAlignment = Enum.TextXAlignment.Right
+	local function paintEffects(value: number)
+		effectsPercent.Text = `{math.floor(value * 100 + 0.5)}%`
+	end
+	local effectsSlider = Ui.slider(effectsRow, effects.Volume, function(value)
+		effects.Volume = value
+		paintEffects(value)
+	end)
+	effectsSlider.AnchorPoint = Vector2.new(0, 1)
+	effectsSlider.Position = UDim2.new(0, 24, 1, -10)
+	effectsSlider.Size = UDim2.new(1, -60, 0, 22)
+	paintEffects(effects.Volume)
+
 	-- Venta automática -------------------------------------------------------------------
-	local sellRow = row(list, 3, "Venta automática", "Las espadas nuevas menos raras que 1 entre N se venden solas. Admite 1000, 1.5K, 2M... Déjalo vacío para no vender.")
+	local sellRow = row(list, 4,"Venta automática", "Las espadas nuevas menos raras que 1 entre N se venden solas. Admite 1000, 1.5K, 2M... Déjalo vacío para no vender.")
 	local sellBox = Instance.new("TextBox")
 	sellBox.Name = "AutoSell"
 	sellBox.AnchorPoint = Vector2.new(1, 0.5)
