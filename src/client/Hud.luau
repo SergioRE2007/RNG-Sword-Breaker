@@ -161,7 +161,7 @@ local function houseIcon(parent: Instance, color: Color3)
 end
 
 function Hud.start()
-	local gui = Ui.screen()
+	local gui = Ui.hud()
 
 	-- La espada siempre va equipada: se quita la barra de objetos de Roblox (y sus teclas 1, 2...).
 	-- SetCoreGuiEnabled puede fallar si el sistema aún no está listo, así que se reintenta.

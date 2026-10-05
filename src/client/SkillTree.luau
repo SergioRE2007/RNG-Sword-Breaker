@@ -296,6 +296,19 @@ function SkillTree.start()
 	canvasScale.Parent = canvas
 
 	local heading = Ui.label(overlay, 30)
+	-- Fondo oscuro detrás del título y la ayuda: sin él, los hexágonos de detrás no dejan leerlos.
+	local titleBack = Instance.new("Frame")
+	titleBack.Name = "TitleBack"
+	titleBack.AnchorPoint = Vector2.new(0.5, 0)
+	titleBack.Position = UDim2.new(0.5, 0, 0, 94)
+	titleBack.Size = UDim2.fromOffset(600, 68)
+	titleBack.BackgroundColor3 = WHITE
+	titleBack.BackgroundTransparency = 0.25
+	titleBack.ZIndex = Z_FRONT - 1
+	titleBack.Parent = overlay
+	Ui.round(titleBack, 14)
+	Ui.stroke(titleBack, Color3.new(0, 0, 0), 3)
+	Ui.gradient(titleBack, Color3.fromRGB(40, 44, 80), Color3.fromRGB(16, 18, 36), 90)
 	heading.AnchorPoint = Vector2.new(0.5, 0)
 	heading.Position = UDim2.new(0.5, 0, 0, 100)
 	heading.Size = UDim2.fromOffset(520, 34)
@@ -747,7 +760,7 @@ function SkillTree.start()
 
 	overlay:GetPropertyChangedSignal("Visible"):Connect(function()
 		-- El resumen de la pantalla ya enseña lo mismo que las estadísticas de abajo a la derecha: se esconden mientras está abierta.
-		local dock = Ui.screen():FindFirstChild("StatsDock")
+		local dock = Ui.hud():FindFirstChild("StatsDock")
 		if dock then
 			dock.Visible = not overlay.Visible
 		end

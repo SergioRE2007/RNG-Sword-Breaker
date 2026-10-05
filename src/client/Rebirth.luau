@@ -29,34 +29,65 @@ local STATS = {
 }
 
 function Rebirth.start()
-	local window, body = Ui.window("Rebirth", "Renacimiento", Vector2.new(520, 500), function(parent)
+	local window, body = Ui.window("Rebirth", "Renacimiento", Vector2.new(520, 592), function(parent)
 		Ui.starIcon(parent, GOLD)
 	end)
 
-	-- Estrella grande y contador de renacimientos.
+	-- Contenido apilado de arriba abajo por un UIListLayout (alturas en Scale del cuerpo). Va en su
+	-- propio marco: el cuerpo tiene además las rayas de fondo y el destello, que no se apilan.
+	local content = Instance.new("Frame")
+	content.Name = "Content"
+	content.Size = UDim2.fromScale(1, 1)
+	content.BackgroundTransparency = 1
+	content.Parent = body
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 12)
+	padding.PaddingBottom = UDim.new(0, 12)
+	padding.PaddingLeft = UDim.new(0, 16)
+	padding.PaddingRight = UDim.new(0, 16)
+	padding.Parent = content
+	local layout = Instance.new("UIListLayout")
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.Padding = UDim.new(0.012, 0)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = content
+
+	-- Estrella grande (cuadrada: manda el alto) y contador de renacimientos.
 	local star = Instance.new("Frame")
 	star.Name = "Star"
-	star.AnchorPoint = Vector2.new(0.5, 0)
-	star.Position = UDim2.new(0.5, 0, 0, 10)
-	star.Size = UDim2.fromOffset(86, 86)
+	star.LayoutOrder = 1
+	star.Size = UDim2.fromScale(1, 0.16)
 	star.BackgroundTransparency = 1
-	star.Parent = body
+	star.Parent = content
+	local square = Instance.new("UIAspectRatioConstraint")
+	square.DominantAxis = Enum.DominantAxis.Height
+	square.Parent = star
 	Ui.starIcon(star, GOLD)
 	local starScale = Instance.new("UIScale")
 	starScale.Parent = star
 
-	local count = Ui.label(body, 30)
-	count.Position = UDim2.fromOffset(0, 98)
-	count.Size = UDim2.new(1, 0, 0, 36)
+	local count = Ui.label(content, 30)
+	count.LayoutOrder = 2
+	count.Size = UDim2.fromScale(1, 0.07)
 
 	-- Una fila por estadística: nombre, lo que multiplica ahora y lo que multiplicará.
+	local list = Instance.new("Frame")
+	list.Name = "Stats"
+	list.LayoutOrder = 3
+	list.Size = UDim2.fromScale(1, 0.42)
+	list.BackgroundTransparency = 1
+	list.Parent = content
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.Padding = UDim.new(0.04, 0)
+	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	listLayout.Parent = list
 	local rows = {}
 	for index, entry in STATS do
 		local row = Instance.new("Frame")
-		row.Position = UDim2.new(0, 16, 0, 142 + (index - 1) * 52)
-		row.Size = UDim2.new(1, -32, 0, 46)
+		row.LayoutOrder = index
+		row.Size = UDim2.fromScale(1, 0.22)
 		row.BackgroundColor3 = WHITE
-		row.Parent = body
+		row.Parent = list
 		Ui.round(row, 10)
 		Ui.stroke(row, BLACK, 3)
 		Ui.gradient(row, Color3.fromRGB(70, 78, 130), Color3.fromRGB(36, 40, 76), 90)
@@ -74,20 +105,19 @@ function Rebirth.start()
 		rows[entry[1]] = value
 	end
 
-	local cost = Ui.label(body, 24)
-	cost.Position = UDim2.fromOffset(0, 358)
-	cost.Size = UDim2.new(1, 0, 0, 30)
+	local cost = Ui.label(content, 24)
+	cost.LayoutOrder = 4
+	cost.Size = UDim2.fromScale(1, 0.06)
 
-	local button = Ui.button(body, "Renacer", Ui.COLORS.green)
+	local button = Ui.button(content, "Renacer", Ui.COLORS.green)
 	button.Name = "Rebirth"
-	button.AnchorPoint = Vector2.new(0.5, 0)
-	button.Position = UDim2.new(0.5, 0, 0, 394)
-	button.Size = UDim2.fromOffset(280, 64)
+	button.LayoutOrder = 5
+	button.Size = UDim2.fromScale(0.55, 0.12)
 	button.TextSize = 30
 
-	local note = Ui.label(body, 16)
-	note.Position = UDim2.fromOffset(0, 462)
-	note.Size = UDim2.new(1, 0, 0, 22)
+	local note = Ui.label(content, 16)
+	note.LayoutOrder = 6
+	note.Size = UDim2.fromScale(1, 0.045)
 	note.TextColor3 = Color3.fromRGB(190, 195, 215)
 	note.Text = "No pierdes nada: solo gastas las monedas del precio."
 

@@ -1005,7 +1005,7 @@ local function buildPanel()
 	panel.Position = UDim2.new(0.5, 0, 0, 84) -- bajo la barra de transporte
 	panel.Size = UDim2.fromOffset(PANEL_SIZE.X, PANEL_SIZE.Y)
 	panel.BackgroundTransparency = 1
-	panel.Parent = Ui.screen()
+	panel.Parent = Ui.hud()
 	panelScale = Instance.new("UIScale")
 	panelScale.Parent = panel
 
@@ -1164,7 +1164,7 @@ function GachaRoll.start()
 	bar.Size = UDim2.fromOffset(0, 64)
 	bar.AutomaticSize = Enum.AutomaticSize.X
 	bar.BackgroundTransparency = 1
-	bar.Parent = Ui.screen()
+	bar.Parent = Ui.hud()
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
 	layout.Padding = UDim.new(0, 12)

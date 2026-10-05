@@ -227,6 +227,38 @@ function Ui.screen(): ScreenGui
 	return gui
 end
 
+-- Capa del HUD (contadores, barra de transporte, menú, estadísticas, gacha, avisos). Ocupa toda la
+-- pantalla y lleva un solo UIScale: en pantallas pequeñas (móvil apaisado, 4:3 pequeño) todo el HUD
+-- se encoge a la vez en vez de pisarse, y cada pieza sigue pegada a su borde. Para que eso pase, la
+-- capa mide pantalla / escala. Desde HUD_SIZE para arriba la escala es 1 y no cambia nada. Las
+-- ventanas no van aquí: Ui.window ya se escala sola.
+local HUD_SIZE = Vector2.new(1100, 700)
+local HUD_MIN_SCALE = 0.55
+local hudRoot: Frame? = nil
+function Ui.hud(): Frame
+	if not hudRoot then
+		local root = Instance.new("Frame")
+		root.Name = "HudRoot"
+		root.AnchorPoint = Vector2.new(0.5, 0.5)
+		root.Position = UDim2.fromScale(0.5, 0.5)
+		root.BackgroundTransparency = 1
+		root.Parent = Ui.screen()
+		local scale = Instance.new("UIScale")
+		scale.Parent = root
+		local camera = workspace.CurrentCamera
+		local function fit()
+			local view = camera.ViewportSize
+			local factor = math.clamp(math.min(view.X / HUD_SIZE.X, view.Y / HUD_SIZE.Y), HUD_MIN_SCALE, 1)
+			scale.Scale = factor
+			root.Size = UDim2.fromOffset(view.X / factor, view.Y / factor)
+		end
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+		fit()
+		hudRoot = root
+	end
+	return hudRoot :: Frame
+end
+
 -- Ventanas ------------------------------------------------------------------------------
 
 local windows = {} -- [nombre] = Frame
@@ -1123,7 +1155,7 @@ function Ui.toast(text: string, color: Color3)
 		list.AutomaticSize = Enum.AutomaticSize.Y
 		list.BackgroundTransparency = 1
 		list.ZIndex = 50
-		list.Parent = Ui.screen()
+		list.Parent = Ui.hud()
 		local layout = Instance.new("UIListLayout")
 		layout.Padding = UDim.new(0, 8)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
