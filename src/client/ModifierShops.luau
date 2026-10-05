@@ -277,6 +277,20 @@ local function buildShop(kind: string)
 
 	-- Izquierda: arriba "Main" (la espada elegida y su rasgo; la ruleta lo tapa al tirar) y abajo
 	-- "BottomControls", un contenedor aparte que la ruleta nunca puede cubrir.
+	-- Dos tarjetas gemelas detrás de cada lado, translúcidas para que se vean las rayas del cuerpo:
+	-- el mismo fondo a izquierda y derecha, con relieve (degradado, brillo y canto) en vez de plano.
+	for _, side in { { "LeftBack", 0, 6, LEFT, -9 }, { "RightBack", LEFT, 3, 1 - LEFT, -9 } } do
+		local card = Instance.new("Frame")
+		card.Name = side[1]
+		card.Position = UDim2.new(side[2], side[3], 0, 6)
+		card.Size = UDim2.new(side[4], side[5], 1, -12)
+		card.Parent = body
+		Ui.round(card, 12)
+		Ui.panel(card, Color3.fromRGB(34, 38, 74))
+		card.BackgroundTransparency = 0.35
+		Ui.stroke(card, BLACK, 2).Transparency = 0.35
+	end
+
 	local left = Instance.new("Frame")
 	left.Name = "Left"
 	left.Size = UDim2.fromScale(LEFT, 1)
@@ -404,14 +418,15 @@ local function buildShop(kind: string)
 		local frame = Instance.new("Frame")
 		frame.Name = name
 		frame.Size = UDim2.fromScale(LEFT, 1)
-		frame.BackgroundColor3 = Ui.COLORS.body
+		-- Sin fondo propio: se ve la tarjeta de la izquierda (igual que la de la derecha) y lo de la
+		-- izquierda se esconde mientras está abierta.
+		frame.BackgroundTransparency = 1
 		frame.Visible = false
 		frame.ZIndex = Z.overlay
 		frame.Parent = body
-		Ui.round(frame, 10)
-		frame.BackgroundColor3 = WHITE
-		Ui.gradient(frame, Color3.fromRGB(70, 76, 120), Color3.fromRGB(32, 34, 62), 90)
-		Ui.stripes(frame, Vector2.new(520, 462), 26, 0.95, Z.overlay)
+		frame:GetPropertyChangedSignal("Visible"):Connect(function()
+			left.Visible = not frame.Visible
+		end)
 		local title = Ui.label(frame, 26)
 		title.Position = UDim2.fromOffset(0, 8)
 		title.Size = UDim2.new(1, 0, 0, 30)
