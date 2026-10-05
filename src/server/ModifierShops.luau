@@ -45,6 +45,10 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown)
 		return
 	end
 	lastRoll[player] = now
+	if kind == "traits" then
+		-- Se pide aquí y no arriba: Missions usa ModifierShops para construir su puesto.
+		require(script.Parent.Missions).add(player, "traitRolls", tries)
+	end
 
 	local info = Modifiers.KINDS[kind]
 	local rolls = {}
@@ -72,9 +76,10 @@ end
 
 -- Puesto: mostrador, cuatro postes, toldo de rayas inclinado, cartel flotante y el aviso de
 -- "pulsa E". `position` en el suelo; mira hacia el centro del hub.
-local function buildStall(parent: Instance, kind: string, position: Vector3, stripes: { Color3 })
+local function buildStall(parent: Instance, kind: string, position: Vector3, stripes: { Color3 }, title: string?)
+	local shopTitle = title or Modifiers.KINDS[kind].title
 	local model = Instance.new("Model")
-	model.Name = "Tienda" .. Modifiers.KINDS[kind].title
+	model.Name = "Tienda" .. shopTitle
 	local floor = Config.Plot.FloorHeight
 	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
 
@@ -124,7 +129,7 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 	label.Font = Enum.Font.FredokaOne
 	label.TextSize = 48
 	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Text = string.upper(Modifiers.KINDS[kind].title)
+	label.Text = string.upper(shopTitle)
 	label.Parent = gui
 	local outline = Instance.new("UIStroke")
 	outline.Color = Color3.new(0, 0, 0)
@@ -142,7 +147,7 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Abrir"
-	prompt.ObjectText = Modifiers.KINDS[kind].title
+	prompt.ObjectText = shopTitle
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 14
 	prompt.RequiresLineOfSight = false
@@ -151,6 +156,9 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 
 	model.Parent = parent
 end
+
+-- Para que otras tiendas del hub (Misiones) usen el mismo puesto.
+ModifierShops.buildStall = buildStall
 
 function ModifierShops.start()
 	local map = workspace:WaitForChild("Map")

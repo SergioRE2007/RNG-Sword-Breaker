@@ -9,6 +9,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
+local Missions = require(script.Parent.Missions)
 
 local Rebirth = {}
 
@@ -28,6 +29,7 @@ local function onRebirth(player: Player)
 		return
 	end
 	PlayerData.addRebirth(player)
+	Missions.add(player, "rebirth")
 	local count = Stats.rebirths(player)
 	Remotes.Notice:FireClient(player, `¡Renacimiento {count}! Monedas x{Format.multiplier(Stats.rebirthBonus(player, "coins"))} y más para siempre`, GOLD)
 	-- Los números redondos y los primeros se anuncian a todos.

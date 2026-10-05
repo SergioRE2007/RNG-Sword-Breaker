@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local PlayerData = require(script.Parent.PlayerData)
+local Missions = require(script.Parent.Missions)
 
 local Leaderboards = {}
 
@@ -344,6 +345,7 @@ function Leaderboards.start()
 			task.wait(TICK)
 			for _, player in Players:GetPlayers() do
 				PlayerData.addPlayTime(player, TICK)
+				Missions.add(player, "minutes", TICK / 60)
 			end
 		end
 	end)

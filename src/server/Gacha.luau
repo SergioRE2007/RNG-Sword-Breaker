@@ -8,6 +8,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
+local Missions = require(script.Parent.Missions)
 
 local Gacha = {}
 
@@ -83,6 +84,12 @@ local function draw(player: Player, luck: number, source: string)
 		PlayerData.addGems(player, Config.Gacha.SellValue)
 	end
 	Remotes.GachaRolled:FireClient(player, index, kept, luck, source)
+	if source == "gacha" then
+		Missions.add(player, "gacha")
+	end
+	if sword.rarity >= 1e6 then
+		Missions.add(player, "rareSword")
+	end
 	-- Cuenta la suerte: con mucha suerte de gacha, una espada rara ya no tiene aura ni aviso.
 	if odds >= revealOdds() then
 		local entry = { index = index, odds = odds }
