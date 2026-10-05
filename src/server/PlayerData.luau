@@ -135,6 +135,9 @@ local function load(player: Player)
 		coins = Config.StartCoins,
 		gems = 0,
 		rebirths = 0,
+		playTime = 0, -- segundos jugados (clasificaciones)
+		totalCoins = 0, -- monedas ganadas en total, sin descontar lo gastado (clasificaciones)
+		robuxSpent = 0, -- Robux gastados en el juego (clasificaciones)
 		swords = { { id = 1, sword = 1 } },
 		nextSwordId = 2,
 		equipped = 1,
@@ -161,6 +164,9 @@ local function load(player: Player)
 				data.coins = tonumber(saved.coins) or data.coins
 				data.gems = tonumber(saved.gems) or 0
 				data.rebirths = math.max(0, math.floor(tonumber(saved.rebirths) or 0))
+				data.playTime = math.max(0, tonumber(saved.playTime) or 0)
+				data.totalCoins = math.max(0, tonumber(saved.totalCoins) or 0)
+				data.robuxSpent = math.max(0, math.floor(tonumber(saved.robuxSpent) or 0))
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
 				loadSwords(data, saved)
 				if type(saved.items) == "table" then
@@ -281,6 +287,9 @@ function PlayerData.addCoins(player: Player, amount: number)
 	local session = sessions[player]
 	if session then
 		session.data.coins += amount
+		if amount > 0 then
+			session.data.totalCoins += amount
+		end
 		publish(player)
 	end
 end
@@ -311,6 +320,21 @@ function PlayerData.trySpendGems(player: Player, cost: number): boolean
 	session.data.gems -= cost
 	publish(player)
 	return true
+end
+
+-- Para las clasificaciones: segundos jugados y Robux gastados (el resto de números van en data).
+function PlayerData.addPlayTime(player: Player, seconds: number)
+	local session = sessions[player]
+	if session then
+		session.data.playTime += seconds
+	end
+end
+
+function PlayerData.addRobuxSpent(player: Player, robux: number)
+	local session = sessions[player]
+	if session and robux > 0 then
+		session.data.robuxSpent += math.floor(robux)
+	end
 end
 
 -- Suma un renacimiento (el cobro lo hace quien llama, con trySpend).
