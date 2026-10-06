@@ -123,7 +123,14 @@ function JapanFx.start()
 	local low = emitterPart("JapanLow")
 	motes().Parent = low
 
-for tag, make in { FireflySpot = fireflies, SmokeSpot = incense } do		CollectionService:GetInstanceAddedSignal(tag):Connect(make)		for _, item in CollectionService:GetTagged(tag) do			make(item)		end	end
+	-- Luciérnagas e incienso donde el servidor puso las marcas.
+	for tag, make in { FireflySpot = fireflies, SmokeSpot = incense } do
+		CollectionService:GetInstanceAddedSignal(tag):Connect(make)
+		for _, item in CollectionService:GetTagged(tag) do
+			make(item)
+		end
+	end
+
 	local koi = {}
 	local lamps = {}
 	local function track(list: { [Instance]: boolean }, tag: string)
