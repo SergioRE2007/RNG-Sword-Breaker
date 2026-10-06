@@ -1,28 +1,22 @@
 # Salida del propio graphify
 graphify-out/
 
-# Lugar de Studio y sus bloqueos (binarios)
+# Lugar de Studio (binario)
 *.rbxl
 *.rbxlx
-*.rbxl.lock
-*.rbxlx.lock
 
 # Modelos y mallas importados (binarios)
 *.rbxm
 *.fbx
 *.blend
-*.blend1
 
-# Datos generados a mano o por script: son enormes y no aportan estructura
+# Datos generados: enormes y sin estructura
 src/client/SwingClips.luau
-src/shared/Meshes/
 
-# Imágenes, capturas y vistas previas
+# Imágenes y capturas
 *.png
 *.jpg
-*.jpeg
 
-# Generados por Rojo, config del editor y de Claude
+# Generados por Rojo y config de Claude
 sourcemap.json
 .claude/
-.git/
