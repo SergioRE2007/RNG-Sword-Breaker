@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local Performance = require(script.Parent.Performance)
+local DayCycle = require(script.Parent.DayCycle)
 
 local JapanFx = {}
 
@@ -277,7 +278,10 @@ function JapanFx.start()
 					paper.Transparency = 0.05 + 0.2 * wave
 					local light = paper:FindFirstChildOfClass("PointLight")
 					if light then
-						light.Brightness = 0.7 + 0.5 * wave
+						-- De día casi apagadas; se encienden al anochecer.
+						-- Las que traen su propio brillo (atributo Base, como los farolillos del templo) lo respetan.
+						local pulse = (light:GetAttribute("Base") or 1) * (0.7 + 0.5 * wave)
+						light.Brightness = pulse * (0.1 + 0.9 * DayCycle.night())
 					end
 				end
 			end

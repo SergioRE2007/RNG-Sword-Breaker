@@ -21,6 +21,7 @@ local part, disc, cylinder, deco, small, lantern = DungeonThemes.part, DungeonTh
 local STONE_A = Color3.fromRGB(78, 76, 98)
 local STONE_B = Color3.fromRGB(62, 60, 80)
 local DARK = Color3.fromRGB(42, 40, 56)
+local SPACE = Color3.fromRGB(12, 10, 34) -- azul casi negro del techo de galaxia
 local ACCENT = Color3.fromRGB(176, 124, 255) -- violeta de las runas y los faroles del lobby
 local BLACK = Color3.new(0, 0, 0)
 
@@ -188,25 +189,9 @@ local function buildShaft(parent: Instance): number
 	local model = Instance.new("Model")
 	model.Name = "PozoMazmorras"
 	local step = 2 * math.pi / cfg.StepsPerTurn
-	local rise = cfg.StepRise
-	local firstTop = HUB_TOP - rise
-	local lastTop = FLOOR + 0.4
-	local count = math.floor((firstTop - lastTop) / rise + 0.5) + 1
 	local exit = math.rad(cfg.ExitAngle)
-	local lastAngle = exit - 0.5 * step
-	local firstAngle = lastAngle - (count - 1) * step
 
-	-- Columna central.
-	cylinder(model, "Pillar", HUB_TOP - FLOOR, cfg.PillarRadius * 2, CFrame.new(0, FLOOR, 0), STONE_A, Enum.Material.Slate)
-
-	-- Peldaños: bloques con zócalo (cualquier caída al pozo aterriza en uno).
-	local inner, outer = cfg.PillarRadius, cfg.StairOuter
-	local length = outer - inner
-	local width = outer * step + 0.5
-	for k = 0, count - 1 do
-		local top = firstTop - k * rise
-		ringBlock(model, "Step", firstAngle + k * step, inner + length / 2, top - 0.8, Vector3.new(length, 1.6, width), if k % 2 == 0 then STONE_A else STONE_B, Enum.Material.Slate)
-	end
+	-- Sin escalera: se baja y se sube en el ascensor de luz (server/LightLift), que pone sus plataformas en el pozo.
 
 	-- Muro del pozo: anillo grueso de bloques, con la puerta de salida abierta junto al último peldaño.
 	local segments = 48
@@ -229,18 +214,41 @@ local function buildShaft(parent: Instance): number
 		end
 	end
 
-	-- Faroles por el muro y un cristal flotando sobre la columna.
+	-- Faroles por el muro.
 	for index = 0, 9 do
 		local theta = index * 2.399963 -- ángulo áureo: no quedan en fila
 		lantern(model, CFrame.new(polar(theta, wallInner - 0.4, FLOOR + 8 + index * 8)), ACCENT, 20, 0.8)
 	end
-	local crystal = small(part(model, "Crystal", Vector3.new(1.6, 3.6, 1.6), CFrame.new(0, HUB_TOP + 3, 0) * CFrame.Angles(0.5, 0.8, 0.3), ACCENT:Lerp(BLACK, 0.25), Enum.Material.Glass))
-	crystal.Transparency = 0.3
 	model.Parent = parent
 	return exit
 end
 
 -- Caverna ---------------------------------------------------------------------------------------------------------
+
+-- Techo de cielo estrellado: estrellas diminutas de neón (blancas, azuladas y anaranjadas, algunas más grandes y
+-- brillantes) repartidas por toda la cara de abajo del techo, y unas pocas nubes tenues de color. Solo piezas pequeñas
+-- y sin choque; el cliente no hace nada (las estrellas brillan solas).
+local function buildStars(parent: Instance, ceiling: number, cavern: number)
+	local random = Random.new(23)
+	local y = ceiling - 2.1
+	local reach = cavern + 6
+	local tints = { Color3.fromRGB(70, 90, 200), Color3.fromRGB(110, 70, 190) }
+	for index = 1, 14 do
+		local center = polar(random:NextNumber(0, 2 * math.pi), random:NextNumber(26, reach), y - random:NextNumber(0, 0.4))
+		local cloud = small(disc(parent, "Cloud", center, random:NextNumber(14, 28), 0.1, tints[index % 2 + 1], Enum.Material.SmoothPlastic))
+		cloud.Transparency = random:NextNumber(0.9, 0.95)
+	end
+	for _ = 1, 520 do
+		-- Reparto uniforme por la superficie (la raíz evita que se amontonen en el centro).
+		local radius = math.sqrt(random:NextNumber(22 * 22, reach * reach))
+		local theta = random:NextNumber(0, 2 * math.pi)
+		local roll = random:NextNumber()
+		local size = random:NextNumber(0.25, 0.8) * (if roll < 0.05 then 2.4 else 1)
+		local color = if roll < 0.2 then Color3.fromRGB(255, 205, 160) elseif roll < 0.45 then Color3.fromRGB(175, 205, 255) else Color3.new(1, 1, 1)
+		local star = small(part(parent, "Star", Vector3.one * size, CFrame.new(polar(theta, radius, y - 0.05 - random:NextNumber(0, 0.3))), color, Enum.Material.Neon))
+		star.Shape = Enum.PartType.Ball
+	end
+end
 
 local function buildCavern(parent: Instance, cavern: number)
 	local model = Instance.new("Model")
@@ -270,14 +278,9 @@ local function buildCavern(parent: Instance, cavern: number)
 	local plankWidth = 2 * math.pi * to / planks + 0.6
 	for index = 1, planks do
 		local theta = (index - 1) / planks * math.pi * 2
-		small(ringBlock(model, "Ceiling", theta, (from + to) / 2, ceiling - 1, Vector3.new(to - from, 2, plankWidth), DARK, Enum.Material.SmoothPlastic))
+		small(ringBlock(model, "Ceiling", theta, (from + to) / 2, ceiling - 1, Vector3.new(to - from, 2, plankWidth), SPACE, Enum.Material.SmoothPlastic))
 	end
-	local random = Random.new(11)
-	for _ = 1, 26 do
-		local theta = random:NextNumber(0, math.pi * 2)
-		local radius = random:NextNumber(26, cavern - 6)
-		DungeonThemes.stalactite(model, polar(theta, radius, ceiling - 2), random:NextNumber(6, 15), DARK, Enum.Material.Slate)
-	end
+	buildStars(model, ceiling, cavern)
 
 	-- Farolas de la plaza (pie de piedra y farol) y luces repartidas por el techo.
 	for index = 1, 12 do
@@ -327,7 +330,7 @@ local function buildRoom(parent: Instance, index: number, level, total: number, 
 		part(model, "ArchPillar", Vector3.new(3.4, height + 2, 3.4), roomCF * CFrame.new(side * (width / 2 + 1.7), (height + 2) / 2, -depth / 2), c1, material)
 	end
 	part(model, "Lintel", Vector3.new(width + 8.8, 3.6, 3.4), roomCF * CFrame.new(0, height + 1.8, -depth / 2), c1:Lerp(BLACK, 0.12), material)
-	small(part(model, "Strip", Vector3.new(width + 2, 0.5, 0.5), roomCF * CFrame.new(0, height - 0.4, -depth / 2 - 1.8), level.color, Enum.Material.Neon))
+	small(part(model, "Strip",Vector3.new(width + 2, 0.5, 0.5), roomCF * CFrame.new(0, height - 0.4, -depth / 2 - 1.8), level.color, Enum.Material.Neon))
 
 	-- Altar de grupo: disco del color de la zona con su aviso para abrir la ventana.
 	deco(disc(model, "PadRim", (roomCF * CFrame.new(0, 0.25, 0)).Position, 6.6, 0.5, DARK, Enum.Material.Slate))
