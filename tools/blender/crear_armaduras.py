@@ -155,6 +155,23 @@ def torus(R_, r, n=20, m=5):
     return verts, faces
 
 
+def arc_torus(R_, r, open_deg=100, n=16, m=4):
+    """Aro abierto por delante (-Z), con tapas en los extremos: remate de casco que no tapa la cara."""
+    a0 = -math.pi / 2 + math.radians(open_deg / 2)
+    a1 = -math.pi / 2 - math.radians(open_deg / 2) + 2 * math.pi
+    verts = []
+    for i in range(n + 1):
+        a = a0 + (a1 - a0) * i / n
+        for j in range(m):
+            b = 2 * math.pi * j / m
+            d = R_ + r * math.cos(b)
+            verts.append((d * math.cos(a), r * math.sin(b), d * math.sin(a)))
+    faces = [(i * m + j, (i + 1) * m + j, (i + 1) * m + (j + 1) % m, i * m + (j + 1) % m) for i in range(n) for j in range(m)]
+    faces.append(tuple(range(m)))
+    faces.append(tuple(reversed(range(n * m, n * m + m))))
+    return verts, faces
+
+
 class Piece:
     def __init__(self):
         self.parts = {}
@@ -235,7 +252,7 @@ def helmet_dome(p, role="Base", r=0.72, h=0.95, open_deg=100, base_y=-0.18):
 
 
 def helmet_rim(p, role="Trim", r=0.74, y=-0.2, open_deg=100):
-    p.add(role, torus(r, 0.05, 20, 4), T(0, y, 0))
+    p.add(role, arc_torus(r, 0.05, open_deg), T(0, y, 0))
 
 
 def horns(p, role, size=1.0, curve=1.0, y=0.3):
@@ -248,7 +265,7 @@ def horns(p, role, size=1.0, curve=1.0, y=0.3):
 def helm_1(p):  # bosque: capucha de cuero con hoja
     helmet_dome(p, "Base", 0.78, 1.0, 90)
     p.add("Base", frustum(1.1, 0.4, 0.5, 0.35, 1.0), T(0, -0.35, 0.68) @ R("X", 8))  # cola de la capucha
-    p.add("Dark", torus(0.78, 0.06, 20, 4), T(0, -0.18, 0))
+    p.add("Dark", arc_torus(0.78, 0.06, 90), T(0, -0.18, 0))
     p.add("Trim", gem(0.1, 0.5, 4), T(0, 0.28, -0.74) @ R("X", 20))
     p.add("Gem", gem(0.08, 0.3, 4), T(0.24, 0.2, -0.72) @ R("Z", 40))
     p.add("Gem", gem(0.08, 0.3, 4), T(-0.24, 0.2, -0.72) @ R("Z", -40))
@@ -257,7 +274,7 @@ def helm_1(p):  # bosque: capucha de cuero con hoja
 def helm_2(p):  # minas: yelmo de hierro con guardanariz
     helmet_dome(p, "Base", 0.74, 0.9, 80)
     helmet_rim(p, "Dark", 0.76, -0.18)
-    p.add("Trim", box(0.12, 0.7, 0.1), T(0, 0.0, -0.72))  # guardanariz
+    p.add("Trim", box(0.12, 0.4, 0.1), T(0, 0.2, -0.72))  # guardanariz
     for a in range(-4, 5):
         ang = math.radians(a * 22 - 90 + 180)
         p.add("Trim", sphere(0.04, 5, 3), T(0.76 * math.cos(ang), -0.12, 0.76 * math.sin(ang)))
