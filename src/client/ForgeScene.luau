@@ -16,9 +16,12 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
+local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
+local Backpack = require(script.Parent.Backpack)
 local Ui = require(script.Parent.Ui)
+local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local ForgeScene = {}
 
@@ -635,6 +638,187 @@ local function cameraPose(anvil: BasePart, rotation: CFrame): CFrame
 	return CFrame.lookAt(eye, top + front * -0.2)
 end
 
+-- Paneles propios de la forja: elegir arma y elegir con qué grados se para el Auto. Son ventanas normales
+-- (Ui.window), no la ventana antigua de Grados.
+local PANEL_OFF = Color3.fromRGB(58, 62, 92)
+local pickerWindow: Frame? = nil
+local pickerList: ScrollingFrame? = nil
+local settingsWindow: Frame? = nil
+local stopButtons: { [number]: TextButton } = {}
+
+local function panelOpen(): boolean
+	return (pickerWindow ~= nil and pickerWindow.Visible) or (settingsWindow ~= nil and settingsWindow.Visible)
+end
+
+local function closePanels()
+	if pickerWindow then
+		pickerWindow.Visible = false
+	end
+	if settingsWindow then
+		settingsWindow.Visible = false
+	end
+end
+
+local function paintStops()
+	local stop = api.state.stop
+	for index, button in stopButtons do
+		local entry = GRADES.list[index]
+		local on = stop[index] == true
+		button.BackgroundColor3 = if on then entry.color else PANEL_OFF
+		button.TextColor3 = if on then WHITE else entry.color
+		button.Text = `{if on then "✓ " else ""}{entry.name}\n<font size="16">{Modifiers.formatPercent(Modifiers.percent("grades", index))}</font>`
+	end
+end
+
+local function buildPanels()
+	if pickerWindow then
+		return
+	end
+	-- Elegir arma: una casilla por copia, de la más rara a la más común.
+	local window, body = Ui.window("ForgePicker", "Elige un arma", Vector2.new(580, 440))
+	pickerWindow = window
+	local list = Instance.new("ScrollingFrame")
+	list.Name = "List"
+	list.Position = UDim2.fromOffset(10, 10)
+	list.Size = UDim2.new(1, -20, 1, -20)
+	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.ScrollBarThickness = 6
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.CanvasSize = UDim2.new()
+	list.ZIndex = 3
+	list.Parent = body
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, 8)
+	padding.PaddingRight = UDim.new(0, 12)
+	padding.PaddingTop = UDim.new(0, 8)
+	padding.PaddingBottom = UDim.new(0, 8)
+	padding.Parent = list
+	local grid = Instance.new("UIGridLayout")
+	grid.CellSize = UDim2.fromOffset(84, 84)
+	grid.CellPadding = UDim2.fromOffset(8, 8)
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.Parent = list
+	pickerList = list
+
+	-- Ajustes: con qué grados se para el Auto.
+	local settings, settingsBody = Ui.window("ForgeSettings", "El Auto se para con…", Vector2.new(560, 470))
+	settingsWindow = settings
+	local hint = Ui.label(settingsBody, 20)
+	hint.Position = UDim2.fromOffset(12, 10)
+	hint.Size = UDim2.new(1, -24, 0, 30)
+	hint.Text = "Marca los grados con los que quieres que pare:"
+	hint.ZIndex = 3
+	local holder = Instance.new("Frame")
+	holder.Name = "Grades"
+	holder.Position = UDim2.fromOffset(12, 50)
+	holder.Size = UDim2.new(1, -24, 1, -122)
+	holder.BackgroundTransparency = 1
+	holder.ZIndex = 3
+	holder.Parent = settingsBody
+	local gradeGrid = Instance.new("UIGridLayout")
+	gradeGrid.CellSize = UDim2.new(0.31, 0, 0, 62)
+	gradeGrid.CellPadding = UDim2.new(0.02, 0, 0, 8)
+	gradeGrid.SortOrder = Enum.SortOrder.LayoutOrder
+	gradeGrid.Parent = holder
+	for index in GRADES.list do
+		local button = Ui.button(holder, "", PANEL_OFF)
+		button.Name = "Grade" .. index
+		button.LayoutOrder = index
+		button.RichText = true
+		button.TextSize = 24
+		Ui.layer(button, 4)
+		stopButtons[index] = button
+		button.Activated:Connect(function()
+			api.state.stop[index] = not api.state.stop[index]
+			paintStops()
+		end)
+	end
+	local function preset(text: string, color: Color3, x: number, apply: (number) -> boolean)
+		local button = Ui.button(settingsBody, text, color)
+		button.AnchorPoint = Vector2.new(0, 1)
+		button.Position = UDim2.new(x, 12, 1, -12)
+		button.Size = UDim2.new(0.48, -18, 0, 48)
+		button.TextSize = 22
+		Ui.layer(button, 4)
+		button.Activated:Connect(function()
+			for index in GRADES.list do
+				api.state.stop[index] = apply(index)
+			end
+			paintStops()
+		end)
+	end
+	preset("Solo los raros (< 1 %)", Ui.COLORS.blue, 0, function(index)
+		return Modifiers.percent("grades", index) < 1
+	end)
+	preset("Todos", Ui.COLORS.orange, 0.5, function()
+		return true
+	end)
+end
+
+local function rebuildPicker()
+	local list = pickerList :: ScrollingFrame
+	for _, child in list:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	local equipped = player:GetAttribute("Equipped")
+	local copies = Stats.swords(player)
+	table.sort(copies, function(a, b)
+		local rarityA, rarityB = Config.Swords[a.sword].rarity or 1, Config.Swords[b.sword].rarity or 1
+		if rarityA ~= rarityB then
+			return rarityA > rarityB
+		end
+		return Stats.swordDamage(a) > Stats.swordDamage(b)
+	end)
+	for position, copy in copies do
+		local color = Rarity.tier(Stats.rarity(copy)).color
+		local cell = Ui.cell(list, color)
+		cell.Name = "Sword" .. copy.id
+		cell.LayoutOrder = position
+		WeaponPreview.attach(cell, copy.sword, color, copy.metal)
+		local current = GRADES.list[copy[GRADES.field]]
+		if current then
+			Ui.cellLabel(cell, current.name)
+		end
+		if copy.id == equipped then
+			Ui.cellTag(cell, "E", Ui.COLORS.green)
+		end
+		cell.ZIndex = 4
+		for _, descendant in cell:GetDescendants() do
+			if descendant:IsA("GuiObject") then
+				descendant.ZIndex = 5
+			end
+		end
+		Ui.tip(cell, function()
+			return Backpack.swordTip(copy)
+		end)
+		cell.Activated:Connect(function()
+			api.state.selected = copy.id
+			closePanels()
+			api.refresh()
+			placeSword(true)
+		end)
+	end
+end
+
+local function openPicker()
+	buildPanels()
+	rebuildPicker()
+	if not (pickerWindow :: Frame).Visible then
+		Ui.toggle("ForgePicker")
+	end
+end
+
+local function openSettings()
+	buildPanels()
+	paintStops()
+	if not (settingsWindow :: Frame).Visible then
+		Ui.toggle("ForgeSettings")
+	end
+end
+
 -- Clics: la silueta abre la lista; el arma recibe martillazos.
 local function connectInput()
 	local s = scene
@@ -648,12 +832,12 @@ local function connectInput()
 		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
 			return
 		end
-		if api.window.Visible or os.clock() - scene.enteredAt < 0.9 then
+		if panelOpen() or os.clock() - scene.enteredAt < 0.9 then
 			return
 		end
 		if not scene.placedId then
 			if scene.ghostOver or input.UserInputType == Enum.UserInputType.Touch then
-				api.openPicker()
+				openPicker()
 			end
 			return
 		end
@@ -676,11 +860,11 @@ local function connectInput()
 	end))
 	table.insert(s.connections, ui.weapon.Activated:Connect(function()
 		if not striking and not api.state.auto then
-			api.openPicker()
+			openPicker()
 		end
 	end))
 	table.insert(s.connections, ui.settings.Activated:Connect(function()
-		api.openSettings()
+		openSettings()
 	end))
 	table.insert(s.connections, ui.auto.Activated:Connect(function()
 		local state = api.state
@@ -837,10 +1021,6 @@ function ForgeScene.enter()
 	setGradeLabel(nil)
 
 	api.state.forge = true
-	api.state.onPick = function()
-		api.closeWindow()
-		placeSword(true)
-	end
 	api.state.onResult = function(index: number)
 		if scene then
 			scene.resultIndex = index
@@ -925,7 +1105,7 @@ function ForgeScene.enter()
 
 		-- Martillo: solo existe mientras el ratón está sobre el yunque (AREA); fuera de ahí se esconde y
 		-- vuelve el cursor normal, para poder pulsar Salir, Ajustes, etc.
-		local point = if api.window.Visible then nil else mousePoint(s.planeY)
+		local point = if panelOpen() then nil else mousePoint(s.planeY)
 		local localPoint = if point then s.anvil.CFrame:PointToObjectSpace(point) else nil
 		local inside = localPoint ~= nil and localPoint.X >= AREA.minX and localPoint.X <= AREA.maxX and localPoint.Z >= AREA.minZ and localPoint.Z <= AREA.maxZ
 		s.inArea = inside
@@ -956,9 +1136,8 @@ function ForgeScene.exit()
 	local s = scene
 	api.state.auto = false
 	api.state.forge = nil
-	api.state.onPick = nil
 	api.state.onResult = nil
-	api.closeWindow()
+	closePanels()
 	RunService:UnbindFromRenderStep("ForgeScene")
 	UserInputService.MouseIconEnabled = true
 	if s then
