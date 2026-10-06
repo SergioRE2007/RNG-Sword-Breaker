@@ -387,11 +387,11 @@ function SceneryJapan.start()
 	ring(cfg.Count, 1, 0, function(direction, index)
 		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1), index == 1)
 	end)
+
 	-- Linternas de piedra en el borde del hub, entre las entradas.
-	-- Linternas de piedra y farolillos de colores en el borde del hub, entre las entradas.
-	ring(cfg.Count * 2, cfg.HubRadius - 4, 0.5, function(position, index)
+	ring(cfg.Count * 2, cfg.HubRadius - 4, 0.5, function(position)
 		local direction = position.Unit
-		PropModel.place(folder, "Chochin", CFrame.new(position + side * 5 + Vector3.new(0, 5.5, 0)), 1.0, { Red = Color3.fromHSV((index % cfg.Count) / cfg.Count, 0.65, 1) })
+		lit(PropModel.place(folder, "StoneLantern", CFrame.lookAt(position, position + direction), 1.0), 0.9, 15)
 	end)
 
 	-- Mástiles de koinobori (carpas de tela) en el borde interior de cada hueco entre caminos.
