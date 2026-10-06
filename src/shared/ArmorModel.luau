@@ -100,7 +100,7 @@ end
 
 -- Cuánto se suben las mallas sobre la parte del cuerpo (en studs del modelo): el casco y las grebas se veían
 -- demasiado bajos en el personaje de verdad.
-local LIFT = { helmet = 0.3, legs = 0.3 }
+local LIFT = { helmet = 0.3, legs = 0.7 }
 
 -- Color, material y transparencia de cada papel de las mallas.
 local function roleLook(role: string, set, trim: Color3): (Color3, Enum.Material, number)
