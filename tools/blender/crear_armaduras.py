@@ -198,9 +198,13 @@ def greave(p, role="Base", knee=True, width=1.14):
 
 
 def boot(p, role="Base", toe=True):
-    p.add(role, box(1.12, 0.52, 1.28), T(0, 0.04, -0.02))
+    # Suela oscura más ancha que el pie, tacón, caña que sube por el tobillo y puntera redondeada y levantada.
+    p.add("Dark", box(1.2, 0.12, 1.5), T(0, -0.22, -0.06))
+    p.add("Dark", box(1.12, 0.14, 0.42), T(0, -0.3, 0.52))
+    p.add(role, frustum(1.12, 1.1, 1.0, 0.95, 0.5), T(0, 0.07, 0.12))
     if toe:
-        p.add(role, sphere(0.52, 8, 4), T(0, 0.02, -0.62) @ S(1.05, 0.55, 0.85))
+        p.add(role, sphere(0.52, 8, 4), T(0, -0.03, -0.58) @ S(1.08, 0.62, 0.95))
+        p.add("Dark", box(0.9, 0.06, 0.06), T(0, 0.02, -0.5))  # costura de la puntera
 
 
 def pauldron(p, kind, base="Base", acc="Trim", dark="Dark", scale=1.0):
