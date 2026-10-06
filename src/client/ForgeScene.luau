@@ -33,6 +33,8 @@ local HEAD_REACH = 0.74 -- de la cara de abajo de la cabeza (de pie) a su centro
 local HOVER, WIND, HIT = math.rad(48), math.rad(80), math.rad(6)
 local SUPER_WIND = math.rad(104)
 local SWORD_LENGTH = 4.8 -- lo que mide el arma tumbada sobre el yunque
+-- Zona del yunque (en sus ejes) donde vive el martillo.
+local AREA = { minX = -3.8, maxX = 4.4, minZ = -2.6, maxZ = 2.6 }
 local SUPER_BELOW = 1 -- los grados con menos de este % dan el súper martillazo
 
 local api: any = nil
@@ -655,7 +657,7 @@ local function connectInput()
 			end
 			return
 		end
-		if not api.state.auto and not striking then
+		if not api.state.auto and not striking and scene.inArea then
 			task.spawn(function()
 				local ok, problem = pcall(strike, false)
 				if not ok then
@@ -921,20 +923,25 @@ function ForgeScene.enter()
 			s.sword:PivotTo(CFrame.new(0, lift, 0) * jitter * rest)
 		end
 
-		-- Martillo: sigue al ratón sobre el yunque (mientras no golpea) y se esconde sobre la interfaz.
-		local overWindow = api.window.Visible
-		showHammer(not overWindow)
-		UserInputService.MouseIconEnabled = overWindow
+		-- Martillo: solo existe mientras el ratón está sobre el yunque (AREA); fuera de ahí se esconde y
+		-- vuelve el cursor normal, para poder pulsar Salir, Ajustes, etc.
+		local point = if api.window.Visible then nil else mousePoint(s.planeY)
+		local localPoint = if point then s.anvil.CFrame:PointToObjectSpace(point) else nil
+		local inside = localPoint ~= nil and localPoint.X >= AREA.minX and localPoint.X <= AREA.maxX and localPoint.Z >= AREA.minZ and localPoint.Z <= AREA.maxZ
+		s.inArea = inside
+		local shown = inside or s.hammerFixed
+		showHammer(shown)
+		UserInputService.MouseIconEnabled = not shown
 		if not s.hammerFixed then
-			local point = mousePoint(s.planeY)
-			if point then
-				local localPoint = s.anvil.CFrame:PointToObjectSpace(point)
-				local clamped = Vector3.new(math.clamp(localPoint.X, -3.8, 4.4), localPoint.Y, math.clamp(localPoint.Z, -2.6, 2.6))
-				local target = s.anvil.CFrame * clamped
-				s.hammerAt = s.hammerAt:Lerp(Vector3.new(target.X, s.planeY, target.Z), 0.35)
+			if inside then
+				local target = s.anvil.CFrame * localPoint :: Vector3
+				local flat = Vector3.new(target.X, s.planeY, target.Z)
+				-- Al reaparecer sale directamente bajo el ratón, sin deslizarse desde donde se quedó.
+				s.hammerAt = if s.hammerWasShown then s.hammerAt:Lerp(flat, 0.35) else flat
 			end
 			s.phi = HOVER + math.sin(now * 3) * math.rad(3)
 		end
+		s.hammerWasShown = shown
 		poseHammer()
 	end)
 
