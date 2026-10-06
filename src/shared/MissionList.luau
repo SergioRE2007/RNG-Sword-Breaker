@@ -6,22 +6,22 @@ local MissionList = {}
 
 local DAY = 86400
 
--- kind = qué cuenta (lo suma server/Missions.add): "breaks" objetos rotos, "gacha" tiradas del gacha,
+-- kind = qué cuenta (lo suma server/Missions.add): "breaks" objetos rotos, "gacha" tiradas de arma (las dan los objetos),
 -- "traitRolls" rasgos tirados, "upgrades" mejoras compradas, "minutes" minutos jugados, "rebirth"
 -- renacimientos y "rareSword" espadas de 1 entre 1M o más.
 MissionList.pool = {
 	daily = {
 		{ id = "d_breaks60", kind = "breaks", goal = 60, reward = 2, text = "Rompe 60 objetos" },
 		{ id = "d_breaks150", kind = "breaks", goal = 150, reward = 3, text = "Rompe 150 objetos" },
-		{ id = "d_gacha15", kind = "gacha", goal = 15, reward = 2, text = "Tira el gacha 15 veces" },
-		{ id = "d_gacha40", kind = "gacha", goal = 40, reward = 3, text = "Tira el gacha 40 veces" },
+		{ id = "d_gacha15", kind = "gacha", goal = 15, reward = 2, text = "Consigue 15 tiradas de arma" },
+		{ id = "d_gacha40", kind = "gacha", goal = 40, reward = 3, text = "Consigue 40 tiradas de arma" },
 		{ id = "d_upgrades3", kind = "upgrades", goal = 3, reward = 2, text = "Compra 3 mejoras" },
 		{ id = "d_minutes20", kind = "minutes", goal = 20, reward = 3, text = "Juega 20 minutos" },
 		{ id = "d_traits5", kind = "traitRolls", goal = 5, reward = 3, text = "Tira 5 rasgos" },
 	},
 	weekly = {
 		{ id = "w_breaks1000", kind = "breaks", goal = 1000, reward = 10, text = "Rompe 1000 objetos" },
-		{ id = "w_gacha250", kind = "gacha", goal = 250, reward = 10, text = "Tira el gacha 250 veces" },
+		{ id = "w_gacha250", kind = "gacha", goal = 250, reward = 10, text = "Consigue 250 tiradas de arma" },
 		{ id = "w_minutes180", kind = "minutes", goal = 180, reward = 12, text = "Juega 3 horas" },
 		{ id = "w_upgrades25", kind = "upgrades", goal = 25, reward = 10, text = "Compra 25 mejoras" },
 		{ id = "w_traits50", kind = "traitRolls", goal = 50, reward = 12, text = "Tira 50 rasgos" },

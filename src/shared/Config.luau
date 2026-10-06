@@ -134,15 +134,22 @@ Config.Sizes = {
 -- Máximo de espadas en el inventario; con el inventario lleno las nuevas se venden solas.
 Config.MaxSwords = 200
 
--- Gacha de espadas: gratis, se tira desde cualquier sitio, una tirada cada RollTime segundos.
+-- Gacha de espadas: el motor de las tiradas de arma. Las tiradas las dan los objetos de la parcela al romperse
+-- (Config.ObjectRolls, más abajo); el gacha decide qué arma sale con la suerte que le llega.
 Config.Gacha = {
-	RollTime = 2, -- segundos por tirada sin mejoras (la rama "Velocidad de tirada" lo baja; un gamepass lo bajará más)
-	MinRollTime = 0.5, -- nunca se tira más rápido que esto
-	ShowcaseOdds = 200, -- desde "1 entre N" real (rareza / suerte de gacha) la tirada pasa a pantalla completa
+	FreeRoll = false, -- true: vuelven los botones "Tirar" y "Auto" y la tirada gratis cada RollTime segundos de antes de que las armas salieran de los objetos
+	RollTime = 2, -- (sin uso: con FreeRoll el tiempo por tirada es el de la mejora "Velocidad de aparición", Stats.rollTime)
+	MinRollTime = 0.5, -- (solo con FreeRoll) nunca se tira más rápido que esto
+	-- Lo difícil que era un arma para el jugador ("1 entre N", Permanent.odds: arma, metal y tamaño, con su suerte de
+	-- armas y sin la del objeto) decide cuánto se celebra. Como son tres tiradas a la vez, llegar a un N es más fácil
+	-- de lo que suena. Medido con 120 000 tiradas: llega a 500 una de cada ~70-160, a 2000 una de cada ~180-490 y a
+	-- 25 000 una de cada ~1600-4300 (menos cuanta más suerte).
+	ShowcaseOdds = 2000, -- desde aquí la tirada pasa a pantalla completa (antes 200: salía cada 30 tiradas, demasiado ahora que llegan solas mientras juegas)
 	RevealTimeout = 30, -- si el cliente no avisa de que ha destapado una tirada rara, su aura y aviso salen igual a los N segundos
-	AuraOdds = 100, -- desde "1 entre N" real (rareza / suerte de gacha) el aura se ve en el personaje (también para los demás)
+	AuraOdds = 500, -- desde aquí el aura se ve en el personaje (también para los demás)
+	AnnounceOdds = 25000, -- desde aquí se anuncia el arma a todo el servidor
 	SellValue = 0, -- gemas por vender una espada (a mano o con la venta automática). 0: las gemas salen de la parcela
-	RockLuck = 10, -- la tirada gratis de la "Roca de armas" multiplica por esto la suerte de gacha
+	ShowcaseStay = 3, -- segundos que se queda la animación grande de una tirada de objeto antes de cerrarse sola (con FreeRoll espera a "Continuar")
 	-- Empujón del principio (para enganchar): las primeras BoostRolls tiradas de cada jugador tienen la suerte multiplicada por BoostLuck.
 	BoostRolls = 15,
 	BoostLuck = 30,
@@ -238,19 +245,21 @@ Config.Plot = {
 	RingRadius = 250, -- distancia del centro del mapa al centro de cada parcela
 	HubRadius = 90,
 	FloorHeight = 0.4,
-	SpawnInterval = 1.5, -- segundos entre apariciones de objetos en una parcela
+	SpawnInterval = 1.5, -- segundos entre apariciones de objetos en una parcela (sin mejoras: la rama "Velocidad de aparición" lo baja)
+	MinSpawnInterval = 0.3, -- nunca aparecen más rápido que esto
 }
 
 -- Ordenados de común a raro. "rarity" = 1 entre N de que salga en cada aparición;
 -- la suerte del jugador multiplica esa probabilidad. El primero es el de relleno.
--- "gems" = gemas que suelta (solo los raros). "dropsSword" = al romperse da una espada.
+-- "gems" = gemas que suelta (solo los raros). Todos dan tiradas de arma al romperse (Config.ObjectRolls, debajo,
+-- que explica también lo que puede llevar de más un objeto especial: luck, rolls, minScale...).
 Config.Destructibles = {
 	{ name = "Caja", rarity = 1, hp = 2, reward = 2, gems = 0, size = Vector3.new(3, 3, 3), color = Color3.fromRGB(170, 125, 75), material = Enum.Material.WoodPlanks },
 	{ name = "Barril", rarity = 4, hp = 3, reward = 10, gems = 0, size = Vector3.new(3, 4.5, 3), color = Color3.fromRGB(120, 75, 45), material = Enum.Material.Wood },
 	{ name = "Roca", rarity = 20, hp = 7, reward = 60, gems = 1, size = Vector3.new(5, 4, 5), color = Color3.fromRGB(110, 110, 115), material = Enum.Material.Slate },
 	{ name = "Pilar", rarity = 120, hp = 17, reward = 500, gems = 8, size = Vector3.new(4, 12, 4), color = Color3.fromRGB(225, 220, 205), material = Enum.Material.Marble },
 	{ name = "Cristal", rarity = 800, hp = 43, reward = 5000, gems = 60, size = Vector3.new(7, 11, 7), color = Color3.fromRGB(110, 220, 255), material = Enum.Material.Glass },
-	{ name = "Roca de armas", rarity = 2000, hp = 23, reward = 0, gems = 0, dropsSword = true, size = Vector3.new(6, 6, 6), color = Color3.fromRGB(255, 120, 40), material = Enum.Material.Neon },
+	{ name = "Roca de armas", rarity = 2000, hp = 23, reward = 0, gems = 0, luck = 10, rolls = 1, size = Vector3.new(6, 6, 6), color = Color3.fromRGB(255, 120, 40), material = Enum.Material.Neon },
 	{ name = "Monolito", rarity = 5000, hp = 130, reward = 60000, gems = 500, size = Vector3.new(11, 20, 11), color = Color3.fromRGB(45, 40, 60), material = Enum.Material.Basalt },
 	{ name = "Obelisco", rarity = 5e4, hp = 430, reward = 8e5, gems = 4000, size = Vector3.new(6, 22, 6), color = Color3.fromRGB(230, 190, 70), material = Enum.Material.Foil },
 	{ name = "Meteorito", rarity = 1e6, hp = 1800, reward = 2e7, gems = 5e4, size = Vector3.new(12, 10, 12), color = Color3.fromRGB(200, 70, 30), material = Enum.Material.CrackedLava },
@@ -267,6 +276,57 @@ Config.Destructibles = {
 -- lo pone) y la cantidad es gems * azar entre min y max (con el multiplicador de gemas del jugador).
 Config.GemDrop = { min = 0.7, max = 1.3 }
 
+-- ARMAS DESDE LOS OBJETOS. Cada objeto que aparece en una parcela lleva, además de su tipo (la lista de arriba, que
+-- sale según la suerte de parcela), una RAREZA y un TAMAÑO propios, tirados al aparecer. Al romperlo da tiradas de
+-- arma (server/Gacha) con la suerte de armas del jugador multiplicada por la SUERTE DEL OBJETO:
+--   suerte del objeto = "luck" de su rareza * escala ^ SizeLuckPower * "luck" del tipo      (como mucho MaxLuck)
+-- El "luck" del tipo es 1 salvo en los objetos especiales (la Roca de armas, x10). Un objeto común de tamaño
+-- normal da x1: lo de siempre. La suerte solo multiplica probabilidades, como toda la del juego: un objeto enorme
+-- no garantiza ningún arma.
+-- Tiradas = "rolls" de la rareza + "rolls" del tamaño + "rolls" del tipo; la parte decimal es la probabilidad de
+-- una más (1.5 = una, y otra la mitad de las veces), con el tope MaxRolls.
+-- El tamaño multiplica también la vida (escala ^ SizeHpPower) y las monedas y gemas (escala ^ SizeRewardPower).
+-- OBJETOS ESPECIALES: un tipo de Config.Destructibles puede llevar además "luck" (su suerte), "rolls" (tiradas de
+-- más), "minScale" y "maxScale" (límites de su escala), "rarityLuck" y "sizeLuck" (multiplican la probabilidad de
+-- sus rarezas y de sus tamaños grandes) y "minRarity" (rareza mínima, posición en ObjectRarities). Con eso se hace
+-- un objeto nuevo sin tocar código. Las cuentas están en shared/ObjectSpec.
+Config.ObjectRolls = {
+	SizeLuckPower = 1.5, -- al 70 % x0.59, al 150 % x1.84, al 200 % x2.83, al 250 % x3.95
+	SizeHpPower = 2,
+	SizeRewardPower = 2,
+	MaxLuck = 1000, -- tope de la suerte de un objeto (una Roca de armas mítica y colosal llega a x790)
+	MaxRolls = 5, -- tope de tiradas de arma de un solo objeto
+	MaxWidth = 30, -- studs: ningún objeto se agranda más que esto de ancho...
+	MaxHeight = 56, -- ...ni de alto (los tipos más grandes llegan a menos escala que los pequeños)
+	NoticeOdds = 250, -- aviso al dueño cuando le aparece un objeto de "1 entre N" o más (rareza por tamaño)
+	AnnounceOdds = 2000, -- y a todo el servidor desde este
+}
+
+-- Rarezas de los objetos, de peor a mejor. Son suyas (no son las de las espadas ni las de la armadura), pero con
+-- los mismos nombres y colores para que se entiendan de un vistazo. "odds" = 1 entre N de que un objeto salga así
+-- (se prueba de la más rara a la más común; Stats.objectLuck multiplica la probabilidad, no la suerte de parcela),
+-- "luck" = multiplica la suerte de sus tiradas de arma, "rolls" = tiradas que da, "hp" y "reward" = multiplican su
+-- vida y sus monedas y gemas, "sizeLuck" = multiplica la probabilidad de que además salga grande.
+Config.ObjectRarities = {
+	{ name = "Común", odds = 1, luck = 1, rolls = 1, hp = 1, reward = 1, sizeLuck = 1, color = Config.RarityTiers[1].color },
+	{ name = "Poco común", odds = 4, luck = 1.5, rolls = 1, hp = 1.5, reward = 2, sizeLuck = 1, color = Config.RarityTiers[2].color },
+	{ name = "Rara", odds = 15, luck = 2.5, rolls = 1, hp = 2.5, reward = 4, sizeLuck = 1.2, color = Config.RarityTiers[3].color },
+	{ name = "Épica", odds = 60, luck = 4, rolls = 1.5, hp = 4, reward = 8, sizeLuck = 1.5, color = Config.RarityTiers[4].color },
+	{ name = "Legendaria", odds = 300, luck = 8, rolls = 2, hp = 7, reward = 20, sizeLuck = 2, color = Config.RarityTiers[5].color },
+	{ name = "Mítica", odds = 2000, luck = 20, rolls = 3, hp = 12, reward = 60, sizeLuck = 3, color = Config.RarityTiers[6].color },
+}
+
+-- Tamaños de los objetos: el primero es el normal y los demás salen 1 entre "odds" (como las rarezas). La escala
+-- exacta se tira al azar entre "min" y "max" (1 = el tamaño de Config.Destructibles) y es la que cuenta para la
+-- suerte, la vida y el premio; "rolls" = tiradas de arma de más.
+Config.ObjectSizes = {
+	{ name = "Normal", odds = 1, min = 0.9, max = 1.15, rolls = 0 },
+	{ name = "Pequeño", odds = 4, min = 0.7, max = 0.9, rolls = 0 },
+	{ name = "Grande", odds = 5, min = 1.15, max = 1.5, rolls = 0 },
+	{ name = "Enorme", odds = 25, min = 1.5, max = 2, rolls = 0.5 },
+	{ name = "Colosal", odds = 150, min = 2, max = 2.5, rolls = 1 },
+}
+
 -- Mejoras. Valor: "add" = base + perLevel * nivel; "mul" = base * perLevel ^ nivel (exponencial).
 -- Precio: cost * growth ^ nivel, en monedas o en gemas (currency = "gems").
 -- Los cálculos están en shared/Upgrades.
@@ -279,9 +339,11 @@ Config.Upgrades = {
 	capacity = { name = "Más objetos", short = "Objetos", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, cost = 25, growth = 2.6, display = "%d" },
 	luck = { name = "Suerte", short = "Suerte", icon = "orb", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 40, growth = 3.7, display = "x%s" },
 	speed = { name = "Velocidad de golpe", short = "Velocidad", icon = "sword", color = Color3.fromRGB(60, 170, 255), mode = "mul", base = 0.35, perLevel = 0.912, maxLevel = 10, cost = 200, growth = 3.3, display = "%.2fs" },
-	gachaLuck = { name = "Suerte de gacha", short = "Gacha", icon = "gem", color = Color3.fromRGB(180, 100, 255), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 10, growth = 4.1, currency = "gems", display = "x%s" },
-	-- Segundos por tirada del gacha (lo lee Stats.rollTime): 2 s al principio, -12 % por nivel, ~0,56 s al final. Base = Config.Gacha.RollTime.
-	rollSpeed = { name = "Velocidad de tirada", short = "Tirada", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = 2, perLevel = 0.88, maxLevel = 10, cost = 300, growth = 3.4, display = "%.2fs" },
+	gachaLuck = { name = "Suerte de armas", short = "Armas", icon = "gem", color = Color3.fromRGB(180, 100, 255), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 10, growth = 4.1, currency = "gems", display = "x%s" },
+	-- Segundos entre apariciones de objetos en la parcela (lo lee Stats.spawnTime): cada objeto trae tiradas de arma, así
+	-- que es la antigua "Velocidad de tirada" (misma clave, para no perder lo comprado). 1,5 s al principio, -12 % por
+	-- nivel, ~0,42 s al final. Con Config.Gacha.FreeRoll también acorta la tirada gratis (Stats.rollTime).
+	rollSpeed = { name = "Velocidad de aparición", short = "Aparición", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, cost = 300, growth = 3.4, display = "%.2fs" },
 }
 
 -- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Números a ojo, sin equilibrar.
@@ -305,7 +367,7 @@ Config.Armor = {
 		health = { name = "Vida máxima", flat = true, color = Color3.fromRGB(255, 110, 110) },
 		damage = { name = "Ataque", color = Color3.fromRGB(255, 154, 106) },
 		luck = { name = "Suerte", color = Color3.fromRGB(126, 224, 122) },
-		rollSpeed = { name = "Velocidad de tirada", scales = false, color = Color3.fromRGB(255, 200, 90) },
+		rollSpeed = { name = "Velocidad de aparición", scales = false, color = Color3.fromRGB(255, 200, 90) },
 	},
 	-- Calidades, de peor a mejor: "odds" = 1 entre N de que salga (la suerte de la dificultad y del enemigo divide N),
 	-- "mods" = modificadores extra que trae, "value" = Cristales de grado al desmontarla (por el loot de su dificultad).

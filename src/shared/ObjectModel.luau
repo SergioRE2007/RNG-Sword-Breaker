@@ -78,12 +78,14 @@ end
 ObjectModel.look = roleLook
 
 -- Viste la pieza del objeto `index` de Config.Destructibles con su modelo: la pieza se queda como caja invisible
--- (es la que se golpea) y las mallas van dentro de ella, quietas. Devuelve false si no hay modelo de ese objeto.
-function ObjectModel.attach(part: BasePart, index: number, def): boolean
+-- (es la que se golpea) y las mallas van dentro de ella, quietas. `scale` = cuánto se ha agrandado la pieza respecto
+-- a def.size (1 si no se pone). Devuelve false si no hay modelo de ese objeto.
+function ObjectModel.attach(part: BasePart, index: number, def, scale: number?): boolean
 	local pieces = load()[index]
 	if not pieces then
 		return false
 	end
+	local grow = scale or 1
 	for _, piece in pieces do
 		local mesh = piece.part:Clone() :: BasePart
 		for _, child in mesh:GetChildren() do
@@ -105,8 +107,8 @@ function ObjectModel.attach(part: BasePart, index: number, def): boolean
 		mesh.Color = color
 		mesh.Material = material
 		mesh.Transparency = transparency
-		mesh.Size = piece.size
-		mesh.CFrame = part.CFrame * piece.offset
+		mesh.Size = piece.size * grow
+		mesh.CFrame = part.CFrame * (piece.offset.Rotation + piece.offset.Position * grow)
 		mesh.Parent = part
 	end
 	part.Transparency = 1

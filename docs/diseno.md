@@ -4,9 +4,9 @@ Incremental de espadas estilo RNG. Servidores de 8 jugadores (una parcela cada u
 
 ## Bucle principal
 
-Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, más suerte) → salen objetos más raros y duros → hace falta mejor espada → gacha.
+Romper objetos en tu parcela → monedas, gemas y **tiradas de arma** → mejorar la parcela (más objetos, más suerte, aparecen más rápido) → salen objetos más raros y duros → hace falta mejor espada → buscar en la parcela el objeto bueno (raro y grande) y romperlo.
 
-- **El dinero** mejora la parcela y la suerte. **Las espadas** salen del gacha, que es **gratis** y se tira todo el rato (una tirada cada 2 s, desde cualquier sitio); lo que limita es el tiempo por tirada y la suerte de gacha. Las **gemas** las sueltan los objetos raros (de la Roca en adelante) y se gastan en suerte de gacha. Los Grados y los Rasgos se pagan con cristales que salen de las mazmorras (ver "Mazmorras, armadura y Cristal de grado").
+- **El dinero** mejora la parcela y la suerte. **Las espadas** salen de los objetos de la parcela: cada uno da al romperse una o varias tiradas de arma (ver "Armas desde los objetos"); el gacha es solo el motor que decide qué arma sale. Las **gemas** las sueltan los objetos raros (de la Roca en adelante) y se gastan en suerte de armas (la antigua "suerte de gacha"). Los Grados y los Rasgos se pagan con cristales que salen de las mazmorras (ver "Mazmorras, armadura y Cristal de grado").
 - **Mapa**: hub circular en el centro y 8 parcelas en círculo. El jugador aparece en la suya y solo puede romper sus propios objetos.
 - **Objetos**: 16 tipos (Caja → Infinito), cada uno con una rareza "1 entre N" que llega hasta 1 entre 1Sp. En cada aparición se prueba del más raro al más común; la suerte multiplica la probabilidad.
 - **Todo es exponencial**: cada nivel de Suerte y de Suerte de gacha multiplica x3 (50 niveles, hasta ~x718Sx), y los precios crecen también exponencialmente. Las rarezas, vidas, recompensas y daños suben por órdenes de magnitud.
@@ -87,6 +87,17 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - **Centro del hub vacío (pedido por el usuario, le molestaban)**: se quitaron el expositor con las 6 espadas más raras flotando y la máquina del gacha con su cartel "Gacha de espadas ¡Gratis!". El gacha sigue igual (se tira desde cualquier sitio con los botones de abajo); solo desaparece el efecto de la máquina hinchándose. Lo que más arriba en este documento habla del expositor y de la máquina ya no existe.
 - HUD, tabla de clasificación, escombros con físicas, números de daño, barra de vida.
 - Guardado con DataStore (solo funciona con el lugar publicado).
+- **Armas desde los objetos (rework pedido por el usuario)**: la parcela es la máquina de RNG. Lo que arriba dice del gacha gratis con botones "Tirar" y "Auto" ya no está a la vista (queda apagado en `Config.Gacha.FreeRoll`).
+  - Cada objeto aparece con **tipo** (el de siempre, por la suerte de parcela), **rareza** propia (`Config.ObjectRarities`: Común, Poco común 1/4, Rara 1/15, Épica 1/60, Legendaria 1/300, Mítica 1/2000) y **tamaño** (`Config.ObjectSizes`: Normal, Pequeño, Grande 1/5, Enorme 1/25, Colosal 1/150; escala del 70 % al 250 %, se ve de verdad y agranda la caja que se golpea). La suerte de parcela no toca la rareza ni el tamaño (lo haría `Stats.objectLuck`, hoy 1).
+  - **Suerte del objeto** = suerte de su rareza (x1, x1.5, x2.5, x4, x8, x20) × escala ^ 1,5 (70 % = x0,59; 200 % = x2,83; 250 % = x3,95) × suerte del tipo (1, salvo la Roca de armas, x10). Multiplica la suerte de armas del jugador en sus tiradas: sube probabilidades, no garantiza nada. Una Mítica colosal llega a x79.
+  - **Tiradas**: 1 las comunes, poco comunes y raras; 1 o 2 la Épica; 2 la Legendaria; 3 la Mítica; +1 a veces el Enorme y +1 el Colosal y la Roca de armas; tope 5. La rareza y el tamaño multiplican también la vida y las monedas y gemas.
+  - Medido con 300 000 apariciones: suerte media x1,49, 1,04 tiradas por objeto, monedas y gemas x2,05 de media, vida x1,59. Suerte x5 o más, 1 de cada 75 objetos; x10 o más, 1 de cada 412.
+  - Se ve: base de luz del color de la rareza y chispas; luz desde Rara, contorno desde Épica y rayo hacia el cielo en Legendaria y Mítica; etiqueta con la rareza y la suerte sobre los notables; y el **cartel** del objeto que golpeas, señalas con el ratón o tienes delante (nombre, rareza, tamaño, suerte, tiradas y vida; sustituye a la barra de vida). Aviso al dueño cuando aparece algo de 1 entre 250 o más (rareza × tamaño) y a todos desde 1 entre 2000.
+  - Al romperlo: más espectáculo cuanta más rareza (ondas, chispas, destello, rayo), cartel flotante "¡3 tiradas! · suerte x18" y las tiradas pasan en cola por el panel de arriba (más rápidas si se amontonan). Solo una animación grande por objeto, y no se encadenan.
+  - **Lo difícil que era un arma** ("1 entre N") se mide con `Permanent.odds`: arma, metal y tamaño por separado contra la suerte de armas del jugador, sin la del objeto (así un objeto bueno se celebra). Antes era rareza total / suerte y, con metales y tamaños, a partir de suerte 100 todas las tiradas salían como "1 entre miles". Umbrales nuevos: animación grande 1 entre 2000, aura 500, aviso a todos 25 000.
+  - La mejora "Velocidad de tirada" es ahora **"Velocidad de aparición"** (misma clave `rollSpeed`, también el stat de la armadura): los objetos salen cada 1,5 s y hasta cada 0,42 s.
+  - Mochila llena: un arma nueva más rara que la peor copia sin tocar (ni equipada, ni con rasgo o grado) se queda con su sitio, en vez de venderse sola.
+  - Seguridad: el cliente solo manda `Swing`. Rareza, tamaño, suerte y tiradas se deciden al aparecer el objeto y viven en el servidor; probado que no hacen nada la tirada gratis a mano, los golpes desde lejos, 41 golpes de golpe (cuenta uno) ni cambiar los atributos del objeto en el cliente.
 
 ## Provisional o sin probar
 
@@ -104,9 +115,12 @@ Romper objetos en tu parcela → monedas → mejorar la parcela (más objetos, m
 - Gacha gratis probado en Studio con tiradas reales y falsas (Legendaria, Secreta y el aura de Mítica forzadas). Sin probar en móvil ni con varios jugadores viendo auras a la vez.
 - **Gemas con el gacha gratis**: vender espadas sigue dando 2 gemas, y con la tirada automática y venta automática salen ~60 gemas por minuto sin hacer nada, más que de los objetos raros. Hay que decidir si vender da gemas, otra cosa o nada.
 - Sin probar: varios jugadores a la vez, liberar la parcela al salir, la mejora de suerte, los objetos raros, el guardado y el sonido del espadazo.
+- **Armas desde los objetos**: rarezas, tamaños, suertes, tiradas y umbrales puestos por Claude y medidos por simulación, sin una partida larga de verdad. Probado en Studio con un solo jugador, bajando temporalmente las rarezas y tamaños para verlos todos; sin probar con varios jugadores, en móvil ni con guardado. Vistos en captura el cartel, las etiquetas, las auras (suavizadas tras un primer intento demasiado saturado) y una Legendaria salida con los valores reales; la Mítica solo con las rarezas bajadas. Los objetos del final (14 de ancho) ya cabían pocos a la vez y con tamaños grandes caben menos. Las monedas y gemas salen ahora x2 de media y hasta x3,6 más rápido con la Velocidad de aparición: el ritmo de la economía está sin revisar.
 - Al publicar: máximo 8 jugadores por servidor (un noveno se queda sin parcela) y activar el acceso de Studio a los servicios de API para probar el guardado.
 
 ## Velocidad de tirada (hecha) y gamepass (pendiente)
+
+(Desde "Armas desde los objetos" esta mejora es la **Velocidad de aparición** de los objetos, que son quienes dan las tiradas: `Stats.spawnTime`, de 1,5 s a ~0,42 s. Lo de abajo describe la tirada gratis, que solo vuelve con `Config.Gacha.FreeRoll`.)
 
 Como el gacha es gratis y se tira todo el rato, lo que se mejora es lo rápido que se tira:
 

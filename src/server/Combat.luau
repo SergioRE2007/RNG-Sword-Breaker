@@ -50,16 +50,15 @@ local function onSwing(player: Player)
 	local _, kind = Stats.weapon(player)
 	for _, part in Destructibles.getInRange(player, root.CFrame, range, kind.arc) do
 		Remotes.Hit:FireAllClients(player, part, part.Position, damage)
-		local broken, coins, gems = Destructibles.damage(part, damage, player)
+		local broken, coins, gems, object = Destructibles.damage(part, damage, player)
 		if broken then
 			PlayerData.addCoins(player, coins)
 			Missions.add(player, "breaks")
 			if gems > 0 then
 				PlayerData.addGems(player, gems)
 			end
-			if broken.dropsSword then
-				Gacha.give(player, Config.Gacha.RockLuck, "roca")
-			end
+			-- Tiradas de arma del objeto: cuántas y con qué suerte se decidió al aparecer (rareza y tamaño).
+			Gacha.give(player, object.luck, "object", object.rolls, { name = broken.name, quality = object.quality })
 			Traits.onBroken(player, broken)
 			Gear.onBroken(player)
 		end
