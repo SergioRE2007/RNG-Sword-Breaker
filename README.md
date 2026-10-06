@@ -39,7 +39,7 @@ Cada zona tiene sus archivos. Si cada uno se queda en la suya, no hay conflictos
 | Zona | Servidor | Cliente | Shared |
 |---|---|---|---|
 | **Armas** (modelos, golpe, auras, mochila) | `Swords`, `Gear` | `Backpack`, `WeaponPreview`, `WeaponAura`, `SwingAnim`, `SwordController` | `SwordModel` |
-| **Gacha y modificadores** (rasgos, grados, tiendas) | `Gacha`, `Traits`, `ModifierShops` | `GachaRoll`, `ModifierShops` | `Modifiers` |
+| **Gacha y modificadores** (rasgos, grados, tiendas, estaciones del hub) | `Gacha`, `Traits`, `ModifierShops`, `Stations`, `StallSkin` | `GachaRoll`, `ModifierShops`, `ForgeScene`, `StationFx` | `Modifiers` |
 | **Mejoras** | `Shop` | `SkillTree` | `Upgrades` |
 | **Mapa y objetos** | `Plots`, `Scenery`, `Destructibles` | `Ambience` | — |
 | **Combate y efectos** | `Combat`, `Movement`, `CollisionGroups` | `Effects` | `Chance` |
