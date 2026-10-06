@@ -7,8 +7,11 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Plots = {}
 
 -- Dos tonos para el suelo a cuadros.
-local FLOOR_FREE = { Color3.fromRGB(150, 155, 165), Color3.fromRGB(136, 141, 152) }
-local FLOOR_OWNED = { Color3.fromRGB(128, 214, 78), Color3.fromRGB(110, 198, 64) }
+-- En el mapa japonés (Config.Theme) las parcelas libres son de losa lila y las que tienen dueño, de tarima de madera.
+local JAPAN = Config.Theme == "japan"
+local FLOOR_FREE = if JAPAN then { Color3.fromRGB(198, 192, 216), Color3.fromRGB(180, 174, 200) } else { Color3.fromRGB(150, 155, 165), Color3.fromRGB(136, 141, 152) }
+local FLOOR_OWNED = if JAPAN then { Color3.fromRGB(216, 162, 106), Color3.fromRGB(196, 140, 90) } else { Color3.fromRGB(128, 214, 78), Color3.fromRGB(110, 198, 64) }
+local OWNED_MATERIAL = if JAPAN then Enum.Material.WoodPlanks else Enum.Material.SmoothPlastic
 local TILE = 10 -- lado de cada baldosa; también el largo de cada tramo de valla
 
 -- Color propio de cada parcela (arcoíris alrededor del hub): valla y cartel.
@@ -39,6 +42,7 @@ local function paint(plot, owned: boolean)
 	local colors = if owned then FLOOR_OWNED else FLOOR_FREE
 	for _, tile in plot.tiles do
 		tile.part.Color = colors[tile.shade]
+		tile.part.Material = if owned then OWNED_MATERIAL else Enum.Material.SmoothPlastic
 	end
 end
 

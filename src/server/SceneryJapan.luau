@@ -86,24 +86,24 @@ end
 
 local function setLighting()
 	Lighting.ClockTime = 17.4 -- atardecer dorado
-	Lighting.Brightness = 3
-	Lighting.Ambient = Color3.fromRGB(150, 112, 150)
-	Lighting.OutdoorAmbient = Color3.fromRGB(205, 150, 175)
+	Lighting.Brightness = 2.1
+	Lighting.Ambient = Color3.fromRGB(122, 96, 132)
+	Lighting.OutdoorAmbient = Color3.fromRGB(176, 136, 160)
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 176, 130)
 	Lighting.ColorShift_Bottom = Color3.fromRGB(255, 190, 215)
 	Lighting.GlobalShadows = true
 	Lighting.ShadowSoftness = 0.4
 
 	local color = Instance.new("ColorCorrectionEffect")
-	color.Saturation = 0.3
-	color.Contrast = 0.14
+	color.Saturation = 0.18
+	color.Contrast = 0.1
 	color.TintColor = Color3.fromRGB(255, 236, 238)
 	color.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.55
-	bloom.Size = 28
-	bloom.Threshold = 1.0
+	bloom.Intensity = 0.22
+	bloom.Size = 22
+	bloom.Threshold = 1.35
 	bloom.Parent = Lighting
 
 	local atmosphere = Instance.new("Atmosphere")
@@ -111,12 +111,12 @@ local function setLighting()
 	atmosphere.Offset = 0.2
 	atmosphere.Color = Color3.fromRGB(255, 196, 218)
 	atmosphere.Decay = Color3.fromRGB(255, 150, 140)
-	atmosphere.Glare = 0.45
+	atmosphere.Glare = 0.25
 	atmosphere.Haze = 1.9
 	atmosphere.Parent = Lighting
 
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.12
+	rays.Intensity = 0.045
 	rays.Spread = 0.6
 	rays.Parent = Lighting
 
@@ -211,6 +211,13 @@ local function plaza(parent: Instance, radius: number)
 	end
 end
 
+-- Marca invisible donde el cliente (JapanFx) pone luciérnagas o humo de incienso.
+local function spot(parent: Instance, name: string, position: Vector3, size: Vector3, tag: string)
+	local item = decor(part(parent, name, size, CFrame.new(position), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic))
+	item.Transparency = 1
+	CollectionService:AddTag(item, tag)
+end
+
 local function lit(model: Model?, brightness: number, range: number)
 	local paper = model and model:FindFirstChild("Paper")
 	if paper then
@@ -224,7 +231,7 @@ local function lit(model: Model?, brightness: number, range: number)
 end
 
 -- Camino de losas hasta cada parcela, con un torii a la entrada y linternas de piedra a los lados.
-local function path(parent: Instance, direction: Vector3, from: number, to: number, hue: Color3)
+local function path(parent: Instance, direction: Vector3, from: number, to: number, hue: Color3, tunnel: boolean)
 	local width = 18
 	local tile = 9
 	local side = Vector3.new(-direction.Z, 0, direction.X)
@@ -255,6 +262,23 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 			lit(PropModel.place(parent, "StoneLantern", CFrame.lookAt(spot, spot + side * -sign), 1.1), 0.9, 16)
 		end
 	end
+	-- Guardianes de piedra a los pies del torii, y en dos caminos un túnel de toriis pequeños.
+	for _, sign in { 1, -1 } do
+		local guard = gate + side * sign * 11
+		PropModel.place(parent, "Komainu", CFrame.lookAt(guard, guard + direction), 1.0)
+	end
+	if tunnel then
+		for step = 1, 6 do
+			local spot = direction * (from + 8 + step * 13)
+			PropModel.place(parent, "Torii", CFrame.lookAt(spot, spot + direction), 0.95)
+		end
+	end
+	for distance = from + 50, from + length - 20, 55 do
+		for _, sign in { 1, -1 } do
+			local spot = direction * distance + side * sign * (width / 2 + 17 + rng:NextNumber(0, 5))
+			PropModel.place(parent, TREES[rng:NextInteger(1, #TREES)], CFrame.new(spot) * turn(), rng:NextNumber(0.9, 1.15))
+		end
+	end
 end
 
 -- Estanque con nenúfares, carpas (nadan en el cliente) y un puente rojo por encima.
@@ -266,7 +290,7 @@ local function pond(parent: Instance, center: Vector3, radius: number)
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(radius * 0.25, 0.7, -radius * 0.2)) * turn(), 1.2)
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(-radius * 0.35, 0.7, radius * 0.3)) * turn(), 1.0)
 	local turnBridge = rng:NextNumber(0, math.pi)
-	PropModel.place(parent, "Bridge", CFrame.new(center + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, turnBridge, 0), radius / 12)
+	PropModel.place(parent, "Bridge", CFrame.new(center + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, turnBridge, 0), radius / 10)
 	for index = 1, 4 do
 		local fish = PropModel.place(parent, "Koi", CFrame.new(center + Vector3.new(0, 0.9, 0)), 0.8)
 		if fish then
@@ -281,6 +305,16 @@ local function pond(parent: Instance, center: Vector3, radius: number)
 		local angle = index / 7 * math.pi * 2 + 0.3
 		PropModel.place(parent, "Rocks", CFrame.new(center + Vector3.new(math.cos(angle) * (radius + 3), 0.3, math.sin(angle) * (radius + 3))) * turn(), rng:NextNumber(0.4, 0.8))
 	end
+	-- Valla de bambú alrededor, con un hueco al azar, y luciérnagas sobre el agua.
+	local gap = rng:NextInteger(1, 24)
+	for index = 1, 24 do
+		if index ~= gap then
+			local angle = index / 24 * math.pi * 2
+			local spotPosition = center + Vector3.new(math.cos(angle) * (radius + 8), 0.3, math.sin(angle) * (radius + 8))
+			PropModel.place(parent, "Fence", CFrame.lookAt(spotPosition, center), 1.0)
+		end
+	end
+	spot(parent, "Fireflies", center + Vector3.new(0, 4, 0), Vector3.new(radius * 1.6, 6, radius * 1.6), "FireflySpot")
 end
 
 -- Pétalos caídos por el suelo: discos rosas pequeños, sobre todo cerca de los árboles.
@@ -303,6 +337,9 @@ local function tree(parent: Instance, position: Vector3)
 end
 
 local function grove(parent: Instance, position: Vector3)
+	if rng:NextNumber() < 0.25 then
+		spot(parent, "Fireflies", position + Vector3.new(0, 3, 0), Vector3.new(24, 5, 24), "FireflySpot")
+	end
 	for _ = 1, 3 do
 		PropModel.place(parent, "Bamboo", CFrame.new(position + Vector3.new(rng:NextNumber(-5, 5), 0, rng:NextNumber(-5, 5))) * turn(), rng:NextNumber(0.9, 1.3))
 	end
@@ -335,7 +372,7 @@ function SceneryJapan.start()
 
 	-- Caminos con torii y linternas, con el farolillo del color de cada parcela.
 	ring(cfg.Count, 1, 0, function(direction, index)
-		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1))
+		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1), index == 1 or index == 5)
 	end)
 
 	-- Linternas de piedra y farolillos de colores en el borde del hub, entre las entradas.
@@ -346,6 +383,7 @@ function SceneryJapan.start()
 		PropModel.place(folder, "Chochin", CFrame.new(position + side * 5 + Vector3.new(0, 5.5, 0)), 1.0, { Red = Color3.fromHSV((index % cfg.Count) / cfg.Count, 0.65, 1) })
 	end)
 
+-- Mástiles de koinobori (carpas de tela) en el borde interior de cada hueco entre caminos.	ring(cfg.Count, cfg.HubRadius + 22, 0.5, function(position)		PropModel.place(folder, "Koinobori", CFrame.new(position) * turn(), 0.85)	end)
 	-- Estanques con puente en dos huecos entre parcelas, santuarios y pagodas en otros.
 	local middle = (cfg.HubRadius + cfg.RingRadius) / 2 + 5
 	ring(cfg.Count, middle, 0.5, function(position, index)
@@ -357,6 +395,16 @@ function SceneryJapan.start()
 			PropModel.place(folder, "Bonsai", CFrame.new(position + Vector3.new(-9, 0.3, 6)), 1.2)
 			lit(PropModel.place(folder, "StoneLantern", CFrame.new(position + Vector3.new(12, 0.3, -6)), 1.2), 1.1, 18)
 			lit(PropModel.place(folder, "StoneLantern", CFrame.new(position + Vector3.new(-12, 0.3, -6)), 1.2), 1.1, 18)
+			-- Jardín zen delante del santuario, con surcos de grava, y humo de incienso.
+			local garden = position - position.Unit * 17
+			decor(disc(folder, "ZenGarden", garden, 15, 0.3, 0.36, Color3.fromRGB(255, 247, 240), Enum.Material.Sand))
+			for ringIndex = 1, 4 do
+				decor(disc(folder, "ZenRing", garden, 15 - ringIndex * 3, 0.36, 0.4 + (ringIndex % 2) * 0.02, if ringIndex % 2 == 0 then Color3.fromRGB(255, 247, 240) else Color3.fromRGB(240, 222, 214), Enum.Material.Sand))
+			end
+			PropModel.place(folder, "Rocks", CFrame.new(garden + Vector3.new(3, 0.4, -2)) * turn(), 0.9)
+			PropModel.place(folder, "Koinobori", CFrame.new(position + Vector3.new(-18, 0, 12)) * turn(), 0.9)
+			PropModel.place(folder, "Koinobori", CFrame.new(position + Vector3.new(18, 0, 12)) * turn(), 0.9)
+			spot(folder, "IncenseSpot", position + Vector3.new(0, 4, 0), Vector3.new(2, 1, 2), "SmokeSpot")
 		else
 			tree(folder, position)
 			grove(folder, position + Vector3.new(rng:NextNumber(-14, 14), 0, rng:NextNumber(-14, 14)))

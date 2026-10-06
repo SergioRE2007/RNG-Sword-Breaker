@@ -380,6 +380,58 @@ def bonsai(p):
     p.add("PinkLight", blob((0.6, 0.35, 0.6), 82, 7, 3), T(0.8, 2.3, 0.2))
 
 
+def fence(p):
+    """Valla de bambú de 8 de largo (a lo largo de X): postes con nudos, dos travesaños y ataduras."""
+    for i in range(5):
+        x = -4 + 2 * i
+        p.add("Leaf", cyl(0.3, 3.4, 6, 0.26), T(x, 0, 0))
+        p.add("LeafDark", cyl(0.36, 0.2, 6), T(x, 3.0, 0))
+        p.add("LeafDark", cyl(0.36, 0.2, 6), T(x, 1.2, 0))
+    for y in (1.1, 2.3):
+        p.add("LeafDark", cyl(0.2, 8.0, 6), T(-4.0, y, 0) @ R("Z", -90))
+        for i in range(5):
+            p.add("Wood", cyl(0.34, 0.3, 6), T(-4 + 2 * i, y - 0.15, 0))
+    for i in range(4):  # cañas finas entre los postes
+        p.add("Leaf", cyl(0.14, 2.6, 5, 0.1), T(-3 + 2 * i, 0, 0))
+
+
+def komainu(p):
+    """Komainu: león-perro guardián de piedra sentado sobre un pedestal, con melena dorada. Mira hacia -Z."""
+    p.add("StoneDark", box(3.4, 1.0, 3.8), T(0, 0.5, 0))
+    p.add("Stone", box(3.0, 0.4, 3.4), T(0, 1.2, 0))
+    p.add("Stone", sphere(1.3, 8, 5), T(0, 2.9, 0.5) @ S(1.0, 1.2, 1.4))  # cuerpo sentado
+    p.add("Stone", sphere(1.0, 8, 4), T(0, 3.6, -0.7) @ S(1.1, 1.2, 0.9))  # pecho
+    for s in (-1, 1):
+        p.add("Stone", box(0.6, 2.2, 0.7), T(s * 0.65, 2.3, -1.1))  # patas delanteras
+        p.add("Stone", box(0.7, 0.4, 1.0), T(s * 0.65, 1.5, -1.5))
+        p.add("Stone", sphere(0.5, 6, 3), T(s * 1.0, 2.0, 1.1))  # ancas
+        p.add("Gold", spike(0.2, 0.9, 5), T(s * 0.55, 5.1, -1.4) @ R("Z", -s * 12))  # orejas
+        p.add("Black", sphere(0.14, 5, 3), T(s * 0.4, 4.6, -2.0))  # ojos
+    p.add("Stone", sphere(1.0, 8, 5), T(0, 4.5, -1.3) @ S(1.1, 0.95, 1.0))  # cabeza
+    p.add("StoneDark", box(0.9, 0.35, 0.7), T(0, 4.05, -2.1))  # hocico
+    for i in range(10):  # melena
+        a = 2 * math.pi * i / 10
+        p.add("Gold", spike(0.28, 1.1, 5), T(math.cos(a) * 1.0, 4.5 + math.sin(a) * 0.9, -1.0) @ R("Z", math.degrees(a) - 90) @ R("X", -20))
+    p.add("Gold", spike(0.4, 1.8, 6), T(0, 2.6, 1.8) @ R("X", 60))  # cola
+
+
+def koinobori(p):
+    """Koinobori: mástil con rueda de flechas dorada y cuatro carpas de tela de colores que ondean."""
+    p.add("Wood", cyl(0.3, 24, 8, 0.2))
+    p.add("Gold", sphere(0.55, 8, 4), T(0, 24.2, 0))
+    for i in range(6):
+        p.add("Gold", spike(0.2, 1.8, 4), T(0, 24.6, 0) @ R("Z", 60 * i) @ T(0, 0.5, 0))
+    p.add("Gold", torus(0.55, 0.07, 14, 4), T(0, 24.6, 0) @ R("X", 90))
+    for i, (role, y, length, radius) in enumerate((("Black", 21.0, 8.0, 1.6), ("Red", 17.8, 6.8, 1.35), ("Roof", 14.8, 5.6, 1.15), ("Pink", 12.2, 4.6, 0.95))):
+        sag = -4 * i
+        body = lathe([(radius, 0), (radius * 0.9, length * 0.3), (radius * 0.55, length * 0.7), (radius * 0.22, length)], 10)
+        p.add(role, body, T(0.4, y, 0) @ R("Z", -90 - sag * 0.8))
+        p.add("White", sphere(radius * 0.22, 6, 3), T(0.9, y + radius * 0.55, radius * 0.7))
+        p.add("White", sphere(radius * 0.22, 6, 3), T(0.9, y + radius * 0.55, -radius * 0.7))
+        p.add("Gold", torus(radius * 0.95, 0.07, 14, 4), T(0.4, y, 0) @ R("Z", 90 + sag * 0.8) @ R("X", 0))
+        p.add("Black", box(0.1, 0.1, 0.1), T(0.2, y + 0.4, 0))
+
+
 def fuji(p):
     """Monte Fuji de fondo: cono grande con laderas en dos tonos y la cima nevada."""
     p.add("StoneDark", lathe([(120, 0), (96, 40), (62, 100), (30, 160), (14, 190)], 18))
@@ -390,7 +442,8 @@ def fuji(p):
 PIECES = {
     "Sakura": sakura, "SakuraB": sakura_b, "Maple": maple, "Pine": pine, "Bamboo": bamboo, "Torii": torii,
     "StoneLantern": stone_lantern, "Chochin": chochin, "Pagoda": pagoda, "Bridge": bridge, "Shrine": shrine,
-    "Rocks": rocks, "Lotus": lotus, "Koi": koi, "Bonsai": bonsai, "Fuji": fuji,
+    "Rocks": rocks, "Lotus": lotus, "Koi": koi, "Bonsai": bonsai, "Fence": fence, "Komainu": komainu,
+    "Koinobori": koinobori, "Fuji": fuji,
 }
 
 
@@ -482,7 +535,7 @@ def main():
     )
     render_preview(os.path.join(OUT_DIR, "mapa_japones1.png"), (1, 6), 1.0)
     render_preview(os.path.join(OUT_DIR, "mapa_japones2.png"), (7, 12), 0.9)
-    render_preview(os.path.join(OUT_DIR, "mapa_japones3.png"), (13, 15), 0.5)
+    render_preview(os.path.join(OUT_DIR, "mapa_japones3.png"), (16, 18), 1.0)
     print("Exportadas", len(PIECES), "piezas")
 
 

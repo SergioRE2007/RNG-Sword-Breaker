@@ -72,6 +72,46 @@ local function motes(): ParticleEmitter
 	return glow
 end
 
+-- Luciérnagas: motas verdosas que vagan despacio sobre el agua y entre el bambú.
+local function fireflies(spot: BasePart)
+	local glow = Instance.new("ParticleEmitter")
+	glow.Name = "Fireflies"
+	glow.Texture = SPARKLE
+	glow.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(190, 255, 120)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 236, 130)),
+	})
+	glow.LightEmission = 1
+	glow.Shape = Enum.ParticleEmitterShape.Box
+	glow.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	glow.Rate = math.clamp(spot.Size.X * 0.35, 5, 18)
+	glow.Lifetime = NumberRange.new(3, 6)
+	glow.Speed = NumberRange.new(0.3, 1.4)
+	glow.SpreadAngle = Vector2.new(180, 180)
+	glow.Acceleration = Vector3.new(0, 0.15, 0)
+	glow.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(0.5, 0.4), NumberSequenceKeypoint.new(1, 0.1) })
+	glow.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.15), NumberSequenceKeypoint.new(0.75, 0.35), NumberSequenceKeypoint.new(1, 1) })
+	glow.Parent = spot
+end
+
+-- Humo de incienso: hilo blanco azulado que sube y se deshace.
+local function incense(spot: BasePart)
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Name = "Incense"
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Color = ColorSequence.new(Color3.fromRGB(240, 235, 255))
+	smoke.LightEmission = 0.2
+	smoke.Rate = 3
+	smoke.Lifetime = NumberRange.new(4, 6)
+	smoke.Speed = NumberRange.new(2, 3)
+	smoke.EmissionDirection = Enum.NormalId.Top
+	smoke.SpreadAngle = Vector2.new(8, 8)
+	smoke.Acceleration = Vector3.new(0.6, 0, 0.3)
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 3) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Parent = spot
+end
+
 function JapanFx.start()
 	if Config.Theme ~= "japan" then
 		return
@@ -83,6 +123,7 @@ function JapanFx.start()
 	local low = emitterPart("JapanLow")
 	motes().Parent = low
 
+for tag, make in { FireflySpot = fireflies, SmokeSpot = incense } do		CollectionService:GetInstanceAddedSignal(tag):Connect(make)		for _, item in CollectionService:GetTagged(tag) do			make(item)		end	end
 	local koi = {}
 	local lamps = {}
 	local function track(list: { [Instance]: boolean }, tag: string)
