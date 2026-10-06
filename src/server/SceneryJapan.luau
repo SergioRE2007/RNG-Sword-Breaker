@@ -106,6 +106,12 @@ local function setLighting()
 	bloom.Threshold = 1.25
 	bloom.Parent = Lighting
 
+	-- Cielo con muchas estrellas para la noche (el ciclo de client/DayCycle las deja ver al oscurecer).
+	local sky = Instance.new("Sky")
+	sky.StarCount = 5000
+	sky.CelestialBodiesShown = true
+	sky.Parent = Lighting
+
 	local atmosphere = Instance.new("Atmosphere")
 	atmosphere.Density = 0.36
 	atmosphere.Offset = 0.2
