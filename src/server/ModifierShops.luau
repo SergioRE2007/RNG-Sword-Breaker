@@ -119,7 +119,7 @@ end
 
 -- Cartel con el nombre de la tienda y el aviso "pulsa E" (el cliente además abre la ventana al
 -- acercarse). Van en `counter`, una pieza por delante del puesto.
-local function addSignAndPrompt(counter: Part, kind: string, shopTitle: string, stripes: { Color3 }, signHeight: number)
+local function addSignAndPrompt(counter: Part, kind: string, shopTitle: string, stripes: { Color3 }, signHeight: number, withPrompt: boolean)
 	-- Cartel con el nombre de la tienda, por encima del toldo y con borde negro grueso.
 	local gui = Instance.new("BillboardGui")
 	gui:SetAttribute("SignHeight", signHeight)
@@ -150,6 +150,13 @@ local function addSignAndPrompt(counter: Part, kind: string, shopTitle: string, 
 	-- El cliente (ModifierShops) lo hace girar, latir y flotar.
 	CollectionService:AddTag(gui, "ShopSign")
 
+	if not withPrompt then
+		-- Las estaciones (Rasgos, Grados) se abren solas al acercarse y se cierran al alejarse: sin botón.
+		-- El cliente busca esta pieza (etiqueta ShopStation) para saber dónde está la estación.
+		counter:SetAttribute("Shop", kind)
+		CollectionService:AddTag(counter, "ShopStation")
+		return
+	end
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Abrir"
 	prompt.ObjectText = shopTitle
@@ -225,7 +232,7 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 		end
 	end
 
-	addSignAndPrompt(counter, kind, shopTitle, stripes, signHeight)
+	addSignAndPrompt(counter, kind, shopTitle, stripes, signHeight, true)
 
 	model.Parent = parent
 end
@@ -233,7 +240,7 @@ end
 -- Estación hecha con piezas (Forja, Mesa de encantamiento): `build` es Stations.forge o enchanter.
 local function buildStation(parent: Instance, kind: string, position: Vector3, stripes: { Color3 }, build: (Vector3) -> (Model, Part, number))
 	local model, counter, signHeight = build(position)
-	addSignAndPrompt(counter, kind, Modifiers.KINDS[kind].title, stripes, signHeight)
+	addSignAndPrompt(counter, kind, Modifiers.KINDS[kind].title, stripes, signHeight, false)
 	model.Parent = parent
 end
 
