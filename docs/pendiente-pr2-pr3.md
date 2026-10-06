@@ -30,10 +30,12 @@ Hecho:
 - [x] Medido en partida: al pulsar, el labio baja de 6 a 2,5 px y el botón encoge a 0,95; con el `HudRoot` a 0,55 el
   labio queda en 3,9 px y la línea de brillo se subió a 3 px para que no desaparezca.
 
+- [x] Paneles: cabeceras de Missions, panel del gacha (`GachaBar`) y cartel de resultado de mazmorra (su texto pasa a
+  `DungeonResult.Content`). PassShop no tenía paneles planos.
+- [x] Modo rendimiento probado en partida: el botón no rebota (escala 1) pero se sigue viendo el aclarado y el hundido.
+
 Falta (en este orden):
-- [ ] Paneles de Missions, PassShop, GachaRoll y la tarjeta de Dungeons (esta tiene `UIListLayout`: hace falta un marco
-  de contenido dentro, como en `StatsDock.Stats.Content`).
-- [ ] Probar con el modo rendimiento activado (el código lo respeta, pero no se ha mirado en partida).
+- [ ] Aplicar lo que digan los revisores (Sonnet para el código, Haiku para las capturas): lanzados el 6 oct 2026.
 - [ ] Paso 6, segunda pasada: capturas de cada pantalla, revisor Haiku (visual) y Sonnet (código).
 - [ ] Avisar al compañero antes de juntar (toca `Ui` y `Hud`).
 
