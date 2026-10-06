@@ -112,13 +112,19 @@ function Stations.forge(position: Vector3): (Model, Part, number)
 	tag(hot, "StationHotMetal")
 
 	-- Martillo: el cliente lo levanta y lo deja caer sobre el metal; `Hit` es donde saltan las chispas.
+	-- La cabeza es larga en Z (el plano del golpe): con el mango horizontal queda de pie y apoya su
+	-- cara plana sobre el metal.
 	local hammer = Instance.new("Model")
 	hammer.Name = "Martillo"
-	local handle = make(hammer, "Mango", Vector3.new(0.5, 3.4, 0.5), at(-0.3, y0 + 5.1 + 1.7, -4.4), rgb(120, 80, 48), Enum.Material.Wood)
-	local head = make(hammer, "Cabeza", Vector3.new(2.2, 1.3, 1.3), at(-0.3, y0 + 5.1 + 3.4, -4.4), rgb(84, 86, 96), Enum.Material.Metal)
+	local handle = make(hammer, "Mango", Vector3.new(0.5, 3.4, 0.5), at(-0.3, y0 + 5.55 + 1.7, -4.6), rgb(120, 80, 48), Enum.Material.Wood)
+	local head = make(hammer, "Cabeza", Vector3.new(1, 1, 1.8), at(-0.3, y0 + 5.55 + 3.4, -4.6), rgb(84, 86, 96), Enum.Material.Metal)
 	decor(handle)
 	decor(head)
-	hammer.WorldPivot = at(-0.3, y0 + 5.1, -4.4)
+	-- Eje invisible en el extremo del mango: es el pivote que ve el cliente (WorldPivot no llega).
+	local axis = make(hammer, "Eje", Vector3.new(0.3, 0.3, 0.3), at(-0.3, y0 + 5.55, -4.6), iron, Enum.Material.Metal)
+	axis.Transparency = 1
+	decor(axis)
+	hammer.PrimaryPart = axis
 	hammer.Parent = model
 	tag(hammer, "StationHammer", { Hit = (at(-0.3, y0 + 4.75, -1.2)).Position })
 

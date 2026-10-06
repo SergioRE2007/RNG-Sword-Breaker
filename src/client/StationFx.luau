@@ -185,7 +185,24 @@ end
 
 -- Martillo: sube despacio, se queda un momento arriba y cae; al golpear saltan chispas.
 local function setupHammer(model: Model)
-	local pivot = model:GetPivot()
+	-- El pivote del modelo no llega bien al cliente: se gira cada pieza alrededor de la pieza "Eje".
+	local axis = model:WaitForChild("Eje", 10) :: BasePart?
+	if not axis then
+		return
+	end
+	local pivot = axis.CFrame
+	local original: { [BasePart]: CFrame } = {}
+	for _, item in model:GetChildren() do
+		if item:IsA("BasePart") then
+			original[item] = item.CFrame
+		end
+	end
+	local function pose(angle: number)
+		local turn = pivot * CFrame.Angles(angle, 0, 0) * pivot:Inverse()
+		for part, cframe in original do
+			part.CFrame = turn * cframe
+		end
+	end
 	local hit = model:GetAttribute("Hit") :: Vector3
 	local holder = emitterPart(hit, model)
 	local sparks = emitter(holder, SPARK_TEXTURE)
@@ -197,10 +214,10 @@ local function setupHammer(model: Model)
 	sparks.Acceleration = Vector3.new(0, -45, 0)
 	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0) })
 	sparks.Color = sequence(Color3.fromRGB(255, 245, 190), Color3.fromRGB(255, 140, 40))
-	local REST, UP, STRIKE = math.rad(14), math.rad(-25), math.rad(92)
+	local REST, UP, STRIKE = math.rad(14), math.rad(-25), math.rad(90)
 	local PERIOD = 2.1
 	local previous = 0
-	register(model, function(now)
+	register(axis, function(now)
 		local phase = (now % PERIOD) / PERIOD
 		local angle
 		if phase < 0.5 then
@@ -214,7 +231,7 @@ local function setupHammer(model: Model)
 		else
 			angle = STRIKE + math.sin((phase - 0.8) * 30) * math.rad(3) * (1 - (phase - 0.8) / 0.2) -- rebote
 		end
-		model:PivotTo(pivot * CFrame.Angles(angle, 0, 0))
+		pose(angle)
 		if previous < 0.8 and phase >= 0.8 then
 			lastHit = now
 			sparks:Emit(random:NextInteger(14, 22))
@@ -226,7 +243,7 @@ local function setupHammer(model: Model)
 		end
 	end)
 	-- Quieto en reposo por si está lejos.
-	model:PivotTo(pivot * CFrame.Angles(REST, 0, 0))
+	pose(REST)
 end
 
 -- Pulso de brillo (Transparency) de un neón.
