@@ -1,5 +1,5 @@
 -- Decorado alternativo: un bosque japonés de atardecer (Config.Theme = "japan"). Cerezos y arces cargados de flor, pinos,
--- bambú, toriis rojos en la entrada de cada camino, linternas de piedra y farolillos, estanques con puente, carpas
+-- bambú, toriis rojos en la entrada de cada camino, linternas de piedra y farolillos, estanques con puente
 -- y nenúfares, santuarios, pagodas, islotes con torii en el lago y el monte Fuji al fondo. Los colores son vivos y
 -- hay luz dorada y rosa, bloom y niebla rosada. Las piezas con forma salen de shared/PropModel (modelos de
 -- Blender); sin ese archivo se queda el suelo, la luz y el agua. Todo es decoración: no afecta al juego.
@@ -272,7 +272,7 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 	end
 end
 
--- Estanque con nenúfares, carpas (nadan en el cliente) y un puente rojo por encima.
+-- Estanque con nenúfares y un puente rojo por encima.
 local function pond(parent: Instance, center: Vector3, radius: number)
 	disc(parent, "PondEdge", center, radius + 2.2, 0.2, 0.55, Color3.fromRGB(196, 200, 218), Enum.Material.SmoothPlastic)
 	local water = disc(parent, "Pond", center, radius, 0.3, 0.7, Color3.fromRGB(86, 214, 238), Enum.Material.Glass)
@@ -282,16 +282,6 @@ local function pond(parent: Instance, center: Vector3, radius: number)
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(-radius * 0.35, 0.7, radius * 0.3)) * turn(), 1.0)
 	local turnBridge = rng:NextNumber(0, math.pi)
 	PropModel.place(parent, "Bridge", CFrame.new(center + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, turnBridge, 0), radius / 10)
-	for index = 1, 4 do
-		local fish = PropModel.place(parent, "Koi", CFrame.new(center + Vector3.new(0, 0.9, 0)), 0.8)
-		if fish then
-			fish:SetAttribute("Center", center + Vector3.new(0, 0.9, 0))
-			fish:SetAttribute("Radius", radius * rng:NextNumber(0.35, 0.8))
-			fish:SetAttribute("Speed", rng:NextNumber(0.25, 0.5) * (if index % 2 == 0 then 1 else -1))
-			fish:SetAttribute("Phase", rng:NextNumber(0, math.pi * 2))
-			CollectionService:AddTag(fish, "Koi")
-		end
-	end
 	for index = 1, 7 do
 		local angle = index / 7 * math.pi * 2 + 0.3
 		PropModel.place(parent, "Rocks", CFrame.new(center + Vector3.new(math.cos(angle) * (radius + 3), 0.3, math.sin(angle) * (radius + 3))) * turn(), rng:NextNumber(0.4, 0.8))
@@ -406,7 +396,11 @@ function SceneryJapan.start()
 		PropModel.place(folder, "Chochin", CFrame.new(position + side * 5 + Vector3.new(0, 5.5, 0)), 1.0, { Red = Color3.fromHSV((index % cfg.Count) / cfg.Count, 0.65, 1) })
 	end)
 
--- Mástiles de koinobori (carpas de tela) en el borde interior de cada hueco entre caminos.	ring(cfg.Count, cfg.HubRadius + 22, 0.5, function(position)		PropModel.place(folder, "Koinobori", CFrame.new(position) * turn(), 0.85)	end)
+	-- Mástiles de koinobori (carpas de tela) en el borde interior de cada hueco entre caminos.
+	ring(cfg.Count, cfg.HubRadius + 22, 0.5, function(position)
+		PropModel.place(folder, "Koinobori", CFrame.new(position) * turn(), 0.85)
+	end)
+
 	-- Estanques con puente en dos huecos entre parcelas, santuarios y pagodas en otros.
 	local middle = (cfg.HubRadius + cfg.RingRadius) / 2 + 5
 	ring(cfg.Count, middle, 0.5, function(position, index)

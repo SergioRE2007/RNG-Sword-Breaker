@@ -1,5 +1,5 @@
 -- Vida del mapa japonés (Config.Theme = "japan"): pétalos de cerezo que caen siempre alrededor de la cámara, motas
--- doradas que flotan, farolillos y linternas que laten con su luz y carpas que nadan en círculos por los estanques.
+-- doradas que flotan, farolillos y linternas que laten con su luz, animales que pasean y luciérnagas e incienso.
 -- Todo es solo de este cliente; el modo rendimiento (Performance) apaga las partículas y luces y para las animaciones.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,7 +12,6 @@ local Performance = require(script.Parent.Performance)
 local JapanFx = {}
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
-local KOI_RANGE = 220
 local CRITTER_RANGE = 240
 
 local function emitterPart(name: string): Part
@@ -132,7 +131,6 @@ function JapanFx.start()
 		end
 	end
 
-	local koi = {}
 	local lamps = {}
 	local function track(list: { [Instance]: boolean }, tag: string)
 		CollectionService:GetInstanceAddedSignal(tag):Connect(function(item)
@@ -145,7 +143,6 @@ function JapanFx.start()
 			list[item] = true
 		end
 	end
-	track(koi, "Koi")
 	track(lamps, "LanternGlow")
 
 	-- Estado de cada animal (posición, hacia dónde mira y a dónde va); parten de su casa.
@@ -177,20 +174,6 @@ function JapanFx.start()
 			return
 		end
 		local now = os.clock()
-
-		for fish in koi do
-			local model = fish :: Model
-			if model.Parent then
-				local center = model:GetAttribute("Center")
-				if center and (center - position).Magnitude < KOI_RANGE then
-					local angle = now * model:GetAttribute("Speed") + model:GetAttribute("Phase")
-					local radius = model:GetAttribute("Radius") + math.sin(now * 0.7 + model:GetAttribute("Phase")) * 1.2
-					local spot = center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
-					local heading = Vector3.new(-math.sin(angle), 0, math.cos(angle)) * math.sign(model:GetAttribute("Speed"))
-					model:PivotTo(CFrame.lookAt(spot, spot + heading) * CFrame.Angles(0, math.sin(now * 5 + angle) * 0.18, 0))
-				end
-			end
-		end
 
 		-- Los animales pasean por su rincón: eligen un punto, andan hasta él dando saltitos, descansan y repiten.
 		for model, state in critters do

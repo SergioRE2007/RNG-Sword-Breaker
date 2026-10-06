@@ -434,139 +434,215 @@ def koinobori(p):
 
 
 # ---------- Animales (miran hacia -Z, con las patas en y=0) ----------
+# Cuerpo en tres bultos (pecho, vientre y grupa), patas con muslo, rodilla y caña, cuello que une el cuerpo con la
+# cabeza, hocico y ojos: más natural que una bola con cuatro palos.
 
-def quad(p, body, legs, L, W, H, leg, belly=None):
-    """Cuadrúpedo base: cuerpo ovalado y cuatro patas. Devuelve la altura del centro del cuerpo."""
-    cy = leg + H / 2
-    p.add(body, sphere(1, 12, 7), T(0, cy, 0) @ S(W / 2, H / 2, L / 2))
+def leg(p, upper, x, z, top, thick, length, knee=0.3, lower=None, paw=None):
+    """Pata: muslo desde (x, top, z), rodilla algo adelantada o atrasada según `knee`, caña y pie."""
+    lower = lower or upper
+    a = (x, top, z)
+    b = (x, top - length * 0.48, z + knee)
+    c = (x, 0.14, z + knee * 0.15)
+    p.branch(upper, a, b, thick, thick * 0.74, 8)
+    p.branch(lower, b, c, thick * 0.74, thick * 0.5, 8)
+    p.add(lower, sphere(thick * 0.7, 7, 4), T(x, 0.2, z + knee * 0.15 - thick * 0.35) @ S(1, 0.5, 1.5))
+    if paw:
+        p.add(paw, sphere(thick * 0.6, 6, 3), T(x, 0.16, z + knee * 0.15 - thick * 0.9) @ S(1, 0.5, 0.9))
+
+
+def torso(p, role, L, W, H, cy, belly=None):
+    """Cuerpo en tres bultos: pecho, vientre y grupa."""
+    p.add(role, sphere(1, 12, 7), T(0, cy + H * 0.05, -L * 0.2) @ S(W / 2, H / 2 * 1.05, L * 0.34))
+    p.add(role, sphere(1, 12, 7), T(0, cy, 0) @ S(W / 2 * 0.92, H / 2 * 0.9, L * 0.3))
+    p.add(role, sphere(1, 12, 7), T(0, cy + H * 0.03, L * 0.22) @ S(W / 2 * 0.95, H / 2 * 0.97, L * 0.3))
     if belly:
-        p.add(belly, sphere(1, 10, 6), T(0, cy - H * 0.2, -L * 0.04) @ S(W / 2 * 0.9, H / 2 * 0.8, L / 2 * 0.9))
-    for sx in (-1, 1):
-        for sz in (-1, 1):
-            p.add(legs, cyl(W * 0.17, leg + H * 0.25, 8, W * 0.13), T(sx * W * 0.27, 0, sz * L * 0.27))
-    return cy
+        p.add(belly, sphere(1, 10, 6), T(0, cy - H * 0.2, -L * 0.02) @ S(W / 2 * 0.8, H / 2 * 0.68, L * 0.46))
+
+
+def eye(p, x, y, z, r=0.12, iris="Black"):
+    p.add(iris, sphere(r, 6, 4), T(x, y, z))
+    p.add("White", sphere(r * 0.4, 4, 3), T(x * 1.02, y + r * 0.35, z - r * 0.6))
+
+
+def muzzle_nose(p, x, y, z, r, role="Black"):
+    p.add(role, sphere(r, 6, 4), T(x, y, z) @ S(1.3, 0.85, 0.9))
 
 
 def panda(p):
-    L, W, H = 4.4, 2.8, 2.7
-    cy = quad(p, "White", "Black", L, W, H, 1.3)
-    p.add("Black", sphere(1, 12, 7), T(0, cy + 0.05, -L * 0.2) @ S(W / 2 * 1.04, H / 2 * 1.06, 0.6))  # banda de los hombros
-    hy, hz = cy + 1.1, -L / 2 - 0.2
-    p.add("White", sphere(1.35, 12, 7), T(0, hy, hz) @ S(1.1, 0.95, 1.0))
+    L, W, H = 4.8, 3.0, 2.8
+    cy = 3.0
+    torso(p, "White", L, W, H, cy)
+    p.add("Black", sphere(1, 12, 7), T(0, cy + 0.1, -L * 0.2) @ S(W / 2 + 0.06, H / 2 * 1.08, 0.8))  # banda de los hombros
     for s in (-1, 1):
-        p.add("Black", sphere(0.45, 8, 5), T(s * 0.95, hy + 1.0, hz + 0.15))
-        p.add("Black", sphere(1, 8, 5), T(s * 0.5, hy + 0.2, hz - 1.15) @ S(0.3, 0.42, 0.18) @ R("Z", s * 25))  # manchas de los ojos
-        p.add("White", sphere(0.07, 5, 3), T(s * 0.5, hy + 0.2, hz - 1.3))
-    p.add("Black", sphere(0.2, 6, 4), T(0, hy - 0.2, hz - 1.35) @ S(1.2, 0.8, 0.8))
-    p.add("White", sphere(0.65, 8, 5), T(0, hy - 0.4, hz - 1.0) @ S(1, 0.7, 0.9))
-    p.add("White", sphere(0.4, 7, 4), T(0, cy + 0.2, L / 2 + 0.2))  # cola
+        leg(p, "Black", s * W * 0.3, -L * 0.26, cy - 0.3, 0.7, 2.6, 0.2)
+        leg(p, "Black", s * W * 0.3, L * 0.26, cy - 0.2, 0.72, 2.6, -0.3)
+    p.add("White", sphere(1.3, 9, 5), T(0, cy + 0.5, -L / 2 + 0.2) @ S(1, 1, 1))  # cuello grueso
+    hy, hz = cy + 1.0, -L / 2 - 0.5
+    p.add("White", sphere(1.35, 12, 7), T(0, hy, hz) @ S(1.12, 0.95, 1.0))
+    p.add("White", sphere(0.75, 9, 5), T(0, hy - 0.4, hz - 1.0) @ S(1, 0.72, 0.95))  # hocico
+    muzzle_nose(p, 0, hy - 0.15, hz - 1.62, 0.22)
+    p.add("Black", box(0.05, 0.3, 0.05), T(0, hy - 0.5, hz - 1.55))
+    for s in (-1, 1):
+        p.add("Black", sphere(0.48, 8, 5), T(s * 0.98, hy + 1.0, hz + 0.1))  # orejas
+        p.add("Black", sphere(1, 8, 5), T(s * 0.55, hy + 0.2, hz - 1.0) @ S(0.3, 0.45, 0.2) @ R("Z", s * 28))  # manchas de los ojos
+        eye(p, s * 0.52, hy + 0.2, hz - 1.18, 0.09, "Black")
+        p.add("White", sphere(0.07, 4, 3), T(s * 0.52, hy + 0.23, hz - 1.26))
+    p.add("White", sphere(0.42, 7, 4), T(0, cy + 0.3, L / 2 + 0.25))  # cola
 
 
 def red_panda(p):
-    L, W, H = 3.0, 1.7, 1.6
-    cy = quad(p, "Fur", "Black", L, W, H, 0.9, "Cream")
-    hy, hz = cy + 0.6, -L / 2 - 0.15
-    p.add("Fur", sphere(0.95, 10, 6), T(0, hy, hz) @ S(1.15, 0.9, 1.0))
+    L, W, H = 3.2, 1.8, 1.7
+    cy = 1.9
+    torso(p, "Fur", L, W, H, cy, "Black")
     for s in (-1, 1):
-        p.add("Fur", spike(0.34, 0.6, 5), T(s * 0.62, hy + 0.65, hz + 0.05) @ R("Z", -s * 12))
-        p.add("Cream", sphere(0.2, 5, 3), T(s * 0.62, hy + 0.7, hz - 0.12))
-        p.add("Cream", sphere(0.42, 7, 4), T(s * 0.45, hy - 0.2, hz - 0.62) @ S(1, 0.8, 0.9))  # mejillas
-        p.add("Black", sphere(0.1, 5, 3), T(s * 0.34, hy + 0.12, hz - 0.88))
-    p.add("Black", sphere(0.14, 5, 3), T(0, hy - 0.1, hz - 1.02))
-    for i in range(6):  # cola anillada
-        p.add("Fur" if i % 2 == 0 else "Cream", sphere(0.5 - i * 0.025, 7, 4), T(0, cy + 0.35 + i * 0.12, L / 2 + 0.3 + i * 0.5) @ S(1, 1, 0.8))
+        leg(p, "Black", s * W * 0.28, -L * 0.26, cy - 0.2, 0.34, 1.6, 0.15)
+        leg(p, "Black", s * W * 0.28, L * 0.24, cy - 0.15, 0.36, 1.6, -0.2)
+    p.add("Fur", sphere(0.85, 9, 5), T(0, cy + 0.35, -L / 2 + 0.2))
+    hy, hz = cy + 0.65, -L / 2 - 0.35
+    p.add("Fur", sphere(0.95, 11, 6), T(0, hy, hz) @ S(1.2, 0.92, 1.0))
+    p.add("Cream", sphere(0.55, 8, 5), T(0, hy - 0.22, hz - 0.62) @ S(1.2, 0.75, 0.85))  # hocico blanco
+    muzzle_nose(p, 0, hy - 0.08, hz - 1.0, 0.12)
+    for s in (-1, 1):
+        p.add("Fur", spike(0.36, 0.65, 6), T(s * 0.66, hy + 0.62, hz + 0.1) @ R("Z", -s * 14))
+        p.add("Cream", spike(0.2, 0.4, 5), T(s * 0.66, hy + 0.7, hz + 0.02) @ R("Z", -s * 14))
+        p.add("Cream", sphere(0.34, 7, 4), T(s * 0.5, hy + 0.1, hz - 0.5) @ S(1, 0.7, 0.8))  # pómulos
+        p.add("Black", sphere(1, 6, 4), T(s * 0.32, hy + 0.14, hz - 0.78) @ S(0.16, 0.28, 0.12) @ R("Z", s * -20))  # lágrimas oscuras
+        eye(p, s * 0.34, hy + 0.17, hz - 0.84, 0.08)
+    for i in range(8):  # cola larga anillada
+        t = i / 7
+        p.add("Fur" if i % 2 == 0 else "Cream", sphere(0.5 - t * 0.12, 8, 4), T(0, cy + 0.3 + math.sin(t * 2.2) * 0.9, L / 2 + 0.2 + t * 2.3) @ S(1, 1, 0.8))
 
 
 def tiger(p):
-    L, W, H = 6.6, 2.5, 2.9
-    cy = quad(p, "Orange", "Orange", L, W, H, 1.9, "White")
-    for i in range(8):  # rayas del lomo y los costados
-        z = -L * 0.38 + i * L * 0.11
-        k = math.sqrt(max(1 - (z / (L / 2)) ** 2, 0.05))
-        p.add("Black", box(W * 0.62, 0.2, 0.36), T(0, cy + H / 2 * k * 0.98, z))
-        for s in (-1, 1):
-            p.add("Black", box(0.2, H * 0.34, 0.34), T(s * (W / 2 * k * 0.93), cy + H * 0.1, z) @ R("Z", s * -12))
-    hy, hz = cy + 0.8, -L / 2 - 0.35
-    p.add("Orange", sphere(1.4, 12, 7), T(0, hy, hz) @ S(1.05, 0.95, 0.95))
-    p.add("White", sphere(0.78, 9, 5), T(0, hy - 0.45, hz - 1.05) @ S(1.25, 0.75, 0.8))
-    p.add("Black", sphere(0.2, 6, 4), T(0, hy - 0.2, hz - 1.65) @ S(1.3, 0.9, 0.8))
+    L, W, H = 7.0, 2.5, 2.9
+    cy = 3.6
+    torso(p, "Orange", L, W, H, cy, "White")
+    p.add("Orange", sphere(1, 9, 5), T(0, cy + H * 0.5, -L * 0.22) @ S(W * 0.36, 0.5, 1.3))  # lomo con la cruz marcada
     for s in (-1, 1):
-        p.add("Orange", sphere(0.5, 8, 5), T(s * 1.0, hy + 1.1, hz + 0.25) @ S(1, 1, 0.6))
-        p.add("Black", sphere(0.3, 6, 4), T(s * 1.0, hy + 1.1, hz + 0.46) @ S(1, 1, 0.5))
-        p.add("Black", sphere(0.14, 6, 4), T(s * 0.55, hy + 0.3, hz - 1.15))
-        p.add("Black", box(0.5, 0.13, 0.2), T(s * 1.05, hy + 0.15, hz - 0.8) @ R("Z", s * 15))
-        p.add("Black", box(0.5, 0.13, 0.2), T(s * 1.05, hy - 0.2, hz - 0.8) @ R("Z", s * -10))
-    p.add("Black", box(0.2, 0.7, 0.2), T(0, hy + 0.85, hz - 0.9))
-    for i in range(7):  # cola con anillos
-        p.add("Black" if i % 2 else "Orange", cyl(0.36, 0.7, 7), T(0, cy + 0.2 + i * 0.28, L / 2 + 0.2 + i * 0.5) @ R("X", -80 + 6 * i))
+        leg(p, "Orange", s * W * 0.28, -L * 0.27, cy - 0.4, 0.62, 3.3, 0.25, None, "Cream")
+        leg(p, "Orange", s * W * 0.28, L * 0.27, cy - 0.3, 0.7, 3.3, -0.55, None, "Cream")
+    for i in range(10):  # rayas
+        z = -L * 0.34 + i * L * 0.075
+        k = math.sqrt(max(1 - (z / (L / 2 + 0.2)) ** 2, 0.06))
+        p.add("Black", box(W * 0.46, 0.15, 0.3 - 0.01 * i), T(0, cy + H / 2 * k * 1.0 + 0.04, z))
+        for s in (-1, 1):
+            p.add("Black", box(0.16, H * (0.3 if i % 2 else 0.42), 0.26), T(s * (W / 2 * k * 0.95), cy + H * 0.12, z + (0.05 if i % 2 else 0)) @ R("Z", s * -14))
+    neck_a, neck_b = (0, cy + 0.35, -L * 0.34), (0, cy + 1.0, -L * 0.5 - 0.5)
+    p.branch("Orange", neck_a, neck_b, 1.15, 0.95, 9)
+    hy, hz = cy + 1.1, -L / 2 - 0.9
+    p.add("Orange", sphere(1.35, 12, 7), T(0, hy, hz) @ S(1.1, 0.95, 0.95))
+    p.add("Cream", sphere(0.85, 9, 5), T(0, hy - 0.45, hz - 1.0) @ S(1.25, 0.75, 0.85))  # hocico
+    p.add("Pink", sphere(0.2, 6, 4), T(0, hy - 0.15, hz - 1.72) @ S(1.4, 0.85, 0.8))
+    p.add("Black", box(0.06, 0.4, 0.06), T(0, hy - 0.5, hz - 1.7))
+    for s in (-1, 1):
+        p.add("Cream", spike(0.28, 0.7, 5), T(s * 1.25, hy - 0.5, hz - 0.2) @ R("Z", -s * 100))  # patillas
+        p.add("Orange", sphere(0.52, 8, 5), T(s * 1.0, hy + 1.1, hz + 0.3) @ S(1, 1, 0.6))
+        p.add("Black", sphere(0.3, 6, 4), T(s * 1.0, hy + 1.1, hz + 0.52) @ S(1, 1, 0.5))
+        p.add("Gold", sphere(0.17, 6, 4), T(s * 0.55, hy + 0.32, hz - 1.15))
+        p.add("Black", box(0.05, 0.22, 0.05), T(s * 0.55, hy + 0.32, hz - 1.3))
+        p.add("Black", box(0.55, 0.12, 0.2), T(s * 1.02, hy + 0.15, hz - 0.7) @ R("Z", s * 16))
+        p.add("Black", box(0.55, 0.12, 0.2), T(s * 1.05, hy - 0.2, hz - 0.65) @ R("Z", s * -8))
+    p.add("Black", box(0.18, 0.7, 0.18), T(0, hy + 0.85, hz - 0.85))
+    for i in range(9):  # cola larga con anillos
+        t = i / 8
+        p.add("Black" if i % 2 else "Orange", sphere(0.34 - t * 0.04, 7, 4), T(0, cy - 0.2 + math.sin(t * 2.4) * 1.6, L / 2 + 0.2 + t * 3.2) @ S(1, 1, 1.4))
 
 
 def fox(p):
-    L, W, H = 3.4, 1.6, 1.5
-    cy = quad(p, "Orange", "Black", L, W, H, 1.2, "White")
-    hy, hz = cy + 0.5, -L / 2 - 0.1
-    p.add("Orange", sphere(0.85, 10, 6), T(0, hy, hz) @ S(1.1, 0.9, 0.95))
-    p.add("White", spike(0.46, 1.1, 6), T(0, hy - 0.25, hz - 0.55) @ R("X", -90))  # hocico
-    p.add("Black", sphere(0.1, 5, 3), T(0, hy - 0.25, hz - 1.65))
+    L, W, H = 3.6, 1.5, 1.5
+    cy = 2.1
+    torso(p, "Orange", L, W, H, cy, "Cream")
     for s in (-1, 1):
-        p.add("Orange", spike(0.36, 1.2, 5), T(s * 0.5, hy + 0.55, hz + 0.1) @ R("Z", -s * 8))
-        p.add("Black", spike(0.2, 0.5, 5), T(s * 0.5, hy + 1.35, hz + 0.1) @ R("Z", -s * 8))
-        p.add("White", sphere(0.36, 7, 4), T(s * 0.5, hy - 0.2, hz - 0.5) @ S(1, 0.8, 1))
-        p.add("Black", sphere(0.09, 5, 3), T(s * 0.35, hy + 0.15, hz - 0.78))
-    p.add("Orange", sphere(1, 9, 6), T(0, cy + 0.35, L / 2 + 0.9) @ S(0.62, 0.62, 1.6))  # cola grande
-    p.add("White", sphere(1, 8, 5), T(0, cy + 0.45, L / 2 + 2.2) @ S(0.5, 0.5, 0.75))
+        leg(p, "Orange", s * W * 0.28, -L * 0.26, cy - 0.2, 0.26, 1.9, 0.2, "Black")
+        leg(p, "Orange", s * W * 0.28, L * 0.26, cy - 0.15, 0.3, 1.9, -0.4, "Black")
+    p.branch("Orange", (0, cy + 0.2, -L * 0.3), (0, cy + 0.65, -L / 2 - 0.2), 0.62, 0.5, 8)
+    hy, hz = cy + 0.75, -L / 2 - 0.35
+    p.add("Orange", sphere(0.8, 10, 6), T(0, hy, hz) @ S(1.1, 0.9, 1.0))
+    p.branch("Orange", (0, hy - 0.05, hz - 0.5), (0, hy - 0.22, hz - 1.55), 0.42, 0.18, 8)  # hocico largo
+    p.add("Cream", sphere(0.34, 7, 4), T(0, hy - 0.4, hz - 0.9) @ S(1, 0.6, 1.6))
+    muzzle_nose(p, 0, hy - 0.2, hz - 1.62, 0.1)
+    for s in (-1, 1):
+        p.add("Orange", spike(0.34, 1.2, 5), T(s * 0.48, hy + 0.55, hz + 0.1) @ R("Z", -s * 6))
+        p.add("Black", spike(0.2, 0.55, 5), T(s * 0.5, hy + 1.3, hz + 0.1) @ R("Z", -s * 6))
+        p.add("Cream", sphere(0.34, 7, 4), T(s * 0.5, hy - 0.2, hz - 0.5) @ S(1, 0.8, 1))
+        eye(p, s * 0.36, hy + 0.15, hz - 0.8, 0.08)
+    for i in range(5):  # cola grande y esponjosa
+        t = i / 4
+        p.add("White" if i == 4 else "Orange", sphere(0.5 + 0.1 * math.sin(t * 3), 8, 4), T(0, cy + 0.3 - t * 0.2, L / 2 + 0.5 + t * 1.9) @ S(1, 1, 1.4))
 
 
 def tanuki(p):
-    L, W, H = 3.0, 2.3, 2.3
-    cy = quad(p, "Wood", "Black", L, W, H, 0.8, "Cream")
-    hy, hz = cy + 0.65, -L / 2 - 0.1
-    p.add("Wood", sphere(1.0, 10, 6), T(0, hy, hz) @ S(1.15, 0.9, 1.0))
-    p.add("Black", sphere(1, 8, 5), T(0, hy + 0.12, hz - 0.45) @ S(0.95, 0.28, 0.6))  # antifaz
-    p.add("Cream", sphere(0.4, 7, 4), T(0, hy - 0.3, hz - 0.85) @ S(1.2, 0.7, 0.9))
-    p.add("Black", sphere(0.14, 5, 3), T(0, hy - 0.15, hz - 1.15))
+    L, W, H = 3.2, 2.4, 2.3
+    cy = 1.7
+    torso(p, "Wood", L, W, H, cy, "Cream")
     for s in (-1, 1):
-        p.add("Black", sphere(0.3, 7, 4), T(s * 0.8, hy + 0.8, hz + 0.15))
-        p.add("White", sphere(0.07, 5, 3), T(s * 0.4, hy + 0.15, hz - 0.78))
-    for i in range(4):
-        p.add("Wood" if i % 2 == 0 else "Black", sphere(0.6 - i * 0.07, 7, 4), T(0, cy + 0.2 + i * 0.1, L / 2 + 0.25 + i * 0.42))
+        leg(p, "Black", s * W * 0.3, -L * 0.25, cy - 0.2, 0.34, 1.4, 0.1)
+        leg(p, "Black", s * W * 0.3, L * 0.25, cy - 0.15, 0.36, 1.4, -0.2)
+    p.add("Wood", sphere(0.95, 8, 5), T(0, cy + 0.45, -L / 2 + 0.2))
+    hy, hz = cy + 0.75, -L / 2 - 0.3
+    p.add("Wood", sphere(1.0, 11, 6), T(0, hy, hz) @ S(1.2, 0.9, 1.0))
+    p.add("Cream", sphere(0.5, 8, 5), T(0, hy - 0.28, hz - 0.65) @ S(1.2, 0.7, 0.9))
+    muzzle_nose(p, 0, hy - 0.08, hz - 1.05, 0.13)
+    for s in (-1, 1):
+        p.add("Black", sphere(1, 8, 5), T(s * 0.4, hy + 0.16, hz - 0.7) @ S(0.36, 0.2, 0.2) @ R("Z", s * -20))  # antifaz
+        p.add("Black", sphere(0.3, 7, 4), T(s * 0.82, hy + 0.82, hz + 0.1))
+        eye(p, s * 0.4, hy + 0.17, hz - 0.88, 0.07)
+    for i in range(5):
+        p.add("Wood" if i % 2 == 0 else "Black", sphere(0.62 - i * 0.07, 7, 4), T(0, cy + 0.2 + i * 0.08, L / 2 + 0.3 + i * 0.4))
 
 
 def deer(p):
-    L, W, H = 4.6, 1.9, 2.0
-    cy = quad(p, "Tan", "Tan", L, W, H, 2.9)
-    for i in range(9):  # manchas blancas
-        p.add("Cream", sphere(0.16, 5, 3), T(math.sin(i * 2.1) * 0.7, cy + H * 0.42, -L * 0.3 + i * 0.5))
-    p.add("Cream", sphere(1, 8, 5), T(0, cy - 0.2, -L * 0.04) @ S(0.8, 0.5, 1.9))
-    p.add("Tan", cyl(0.42, 2.1, 8, 0.3), T(0, cy + 0.5, -L / 2 + 0.3) @ R("X", 35))  # cuello
-    hy, hz = cy + 2.7, -L / 2 - 0.85
-    p.add("Tan", sphere(0.72, 9, 5), T(0, hy, hz) @ S(0.9, 0.85, 1.25))
-    p.add("Cream", sphere(0.33, 6, 4), T(0, hy - 0.2, hz - 0.8))
-    p.add("Black", sphere(0.14, 5, 3), T(0, hy - 0.15, hz - 1.1))
+    L, W, H = 4.4, 1.7, 1.8
+    cy = 3.6
+    torso(p, "Tan", L, W, H, cy, "Cream")
+    for i in range(10):  # manchas
+        p.add("Cream", sphere(0.14, 5, 3), T(math.sin(i * 2.1) * 0.6, cy + H * 0.44, -L * 0.3 + i * 0.45))
     for s in (-1, 1):
-        p.add("Black", sphere(0.09, 5, 3), T(s * 0.5, hy + 0.1, hz - 0.35))
-        p.add("Tan", spike(0.3, 0.8, 5), T(s * 0.7, hy + 0.5, hz + 0.35) @ R("Z", -s * 60))
-        p.add("Wood", cyl(0.07, 1.3, 5, 0.04), T(s * 0.35, hy + 0.5, hz + 0.3) @ R("Z", -s * 15))  # cuernos
-        p.add("Wood", cyl(0.05, 0.8, 5, 0.03), T(s * 0.55, hy + 1.2, hz + 0.3) @ R("Z", -s * 55))
-        p.add("Wood", cyl(0.05, 0.6, 5, 0.03), T(s * 0.5, hy + 1.0, hz + 0.1) @ R("Z", -s * 30) @ R("X", -35))
-    p.add("Cream", sphere(0.3, 6, 4), T(0, cy + 0.5, L / 2 + 0.1) @ S(1, 1.2, 0.8))
+        leg(p, "Tan", s * W * 0.26, -L * 0.27, cy - 0.4, 0.26, 3.6, 0.2, "Wood")
+        leg(p, "Tan", s * W * 0.26, L * 0.26, cy - 0.3, 0.3, 3.6, -0.6, "Wood")
+    # El cuello sale del pecho y acaba dentro de la cabeza.
+    neck_a, neck_b = (0, cy + 0.45, -L * 0.34), (0, cy + 2.35, -L * 0.5 - 0.75)
+    p.branch("Tan", neck_a, neck_b, 0.6, 0.36, 9)
+    p.add("Cream", sphere(0.5, 7, 4), T(0, cy + 1.2, -L * 0.48 - 0.1) @ S(0.8, 1.3, 0.8))  # pechuga
+    hy, hz = neck_b[1] + 0.2, neck_b[2] - 0.3
+    p.add("Tan", sphere(0.55, 10, 6), T(0, hy, hz) @ S(0.85, 0.85, 1.05))  # cráneo
+    p.branch("Tan", (0, hy - 0.05, hz - 0.3), (0, hy - 0.3, hz - 1.2), 0.38, 0.24, 8)  # hocico
+    p.add("Cream", sphere(0.26, 6, 4), T(0, hy - 0.34, hz - 1.18) @ S(1, 0.8, 1))
+    muzzle_nose(p, 0, hy - 0.26, hz - 1.4, 0.1)
+    for s in (-1, 1):
+        eye(p, s * 0.42, hy + 0.12, hz - 0.35, 0.09)
+        p.add("Tan", sphere(1, 7, 4), T(s * 0.62, hy + 0.55, hz + 0.25) @ S(0.15, 0.5, 0.26) @ R("Z", -s * 40))  # orejas
+        p.add("Cream", sphere(1, 6, 4), T(s * 0.58, hy + 0.55, hz + 0.28) @ S(0.1, 0.35, 0.16) @ R("Z", -s * 40))
+        base = (s * 0.3, hy + 0.5, hz + 0.1)  # cuernas con ramas
+        p.branch("Wood", base, (s * 0.45, hy + 1.6, hz + 0.45), 0.07, 0.045, 5)
+        p.branch("Wood", (s * 0.4, hy + 1.1, hz + 0.3), (s * 0.7, hy + 1.8, hz + 0.1), 0.05, 0.03, 5)
+        p.branch("Wood", (s * 0.45, hy + 1.6, hz + 0.45), (s * 0.7, hy + 2.2, hz + 0.6), 0.045, 0.025, 5)
+        p.branch("Wood", (s * 0.45, hy + 1.6, hz + 0.45), (s * 0.3, hy + 2.3, hz + 0.3), 0.04, 0.025, 5)
+    p.add("Cream", sphere(0.3, 6, 4), T(0, cy + 0.6, L / 2 + 0.2) @ S(1, 1.3, 0.7))  # rabo
 
 
 def crane(p):
-    p.add("White", sphere(1, 10, 6), T(0, 3.9, 0.2) @ S(0.85, 0.8, 1.5))  # cuerpo
+    p.add("White", sphere(1, 11, 6), T(0, 4.2, 0.3) @ S(0.9, 0.85, 1.6))  # cuerpo
+    p.add("White", sphere(1, 9, 5), T(0, 4.1, -1.1) @ S(0.7, 0.7, 0.8))  # pecho
     for s in (-1, 1):
-        p.add("Black", cyl(0.07, 3.4, 5, 0.05), T(s * 0.3, 0, 0.1))
-        p.add("Black", box(0.5, 0.06, 0.8), T(s * 0.3, 0.03, -0.25))
-        p.add("White", sphere(1, 9, 5), T(s * 0.78, 4.0, 0.3) @ S(0.2, 0.55, 1.35) @ R("Z", s * 8))  # alas
-        p.add("Black", sphere(1, 7, 4), T(s * 0.82, 3.75, 1.35) @ S(0.15, 0.3, 0.55))
-    pts = [(0, 4.4, -1.0), (0, 5.4, -1.5), (0, 6.4, -1.3), (0, 7.1, -1.6)]
+        p.branch("Black", (s * 0.3, 3.7, 0.1), (s * 0.3, 2.0, 0.35), 0.1, 0.07, 5)  # muslo y rodilla
+        p.branch("Black", (s * 0.3, 2.0, 0.35), (s * 0.3, 0.1, 0.05), 0.07, 0.05, 5)
+        p.add("Black", box(0.45, 0.06, 0.9), T(s * 0.3, 0.04, -0.3))
+        p.add("White", sphere(1, 10, 5), T(s * 0.82, 4.25, 0.4) @ S(0.18, 0.62, 1.5) @ R("Z", s * 7))  # ala plegada
+        for k in range(3):
+            p.add("White", sphere(1, 8, 4), T(s * (0.9 + 0.03 * k), 3.9 - 0.1 * k, 0.9 + 0.3 * k) @ S(0.12, 0.28, 0.95))
+        p.add("Black", sphere(1, 7, 4), T(s * 0.88, 3.7, 1.7) @ S(0.14, 0.26, 0.7))  # puntas negras
+    for i in range(5):  # plumas de la cola
+        p.add("Black", spike(0.1, 1.5, 4), T(0, 4.0, 1.7) @ R("X", 72) @ R("Y", (i - 2) * 14))
+    pts = [(0, 4.6, -1.3), (0, 5.5, -1.9), (0, 6.5, -1.75), (0, 7.3, -1.9), (0, 7.8, -2.2)]  # cuello en S
     for a, b in zip(pts, pts[1:]):
-        p.branch("White", a, b, 0.2, 0.17, 6)
-    p.add("White", sphere(0.32, 8, 5), T(0, 7.3, -1.75))
-    p.add("Red", sphere(0.28, 7, 4), T(0, 7.5, -1.75) @ S(1, 0.5, 1))
-    p.add("Black", spike(0.1, 1.2, 5), T(0, 7.3, -2.0) @ R("X", -90))
-    for i in range(4):
-        p.add("Black", spike(0.1, 1.6, 4), T(0, 3.9, 1.7) @ R("X", 70) @ R("Y", (i - 1.5) * 18))
+        p.branch("White", a, b, 0.22, 0.16, 7)
+        p.add("White", sphere(0.2, 6, 4), T(*b))
+    p.add("White", sphere(0.32, 8, 5), T(0, 7.95, -2.35) @ S(0.9, 0.9, 1.1))
+    p.add("Red", sphere(0.3, 7, 4), T(0, 8.18, -2.35) @ S(1, 0.45, 1))
+    p.branch("Black", (0, 7.9, -2.55), (0, 7.8, -3.7), 0.11, 0.025, 6)  # pico
+    for s in (-1, 1):
+        eye(p, s * 0.26, 8.0, -2.45, 0.06)
 
 
 def fuji(p):
@@ -580,7 +656,7 @@ ANIMALS = ["Panda", "RedPanda", "Tiger", "Fox", "Tanuki", "Deer", "Crane"]
 PIECES = {
     "Sakura": sakura, "SakuraB": sakura_b, "Maple": maple, "Pine": pine, "Bamboo": bamboo, "Torii": torii,
     "StoneLantern": stone_lantern, "Chochin": chochin, "Pagoda": pagoda, "Bridge": bridge, "Shrine": shrine,
-    "Rocks": rocks, "Lotus": lotus, "Koi": koi, "Bonsai": bonsai, "Fence": fence, "Komainu": komainu,
+    "Rocks": rocks, "Lotus": lotus, "Bonsai": bonsai, "Fence": fence, "Komainu": komainu,
     "Koinobori": koinobori, "Panda": panda, "RedPanda": red_panda, "Tiger": tiger, "Fox": fox, "Tanuki": tanuki,
     "Deer": deer, "Crane": crane, "Fuji": fuji,
 }
@@ -621,7 +697,7 @@ def marker(name, position):
     make_object(name, "Marker", verts, faces, position)
 
 
-def render_row(path, center_x, width):
+def render_row(path, center_x, width, angle=0.0):
     """Vista de una fila de piezas pequeñas centrada en center_x, de `width` studs de ancho."""
     scene = bpy.context.scene
     scene.render.engine = "BLENDER_WORKBENCH"
@@ -633,8 +709,8 @@ def render_row(path, center_x, width):
     cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
     cam.data.type = "ORTHO"
     cam.data.ortho_scale = width
-    cam.location = (center_x, 120, width * 0.19 - 1)
-    cam.rotation_euler = (math.radians(90), 0, math.radians(180))
+    cam.location = (center_x + 120 * math.sin(math.radians(angle)), 120 * math.cos(math.radians(angle)), width * 0.19 - 1)
+    cam.rotation_euler = (math.radians(90), 0, math.radians(180 - angle))
     scene.collection.objects.link(cam)
     scene.camera = cam
     bpy.ops.render.render(write_still=True)
@@ -700,6 +776,7 @@ def main():
     render_preview(os.path.join(OUT_DIR, "mapa_japones2.png"), (7, 12), 0.9)
     render_preview(os.path.join(OUT_DIR, "mapa_japones3.png"), (16, 18), 1.0)
     render_row(os.path.join(OUT_DIR, "mapa_japones4.png"), 1200.0 + 3 * 14.0, 14.0 * 8)
+    render_row(os.path.join(OUT_DIR, "mapa_japones5.png"), 1200.0 + 3 * 14.0, 14.0 * 8, 38.0)
     print("Exportadas", len(PIECES), "piezas")
 
 
