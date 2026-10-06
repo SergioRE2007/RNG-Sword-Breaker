@@ -584,9 +584,7 @@ local function strike(auto: boolean): boolean
 		task.wait(0.09) -- un instante de pausa en el golpe
 		setHammerLook(nil)
 	end
-	if super or Modifiers.percent("grades", index) < 10 then
-		Ui.toast(`¡Grado {entry.name}! {Modifiers.effect(entry)}`, entry.color)
-	end
+	-- Sin avisos flotantes: con el auto taparían la pantalla; el grado ya sale grande sobre el yunque.
 	swing(s.phi, math.rad(24), 0.1 * fast, easeOut)
 	swing(s.phi, HOVER, 0.16 * fast, easeOut)
 	if not alive() then
