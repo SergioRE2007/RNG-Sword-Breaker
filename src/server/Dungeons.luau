@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Destructibles = require(script.Parent.Destructibles)
+local DungeonThemes = require(script.Parent.DungeonThemes)
 local Loot = require(script.Parent.Loot)
 local Plots = require(script.Parent.Plots)
 
@@ -135,56 +136,99 @@ end
 
 -- Arena ----------------------------------------------------------------------------------
 
--- Plataforma redonda de piedra con muro, antorchas y un emblema del color de la dificultad.
-local function buildArena(origin: Vector3, level): Model
+-- La arena de la zona: suelo, muro, techo y adornos según su tema de Config.DungeonThemes (server/DungeonThemes).
+local function buildArena(origin: Vector3, level, theme): Model
 	local model = Instance.new("Model")
 	model.Name = "Mazmorra"
-	local radius = cfg.ArenaRadius
-
-	disc(model, "Floor", origin - Vector3.new(0, 2, 0), radius + 4, 4, STONE[2], Enum.Material.Slate)
-	local ring = disc(model, "Ring", origin + Vector3.new(0, 0.05, 0), radius * 0.7, 0.1, STONE[1], Enum.Material.Cobblestone)
-	ring.CanCollide = false
-	local emblem = disc(model, "Emblem", origin + Vector3.new(0, 0.1, 0), 7, 0.1, level.color:Lerp(Color3.new(0, 0, 0), 0.6), Enum.Material.Slate)
-	emblem.CanCollide = false
-
-	local segments = 28
-	local width = 2 * math.pi * (radius + 2) / segments + 0.6
-	for index = 1, segments do
-		local turn = (index - 1) / segments * math.pi * 2
-		local outward = Vector3.new(math.cos(turn), 0, math.sin(turn))
-		local facing = CFrame.lookAt(origin + outward * (radius + 2), origin)
-		local tall = index % 4 == 1
-		local height = if tall then 22 else 15
-		block(model, "Wall", Vector3.new(width, height, 4), facing * CFrame.new(0, height / 2, 0), STONE[index % 2 + 1])
-		if tall then
-			local torch = block(model, "Torch", Vector3.new(1.4, 1.4, 1.4), facing * CFrame.new(0, 12, -3), Color3.fromRGB(255, 160, 60), Enum.Material.Neon)
-			torch.CanCollide = false
-			local light = Instance.new("PointLight")
-			light.Color = level.color:Lerp(Color3.fromRGB(255, 170, 80), 0.5)
-			light.Range = 40
-			light.Brightness = 1.6
-			light.Parent = torch
-		end
-	end
-	-- Muro invisible por encima, para que no se pueda salir saltando.
-	for index = 1, segments do
-		local turn = (index - 1) / segments * math.pi * 2
-		local facing = CFrame.lookAt(origin + Vector3.new(math.cos(turn), 0, math.sin(turn)) * (radius + 2), origin)
-		local barrier = block(model, "Barrier", Vector3.new(width, 60, 2), facing * CFrame.new(0, 45, 0), STONE[1])
-		barrier.Transparency = 1
-		barrier.CanQuery = false
-		barrier.CastShadow = false
-	end
+	DungeonThemes.build(model, origin, cfg.ArenaRadius, level, theme)
 	model.Parent = workspace
 	return model
 end
 
 -- Enemigos -------------------------------------------------------------------------------
 
--- Adornos por tipo de enemigo ("look" en Config.Enemies): piezas pequeñas soldadas al cuerpo.
-local function decorate(body: Part, def)
-	local size = def.size
-	local function add(name: string, partSize: Vector3, offset: CFrame, color: Color3, material: Enum.Material?)
+-- Adornos de cada "look" (Config.Enemies y los skins de Config.DungeonThemes; un enemigo puede llevar varios):
+-- piezas pequeñas soldadas al cuerpo. Un look nuevo es una función más aquí. `add` pone una pieza (devuelve la
+-- pieza); `size` es el tamaño del cuerpo; `color` su color. La cara es -Z.
+local GOLD = Color3.fromRGB(255, 205, 60)
+local BONE = Color3.fromRGB(240, 235, 215)
+local LOOKS: { [string]: (add: (string, Vector3, CFrame, Color3, Enum.Material?) -> Part, size: Vector3, color: Color3) -> () } = {}
+
+LOOKS.horns = function(add, size)
+	for _, side in { -1, 1 } do
+		add("Horn", Vector3.new(size.X * 0.14, size.Y * 0.35, size.X * 0.14), CFrame.new(side * size.X * 0.36, size.Y * 0.62, 0) * CFrame.Angles(0, 0, math.rad(-side * 18)), BONE)
+	end
+end
+
+LOOKS.crown = function(add, size)
+	add("Crown", Vector3.new(size.X * 0.5, size.Y * 0.1, size.Z * 0.5), CFrame.new(0, size.Y * 0.55, 0), GOLD, Enum.Material.Foil)
+	for index = 1, 4 do
+		local turn = index * math.pi / 2
+		add("Spike", Vector3.new(size.X * 0.08, size.Y * 0.16, size.X * 0.08), CFrame.new(math.cos(turn) * size.X * 0.2, size.Y * 0.68, math.sin(turn) * size.Z * 0.2), GOLD, Enum.Material.Foil)
+	end
+end
+
+-- Hojas en la cabeza (bosque, nebulosa): láminas verdes inclinadas.
+LOOKS.leaf = function(add, size, color)
+	local green = color:Lerp(Color3.fromRGB(70, 190, 80), 0.6)
+	for index, lean in { -26, 0, 26 } do
+		add("Leaf", Vector3.new(size.X * 0.2, size.Y * 0.34, size.X * 0.05), CFrame.new((index - 2) * size.X * 0.2, size.Y * 0.64, 0) * CFrame.Angles(0, 0, math.rad(lean)), green)
+	end
+end
+
+LOOKS.antlers = function(add, size)
+	local wood = Color3.fromRGB(128, 96, 64)
+	for _, side in { -1, 1 } do
+		add("Antler", Vector3.new(size.X * 0.08, size.Y * 0.5, size.X * 0.08), CFrame.new(side * size.X * 0.3, size.Y * 0.68, 0) * CFrame.Angles(0, 0, math.rad(-side * 20)), wood, Enum.Material.Wood)
+		add("Prong", Vector3.new(size.X * 0.06, size.Y * 0.24, size.X * 0.06), CFrame.new(side * size.X * 0.46, size.Y * 0.8, 0) * CFrame.Angles(0, 0, math.rad(-side * 55)), wood, Enum.Material.Wood)
+	end
+end
+
+-- Capucha: un bloque oscuro sobre la cabeza.
+LOOKS.hood = function(add, size, color)
+	add("Hood", Vector3.new(size.X * 1.05, size.Y * 0.24, size.Z * 1.05), CFrame.new(0, size.Y * 0.4, size.Z * 0.01), color:Lerp(Color3.new(0, 0, 0), 0.55))
+end
+
+LOOKS.spikes = function(add, size, color)
+	for index = 1, 5 do
+		local turn = index / 5 * math.pi * 2
+		add("Spike", Vector3.new(size.X * 0.1, size.Y * 0.24, size.X * 0.1), CFrame.new(math.cos(turn) * size.X * 0.28, size.Y * 0.58, math.sin(turn) * size.Z * 0.28), color:Lerp(Color3.new(1, 1, 1), 0.45))
+	end
+end
+
+-- Llamitas en la cabeza (brillan, pero son pequeñas).
+LOOKS.flame = function(add, size)
+	for index, lean in { -14, 0, 14 } do
+		add("Flame", Vector3.new(size.X * 0.12, size.Y * 0.3, size.X * 0.12), CFrame.new((index - 2) * size.X * 0.16, size.Y * 0.62, 0) * CFrame.Angles(0, 0, math.rad(lean)), Color3.fromRGB(255, 150, 50), Enum.Material.Neon)
+	end
+end
+
+LOOKS.halo = function(add, size)
+	local ring = add("Halo", Vector3.new(size.Y * 0.06, size.X * 0.8, size.X * 0.8), CFrame.new(0, size.Y * 0.78, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 245, 190), Enum.Material.Neon)
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Transparency = 0.15
+end
+
+LOOKS.helmet = function(add, size)
+	add("Helmet", Vector3.new(size.X * 1.04, size.Y * 0.2, size.Z * 1.04), CFrame.new(0, size.Y * 0.42, 0), Color3.fromRGB(235, 190, 60), Enum.Material.Metal)
+	add("Lamp", Vector3.new(size.X * 0.18, size.X * 0.18, size.X * 0.14), CFrame.new(0, size.Y * 0.46, -size.Z / 2 - 0.3), Color3.fromRGB(255, 244, 190), Enum.Material.Neon)
+end
+
+-- Calavera: cuencas negras tras los ojos y dientes.
+LOOKS.skull = function(add, size)
+	local eye = size.X * 0.2
+	for _, side in { -1, 1 } do
+		add("Socket", Vector3.new(eye * 1.55, eye * 1.8, 0.2), CFrame.new(side * size.X * 0.22, size.Y * 0.15, -size.Z / 2 - 0.05), Color3.new(0, 0, 0))
+	end
+	for index = -1.5, 1.5 do
+		add("Tooth", Vector3.new(size.X * 0.07, size.Y * 0.1, 0.3), CFrame.new(index * size.X * 0.1, -size.Y * 0.2, -size.Z / 2 - 0.3), Color3.new(1, 1, 1))
+	end
+end
+
+-- Cuerpo ya creado: ojos, boca y los adornos del look (nombre o lista de nombres).
+local function decorate(body: Part, look: (string | { string })?)
+	local size = body.Size
+	local function add(name: string, partSize: Vector3, offset: CFrame, color: Color3, material: Enum.Material?): Part
 		local part = Instance.new("Part")
 		part.Name = name
 		part.Size = partSize
@@ -199,6 +243,7 @@ local function decorate(body: Part, def)
 		weld.Part1 = part
 		weld.Parent = part
 		part.Parent = body
+		return part
 	end
 	-- Ojos (la cara es -Z).
 	local eye = size.X * 0.2
@@ -207,16 +252,11 @@ local function decorate(body: Part, def)
 		add("Pupil", Vector3.new(eye * 0.45, eye * 0.6, 0.3), CFrame.new(side * size.X * 0.22, size.Y * 0.12, -size.Z / 2 - 0.2), Color3.new(0, 0, 0))
 	end
 	add("Mouth", Vector3.new(size.X * 0.4, size.Y * 0.07, 0.3), CFrame.new(0, -size.Y * 0.2, -size.Z / 2 - 0.1), Color3.new(0, 0, 0))
-	if def.look == "horns" or def.look == "crown" then
-		for _, side in { -1, 1 } do
-			add("Horn", Vector3.new(size.X * 0.14, size.Y * 0.35, size.X * 0.14), CFrame.new(side * size.X * 0.36, size.Y * 0.62, 0) * CFrame.Angles(0, 0, math.rad(-side * 18)), Color3.fromRGB(240, 235, 215))
-		end
-	end
-	if def.look == "crown" then
-		add("Crown", Vector3.new(size.X * 0.5, size.Y * 0.1, size.Z * 0.5), CFrame.new(0, size.Y * 0.55, 0), Color3.fromRGB(255, 205, 60), Enum.Material.Foil)
-		for index = 1, 4 do
-			local turn = index * math.pi / 2
-			add("Spike", Vector3.new(size.X * 0.08, size.Y * 0.16, size.X * 0.08), CFrame.new(math.cos(turn) * size.X * 0.2, size.Y * 0.68, math.sin(turn) * size.Z * 0.2), Color3.fromRGB(255, 205, 60), Enum.Material.Foil)
+	local names = if type(look) == "table" then look elseif look then { look } else {}
+	for _, name in names do
+		local make = LOOKS[name]
+		if make then
+			make(add, size, body.Color)
 		end
 	end
 end
@@ -224,14 +264,17 @@ end
 local function spawnEnemy(run, key: string)
 	local def = Config.Enemies[key]
 	local level = run.level
+	-- Cómo se ve en esta zona (nombre, color, adornos y escala del tema); sus números siguen siendo los de Config.Enemies.
+	local skin = DungeonThemes.skin(run.theme, key)
+	local size: Vector3 = def.size * ((skin and skin.scale) or 1)
 	local turn = random:NextNumber(0, math.pi * 2)
 	local distance = cfg.ArenaRadius * random:NextNumber(0.55, 0.85)
-	local position = run.origin + Vector3.new(math.cos(turn) * distance, def.size.Y / 2 + 1, math.sin(turn) * distance)
+	local position = run.origin + Vector3.new(math.cos(turn) * distance, size.Y / 2 + 1, math.sin(turn) * distance)
 
 	local body = Instance.new("Part")
-	body.Name = def.name
-	body.Size = def.size
-	body.Color = def.color
+	body.Name = (skin and skin.name) or def.name
+	body.Size = size
+	body.Color = (skin and skin.color) or def.color
 	body.Material = Enum.Material.SmoothPlastic
 	body.TopSurface = Enum.SurfaceType.Smooth
 	body.BottomSurface = Enum.SurfaceType.Smooth
@@ -241,11 +284,11 @@ local function spawnEnemy(run, key: string)
 	body:SetAttribute("HP", hp)
 	body:SetAttribute("MaxHP", hp)
 	CollectionService:AddTag(body, "Enemy")
-	decorate(body, def)
+	decorate(body, (skin and skin.look) or def.look)
 
 	local attachment = Instance.new("Attachment")
 	attachment.Parent = body
-	local mass = def.size.X * def.size.Y * def.size.Z
+	local mass = size.X * size.Y * size.Z
 	local velocity = Instance.new("LinearVelocity")
 	velocity.Attachment0 = attachment
 	velocity.RelativeTo = Enum.ActuatorRelativeTo.World
@@ -265,7 +308,7 @@ local function spawnEnemy(run, key: string)
 
 	body.Parent = run.model
 	body:SetNetworkOwner(nil)
-	run.enemies[body] = { def = def, hp = hp, velocity = velocity, align = align, nextAttack = os.clock() + def.attackTime * 0.5, mass = mass }
+	run.enemies[body] = { def = def, size = size, hp = hp, velocity = velocity, align = align, nextAttack = os.clock() + def.attackTime * 0.5, mass = mass }
 	run.alive += 1
 end
 
@@ -417,16 +460,16 @@ local function step()
 			-- Si se cae de la plataforma vuelve a entrar por el borde.
 			if body.Position.Y < run.origin.Y - 20 then
 				body.AssemblyLinearVelocity = Vector3.zero
-				body.CFrame = CFrame.new(run.origin + Vector3.new(0, def.size.Y / 2 + 2, cfg.ArenaRadius * 0.6))
+				body.CFrame = CFrame.new(run.origin + Vector3.new(0, enemy.size.Y / 2 + 2, cfg.ArenaRadius * 0.6))
 			end
 			local offset = root.Position - body.Position
 			local flat = Vector3.new(offset.X, 0, offset.Z)
-			local gap = flat.Magnitude - def.size.X / 2 - 1
+			local gap = flat.Magnitude - enemy.size.X / 2 - 1
 			local direction = if flat.Magnitude > 0.1 then flat.Unit else Vector3.zAxis
 			enemy.align.CFrame = CFrame.lookAt(Vector3.zero, direction)
 			local speed = if gap > def.attackRange * 0.6 then def.speed else 0
 			enemy.velocity.PlaneVelocity = Vector2.new(direction.X, direction.Z) * speed
-			if gap <= def.attackRange and math.abs(offset.Y) < def.size.Y + 6 and now >= enemy.nextAttack then
+			if gap <= def.attackRange and math.abs(offset.Y) < enemy.size.Y + 6 and now >= enemy.nextAttack then
 				enemy.nextAttack = now + def.attackTime
 				local amount = def.damage * power
 				humanoid:TakeDamage(amount)
@@ -459,13 +502,15 @@ function begin(player: Player, index: number)
 	local plot = Plots.get(player)
 	local slot = if plot then plot.index else 0
 	local origin = cfg.Origin + Vector3.new(slot * cfg.Spacing, 0, 0)
+	local theme = DungeonThemes.get(level)
 	local run = {
 		player = player,
 		players = { player }, -- de momento se entra solo; la lista queda preparada para grupos
 		index = index,
 		level = level,
+		theme = theme,
 		origin = origin,
-		model = buildArena(origin, level),
+		model = buildArena(origin, level, theme),
 		enemies = {},
 		alive = 0,
 		wave = 0,

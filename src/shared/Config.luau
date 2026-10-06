@@ -344,27 +344,215 @@ Config.Dungeon = {
 	},
 }
 
--- Dificultades, de menor a mayor. "hp" = daño por golpe recomendado: la vida de un enemigo es su hp (en golpes) por
+-- Mazmorras (zonas), de menor a mayor. El jugador solo ve "name" (la zona) y "tagline"; "difficulty" es la etiqueta
+-- interna del equilibrio (Fácil … Infinito) y no se enseña. "id" = clave estable (la usa Config.DungeonThemes).
+-- "hp" = daño por golpe recomendado: la vida de un enemigo es su hp (en golpes) por
 -- este número. "power" multiplica el daño de los enemigos Y los stats de la armadura que cae: cada dificultad pide
 -- la armadura de la anterior. "count" = más enemigos, "loot" = más cristales, "qualityLuck" = mejor calidad de armadura.
 -- "set", "armorColor" y "armorMaterial" = nombre y aspecto de la armadura que cae ahí ("Casco de cuero").
+-- "color" = acento de la zona. "minDamage" (opcional) = daño mínimo para entrar (si no llega, la sala sale cerrada).
 -- No cambies el orden: las piezas de armadura guardan la posición. Lo nuevo, al final.
 Config.Dungeons = {
-	{ name = "Fácil", hp = 10, power = 1, count = 1, loot = 1, qualityLuck = 1, color = Color3.fromRGB(90, 210, 110), set = "de cuero", armorColor = Color3.fromRGB(150, 105, 65), armorMaterial = Enum.Material.Leather },
-	{ name = "Normal", hp = 1e3, power = 4, count = 1.25, loot = 2, qualityLuck = 3, color = Color3.fromRGB(70, 160, 255), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
-	{ name = "Difícil", hp = 1e5, power = 16, count = 1.5, loot = 4, qualityLuck = 10, color = Color3.fromRGB(255, 170, 50), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
-	{ name = "Pesadilla", hp = 1e7, power = 64, count = 1.75, loot = 8, qualityLuck = 30, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
-	{ name = "Abismo", hp = 1e9, power = 256, count = 2, loot = 16, qualityLuck = 100, color = Color3.fromRGB(160, 80, 255), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
+	{ id = "forest", name = "Bosque de los Susurros", difficulty = "Fácil", tagline = "Raíces viejas que murmuran tu nombre.", hp = 10, power = 1, count = 1, loot = 1, qualityLuck = 1, color = Color3.fromRGB(90, 210, 110), set = "de cuero", armorColor = Color3.fromRGB(150, 105, 65), armorMaterial = Enum.Material.Leather },
+	{ id = "mines", name = "Minas Abandonadas", difficulty = "Normal", tagline = "Galerías olvidadas donde algo sigue picando.", hp = 1e3, power = 4, count = 1.25, loot = 2, qualityLuck = 3, color = Color3.fromRGB(240, 170, 70), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
+	{ id = "crypt", name = "Cripta del Rey Caído", difficulty = "Difícil", tagline = "Un rey sin descanso y su corte de huesos.", hp = 1e5, power = 16, count = 1.5, loot = 4, qualityLuck = 10, color = Color3.fromRGB(160, 125, 225), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
+	{ id = "temple", name = "Templo de las Cenizas", difficulty = "Pesadilla", tagline = "Brasas, incienso y fieles que no se rinden.", hp = 1e7, power = 64, count = 1.75, loot = 8, qualityLuck = 30, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
+	{ id = "abyss", name = "Abismo Sumergido", difficulty = "Abismo", tagline = "Aguas hundidas donde la luz ya no llega.", hp = 1e9, power = 256, count = 2, loot = 16, qualityLuck = 100, color = Color3.fromRGB(50, 200, 210), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
 	-- Endgame. La mejor arma posible sin renacer pega ~7e30 por golpe: Espada del infinito (1,6e10) x Paradoja (57,5)
 	-- x Etherio (~2,2e3) x Universal (~7e6) x los tres mejores artefactos de daño (5e8); renacer y la armadura suben más.
 	-- Por eso la escalera sigue de 1e12 a 1e30, de 1000 en 1000.
-	{ name = "Infierno", hp = 1e12, power = 1024, count = 2, loot = 32, qualityLuck = 200, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
-	{ name = "Vacío", hp = 1e15, power = 4096, count = 2, loot = 64, qualityLuck = 400, color = Color3.fromRGB(120, 60, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
-	{ name = "Nebulosa", hp = 1e18, power = 16384, count = 2.25, loot = 128, qualityLuck = 800, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
-	{ name = "Galaxia", hp = 1e21, power = 65536, count = 2.25, loot = 256, qualityLuck = 1500, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
-	{ name = "Cosmos", hp = 1e24, power = 262144, count = 2.5, loot = 512, qualityLuck = 3000, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
-	{ name = "Origen", hp = 1e27, power = 1048576, count = 2.5, loot = 1024, qualityLuck = 6000, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
-	{ name = "Infinito", hp = 1e30, power = 4194304, count = 3, loot = 2048, qualityLuck = 12000, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
+	{ id = "inferno", name = "Caldera del Infierno", difficulty = "Infierno", tagline = "Una caldera viva: todo arde, todo golpea.", hp = 1e12, power = 1024, count = 2, loot = 32, qualityLuck = 200, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
+	{ id = "void", name = "Páramo del Vacío", difficulty = "Vacío", tagline = "El suelo se acaba. El silencio, no.", hp = 1e15, power = 4096, count = 2, loot = 64, qualityLuck = 400, color = Color3.fromRGB(130, 70, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
+	{ id = "nebula", name = "Jardín de la Nebulosa", difficulty = "Nebulosa", tagline = "Un jardín de polvo de estrellas… con dientes.", hp = 1e18, power = 16384, count = 2.25, loot = 128, qualityLuck = 800, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
+	{ id = "galaxy", name = "Observatorio Galáctico", difficulty = "Galaxia", tagline = "Mira las estrellas. Ellas te miran a ti.", hp = 1e21, power = 65536, count = 2.25, loot = 256, qualityLuck = 1500, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
+	{ id = "cosmos", name = "Bastión del Cosmos", difficulty = "Cosmos", tagline = "Torres de cristal que giran con el cosmos.", hp = 1e24, power = 262144, count = 2.5, loot = 512, qualityLuck = 3000, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
+	{ id = "origin", name = "Santuario del Origen", difficulty = "Origen", tagline = "Donde todo empezó, y donde todo se mide.", hp = 1e27, power = 1048576, count = 2.5, loot = 1024, qualityLuck = 6000, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
+	{ id = "infinity", name = "Trono del Infinito", difficulty = "Infinito", tagline = "El último trono. Nadie ha vuelto a sentarse.", hp = 1e30, power = 4194304, count = 3, loot = 2048, qualityLuck = 12000, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
+}
+
+-- Aspecto de cada zona de Config.Dungeons, por su "id" (lo construye server/DungeonThemes y lo viste client/DungeonFx):
+-- "floor" = suelo y anillo; "wall" = estilo del muro ("stone", "trees", "rock", "crystal", "pillars" o "shards"), sus dos
+-- colores y su material; "props" = decorado { kind, count, color? } (los kinds están en server/DungeonThemes); "ceiling" =
+-- techo opcional con estalactitas ("hang"); "torch" = color de faroles y luces; "light" = iluminación del cliente mientras
+-- estás dentro (hora, ambiente, niebla, atmósfera, tinte); "fx" = partículas del cliente (client/DungeonFx);
+-- "enemies" = cómo se ven el Esbirro (grunt), el Bruto (brute) y el Guardián (boss) en esa zona: nombre, color, adornos
+-- ("look", uno o varios) y escala, sin tocar sus números; "room" = decorado extra de su sala en el lobby subterráneo.
+-- "waves" (opcional) cambia las oleadas de Config.Dungeon.Waves solo en esa zona (así se añaden jefes propios).
+-- Una zona nueva = una entrada aquí y otra en Config.Dungeons.
+local function rgb(r: number, g: number, b: number): Color3
+	return Color3.fromRGB(r, g, b)
+end
+Config.DungeonThemes = {
+	forest = {
+		floor = { color = rgb(66, 104, 58), material = Enum.Material.Grass, ring = rgb(112, 90, 60), ringMaterial = Enum.Material.Ground },
+		wall = { style = "trees", colors = { rgb(92, 64, 44), rgb(52, 132, 66) }, material = Enum.Material.Wood },
+		props = { { kind = "bush", count = 18 }, { kind = "mushroom", count = 16 }, { kind = "stump", count = 8 } },
+		torch = rgb(170, 255, 170),
+		light = { clock = 17.4, ambient = rgb(78, 104, 82), outdoor = rgb(120, 150, 120), brightness = 1.6, atmosphere = { color = rgb(150, 205, 150), decay = rgb(90, 150, 100), density = 0.42, haze = 2.4, glare = 0 }, tint = rgb(232, 255, 232), saturation = 0.12 },
+		fx = { kind = "fireflies", color = rgb(200, 255, 150) },
+		enemies = {
+			grunt = { name = "Brote Susurrante", color = rgb(104, 176, 78), look = "leaf" },
+			brute = { name = "Ent Joven", color = rgb(112, 86, 60), look = { "antlers", "leaf" }, scale = 1.05 },
+			boss = { name = "Ent Anciano", color = rgb(76, 112, 64), look = { "antlers", "crown" } },
+		},
+		room = { { kind = "bush", count = 5 }, { kind = "mushroom", count = 6 } },
+	},
+	mines = {
+		floor = { color = rgb(92, 84, 76), material = Enum.Material.Slate, ring = rgb(120, 106, 90), ringMaterial = Enum.Material.Cobblestone },
+		wall = { style = "rock", colors = { rgb(86, 80, 74), rgb(70, 65, 62) }, material = Enum.Material.Rock },
+		props = { { kind = "beam", count = 8 }, { kind = "cart", count = 3 }, { kind = "rails", count = 2 }, { kind = "crystal", count = 6, color = rgb(100, 180, 255) } },
+		ceiling = { height = 40, color = rgb(60, 56, 54), material = Enum.Material.Rock, hang = 16 },
+		torch = rgb(255, 176, 84),
+		light = { clock = 0, ambient = rgb(104, 92, 80), outdoor = rgb(80, 76, 84), brightness = 1.2, atmosphere = { color = rgb(70, 58, 46), decay = rgb(60, 48, 40), density = 0.5, haze = 3, glare = 0 }, tint = rgb(255, 232, 206), saturation = 0.05 },
+		fx = { kind = "dust", color = rgb(220, 190, 140) },
+		enemies = {
+			grunt = { name = "Topo de Cueva", color = rgb(146, 112, 86), look = "helmet" },
+			brute = { name = "Capataz de Hierro", color = rgb(150, 152, 164), look = { "helmet", "spikes" }, scale = 1.05 },
+			boss = { name = "Gólem de Mena", color = rgb(126, 102, 84), look = { "spikes", "crown" } },
+		},
+		room = { { kind = "beam", count = 2 }, { kind = "cart", count = 1 }, { kind = "crystal", count = 3, color = rgb(100, 180, 255) } },
+	},
+	crypt = {
+		floor = { color = rgb(72, 68, 88), material = Enum.Material.Slate, ring = rgb(96, 88, 120), ringMaterial = Enum.Material.Marble },
+		wall = { style = "stone", colors = { rgb(86, 82, 104), rgb(68, 64, 86) }, material = Enum.Material.Slate },
+		props = { { kind = "coffin", count = 6 }, { kind = "column", count = 8 }, { kind = "bones", count = 16 }, { kind = "brazier", count = 6 } },
+		ceiling = { height = 42, color = rgb(52, 48, 66), material = Enum.Material.Slate, hang = 12 },
+		torch = rgb(170, 140, 255),
+		light = { clock = 0, ambient = rgb(92, 82, 124), outdoor = rgb(80, 72, 110), brightness = 1.2, atmosphere = { color = rgb(70, 56, 100), decay = rgb(50, 40, 80), density = 0.55, haze = 3.2, glare = 0 }, tint = rgb(235, 225, 255), saturation = 0.02 },
+		fx = { kind = "wisps", color = rgb(190, 200, 255) },
+		enemies = {
+			grunt = { name = "Esqueleto", color = rgb(226, 222, 204), look = "skull" },
+			brute = { name = "Caballero Caído", color = rgb(122, 120, 144), look = { "skull", "horns" }, scale = 1.05 },
+			boss = { name = "Rey Caído", color = rgb(204, 198, 178), look = { "skull", "crown" } },
+		},
+		room = { { kind = "column", count = 2 }, { kind = "bones", count = 6 }, { kind = "brazier", count = 2 } },
+	},
+	temple = {
+		floor = { color = rgb(68, 52, 54), material = Enum.Material.Basalt, ring = rgb(150, 62, 62), ringMaterial = Enum.Material.Brick },
+		wall = { style = "pillars", colors = { rgb(128, 74, 68), rgb(96, 54, 54) }, material = Enum.Material.Brick },
+		props = { { kind = "banner", count = 8, color = rgb(190, 48, 58) }, { kind = "brazier", count = 8 }, { kind = "column", count = 4 } },
+		torch = rgb(255, 120, 72),
+		light = { clock = 18.6, ambient = rgb(120, 70, 66), outdoor = rgb(150, 86, 78), brightness = 1.4, atmosphere = { color = rgb(190, 90, 76), decay = rgb(140, 60, 56), density = 0.5, haze = 2.6, glare = 0.1 }, tint = rgb(255, 224, 214), saturation = 0.1 },
+		fx = { kind = "ash", color = rgb(214, 200, 196) },
+		enemies = {
+			grunt = { name = "Acólito Ceniciento", color = rgb(132, 72, 68), look = "hood" },
+			brute = { name = "Verdugo", color = rgb(92, 62, 62), look = { "hood", "horns" }, scale = 1.05 },
+			boss = { name = "Sumo Sacerdote", color = rgb(176, 52, 62), look = { "hood", "flame", "crown" } },
+		},
+		room = { { kind = "banner", count = 3, color = rgb(190, 48, 58) }, { kind = "brazier", count = 3 } },
+	},
+	abyss = {
+		floor = { color = rgb(44, 74, 94), material = Enum.Material.Slate, ring = rgb(64, 110, 130), ringMaterial = Enum.Material.Sand },
+		wall = { style = "rock", colors = { rgb(38, 76, 100), rgb(30, 60, 84) }, material = Enum.Material.Slate },
+		props = { { kind = "kelp", count = 20 }, { kind = "crystal", count = 6, color = rgb(90, 230, 255) }, { kind = "boulder", count = 8 } },
+		torch = rgb(100, 230, 255),
+		light = { clock = 12, ambient = rgb(52, 98, 126), outdoor = rgb(60, 110, 140), brightness = 1.3, atmosphere = { color = rgb(30, 100, 130), decay = rgb(20, 70, 100), density = 0.6, haze = 3.4, glare = 0 }, tint = rgb(200, 238, 255), saturation = 0.15 },
+		fx = { kind = "bubbles", color = rgb(200, 240, 255) },
+		enemies = {
+			grunt = { name = "Pez Linterna", color = rgb(64, 150, 190), look = "halo" },
+			brute = { name = "Cangrejo Coralino", color = rgb(216, 104, 92), look = "spikes", scale = 1.05 },
+			boss = { name = "Leviatán", color = rgb(52, 92, 172), look = { "spikes", "crown" } },
+		},
+		room = { { kind = "kelp", count = 6 }, { kind = "crystal", count = 3, color = rgb(90, 230, 255) } },
+	},
+	inferno = {
+		floor = { color = rgb(52, 40, 38), material = Enum.Material.Basalt, ring = rgb(255, 120, 40), ringMaterial = Enum.Material.CrackedLava },
+		wall = { style = "rock", colors = { rgb(64, 46, 42), rgb(46, 34, 32) }, material = Enum.Material.Basalt },
+		props = { { kind = "lavaPool", count = 8 }, { kind = "boulder", count = 10 }, { kind = "brazier", count = 6 } },
+		torch = rgb(255, 140, 52),
+		light = { clock = 0, ambient = rgb(138, 70, 44), outdoor = rgb(120, 62, 44), brightness = 1.4, atmosphere = { color = rgb(140, 60, 30), decay = rgb(110, 40, 20), density = 0.55, haze = 3, glare = 0 }, tint = rgb(255, 214, 190), saturation = 0.15 },
+		fx = { kind = "embers", color = rgb(255, 150, 60) },
+		enemies = {
+			grunt = { name = "Imp de Ceniza", color = rgb(232, 104, 52), look = "flame" },
+			brute = { name = "Demonio de Magma", color = rgb(192, 74, 42), look = { "horns", "flame" }, scale = 1.05 },
+			boss = { name = "Señor de la Caldera", color = rgb(152, 42, 32), look = { "horns", "crown", "flame" } },
+		},
+		room = { { kind = "lavaPool", count = 3 }, { kind = "boulder", count = 3 }, { kind = "brazier", count = 2 } },
+	},
+	void = {
+		floor = { color = rgb(32, 28, 46), material = Enum.Material.Slate, ring = rgb(120, 76, 240), ringMaterial = Enum.Material.Glass },
+		wall = { style = "shards", colors = { rgb(62, 50, 94), rgb(42, 34, 72) }, material = Enum.Material.Basalt },
+		props = { { kind = "floatRock", count = 12 }, { kind = "star", count = 30 }, { kind = "crystal", count = 5, color = rgb(160, 110, 255) } },
+		torch = rgb(172, 112, 255),
+		light = { clock = 0, ambient = rgb(84, 62, 128), outdoor = rgb(70, 52, 110), brightness = 1.2, atmosphere = { color = rgb(60, 30, 110), decay = rgb(40, 20, 80), density = 0.45, haze = 2.4, glare = 0 }, tint = rgb(236, 224, 255), saturation = 0.1 },
+		fx = { kind = "motes", color = rgb(190, 140, 255) },
+		enemies = {
+			grunt = { name = "Sombra Errante", color = rgb(62, 42, 104), look = "hood" },
+			brute = { name = "Acechador del Vacío", color = rgb(94, 62, 154), look = { "hood", "halo" }, scale = 1.05 },
+			boss = { name = "Heraldo del Vacío", color = rgb(42, 22, 84), look = { "halo", "crown" } },
+		},
+		room = { { kind = "floatRock", count = 4 }, { kind = "star", count = 10 }, { kind = "crystal", count = 3, color = rgb(160, 110, 255) } },
+	},
+	nebula = {
+		floor = { color = rgb(84, 54, 104), material = Enum.Material.Marble, ring = rgb(214, 116, 188), ringMaterial = Enum.Material.Glass },
+		wall = { style = "crystal", colors = { rgb(236, 116, 196), rgb(176, 96, 226) }, material = Enum.Material.Glass },
+		props = { { kind = "crystal", count = 10, color = rgb(244, 130, 210) }, { kind = "floatRock", count = 6 }, { kind = "star", count = 24 } },
+		torch = rgb(255, 144, 224),
+		light = { clock = 20, ambient = rgb(132, 84, 146), outdoor = rgb(120, 78, 140), brightness = 1.4, atmosphere = { color = rgb(226, 112, 184), decay = rgb(160, 70, 150), density = 0.45, haze = 2.2, glare = 0.2 }, tint = rgb(255, 228, 250), saturation = 0.2 },
+		fx = { kind = "sparkles", color = rgb(255, 170, 230) },
+		enemies = {
+			grunt = { name = "Espora Estelar", color = rgb(242, 134, 192), look = "leaf" },
+			brute = { name = "Guardián Floral", color = rgb(204, 94, 172), look = { "leaf", "horns" }, scale = 1.05 },
+			boss = { name = "Reina de la Nebulosa", color = rgb(174, 84, 204), look = { "leaf", "crown", "halo" } },
+		},
+		room = { { kind = "crystal", count = 4, color = rgb(244, 130, 210) }, { kind = "star", count = 10 } },
+	},
+	galaxy = {
+		floor = { color = rgb(30, 40, 82), material = Enum.Material.Metal, ring = rgb(96, 136, 255), ringMaterial = Enum.Material.Glass },
+		wall = { style = "pillars", colors = { rgb(62, 84, 154), rgb(42, 58, 112) }, material = Enum.Material.Metal },
+		props = { { kind = "orbitRing", count = 2, color = rgb(130, 170, 255) }, { kind = "star", count = 30 }, { kind = "column", count = 6 } },
+		torch = rgb(124, 172, 255),
+		light = { clock = 0, ambient = rgb(70, 92, 156), outdoor = rgb(64, 84, 144), brightness = 1.2, atmosphere = { color = rgb(50, 80, 170), decay = rgb(30, 50, 120), density = 0.4, haze = 2, glare = 0 }, tint = rgb(226, 234, 255), saturation = 0.12 },
+		fx = { kind = "stars", color = rgb(200, 220, 255) },
+		enemies = {
+			grunt = { name = "Satélite Rebelde", color = rgb(124, 144, 204), look = "spikes" },
+			brute = { name = "Astrónomo Errante", color = rgb(84, 104, 194), look = { "hood", "halo" }, scale = 1.05 },
+			boss = { name = "Titán Estelar", color = rgb(60, 92, 232), look = { "halo", "spikes" } },
+		},
+		room = { { kind = "orbitRing", count = 1, color = rgb(130, 170, 255) }, { kind = "star", count = 10 }, { kind = "column", count = 2 } },
+	},
+	cosmos = {
+		floor = { color = rgb(26, 58, 66), material = Enum.Material.Slate, ring = rgb(64, 240, 170), ringMaterial = Enum.Material.Glass },
+		wall = { style = "crystal", colors = { rgb(70, 232, 176), rgb(44, 176, 156) }, material = Enum.Material.Glass },
+		props = { { kind = "crystal", count = 12, color = rgb(90, 255, 190) }, { kind = "orbitRing", count = 1, color = rgb(90, 255, 190) }, { kind = "column", count = 6 } },
+		torch = rgb(112, 255, 204),
+		light = { clock = 0, ambient = rgb(66, 132, 122), outdoor = rgb(58, 120, 112), brightness = 1.3, atmosphere = { color = rgb(40, 150, 130), decay = rgb(20, 100, 90), density = 0.42, haze = 2.2, glare = 0 }, tint = rgb(220, 255, 244), saturation = 0.15 },
+		fx = { kind = "motes", color = rgb(130, 255, 210) },
+		enemies = {
+			grunt = { name = "Fragmento Cósmico", color = rgb(84, 232, 184), look = "spikes" },
+			brute = { name = "Centinela de Cristal", color = rgb(62, 192, 172), look = { "helmet", "spikes" }, scale = 1.05 },
+			boss = { name = "Arconte del Cosmos", color = rgb(42, 162, 152), look = { "halo", "crown" } },
+		},
+		room = { { kind = "crystal", count = 5, color = rgb(90, 255, 190) }, { kind = "column", count = 2 } },
+	},
+	origin = {
+		floor = { color = rgb(232, 232, 244), material = Enum.Material.Marble, ring = rgb(205, 214, 238), ringMaterial = Enum.Material.Marble },
+		wall = { style = "pillars", colors = { rgb(246, 246, 255), rgb(222, 226, 242) }, material = Enum.Material.Marble },
+		props = { { kind = "column", count = 10 }, { kind = "banner", count = 6, color = rgb(240, 214, 120) }, { kind = "brazier", count = 6 }, { kind = "star", count = 16 } },
+		torch = rgb(255, 248, 224),
+		light = { clock = 12.5, ambient = rgb(176, 182, 202), outdoor = rgb(176, 182, 204), brightness = 2.2, atmosphere = { color = rgb(235, 240, 255), decay = rgb(200, 210, 245), density = 0.35, haze = 1.6, glare = 0.3 }, tint = rgb(255, 252, 244), saturation = 0.02 },
+		fx = { kind = "motes", color = rgb(255, 250, 230) },
+		enemies = {
+			grunt = { name = "Eco del Origen", color = rgb(236, 238, 250), look = "halo" },
+			brute = { name = "Guardián de Mármol", color = rgb(214, 218, 236), look = { "horns", "halo" }, scale = 1.05 },
+			boss = { name = "Primer Testigo", color = rgb(255, 246, 222), look = { "halo", "crown" } },
+		},
+		room = { { kind = "column", count = 3 }, { kind = "banner", count = 2, color = rgb(240, 214, 120) }, { kind = "star", count = 8 } },
+	},
+	infinity = {
+		floor = { color = rgb(22, 16, 20), material = Enum.Material.Basalt, ring = rgb(176, 32, 48), ringMaterial = Enum.Material.Metal },
+		wall = { style = "pillars", colors = { rgb(44, 30, 38), rgb(64, 36, 46) }, material = Enum.Material.Basalt },
+		props = { { kind = "column", count = 8 }, { kind = "banner", count = 8, color = rgb(190, 30, 50) }, { kind = "brazier", count = 10 }, { kind = "lavaPool", count = 4 } },
+		torch = rgb(255, 72, 84),
+		light = { clock = 0, ambient = rgb(124, 46, 58), outdoor = rgb(104, 40, 52), brightness = 1.3, atmosphere = { color = rgb(130, 24, 40), decay = rgb(90, 14, 30), density = 0.5, haze = 2.8, glare = 0 }, tint = rgb(255, 224, 224), saturation = 0.12 },
+		fx = { kind = "embers", color = rgb(255, 80, 90) },
+		enemies = {
+			grunt = { name = "Sombra Infinita", color = rgb(74, 32, 54), look = "hood" },
+			brute = { name = "Verdugo del Trono", color = rgb(112, 32, 44), look = { "horns", "spikes" }, scale = 1.05 },
+			boss = { name = "Rey del Infinito", color = rgb(212, 32, 58), look = { "crown", "horns", "flame" } },
+		},
+		room = { { kind = "column", count = 3 }, { kind = "banner", count = 3, color = rgb(190, 30, 50) }, { kind = "brazier", count = 3 } },
+	},
 }
 
 -- Daños pensados para que, con el set común de la dificultad anterior, el jefe necesite unos 5 golpes para matarte.
