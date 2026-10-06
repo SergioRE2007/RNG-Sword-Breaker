@@ -874,6 +874,18 @@ function Ui.gemIcon(parent: Instance, color: Color3)
 	shine.BackgroundTransparency = 0.35
 end
 
+-- Cristal: esquirlas alargadas e inclinadas (una, o dos con `double`), para que no se confunda con la gema.
+function Ui.crystalIcon(parent: Instance, color: Color3, double: boolean?)
+	local holder = iconHolder(parent, 0)
+	for _, tilt in if double then { -20, 20 } else { 14 } do
+		local shard = piece(holder, UDim2.fromScale(0.3, 0.8), UDim2.fromScale(0.5 + tilt / 110, 0.5), color, 5)
+		shard.Rotation = tilt
+		Ui.gradient(shard, WHITE, Color3.fromRGB(150, 150, 170), 30)
+		local shine = piece(shard, UDim2.fromScale(0.3, 0.5), UDim2.fromScale(0.34, 0.32), WHITE, 2)
+		shine.BackgroundTransparency = 0.35
+	end
+end
+
 function Ui.orbIcon(parent: Instance, color: Color3)
 	local holder = iconHolder(parent, 0)
 	local ring = piece(holder, UDim2.fromScale(0.78, 0.78), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(235, 190, 60), 100)

@@ -31,6 +31,7 @@ local SOFT = Color3.fromRGB(190, 195, 215)
 
 -- Capas (la interfaz ordena el ZIndex globalmente; valores absolutos de este módulo).
 local Z_COUNT = 30 -- cuenta atrás, por encima de la ventana del trato
+local Z_SUGGEST = 50 -- tarjeta de la sugerencia recibida, por encima del inventario
 local Z_INVITE = 70 -- aviso de invitación, por encima de todo lo demás
 
 local OFFER_CELL = 66
@@ -108,19 +109,87 @@ local function artifactCell(parent: Instance, index: number): TextButton
 	return cell
 end
 
--- Monedas, gemas u objetos: icono y cantidad.
-local function amountCell(parent: Instance, name: string, color: Color3, amount: number, coin: boolean?): TextButton
+-- Monedas, gemas u objetos: icono y cantidad. `kind` = "coins", "gems" o el nombre del objeto: cada uno su icono.
+local function amountCell(parent: Instance, name: string, color: Color3, amount: number, kind: string): TextButton
 	local cell = Ui.cell(parent, color)
-	if coin then
+	if kind == "coins" then
 		Ui.orbIcon(cell, color)
-	else
+	elseif kind == "gems" then
 		Ui.gemIcon(cell, color)
+	elseif kind == "missionToken" then
+		Ui.starIcon(cell, color)
+	else
+		Ui.crystalIcon(cell, color, kind == "gradeCrystal")
 	end
 	Ui.cellLabel(cell, Format.short(amount))
 	Ui.tip(cell, function()
 		return `{Format.short(amount)} {name}`, color
 	end, true)
 	return cell
+end
+
+-- Sugerencias: cómo se llama lo sugerido y su casilla.
+local INTENTS = { want = { "QUIERO", Ui.COLORS.orange }, give = { "TE DOY", Ui.COLORS.green } }
+
+local function suggestName(suggest): string
+	local category = suggest.category
+	if category == "coins" or category == "gems" then
+		return `{Format.short(suggest.amount)} {if category == "coins" then "monedas" else "gemas"}`
+	elseif category == "items" then
+		return `{Format.short(suggest.amount)} {Config.Items[suggest.key].name}`
+	elseif category == "swords" then
+		local sword = suggest.sword and Config.Swords[suggest.sword.sword]
+		return if sword then sword.name else "Espada"
+	elseif category == "artifacts" then
+		return Config.Artifacts[suggest.key].name
+	end
+	return "Armadura"
+end
+
+local function suggestCell(parent: Instance, suggest): TextButton?
+	local category = suggest.category
+	if category == "coins" then
+		return amountCell(parent, "monedas", Ui.COLORS.coins, suggest.amount, "coins")
+	elseif category == "gems" then
+		return amountCell(parent, "gemas", Ui.COLORS.purple, suggest.amount, "gems")
+	elseif category == "items" then
+		local item = Config.Items[suggest.key]
+		return amountCell(parent, item.name, item.color, suggest.amount, suggest.key)
+	elseif category == "swords" and suggest.sword then
+		return swordCell(parent, suggest.sword)
+	elseif category == "armor" and suggest.piece then
+		return armorCell(parent, suggest.piece)
+	elseif category == "artifacts" then
+		return artifactCell(parent, suggest.key)
+	end
+	return nil
+end
+
+-- Mantener pulsado repite `step(tamaño)` cada vez más deprisa (pasos de 1, 10 y 100); al soltar, `release()`.
+local function hold(button: GuiButton, step: (number) -> (), release: () -> ())
+	local token = 0
+	button.MouseButton1Down:Connect(function()
+		token += 1
+		local mine = token
+		step(1)
+		task.spawn(function()
+			local started = os.clock()
+			task.wait(0.4)
+			while token == mine do
+				local held = os.clock() - started
+				step(if held > 3 then 100 elseif held > 1.5 then 10 else 1)
+				task.wait(0.08)
+			end
+		end)
+	end)
+	local function stop()
+		if token % 2 == 1 then
+			token += 1
+			release()
+		end
+	end
+	button.MouseButton1Up:Connect(stop)
+	button.MouseLeave:Connect(stop)
 end
 
 -- Lista de jugadores ----------------------------------------------------------------------
@@ -397,26 +466,31 @@ local function buildTrade()
 	amountsPadding.PaddingLeft = UDim.new(0, 10)
 	amountsPadding.Parent = amounts
 
-	local amountRows = {} -- { box, label, owned(), offered(), name }
-	local function amountRow(order: number, name: string, color: Color3, owned: () -> number, offered: () -> number, send: (number) -> ())
-		local row = Instance.new("Frame")
-		row.LayoutOrder = order
-		row.BackgroundColor3 = WHITE
-		row.BorderSizePixel = 0
-		row.Parent = amounts
-		Ui.round(row, 8)
-		Ui.stroke(row, BLACK, 2)
-		Ui.panel(row, Color3.fromRGB(52, 56, 100), color)
-		local label = Ui.label(row, 17)
+	-- Modo sugerir (botón "Sugerir"): lo que se pulse o se escriba no cambia tu oferta, se le sugiere al otro.
+	local suggesting = false
+	local setSuggesting: (boolean) -> ()
+
+	-- Cada fila: nombre, [−] cantidad [+] y, en modo sugerir, "Quiero" y "Te doy". `value` es la cantidad que se
+	-- está tocando (con − y + o en modo sugerir); fuera de eso la casilla enseña lo que hay en tu oferta.
+	local amountRows = {} -- { box, label, minus, plus, want, give, owned(), offered(), name, value, touching }
+	local function amountRow(order: number, name: string, color: Color3, category: string, key: string?)
+		local frame = Instance.new("Frame")
+		frame.Name = "Row_" .. (key or category)
+		frame.LayoutOrder = order
+		frame.BackgroundColor3 = WHITE
+		frame.BorderSizePixel = 0
+		frame.Parent = amounts
+		Ui.round(frame, 8)
+		Ui.stroke(frame, BLACK, 2)
+		Ui.panel(frame, Color3.fromRGB(52, 56, 100), color)
+		local label = Ui.label(frame, 17)
 		label.Position = UDim2.fromOffset(18, 0)
-		label.Size = UDim2.new(1, -170, 1, 0)
 		label.TextXAlignment = Enum.TextXAlignment.Left
 		label.TextTruncate = Enum.TextTruncate.AtEnd
 		local box = Instance.new("TextBox")
 		box.Name = "Box"
 		box.AnchorPoint = Vector2.new(1, 0.5)
-		box.Position = UDim2.new(1, -8, 0.5, 0)
-		box.Size = UDim2.fromOffset(140, 32)
+		box.Size = UDim2.fromOffset(92, 32)
 		box.BackgroundColor3 = Ui.COLORS.dark
 		box.TextColor3 = WHITE
 		box.PlaceholderText = "0"
@@ -425,43 +499,84 @@ local function buildTrade()
 		box.TextSize = 19
 		box.ClearTextOnFocus = false
 		box.Text = ""
-		box.Parent = row
+		box.Parent = frame
 		Ui.round(box, 8)
 		Ui.stroke(box, BLACK, 2)
-		box.FocusLost:Connect(function()
-			-- Admite 1000, 1.5K, 2M...; se queda en lo que tengas como mucho.
-			local value = Format.parse(box.Text) or 0
-			local have = owned()
-			if have ~= math.huge then
-				value = math.min(value, have)
+		local function small(buttonName: string, text: string, buttonColor: Color3, width: number): TextButton
+			local button = Ui.button(frame, text, buttonColor)
+			button.Name = buttonName
+			button.AnchorPoint = Vector2.new(1, 0.5)
+			button.Size = UDim2.fromOffset(width, 32)
+			button.TextSize = if width > 40 then 16 else 22
+			return button
+		end
+		local row = {
+			box = box,
+			label = label,
+			minus = small("Minus", "-", Ui.COLORS.gray, 30),
+			plus = small("Plus", "+", Ui.COLORS.gray, 30),
+			want = small("Want", "Quiero", Ui.COLORS.orange, 64),
+			give = small("Give", "Te doy", Ui.COLORS.green, 64),
+			name = name,
+			value = 1,
+			touching = false,
+		}
+		function row.owned(): number
+			return player:GetAttribute(if category == "items" then "Item_" .. key else if category == "coins" then "Coins" else "Gems") or 0
+		end
+		function row.offered(): number
+			if not current then
+				return 0
 			end
-			send(math.max(0, math.floor(value)))
+			return if category == "items" then current.you.items[key] or 0 else current.you[category]
+		end
+		-- En tu oferta no cabe más de lo que tienes; en una sugerencia ("Quiero") sí.
+		local function clamp(value: number): number
+			local top = if suggesting then Config.Trade.SuggestMaxAmount else row.owned()
+			return math.clamp(math.floor(value), if suggesting then 1 else 0, math.max(top, 0))
+		end
+		local function show()
+			box.Text = if row.value > 0 then Format.short(row.value) else ""
+		end
+		local function send()
+			row.touching = false
+			if not suggesting then
+				Remotes.TradeOffer:FireServer(category, key, row.value)
+			end
+		end
+		box.FocusLost:Connect(function()
+			-- Admite 1000, 1.5K, 2M...
+			row.value = clamp(Format.parse(box.Text) or 0)
+			show()
+			send()
 		end)
-		table.insert(amountRows, { box = box, label = label, owned = owned, offered = offered, name = name, color = color })
+		for button, sign in { [row.minus] = -1, [row.plus] = 1 } do
+			hold(button, function(size: number)
+				if current == nil or current.state ~= "editing" then
+					return
+				end
+				if not suggesting and not row.touching then
+					row.value = row.offered()
+				end
+				row.touching = true
+				row.value = clamp(row.value + sign * size)
+				show()
+			end, send)
+		end
+		row.want.Activated:Connect(function()
+			Remotes.TradeSuggest:FireServer("want", category, key, row.value)
+			setSuggesting(false)
+		end)
+		row.give.Activated:Connect(function()
+			Remotes.TradeSuggest:FireServer("give", category, key, math.min(row.value, row.owned()))
+			setSuggesting(false)
+		end)
+		table.insert(amountRows, row)
 	end
-	amountRow(1, "Monedas", Ui.COLORS.coins, function()
-		return player:GetAttribute("Coins") or 0
-	end, function()
-		return if current then current.you.coins else 0
-	end, function(value)
-		Remotes.TradeOffer:FireServer("coins", nil, value)
-	end)
-	amountRow(2, "Gemas", Ui.COLORS.purple, function()
-		return player:GetAttribute("Gems") or 0
-	end, function()
-		return if current then current.you.gems else 0
-	end, function(value)
-		Remotes.TradeOffer:FireServer("gems", nil, value)
-	end)
+	amountRow(1, "Monedas", Ui.COLORS.coins, "coins")
+	amountRow(2, "Gemas", Ui.COLORS.purple, "gems")
 	for order, key in Config.ItemOrder do
-		local item = Config.Items[key]
-		amountRow(2 + order, item.name, item.color, function()
-			return player:GetAttribute("Item_" .. key) or 0
-		end, function()
-			return if current then current.you.items[key] or 0 else 0
-		end, function(value)
-			Remotes.TradeOffer:FireServer("items", key, value)
-		end)
+		amountRow(2 + order, Config.Items[key].name, Config.Items[key].color, "items", key)
 	end
 
 	-- Pestañas.
@@ -488,9 +603,18 @@ local function buildTrade()
 			(cell :: any).Select.Visible = offered[key] == true
 		end
 		for _, row in amountRows do
-			row.label.Text = `{row.name} <font color="{Ui.SOFT}">(tienes {Format.short(row.owned())})</font>`
-			if not row.box:IsFocused() then
-				local value = row.offered()
+			-- De derecha a izquierda: [Te doy] [Quiero] (solo en modo sugerir) [+] cantidad [−] y el nombre.
+			local right = if suggesting then 146 else 8
+			row.want.Visible, row.give.Visible = suggesting, suggesting
+			row.give.Position = UDim2.new(1, -8, 0.5, 0)
+			row.want.Position = UDim2.new(1, -76, 0.5, 0)
+			row.plus.Position = UDim2.new(1, -right, 0.5, 0)
+			row.box.Position = UDim2.new(1, -right - 34, 0.5, 0)
+			row.minus.Position = UDim2.new(1, -right - 130, 0.5, 0)
+			row.label.Size = UDim2.new(1, -right - 186, 1, 0)
+			row.label.Text = if suggesting then row.name else `{row.name} <font color="{Ui.SOFT}">(tienes {Format.short(row.owned())})</font>`
+			if not row.box:IsFocused() and not row.touching then
+				local value = if suggesting then row.value else row.offered()
 				row.box.Text = if value > 0 then Format.short(value) else ""
 			end
 		end
@@ -513,6 +637,11 @@ local function buildTrade()
 			cell.Activated:Connect(function()
 				if locked() then
 					Sfx.play("error")
+					return
+				end
+				if suggesting then
+					Remotes.TradeSuggest:FireServer("give", tab, id, 1)
+					setSuggesting(false)
 					return
 				end
 				Remotes.TradeOffer:FireServer(tab, id, if (cell :: any).Select.Visible then 0 else 1)
@@ -562,7 +691,7 @@ local function buildTrade()
 	status.Name = "Status"
 	status.AnchorPoint = Vector2.new(0, 1)
 	status.Position = UDim2.new(0, 16, 1, -14)
-	status.Size = UDim2.new(1, -470, 0, 56)
+	status.Size = UDim2.new(1, -550, 0, 56)
 	status.TextXAlignment = Enum.TextXAlignment.Left
 	status.TextWrapped = true
 	local mainButton = Ui.button(body, "Aceptar", Ui.COLORS.green)
@@ -583,6 +712,221 @@ local function buildTrade()
 	cancelButton.Position = UDim2.new(1, -372, 1, -12)
 	cancelButton.Size = UDim2.fromOffset(110, 60)
 	cancelButton.TextSize = 20
+	-- "Sugerir": bocadillo con puntos y el texto a su derecha.
+	local suggestButton = Ui.button(body, "Sugerir ", Ui.COLORS.blue)
+	suggestButton.Name = "Suggest"
+	suggestButton.AnchorPoint = Vector2.new(1, 1)
+	suggestButton.Position = UDim2.new(1, -372, 1, -12)
+	suggestButton.Size = UDim2.fromOffset(150, 60)
+	suggestButton.TextSize = 20
+	suggestButton.TextXAlignment = Enum.TextXAlignment.Right
+	local bubble = Instance.new("Frame")
+	bubble.Name = "Bubble"
+	bubble.AnchorPoint = Vector2.new(0, 0.5)
+	bubble.Position = UDim2.new(0, 12, 0.5, -2)
+	bubble.Size = UDim2.fromOffset(38, 28)
+	bubble.BackgroundColor3 = WHITE
+	bubble.BorderSizePixel = 0
+	bubble.Parent = suggestButton
+	Ui.round(bubble, 10)
+	Ui.stroke(bubble, BLACK, 2)
+	Ui.gradient(bubble, WHITE, Color3.fromRGB(190, 200, 225), 90)
+	for dot = 1, 3 do
+		local point = Instance.new("Frame")
+		point.AnchorPoint = Vector2.new(0.5, 0.5)
+		point.Position = UDim2.fromScale(dot / 4, 0.5)
+		point.Size = UDim2.fromOffset(5, 5)
+		point.BackgroundColor3 = Color3.fromRGB(40, 60, 110)
+		point.BorderSizePixel = 0
+		point.Parent = bubble
+		Ui.round(point, 3)
+	end
+	suggestButton.Activated:Connect(function()
+		setSuggesting(not suggesting)
+	end)
+
+	-- Sugerencia recibida: tarjeta sobre tu inventario (las dos ofertas siguen a la vista) con qué se sugiere,
+	-- quién, y Aceptar o Ignorar. Aceptarla solo cambia una oferta: el trato sigue pidiendo Aceptar y Confirmar.
+	local card = Instance.new("Frame")
+	card.Name = "SuggestIn"
+	card.AnchorPoint = Vector2.new(0.5, 0.5)
+	card.Position = UDim2.fromScale(0.5, 0.5)
+	card.Size = UDim2.fromOffset(470, 176)
+	card.BackgroundColor3 = WHITE
+	card.BorderSizePixel = 0
+	card.Visible = false
+	card.Parent = stockArea
+	Ui.round(card, 14)
+	Ui.stroke(card, BLACK, 4)
+	Ui.panel(card, Color3.fromRGB(64, 70, 128))
+	local cardScale = Instance.new("UIScale")
+	cardScale.Parent = card
+	local ribbon = Ui.label(card, 22)
+	ribbon.Name = "Ribbon"
+	ribbon.Position = UDim2.fromOffset(12, 10)
+	ribbon.Size = UDim2.fromOffset(130, 34)
+	ribbon.BackgroundTransparency = 0
+	Ui.round(ribbon, 9)
+	Ui.stroke(ribbon, BLACK, 3)
+	local from = Ui.label(card, 16)
+	from.Name = "From"
+	from.Position = UDim2.fromOffset(152, 10)
+	from.Size = UDim2.new(1, -164, 0, 34)
+	from.TextXAlignment = Enum.TextXAlignment.Left
+	from.TextTruncate = Enum.TextTruncate.AtEnd
+	from.TextColor3 = SOFT
+	local slot = Instance.new("Frame")
+	slot.Name = "Item"
+	slot.Position = UDim2.fromOffset(14, 54)
+	slot.Size = UDim2.fromOffset(92, 92)
+	slot.BackgroundTransparency = 1
+	slot.Parent = card
+	local what = Ui.label(card, 30)
+	what.Name = "What"
+	what.Position = UDim2.fromOffset(118, 54)
+	what.Size = UDim2.new(1, -118 - 178, 0, 92)
+	what.TextXAlignment = Enum.TextXAlignment.Left
+	what.TextWrapped = true
+	what.TextColor3 = GOLD
+	local acceptSuggest = Ui.button(card, "Aceptar", Ui.COLORS.green)
+	acceptSuggest.Name = "Accept"
+	acceptSuggest.AnchorPoint = Vector2.new(1, 0)
+	acceptSuggest.Position = UDim2.new(1, -12, 0, 54)
+	acceptSuggest.Size = UDim2.fromOffset(156, 50)
+	acceptSuggest.TextSize = 24
+	local ignoreSuggest = Ui.button(card, "Ignorar", Ui.COLORS.red)
+	ignoreSuggest.Name = "Ignore"
+	ignoreSuggest.AnchorPoint = Vector2.new(1, 0)
+	ignoreSuggest.Position = UDim2.new(1, -12, 0, 110)
+	ignoreSuggest.Size = UDim2.fromOffset(156, 36)
+	ignoreSuggest.TextSize = 18
+	-- Lo que le queda antes de caducar.
+	local timer = Instance.new("Frame")
+	timer.Name = "Timer"
+	timer.AnchorPoint = Vector2.new(0, 1)
+	timer.Position = UDim2.new(0, 14, 1, -10)
+	timer.Size = UDim2.new(1, -28, 0, 6)
+	timer.BackgroundColor3 = GOLD
+	timer.BorderSizePixel = 0
+	timer.Parent = card
+	Ui.round(timer, 3)
+	Ui.layer(card, Z_SUGGEST)
+	acceptSuggest.Activated:Connect(function()
+		Remotes.TradeSuggestRespond:FireServer(true)
+	end)
+	ignoreSuggest.Activated:Connect(function()
+		Remotes.TradeSuggestRespond:FireServer(false)
+	end)
+
+	-- Tu sugerencia: una tira en la fila de pestañas (donde va la ayuda) con lo que has sugerido y "Quitar".
+	local chip = Instance.new("Frame")
+	chip.Name = "SuggestOut"
+	chip.AnchorPoint = Vector2.new(1, 0)
+	chip.Position = UDim2.new(1, -10, 0, 226)
+	chip.Size = UDim2.fromOffset(306, 46)
+	chip.BackgroundColor3 = WHITE
+	chip.BorderSizePixel = 0
+	chip.Visible = false
+	chip.Parent = body
+	Ui.round(chip, 10)
+	Ui.stroke(chip, BLACK, 3)
+	Ui.panel(chip, Color3.fromRGB(52, 56, 100))
+	local chipRibbon = Ui.label(chip, 15)
+	chipRibbon.Name = "Ribbon"
+	chipRibbon.AnchorPoint = Vector2.new(0, 0.5)
+	chipRibbon.Position = UDim2.new(0, 8, 0.5, 0)
+	chipRibbon.Size = UDim2.fromOffset(76, 28)
+	chipRibbon.BackgroundTransparency = 0
+	Ui.round(chipRibbon, 7)
+	Ui.stroke(chipRibbon, BLACK, 2)
+	local chipText = Ui.label(chip, 16)
+	chipText.Name = "What"
+	chipText.Position = UDim2.fromOffset(92, 0)
+	chipText.Size = UDim2.new(1, -92 - 86, 1, 0)
+	chipText.TextXAlignment = Enum.TextXAlignment.Left
+	chipText.TextTruncate = Enum.TextTruncate.AtEnd
+	local removeSuggest = Ui.button(chip, "Quitar", Ui.COLORS.red)
+	removeSuggest.Name = "Remove"
+	removeSuggest.AnchorPoint = Vector2.new(1, 0.5)
+	removeSuggest.Position = UDim2.new(1, -8, 0.5, 0)
+	removeSuggest.Size = UDim2.fromOffset(72, 30)
+	removeSuggest.TextSize = 15
+	removeSuggest.Activated:Connect(function()
+		Remotes.TradeSuggest:FireServer(nil)
+	end)
+
+	local shownSuggest: string? = nil
+	local function paintSuggests()
+		local mineSuggest, theirSuggest = current.you.suggest, current.them.suggest
+		chip.Visible = mineSuggest ~= nil
+		hint.Visible = mineSuggest == nil
+		if mineSuggest then
+			local intent = INTENTS[mineSuggest.intent]
+			chipRibbon.Text = intent[1]
+			chipRibbon.BackgroundColor3 = intent[2]
+			chipText.Text = if mineSuggest.ignored then "Ignorada" else suggestName(mineSuggest)
+			chipText.TextColor3 = if mineSuggest.ignored then Ui.COLORS.red:Lerp(WHITE, 0.3) else WHITE
+		end
+		-- La que el otro ha visto ignorar ya no se le enseña.
+		if theirSuggest and theirSuggest.ignored then
+			theirSuggest = nil
+		end
+		card.Visible = theirSuggest ~= nil
+		local key = if theirSuggest then `{theirSuggest.intent}|{theirSuggest.category}|{theirSuggest.key}|{theirSuggest.amount}|{theirSuggest.ends}` else nil
+		if key == shownSuggest then
+			return
+		end
+		shownSuggest = key
+		slot:ClearAllChildren()
+		if not theirSuggest then
+			return
+		end
+		local intent = INTENTS[theirSuggest.intent]
+		ribbon.Text = intent[1]
+		ribbon.BackgroundColor3 = intent[2]
+		from.Text = `{current.them.name} {if theirSuggest.intent == "want" then "te lo pide" else "te lo ofrece"}`
+		what.Text = suggestName(theirSuggest)
+		local cell = suggestCell(slot, theirSuggest)
+		if cell then
+			cell.Size = UDim2.fromScale(1, 1)
+			-- Al final, cuando la vista 3D ya está puesta: la tarjeta va en su propia capa.
+			task.defer(function()
+				if cell.Parent then
+					Ui.layer(cell, Z_SUGGEST)
+				end
+			end)
+			Ui.layer(cell, Z_SUGGEST)
+		end
+		Sfx.play("toast")
+		local left = math.max(0, theirSuggest.ends - workspace:GetServerTimeNow())
+		local part = math.min(1, left / Config.Trade.SuggestTime)
+		timer.Size = UDim2.new(part, -28 * part, 0, 6)
+		if not Performance.get() then
+			TweenService:Create(timer, TweenInfo.new(left, Enum.EasingStyle.Linear), { Size = UDim2.fromOffset(0, 6) }):Play()
+			cardScale.Scale = 0.7
+			TweenService:Create(cardScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		end
+	end
+
+	function setSuggesting(on: boolean)
+		local was = suggesting
+		suggesting = on and current ~= nil and current.state == "editing"
+		local stroke = suggestButton:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Color = if suggesting then WHITE else BLACK
+		end
+		suggestButton.BackgroundColor3 = if suggesting then GOLD else Ui.COLORS.blue
+		-- Solo al entrar o salir del modo: cada estado que llega pasa por aquí y no debe borrar lo que se está escribiendo.
+		if was ~= suggesting then
+			for _, row in amountRows do
+				row.value, row.touching = 1, false
+			end
+		end
+		if current then
+			hint.Text = if current.state ~= "editing" then "Ofertas bloqueadas." elseif suggesting then "Sugerir: pulsa algo tuyo, o pide una cantidad." else "Pulsa algo tuyo para añadirlo o quitarlo."
+			paintStock()
+		end
+	end
 
 	-- Cuenta atrás, grande y en el centro.
 	local countdown = Ui.label(window, 120)
@@ -633,15 +977,15 @@ local function buildTrade()
 			cell.LayoutOrder = order
 		end
 		if side.coins > 0 then
-			place(amountCell(panel.grid, "monedas", Ui.COLORS.coins, side.coins, true))
+			place(amountCell(panel.grid, "monedas", Ui.COLORS.coins, side.coins, "coins"))
 		end
 		if side.gems > 0 then
-			place(amountCell(panel.grid, "gemas", Ui.COLORS.purple, side.gems))
+			place(amountCell(panel.grid, "gemas", Ui.COLORS.purple, side.gems, "gems"))
 		end
 		for _, name in Config.ItemOrder do
 			local amount = side.items[name]
 			if amount and amount > 0 then
-				place(amountCell(panel.grid, Config.Items[name].name, Config.Items[name].color, amount))
+				place(amountCell(panel.grid, Config.Items[name].name, Config.Items[name].color, amount, name))
 			end
 		end
 		for _, copy in side.swords do
@@ -667,7 +1011,10 @@ local function buildTrade()
 		local state = current.state
 		status.Text = STEPS[state] or ""
 		status.TextColor3 = if state == "editing" then WHITE else GOLD
-		hint.Text = if state == "editing" then "Pulsa algo tuyo para añadirlo o quitarlo." else "Ofertas bloqueadas."
+		-- Fuera del paso de elegir no hay sugerencias; también pone el texto de ayuda.
+		setSuggesting(suggesting and state == "editing")
+		suggestButton.Visible = state == "editing"
+		paintSuggests()
 		backButton.Visible = state == "confirming"
 		mainButton.Visible = state ~= "countdown"
 		cancelButton.Text = if state == "countdown" then "¡CANCELAR!" else "Cancelar"
@@ -697,6 +1044,8 @@ local function buildTrade()
 		if state == nil then
 			current = nil
 			lastState = nil
+			setSuggesting(false)
+			card.Visible, chip.Visible, shownSuggest = false, false, nil
 			countdown.Visible = false
 			window.Visible = false
 			return

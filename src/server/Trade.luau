@@ -24,6 +24,7 @@ local BAD = Color3.fromRGB(255, 110, 110)
 local sessions = {} -- [Player] = trato en el que está
 local invites = {} -- [invitado] = { [quien invita] = os.clock() en que caduca }
 local lastRequest = {} -- [Player] = os.clock() de su última invitación
+local lastSuggest = {} -- [Player] = os.clock() de su última sugerencia
 
 local function botAllowed(): boolean
 	return RunService:IsStudio() and Config.Test.TradeBot == true
@@ -51,6 +52,32 @@ local function findArmor(data, id: unknown)
 	return nil
 end
 
+local function swordView(copy)
+	return { id = copy.id, sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 }
+end
+
+local function pieceView(piece)
+	return { id = piece.id, slot = piece.slot, quality = piece.quality, level = piece.level, stats = piece.stats }
+end
+
+-- La sugerencia en curso de un lado tal y como la ve el cliente (con la espada o la pieza ya resueltas), o nil.
+local function suggestView(side)
+	local suggest = side.suggest
+	if not suggest then
+		return nil
+	end
+	local out = { intent = suggest.intent, category = suggest.category, key = suggest.key, amount = suggest.amount, ends = suggest.ends, ignored = suggest.ignored }
+	local data = if side.player then PlayerData.read(side.player) else nil
+	if data and suggest.category == "swords" then
+		local copy = PlayerData.findSword(data, suggest.key)
+		out.sword = if copy then swordView(copy) else nil
+	elseif data and suggest.category == "armor" then
+		local piece = findArmor(data, suggest.key)
+		out.piece = if piece then pieceView(piece) else nil
+	end
+	return out
+end
+
 -- Lo que ofrece un lado, con todos los datos de cada cosa, tal y como lo ve el cliente.
 local function view(side)
 	local offer = side.offer
@@ -59,6 +86,7 @@ local function view(side)
 		userId = side.userId,
 		accepted = side.accepted,
 		confirmed = side.confirmed,
+		suggest = suggestView(side),
 		coins = offer.coins,
 		gems = offer.gems,
 		items = offer.items,
@@ -77,13 +105,13 @@ local function view(side)
 	for id in offer.swords do
 		local copy = PlayerData.findSword(data, id)
 		if copy then
-			table.insert(out.swords, { id = copy.id, sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 })
+			table.insert(out.swords, swordView(copy))
 		end
 	end
 	for id in offer.armor do
 		local piece = findArmor(data, id)
 		if piece then
-			table.insert(out.armor, { id = piece.id, slot = piece.slot, quality = piece.quality, level = piece.level, stats = piece.stats })
+			table.insert(out.armor, pieceView(piece))
 		end
 	end
 	for index in offer.artifacts do
@@ -279,6 +307,9 @@ local function complete(session)
 	close(session, "¡Intercambio completado!", GOOD)
 end
 
+-- Sugerencias (definidas más abajo, con las peticiones del cliente): las usa también el bot de pruebas.
+local setSuggest, respondSuggest
+
 -- Bot de pruebas: acepta y confirma un segundo después que el jugador.
 local function botFollow(session)
 	local bot, human
@@ -322,6 +353,8 @@ local function start(playerA: Player, playerB: Player?)
 		local a, b = session.sides[1], session.sides[2]
 		if session.state == "editing" and a.accepted and b.accepted then
 			session.state = "confirming"
+			-- Las sugerencias solo valen mientras se eligen las ofertas.
+			a.suggest, b.suggest = nil, nil
 		elseif session.state == "confirming" and a.confirmed and b.confirmed then
 			session.state = "countdown"
 			session.ends = workspace:GetServerTimeNow() + cfg.Countdown
@@ -339,6 +372,16 @@ local function start(playerA: Player, playerB: Player?)
 		end
 	end
 	push(session)
+	-- Bot de pruebas: a los 3 s pide gemas, para ver una sugerencia recibida.
+	for index, side in session.sides do
+		if side.bot then
+			task.delay(3, function()
+				if session.state == "editing" and not side.suggest then
+					setSuggest(session, side, session.sides[3 - index], { intent = "want", category = "gems", amount = 25 })
+				end
+			end)
+		end
+	end
 end
 
 -- Peticiones del cliente ------------------------------------------------------------------
@@ -352,55 +395,209 @@ local function validAmount(amount: unknown, owned: number): number?
 	return if whole <= owned then whole else nil
 end
 
-local function onOffer(player: Player, category: unknown, key: unknown, amount: unknown)
-	local session, side, other = sideOf(player)
-	local data = PlayerData.read(player)
-	if not session or session.state ~= "editing" or not data then
-		return
+-- Cambia la oferta de `side` (lo pide él, o acepta una sugerencia). Devuelve si el cambio valía.
+local function applyOffer(session, side, other, category: unknown, key: unknown, amount: unknown): boolean
+	-- El bot de pruebas tiene de todo, pero solo cantidades.
+	local data = if side.bot then { coins = math.huge, gems = math.huge, items = {} } else PlayerData.read(side.player)
+	if session.state ~= "editing" or not data then
+		return false
 	end
 	local offer = side.offer
 	local on = amount == 1 or amount == true
 	-- Espadas, armadura y accesorios van por id o índice: tiene que ser un número de verdad (no NaN).
-	if (category == "swords" or category == "armor" or category == "artifacts") and (type(key) ~= "number" or key ~= key) then
-		return
+	if (category == "swords" or category == "armor" or category == "artifacts") and (side.bot or type(key) ~= "number" or key ~= key) then
+		return false
 	end
 	if category == "coins" or category == "gems" then
 		local value = validAmount(amount, data[category])
 		if not value then
-			return
+			return false
 		end
 		offer[category] = value
 	elseif category == "items" then
 		if type(key) ~= "string" or not Config.Items[key] then
-			return
+			return false
 		end
-		local value = validAmount(amount, data.items[key] or 0)
+		local value = validAmount(amount, if side.bot then math.huge else data.items[key] or 0)
 		if not value then
-			return
+			return false
 		end
 		offer.items[key] = if value > 0 then value else nil
 	elseif category == "swords" then
 		-- La equipada no se puede dar: hay que equipar otra antes.
 		if on and (not PlayerData.findSword(data, key) or key == data.equipped) then
-			return
+			return false
 		end
 		offer.swords[key] = if on then true else nil
 	elseif category == "armor" then
 		if on and not findArmor(data, key) then
-			return
+			return false
 		end
 		offer.armor[key] = if on then true else nil
 	elseif category == "artifacts" then
 		if on and not table.find(data.artifacts, key) then
-			return
+			return false
 		end
 		offer.artifacts[key] = if on then true else nil
 	else
-		return
+		return false
 	end
 	-- Cualquier cambio quita el "aceptar" de los dos: nadie acepta una oferta que luego cambia.
 	side.accepted, other.accepted = false, false
+	-- Y la sugerencia de quien cambia su oferta: se hizo viendo la de antes.
+	side.suggest = nil
 	push(session)
+	return true
+end
+
+local function onOffer(player: Player, category: unknown, key: unknown, amount: unknown)
+	local session, side, other = sideOf(player)
+	if session then
+		applyOffer(session, side, other, category, key, amount)
+	end
+end
+
+-- Sugerencias: "want" (quiero eso tuyo) o "give" (te doy eso mío). Se guardan fuera de la oferta, así que por sí
+-- solas no mueven nada: aceptar una solo cambia una oferta, y el trato sigue pidiendo Aceptar, Confirmar y la cuenta atrás.
+local function notice(side, text: string, color: Color3)
+	if side.player then
+		Remotes.Notice:FireClient(side.player, text, color)
+	end
+end
+
+-- Quita la sugerencia `suggest` de `side` si sigue siendo la suya (puede haberla sustituido otra).
+local function dropSuggest(session, side, suggest)
+	if side.suggest == suggest and session.state ~= "closed" then
+		side.suggest = nil
+		push(session)
+	end
+end
+
+-- `side` responde a la sugerencia de `other`.
+function respondSuggest(session, side, other, accept: boolean)
+	local suggest = other.suggest
+	if session.state ~= "editing" or not suggest or suggest.ignored then
+		return
+	end
+	if not accept then
+		-- Se queda un momento marcada como ignorada para que quien la mandó lo vea.
+		suggest.ignored = true
+		push(session)
+		task.delay(2, dropSuggest, session, other, suggest)
+		return
+	end
+	other.suggest = nil
+	if suggest.intent == "want" then
+		-- Va a la oferta de quien acepta, con lo que tenga.
+		local owned = math.huge
+		if side.player then
+			local data = PlayerData.read(side.player)
+			owned = if not data then 0 elseif suggest.category == "items" then data.items[suggest.key] or 0 else data[suggest.category]
+		end
+		local value = math.min(suggest.amount, owned)
+		if value < 1 then
+			notice(side, "No tienes nada de eso", BAD)
+			push(session)
+			return
+		end
+		if value < suggest.amount then
+			notice(side, "No tienes tanto: se pone lo que tienes", BAD)
+		end
+		if not applyOffer(session, side, other, suggest.category, suggest.key, value) then
+			push(session)
+		end
+	elseif not applyOffer(session, other, side, suggest.category, suggest.key, suggest.amount) then
+		-- "Te doy": a la oferta de quien la mandó, si sigue teniéndolo.
+		notice(side, `{other.name} ya no tiene eso`, BAD)
+		push(session)
+	end
+end
+
+-- Pone la sugerencia de `side` (sustituye a la que tuviera) y la hace caducar.
+function setSuggest(session, side, other, suggest)
+	suggest.ends = workspace:GetServerTimeNow() + cfg.SuggestTime
+	side.suggest = suggest
+	push(session)
+	task.delay(cfg.SuggestTime, dropSuggest, session, side, suggest)
+	if other.bot then
+		-- Bot de pruebas: responde al segundo; ignora los "Quiero" de más de 1000 y acepta lo demás.
+		task.delay(1, function()
+			if side.suggest == suggest then
+				respondSuggest(session, other, side, not (suggest.intent == "want" and suggest.amount > 1000))
+			end
+		end)
+	end
+end
+
+local function onSuggest(player: Player, intent: unknown, category: unknown, key: unknown, amount: unknown)
+	local session, side, other = sideOf(player)
+	local data = PlayerData.read(player)
+	if not session or session.state ~= "editing" or not data then
+		return
+	end
+	if intent == nil then
+		if side.suggest then
+			side.suggest = nil
+			push(session)
+		end
+		return
+	end
+	local now = os.clock()
+	if now - (lastSuggest[player] or 0) < cfg.SuggestCooldown then
+		return
+	end
+	lastSuggest[player] = now
+	local byAmount = category == "coins" or category == "gems" or category == "items"
+	if category == "items" then
+		if type(key) ~= "string" or not Config.Items[key] then
+			return
+		end
+	elseif byAmount then
+		key = nil
+	elseif type(key) ~= "number" or key ~= key then
+		return
+	end
+	local value = 1
+	if byAmount then
+		-- "Quiero" no se recorta con lo que tenga el otro, para no chivar cuánto tiene.
+		local owned = if intent == "want" then cfg.SuggestMaxAmount elseif category == "items" then data.items[key] or 0 else data[category]
+		local valid = validAmount(amount, owned)
+		if not valid or valid < 1 then
+			return
+		end
+		value = valid
+	end
+	if intent == "want" then
+		if not cfg.SuggestWant[category] then
+			return
+		end
+	elseif intent == "give" then
+		if category == "swords" then
+			if not PlayerData.findSword(data, key) or key == data.equipped then
+				return
+			end
+		elseif category == "armor" then
+			if not findArmor(data, key) then
+				return
+			end
+		elseif category == "artifacts" then
+			if not table.find(data.artifacts, key) then
+				return
+			end
+		elseif not byAmount then
+			return
+		end
+	else
+		return
+	end
+	setSuggest(session, side, other, { intent = intent, category = category, key = key, amount = value })
+end
+
+local function onSuggestRespond(player: Player, accept: unknown)
+	local session, side, other = sideOf(player)
+	if session then
+		respondSuggest(session, side, other, accept == true)
+	end
 end
 
 local function onAccept(player: Player, value: unknown)
@@ -491,6 +688,8 @@ function Trade.start()
 	Remotes.TradeAccept.OnServerEvent:Connect(onAccept)
 	Remotes.TradeConfirm.OnServerEvent:Connect(onConfirm)
 	Remotes.TradeCancel.OnServerEvent:Connect(onCancel)
+	Remotes.TradeSuggest.OnServerEvent:Connect(onSuggest)
+	Remotes.TradeSuggestRespond.OnServerEvent:Connect(onSuggestRespond)
 
 	local function onPlayer(player: Player)
 		player:SetAttribute("TradeBot", botAllowed())
@@ -509,6 +708,7 @@ function Trade.start()
 			pending[player] = nil
 		end
 		lastRequest[player] = nil
+		lastSuggest[player] = nil
 	end)
 end
 

@@ -628,7 +628,17 @@ Config.Enemies = {
 
 -- COMERCIO entre jugadores (server/Trade). Countdown = segundos de la cuenta atrás final, en los que aún se puede
 -- cancelar; InviteTime = lo que dura una invitación; RequestCooldown = espera entre invitaciones.
-Config.Trade = { Countdown = 3, InviteTime = 20, RequestCooldown = 3 }
+-- Sugerencias dentro del trato ("Quiero" / "Te doy"): SuggestCooldown = espera entre sugerencias, SuggestTime = lo
+-- que dura una sin respuesta, SuggestMaxAmount = tope de la cantidad de un "Quiero", SuggestWant = qué se puede pedir.
+Config.Trade = {
+	Countdown = 3,
+	InviteTime = 20,
+	RequestCooldown = 3,
+	SuggestCooldown = 0.4,
+	SuggestTime = 20,
+	SuggestMaxAmount = 1e36,
+	SuggestWant = { coins = true, gems = true, items = true },
+}
 
 -- PASES DE JUEGO (gamepass; tienda del menú, client/PassShop y server/Passes). "id" = id del pase en Roblox
 -- (se crea en la página del juego; con 0 aún no está a la venta y el botón dice "Pronto"). "price" = Robux que se

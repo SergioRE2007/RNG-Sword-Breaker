@@ -33,7 +33,9 @@ local NAMES = {
 	"TradeConfirm", -- cliente -> servidor: confirmar el trato (segundo paso)
 	"TradeCancel", -- cliente -> servidor: cancelar el trato (también durante la cuenta atrás)
 	"TradeInvite", -- servidor -> cliente: (userId, nombre) ese jugador te invita a comerciar
-	"TradeState", -- servidor -> cliente: ({ state, ends, you, them }) estado del trato, o nil si se ha cerrado
+	"TradeState", -- servidor -> cliente: ({ state, ends, you, them }) estado del trato, o nil si se ha cerrado; you.suggest / them.suggest = sugerencia en curso de cada uno ({ intent, category, key, amount, ends, ignored, sword o piece })
+	"TradeSuggest", -- cliente -> servidor: (intención, categoría, clave, cantidad) sugerir algo en el trato: "want" (quiero eso tuyo; solo monedas, gemas y objetos) o "give" (te doy eso mío); sin intención = quitar mi sugerencia
+	"TradeSuggestRespond", -- cliente -> servidor: (true o false) aceptar o ignorar la sugerencia del otro
 	"SetDungeonLoop", -- cliente -> servidor: (true o false) repetir la mazmorra sola cada vez que la supere (si lideras el grupo)
 	"LeaveDungeon", -- cliente -> servidor: salir de la mazmorra en la que está
 	"DungeonEvent", -- servidor -> cliente: (tipo, datos) "hurt" (daño recibido) o "result" ({ won, level, loot })
