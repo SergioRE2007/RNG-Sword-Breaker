@@ -125,7 +125,7 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 	model.Name = "Tienda" .. shopTitle
 	local floor = Config.Plot.FloorHeight
 	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
-	local skin = if skinned then StallSkin.build() else nil
+	local skin = if skinned then StallSkin.build(stripes[1], stripes[2] or stripes[1]) else nil
 
 	local function block(name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): Part
 		local item = Instance.new("Part")

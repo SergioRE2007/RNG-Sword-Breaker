@@ -1,4 +1,4 @@
--- Aspecto de los puestos de las tiendas del hub: toldo azul y blanco, plataforma y un vendedor
+-- Aspecto de los puestos de las tiendas del hub: toldo de rayas, plataforma y un vendedor
 -- (NPC) detrás del mostrador. Copiado de un modelo gratis de la Creator Store (Steal A Brainrot
 -- Shop, de TwinPlayzDev) y pasado a código, sin scripts. Mira hacia -Z.
 local Players = game:GetService("Players")
@@ -70,12 +70,46 @@ local function buildSeller(): Model?
 			item.Anchored = true
 		end
 	end
+	-- Piezas fijas: el generador deja el cuerpo sin articulaciones y alguna pieza fuera de sitio
+	-- (una pierna flotando). Cada una se coloca desde la raíz, juntando los pares de puntos de
+	-- enganche (XRigAttachment) que comparten dos piezas.
+	local root = seller.HumanoidRootPart
+	root.CFrame = CFrame.new()
+	local byName = {}
+	for _, item in seller:GetDescendants() do
+		if item:IsA("Attachment") and string.find(item.Name, "RigAttachment") then
+			byName[item.Name] = byName[item.Name] or {}
+			table.insert(byName[item.Name], item)
+		end
+	end
+	local placed = { [root] = true }
+	local queue = { root }
+	while #queue > 0 do
+		local part = table.remove(queue, 1)
+		for _, mine in part:GetChildren() do
+			local pair = if mine:IsA("Attachment") then byName[mine.Name] else nil
+			if pair and #pair == 2 then
+				local other = if pair[1] == mine then pair[2] else pair[1]
+				local next = other.Parent :: BasePart
+				if not placed[next] then
+					placed[next] = true
+					next.CFrame = part.CFrame * mine.CFrame * other.CFrame:Inverse()
+					table.insert(queue, next)
+				end
+			end
+		end
+	end
 	seller:PivotTo(NPC_AT)
 	return seller
 end
 
--- Devuelve el modelo con el origen (0, 0, 0) como pivote.
-function StallSkin.build(): Model
+-- Colores originales del toldo (azul y gris claro): se cambian por los de cada tienda.
+local TOLDO_A = Color3.fromRGB(13, 105, 172)
+local TOLDO_B = Color3.fromRGB(191, 179, 184)
+
+-- Devuelve el modelo con el origen (0, 0, 0) como pivote. `colorA` y `colorB` pintan las
+-- rayas del toldo.
+function StallSkin.build(colorA: Color3, colorB: Color3): Model
 	local model = Instance.new("Model")
 	model.Name = "Puesto"
 	for _, row in PARTS do
@@ -85,6 +119,11 @@ function StallSkin.build(): Model
 		part.Size = Vector3.new(row[1], row[2], row[3])
 		part.CFrame = CFrame.new(row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15])
 		part.Color = Color3.fromRGB(row[16], row[17], row[18])
+		if part.Color == TOLDO_A then
+			part.Color = colorA
+		elseif part.Color == TOLDO_B then
+			part.Color = colorB
+		end
 		part.TopSurface = Enum.SurfaceType.Smooth
 		part.BottomSurface = Enum.SurfaceType.Smooth
 		part.Parent = model
