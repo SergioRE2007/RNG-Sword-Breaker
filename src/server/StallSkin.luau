@@ -1,6 +1,7 @@
 -- Aspecto de los puestos de las tiendas del hub: toldo de rayas, plataforma y un vendedor
 -- (NPC) detrás del mostrador. Copiado de un modelo gratis de la Creator Store (Steal A Brainrot
 -- Shop, de TwinPlayzDev) y pasado a código, sin scripts. Mira hacia -Z.
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 
 local StallSkin = {}
@@ -65,6 +66,7 @@ local function buildSeller(): Model?
 		return nil
 	end
 	seller.Name = "Vendedor"
+	CollectionService:AddTag(seller, "StationSeller") -- el cliente lo hace moverse (StationFx)
 	for _, item in seller:GetDescendants() do
 		if item:IsA("BasePart") then
 			item.Anchored = true

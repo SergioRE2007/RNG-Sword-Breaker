@@ -47,6 +47,7 @@ local Z = {
 }
 local AUTO_DELAY = 0.2 -- segundos entre tiradas automáticas
 local CLOSE_DISTANCE = 30 -- se cierra al alejarse del puesto
+local OPEN_DISTANCE = 10 -- se abre sola al acercarse a la estación (la tecla E sigue valiendo)
 -- Tipos de rasgo en el orden de desempate (los colores, los de sus rasgos de nivel I).
 local PRIORITY_NAMES = { luck = "Suerte", coins = "Monedas", damage = "Daño" }
 local PRIORITY_COLORS = { luck = Color3.fromRGB(150, 230, 90), coins = Color3.fromRGB(110, 220, 120), damage = Color3.fromRGB(90, 210, 230) }
@@ -1416,7 +1417,7 @@ function ModifierShops.start()
 		for _, sign in CollectionService:GetTagged("ShopSign") do
 			local billboard = sign :: BillboardGui
 			local wave = math.sin(now * 2.2)
-			billboard.StudsOffset = Vector3.new(0, 13 + wave * 0.5, 0)
+			billboard.StudsOffset = Vector3.new(0, (billboard:GetAttribute("SignHeight") or 13) + wave * 0.5, 0)
 			local label = billboard:FindFirstChildOfClass("TextLabel")
 			if label then
 				label.TextSize = 48 * (1 + wave * 0.06)
@@ -1499,11 +1500,31 @@ function ModifierShops.start()
 			Ui.toggle(shop.name)
 		end
 	end)
+	local inside = {} -- [aviso] = true mientras el jugador está dentro del radio de apertura
 	task.spawn(function()
 		while true do
-			task.wait(0.5)
+			task.wait(0.25)
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root then
+				for _, prompt in CollectionService:GetTagged("ShopStation") do
+					local shop = windows[prompt:GetAttribute("Shop")]
+					local anchor = prompt.Parent
+					if not shop or not anchor or not anchor:IsA("BasePart") then
+						continue
+					end
+					local distance = (root.Position - anchor.Position).Magnitude
+					if distance < OPEN_DISTANCE and not inside[prompt] then
+						inside[prompt] = true
+						if not shop.frame.Visible then
+							openAt = anchor.Position
+							Ui.toggle(shop.name)
+						end
+					elseif distance > OPEN_DISTANCE + 4 then
+						inside[prompt] = nil
+					end
+				end
+			end
 			if openAt and root and (root.Position - openAt).Magnitude > CLOSE_DISTANCE then
 				for _, shop in windows do
 					shop.frame.Visible = false
