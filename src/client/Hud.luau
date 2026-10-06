@@ -1,4 +1,4 @@
--- Interfaz fija: barra de transporte arriba (Hub, Casa, Tiendas), monedas y gemas abajo a la
+-- Interfaz fija: barra de transporte arriba (Hub, Casa, Trades, Mazmorras), monedas y gemas abajo a la
 -- izquierda, cuadro de estadísticas abajo a la derecha (daño, suertes y el nivel de cada mejora,
 -- como el resumen de la pantalla de Mejoras), menú a la izquierda y avisos.
 -- La mochila está en Backpack, las mejoras en SkillTree, el gacha en GachaRoll y el estilo en Ui.
@@ -210,8 +210,8 @@ function Hud.start()
 			Ui.orbIcon(parent, Color3.fromRGB(255, 120, 60))
 		end },
 		{ "home", "Casa", Color3.fromRGB(50, 190, 240), houseIcon },
-		{ "shops", "Tiendas", Color3.fromRGB(70, 200, 90), function(parent)
-			Ui.boxIcon(parent, Color3.fromRGB(255, 210, 90))
+		{ "trades", "Trades", Color3.fromRGB(40, 170, 200), function(parent)
+			Ui.orbIcon(parent, Color3.fromRGB(200, 245, 255))
 		end },
 		{ "dungeon", "Mazmorras", Ui.COLORS.purple, function(parent)
 			Ui.starIcon(parent, Color3.fromRGB(235, 200, 255))
@@ -236,6 +236,10 @@ function Hud.start()
 		label.Text = entry[2]
 		Ui.sparkle(button, 5)
 		button.Activated:Connect(function()
+			if entry[1] == "trades" then
+				Ui.toggle("TradeList") -- abre la lista de Comercio, no transporta
+				return
+			end
 			Remotes.Teleport:FireServer(entry[1])
 			flash.BackgroundTransparency = 0.2
 			TweenService:Create(flash, TweenInfo.new(0.45), { BackgroundTransparency = 1 }):Play()
@@ -342,12 +346,13 @@ function Hud.start()
 	menu.Name = "Menu"
 	menu.AnchorPoint = Vector2.new(0, 0.5)
 	menu.Position = UDim2.new(0, 14, 0.5, 0)
-	menu.Size = UDim2.fromOffset(124, 0)
+	menu.Size = UDim2.fromOffset(256, 0) -- dos botones por fila: 2 x 124 + 8 de hueco
 	menu.AutomaticSize = Enum.AutomaticSize.Y
 	menu.BackgroundTransparency = 1
 	menu.Parent = gui
-	local menuLayout = Instance.new("UIListLayout")
-	menuLayout.Padding = UDim.new(0, 8)
+	local menuLayout = Instance.new("UIGridLayout")
+	menuLayout.CellSize = UDim2.fromOffset(124, 92)
+	menuLayout.CellPadding = UDim2.fromOffset(8, 8)
 	menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	menuLayout.Parent = menu
 
@@ -365,15 +370,11 @@ function Hud.start()
 		{ "PassShop", "Tienda", Color3.fromRGB(40, 185, 110), function(parent)
 			Ui.gemIcon(parent, Color3.fromRGB(190, 255, 210))
 		end },
-		{ "TradeList", "Comercio", Color3.fromRGB(40, 170, 200), function(parent)
-			Ui.orbIcon(parent, Color3.fromRGB(200, 245, 255))
-		end },
 	}
 	for order, entry in menuItems do
 		local item = Ui.button(menu, "", entry[3])
 		item.Name = entry[1]
 		item.LayoutOrder = order
-		item.Size = UDim2.fromOffset(124, 92)
 		local iconBox = Instance.new("Frame")
 		iconBox.Name = "Icon"
 		iconBox.AnchorPoint = Vector2.new(0.5, 0)
