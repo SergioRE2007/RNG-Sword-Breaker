@@ -4,6 +4,10 @@ Segunda iteración grande del juego. El **PR 1** (mazmorras con identidad, lobby
 (#68 y #69). Quedan estas dos partes, **sin empezar**. Decisiones ya tomadas con el usuario: las sugerencias de comercio son
 de dos tipos ("Quiero" / "Te doy") y se juntan a `main` tras probar cada PR sin pedir permiso.
 
+**Estado (6 oct 2026):** el **PR 2 está hecho** (rama `comercio-sugerencias`; probado con el bot: aceptar, ignorar, quitar,
+caducar, rechazos y spam; falta verlo con dos jugadores reales y no ha pasado revisor Sonnet). Del PR 1 ya pasó el revisor
+Sonnet y sus arreglos van en la rama `mazmorras-revision`; sigue sin probarse con dos jugadores reales. **Queda el PR 3.**
+
 Antes de empezar: `git switch main`, `git pull`, `rojo serve`, y leer `CLAUDE.md` (ya está al día con lo del PR 1).
 Para la UI, cargar las skills `roblox-ui-engineer` y `roblox-ui-designer`. Pendiente además del PR 1: probar los grupos con
 dos jugadores reales y pasar un revisor Sonnet de código.

@@ -823,7 +823,7 @@ local function buildTrade()
 	chip.Name = "SuggestOut"
 	chip.AnchorPoint = Vector2.new(1, 0)
 	chip.Position = UDim2.new(1, -10, 0, 226)
-	chip.Size = UDim2.fromOffset(324, 46)
+	chip.Size = UDim2.fromOffset(306, 46)
 	chip.BackgroundColor3 = WHITE
 	chip.BorderSizePixel = 0
 	chip.Visible = false
@@ -909,14 +909,18 @@ local function buildTrade()
 	end
 
 	function setSuggesting(on: boolean)
+		local was = suggesting
 		suggesting = on and current ~= nil and current.state == "editing"
 		local stroke = suggestButton:FindFirstChildOfClass("UIStroke")
 		if stroke then
 			stroke.Color = if suggesting then WHITE else BLACK
 		end
 		suggestButton.BackgroundColor3 = if suggesting then GOLD else Ui.COLORS.blue
-		for _, row in amountRows do
-			row.value, row.touching = 1, false
+		-- Solo al entrar o salir del modo: cada estado que llega pasa por aquí y no debe borrar lo que se está escribiendo.
+		if was ~= suggesting then
+			for _, row in amountRows do
+				row.value, row.touching = 1, false
+			end
 		end
 		if current then
 			hint.Text = if current.state ~= "editing" then "Ofertas bloqueadas." elseif suggesting then "Sugerir: pulsa algo tuyo, o pide una cantidad." else "Pulsa algo tuyo para añadirlo o quitarlo."
