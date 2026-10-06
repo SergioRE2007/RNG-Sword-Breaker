@@ -124,9 +124,8 @@ local function buildUi()
 	-- Cuadro tras un martillazo a mano: quedarse con el grado nuevo o descartarlo y volver al anterior.
 	local decision = Instance.new("Frame")
 	decision.Name = "Decision"
-	-- Arriba, para no tapar el yunque, el arma ni el martillo mientras se decide.
-	decision.AnchorPoint = Vector2.new(0.5, 0)
-	decision.Position = UDim2.new(0.5, 0, 0, 56)
+	decision.AnchorPoint = Vector2.new(0.5, 0.5)
+	decision.Position = UDim2.fromScale(0.5, 0.5)
 	decision.Size = UDim2.fromOffset(470, 300)
 	decision.Visible = false
 	decision.ZIndex = 30
