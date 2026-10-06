@@ -91,3 +91,7 @@ Entorno: Windows, PowerShell, Rojo 7.7.1 instalado con Rokit. Git y GitHub CLI (
 - No reordenar `Config.Swords`, `Config.Traits`, `Config.Grades`, `Config.Artifacts`, `Config.Dungeons` ni `Config.Armor.Qualities`: lo guardado usa la posición en la lista. Lo nuevo se añade al final.
 - Los efectos visuales (escombros, números) se crean en el cliente, nunca en el servidor.
 - Si cambia el formato de los datos guardados, mantén compatibilidad con lo ya guardado.
+
+## graphify
+
+Para preguntas de arquitectura o relaciones entre archivos, `graphify query "<pregunta>"` antes de buscar a mano (si existe `graphify-out/graph.json`; la carpeta no se sube al repo, se genera con `/graphify .`).

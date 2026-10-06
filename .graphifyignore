@@ -1,0 +1,22 @@
+# Salida del propio graphify
+graphify-out/
+
+# Lugar de Studio (binario)
+*.rbxl
+*.rbxlx
+
+# Modelos y mallas importados (binarios)
+*.rbxm
+*.fbx
+*.blend
+
+# Datos generados: enormes y sin estructura
+src/client/SwingClips.luau
+
+# Imágenes y capturas
+*.png
+*.jpg
+
+# Generados por Rojo y config de Claude
+sourcemap.json
+.claude/

@@ -7,3 +7,6 @@
 /*.rbxl.lock
 
 sourcemap.json
+
+# Salida de graphify
+graphify-out/
