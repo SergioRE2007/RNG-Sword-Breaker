@@ -178,6 +178,7 @@ end
 function ArmorModel.attach(character: Model, slot: string, quality: number, level: number): Model?
 	local model = Instance.new("Model")
 	model.Name = "Armor_" .. slot
+	model:SetAttribute("Quality", quality) -- para los brillos (client/ArmorAura)
 	for _, limbInfo in LIMBS[slot] do
 		local limb = character:FindFirstChild(limbInfo[1])
 		if limb and limb:IsA("BasePart") then
