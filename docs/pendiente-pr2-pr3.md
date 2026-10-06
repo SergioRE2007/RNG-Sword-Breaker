@@ -8,6 +8,20 @@ de dos tipos ("Quiero" / "Te doy") y se juntan a `main` tras probar cada PR sin 
 caducar, rechazos y spam; falta verlo con dos jugadores reales y no ha pasado revisor Sonnet). Del PR 1 ya pasó el revisor
 Sonnet y sus arreglos van en la rama `mazmorras-revision`; sigue sin probarse con dos jugadores reales. **Queda el PR 3.**
 
+### Progreso del PR 3 (rama `ui-profundidad`; se va actualizando con cada commit)
+
+Hecho:
+- [x] Paso 1, núcleo: `Ui.STYLE`; `Ui.bevel` con labio de abajo más grueso (crece con el botón, 3 a 7 px) y línea de brillo
+  `Shine`; `Ui.pressable` con aclarado al pasar el ratón (`Hover`) y hundido al pulsar (`Press` + labio aplastado + 0.95);
+  `AutoButtonColor = false` en `Ui.button`; las piezas del relieve siguen el `ZIndex` del botón.
+
+Falta (en este orden):
+- [ ] Paso 2, helpers nuevos: `Ui.pill`, `Ui.iconButton`, `Ui.setSelected`, `Ui.setEnabled`, `Ui.field`, `Ui.coinIcon`.
+- [ ] Paso 3, HUD: contadores con `Ui.pill`, `StatsDock` con `Ui.panel`, transporte/menú/engranaje, "Mazmorra" → "Mazmorras".
+- [ ] Paso 4, barrido: pestañas con `Ui.setSelected`, paneles sueltos a `Ui.panel`, campos con `Ui.field`, sonidos.
+- [ ] Paso 6, segunda pasada: capturas de cada pantalla, revisor Haiku (visual) y Sonnet (código).
+- [ ] Avisar al compañero antes de juntar (toca `Ui` y `Hud`).
+
 Antes de empezar: `git switch main`, `git pull`, `rojo serve`, y leer `CLAUDE.md` (ya está al día con lo del PR 1).
 Para la UI, cargar las skills `roblox-ui-engineer` y `roblox-ui-designer`. Pendiente además del PR 1: probar los grupos con
 dos jugadores reales y pasar un revisor Sonnet de código.

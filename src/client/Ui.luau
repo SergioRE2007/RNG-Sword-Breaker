@@ -37,8 +37,14 @@ Ui.COLORS = {
 	coins = Color3.fromRGB(255, 185, 30),
 }
 
+-- Medidas comunes del relieve: borde negro, labio de abajo (parte del alto del botón), radios y lo que crece
+-- o se encoge un botón al pasar el ratón y al pulsarlo.
+Ui.STYLE = { border = 3, lip = 0.13, radius = 12, cellRadius = 10, hover = 1.07, press = 0.95 }
+
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
+-- Piezas del relieve de un botón (Ui.bevel y Ui.pressable), por nombre.
+local RELIEF = { "Rim", "Gloss", "Shine", "Base", "Hover", "Press" }
 
 function Ui.round(instance: GuiObject, radius: number)
 	local corner = Instance.new("UICorner")
@@ -114,17 +120,50 @@ function Ui.bevel(instance: GuiObject)
 	fade.Transparency = NumberSequence.new(0.6, 0.95)
 	fade.Parent = gloss
 
-	-- Franja oscura abajo (el "grosor" del botón).
+	-- Línea de brillo pegada al borde de arriba: el filo donde da la luz.
+	local shine = Instance.new("Frame")
+	shine.Name = "Shine"
+	shine.AnchorPoint = Vector2.new(0.5, 0)
+	shine.Position = UDim2.new(0.5, 0, 0, 3)
+	shine.Size = UDim2.new(1, -radius * 2, 0, 2)
+	shine.BackgroundColor3 = WHITE
+	shine.BackgroundTransparency = 0.35
+	shine.BorderSizePixel = 0
+	shine.Parent = instance
+	Ui.round(shine, 1)
+
+	-- Labio oscuro abajo (el "grosor" del botón): crece con el botón, entre 3 y 7 px, y se oscurece hacia abajo.
+	-- Ui.pressable lo aplasta al pulsar.
 	local base = Instance.new("Frame")
 	base.Name = "Base"
 	base.AnchorPoint = Vector2.new(0.5, 1)
-	base.Position = UDim2.new(0.5, 0, 1, -3)
-	base.Size = UDim2.new(1, -12, 0, 4)
+	base.Position = UDim2.new(0.5, 0, 1, -2)
+	base.Size = UDim2.new(1, -6, Ui.STYLE.lip, 0)
 	base.BackgroundColor3 = BLACK
-	base.BackgroundTransparency = 0.78
 	base.BorderSizePixel = 0
 	base.Parent = instance
-	Ui.round(base, 2)
+	Ui.round(base, math.max(radius - 5, 2))
+	local limit = Instance.new("UISizeConstraint")
+	limit.MinSize = Vector2.new(0, 3)
+	limit.MaxSize = Vector2.new(math.huge, 7)
+	limit.Parent = base
+	local shade = Instance.new("UIGradient")
+	shade.Rotation = 90
+	shade.Transparency = NumberSequence.new(0.86, 0.6)
+	shade.Parent = base
+
+	-- La interfaz ordena el ZIndex globalmente: si a un botón se le sube la capa a mano, su relieve se quedaba
+	-- por debajo y se veía plano. Las piezas del relieve (y las de Ui.pressable) siguen la capa del botón.
+	local function follow()
+		for _, name in RELIEF do
+			local part = instance:FindFirstChild(name)
+			if part then
+				(part :: GuiObject).ZIndex = instance.ZIndex
+			end
+		end
+	end
+	follow()
+	instance:GetPropertyChangedSignal("ZIndex"):Connect(follow)
 end
 
 function Ui.label(parent: Instance, textSize: number): TextLabel
@@ -142,15 +181,17 @@ end
 function Ui.button(parent: Instance, text: string, color: Color3): TextButton
 	local item = Instance.new("TextButton")
 	item.BackgroundColor3 = color
+	-- Los estados (ratón encima, pulsado) los pinta Ui.pressable, no el oscurecido de Roblox.
+	item.AutoButtonColor = false
 	item.TextColor3 = WHITE
 	item.Font = Ui.FONT
 	item.TextSize = 17
 	item.TextWrapped = true
 	item.Text = text
 	item.Parent = parent
-	Ui.round(item, 12)
+	Ui.round(item, Ui.STYLE.radius)
 	Ui.bevel(item)
-	Ui.stroke(item, BLACK, 3)
+	Ui.stroke(item, BLACK, Ui.STYLE.border)
 	Ui.textStroke(item, 2)
 	Ui.pressable(item)
 	return item
@@ -229,36 +270,78 @@ function Ui.layer(root: GuiObject, z: number)
 	end
 end
 
--- Rebote al pasar el ratón (crece) y al pulsar (se hunde). Vale para cualquier botón o casilla.
+-- Estados de un botón o casilla. Al pasar el ratón crece y se aclara; al pulsar se hunde: encoge, el labio de
+-- abajo (el `Base` de Ui.bevel, si lo tiene) se aplasta y le cae una sombra por arriba. En modo rendimiento
+-- no hay rebotes, pero el aclarado y el hundido se siguen viendo (sin animar).
 function Ui.pressable(item: GuiButton, grow: number?)
 	local scale = Instance.new("UIScale")
 	scale.Name = "PressScale"
 	scale.Parent = item
-	local big = grow or 1.07
-	local function to(value: number, time: number, style: Enum.EasingStyle)
+	local big = grow or Ui.STYLE.hover
+	local corner = item:FindFirstChildOfClass("UICorner")
+	local radius = if corner then corner.CornerRadius.Offset else 10
+	local function overlay(name: string, color: Color3): Frame
+		local frame = Instance.new("Frame")
+		frame.Name = name
+		frame.Size = UDim2.fromScale(1, 1)
+		frame.BackgroundColor3 = color
+		frame.BackgroundTransparency = 1
+		frame.BorderSizePixel = 0
+		frame.ZIndex = item.ZIndex
+		frame.Parent = item
+		Ui.round(frame, radius)
+		return frame
+	end
+	local hover = overlay("Hover", WHITE)
+	local press = overlay("Press", BLACK)
+	-- La sombra de pulsado cae desde arriba y se apaga hacia abajo.
+	local fall = Instance.new("UIGradient")
+	fall.Rotation = 90
+	fall.Transparency = NumberSequence.new(0, 0.7)
+	fall.Parent = press
+	local base = item:FindFirstChild("Base")
+
+	local function tween(target: Instance, goal, time: number, style: Enum.EasingStyle?)
 		if Performance.get() then
-			scale.Scale = 1 -- modo rendimiento: sin rebotes
+			for property, value in goal do
+				(target :: any)[property] = value
+			end
 			return
 		end
-		TweenService:Create(scale, TweenInfo.new(time, style, Enum.EasingDirection.Out), { Scale = value }):Play()
+		TweenService:Create(target, TweenInfo.new(time, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal):Play()
+	end
+	local function to(value: number, time: number, style: Enum.EasingStyle)
+		-- Modo rendimiento: sin rebotes.
+		tween(scale, { Scale = if Performance.get() then 1 else value }, time, style)
 	end
 	local over = false
+	local function pressed(down: boolean)
+		tween(press, { BackgroundTransparency = if down then 0.72 else 1 }, 0.07)
+		if base then
+			tween(base, { Size = UDim2.new(1, -6, if down then 0.02 else Ui.STYLE.lip, 0) }, if down then 0.07 else 0.16)
+		end
+	end
 	item.Activated:Connect(function()
 		Sfx.play("click")
 	end)
 	item.MouseEnter:Connect(function()
 		over = true
 		to(big, 0.18, Enum.EasingStyle.Back)
+		tween(hover, { BackgroundTransparency = 0.86 }, 0.12)
 	end)
 	item.MouseLeave:Connect(function()
 		over = false
 		to(1, 0.15, Enum.EasingStyle.Quad)
+		tween(hover, { BackgroundTransparency = 1 }, 0.15)
+		pressed(false)
 	end)
 	item.MouseButton1Down:Connect(function()
-		to(0.93, 0.07, Enum.EasingStyle.Quad)
+		to(Ui.STYLE.press, 0.07, Enum.EasingStyle.Quad)
+		pressed(true)
 	end)
 	item.MouseButton1Up:Connect(function()
 		to(if over then big else 1, 0.2, Enum.EasingStyle.Back)
+		pressed(false)
 	end)
 end
 
