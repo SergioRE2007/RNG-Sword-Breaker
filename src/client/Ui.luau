@@ -258,6 +258,107 @@ function Ui.panel(frame: GuiObject, base: Color3, accent: Color3?)
 	end
 end
 
+-- Sombra exterior: una copia oscura del marco, caída `drop` px, una capa por debajo (la interfaz ordena el ZIndex
+-- globalmente, así que un hijo con menos ZIndex que su padre se pinta detrás). Separa del fondo lo que flota
+-- sobre el juego (HUD). Sigue la capa del marco si se le cambia.
+function Ui.shadow(frame: GuiObject, drop: number?): Frame
+	local corner = frame:FindFirstChildOfClass("UICorner")
+	local shadow = Instance.new("Frame")
+	shadow.Name = "Shadow"
+	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+	shadow.Position = UDim2.new(0.5, 0, 0.5, drop or 5)
+	shadow.Size = UDim2.new(1, Ui.STYLE.border * 2, 1, Ui.STYLE.border * 2)
+	shadow.BackgroundColor3 = BLACK
+	shadow.BackgroundTransparency = 0.62
+	shadow.BorderSizePixel = 0
+	shadow.ZIndex = frame.ZIndex - 1
+	shadow.Parent = frame
+	Ui.round(shadow, (if corner then corner.CornerRadius.Offset else 10) + Ui.STYLE.border)
+	frame:GetPropertyChangedSignal("ZIndex"):Connect(function()
+		shadow.ZIndex = frame.ZIndex - 1
+	end)
+	return shadow
+end
+
+-- Zócalo de un icono: hueco oscuro y redondo, hundido en el botón, para que el icono no flote suelto. Va antes
+-- que el icono.
+function Ui.socket(iconBox: GuiObject): Frame
+	local socket = Instance.new("Frame")
+	socket.Name = "Socket"
+	socket.AnchorPoint = Vector2.new(0.5, 0.5)
+	socket.Position = UDim2.fromScale(0.5, 0.5)
+	socket.Size = UDim2.fromScale(0.98, 0.98)
+	socket.BackgroundColor3 = BLACK
+	socket.BackgroundTransparency = 0.72
+	socket.BorderSizePixel = 0
+	socket.ZIndex = iconBox.ZIndex
+	socket.Parent = iconBox
+	Ui.round(socket, 100)
+	-- Más oscuro arriba (sombra del borde) y un filo claro abajo, como un hueco iluminado desde arriba.
+	local depth = Instance.new("UIGradient")
+	depth.Rotation = 90
+	depth.Transparency = NumberSequence.new(0, 0.55)
+	depth.Parent = socket
+	local edge = Ui.stroke(socket, WHITE, 1.5)
+	edge.Transparency = 0.7
+	local light = Instance.new("UIGradient")
+	light.Rotation = 90
+	light.Transparency = NumberSequence.new(1, 0)
+	light.Parent = edge
+	return socket
+end
+
+-- Contador o chip con relieve: fondo del color, labio, borde negro y sombra exterior.
+function Ui.pill(frame: GuiObject, color: Color3, radius: number?)
+	frame.BackgroundColor3 = color
+	Ui.round(frame, radius or 14)
+	Ui.bevel(frame)
+	Ui.stroke(frame, BLACK, Ui.STYLE.border)
+	Ui.shadow(frame)
+end
+
+-- Marca un botón (pestaña, opción) como elegido: borde blanco. El primer UIStroke directo del botón es su borde.
+function Ui.setSelected(button: GuiObject, selected: boolean)
+	local stroke = button:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = if selected then WHITE else BLACK
+	end
+end
+
+-- Botón que se puede o no se puede pulsar: apagado se ve gris y no responde.
+function Ui.setEnabled(button: GuiButton, enabled: boolean)
+	button.Active = enabled
+	button.Interactable = enabled
+	local press = button:FindFirstChild("Press")
+	if press then
+		(press :: Frame).BackgroundTransparency = if enabled then 1 else 0.45
+	end
+end
+
+-- Caja de texto con el estilo del juego: hueco oscuro, borde negro, sombra por dentro arriba y filo claro abajo.
+-- Sin degradado en la propia caja: teñiría también lo que se escribe.
+function Ui.field(box: TextBox)
+	box.BackgroundColor3 = Ui.COLORS.dark
+	box.TextColor3 = WHITE
+	box.PlaceholderColor3 = Color3.fromRGB(120, 124, 140)
+	box.Font = Ui.FONT
+	Ui.round(box, 8)
+	Ui.stroke(box, BLACK, 2)
+	for _, edge in { { 0, BLACK, 0.55, 5 }, { 1, WHITE, 0.8, 2 } } do
+		local line = Instance.new("Frame")
+		line.Name = if edge[1] == 0 then "Shade" else "Edge"
+		line.AnchorPoint = Vector2.new(0.5, edge[1])
+		line.Position = UDim2.new(0.5, 0, edge[1], if edge[1] == 0 then 1 else -1)
+		line.Size = UDim2.new(1, -8, 0, edge[4])
+		line.BackgroundColor3 = edge[2]
+		line.BackgroundTransparency = edge[3]
+		line.BorderSizePixel = 0
+		line.ZIndex = box.ZIndex
+		line.Parent = box
+		Ui.round(line, 3)
+	end
+end
+
 -- Pone `root` y todo lo suyo en la capa `z`. La interfaz ordena el ZIndex globalmente: un botón con
 -- relieve (Ui.button) subido de capa dejaba su brillo, su canto y su icono por debajo, y se veía plano.
 -- Con todo en la misma capa manda el orden del árbol y el relieve vuelve a quedar encima.

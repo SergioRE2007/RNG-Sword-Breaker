@@ -34,16 +34,14 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 	box.AnchorPoint = Vector2.new(0, 1)
 	box.Position = UDim2.new(0, MARGIN, 1, -MARGIN - (row - 1) * 64)
 	box.Size = UDim2.fromOffset(270, 56)
-	box.BackgroundColor3 = color
 	box.Parent = gui
-	Ui.round(box, 14)
-	Ui.bevel(box)
-	Ui.stroke(box, BLACK, 3)
+	Ui.pill(box, color)
 	local iconBox = Instance.new("Frame")
 	iconBox.Position = UDim2.fromOffset(6, 4)
 	iconBox.Size = UDim2.fromOffset(48, 48)
 	iconBox.BackgroundTransparency = 1
 	iconBox.Parent = box
+	Ui.socket(iconBox)
 	icon(iconBox, color)
 	local text = Ui.label(box, 28)
 	text.Name = "Amount"
@@ -229,7 +227,9 @@ function Hud.start()
 		iconBox.Size = UDim2.fromOffset(48, 48)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = button
+		Ui.socket(iconBox)
 		entry[4](iconBox, entry[3])
+		Ui.shadow(button)
 		local label = Ui.label(button, 30)
 		label.Position = UDim2.fromOffset(62, 0)
 		label.Size = UDim2.new(1, -70, 1, 0)
@@ -283,24 +283,33 @@ function Hud.start()
 	end
 	Ui.round(statsBox, 12)
 	Ui.stroke(statsBox, BLACK, 3)
-	Ui.gradient(statsBox, Color3.fromRGB(58, 48, 110), Color3.fromRGB(18, 18, 40), 90)
+	Ui.panel(statsBox, Color3.fromRGB(46, 40, 96))
+	Ui.shadow(statsBox)
+	Ui.shadow(tab)
+	-- Las filas van en un marco de dentro: el relleno y la lista no deben mover el brillo ni el canto del panel.
+	local statsContent = Instance.new("Frame")
+	statsContent.Name = "Content"
+	statsContent.Size = UDim2.fromScale(1, 0)
+	statsContent.AutomaticSize = Enum.AutomaticSize.Y
+	statsContent.BackgroundTransparency = 1
+	statsContent.Parent = statsBox
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, 8)
 	padding.PaddingBottom = UDim.new(0, 8)
 	padding.PaddingLeft = UDim.new(0, 12)
 	padding.PaddingRight = UDim.new(0, 10)
-	padding.Parent = statsBox
+	padding.Parent = statsContent
 	local statsLayout = Instance.new("UIListLayout")
 	statsLayout.Padding = UDim.new(0, 2)
 	statsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	statsLayout.Parent = statsBox
+	statsLayout.Parent = statsContent
 
 	local function statsRow(order: number, height: number, size: number, dotColor: Color3?): TextLabel
 		local row = Instance.new("Frame")
 		row.LayoutOrder = order
 		row.Size = UDim2.new(1, 0, 0, height)
 		row.BackgroundTransparency = 1
-		row.Parent = statsBox
+		row.Parent = statsContent
 		local indent = 0
 		if dotColor then
 			local dot = Instance.new("Frame")
@@ -372,7 +381,9 @@ function Hud.start()
 		iconBox.Size = UDim2.fromOffset(52, 52)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = item
+		Ui.socket(iconBox)
 		entry[4](iconBox)
+		Ui.shadow(item)
 		local label = Ui.label(item, 22)
 		label.AnchorPoint = Vector2.new(0.5, 1)
 		label.Position = UDim2.new(0.5, 0, 1, -7)

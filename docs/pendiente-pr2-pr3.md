@@ -15,10 +15,17 @@ Hecho:
   `Shine`; `Ui.pressable` con aclarado al pasar el ratón (`Hover`) y hundido al pulsar (`Press` + labio aplastado + 0.95);
   `AutoButtonColor = false` en `Ui.button`; las piezas del relieve siguen el `ZIndex` del botón.
 
+- [x] Paso 2, helpers nuevos: `Ui.shadow` (sombra exterior: hijo una capa por debajo; sustituye a la idea de
+  `Ui.iconButton`, no hace falta contenedor), `Ui.socket` (zócalo del icono), `Ui.pill`, `Ui.setSelected`,
+  `Ui.setEnabled`, `Ui.field`. No se hizo `Ui.coinIcon` (el `orbIcon` ya hace de moneda).
+- [x] Paso 3, HUD: contadores con `Ui.pill` y zócalo; transporte, menú, engranaje y pestaña de estadísticas con sombra
+  y zócalo; la caja de estadísticas es `Ui.panel` (las filas pasan a `StatsDock.Stats.Content`). "Mazmorras" ya estaba.
+
 Falta (en este orden):
-- [ ] Paso 2, helpers nuevos: `Ui.pill`, `Ui.iconButton`, `Ui.setSelected`, `Ui.setEnabled`, `Ui.field`, `Ui.coinIcon`.
-- [ ] Paso 3, HUD: contadores con `Ui.pill`, `StatsDock` con `Ui.panel`, transporte/menú/engranaje, "Mazmorra" → "Mazmorras".
-- [ ] Paso 4, barrido: pestañas con `Ui.setSelected`, paneles sueltos a `Ui.panel`, campos con `Ui.field`, sonidos.
+- [ ] Paso 4, barrido: pestañas con `Ui.setSelected` (Backpack, Trade), campos con `Ui.field` (Trade, Settings),
+  paneles sueltos a `Ui.panel` (Backpack `count/bar`, ArmorPane, Missions, PassShop, Dungeons, GachaRoll, SkillTree, Trade),
+  sonido suave al pasar el ratón.
+- [ ] Comprobar el modo rendimiento y el `HudRoot` a escala 0.55.
 - [ ] Paso 6, segunda pasada: capturas de cada pantalla, revisor Haiku (visual) y Sonnet (código).
 - [ ] Avisar al compañero antes de juntar (toca `Ui` y `Hud`).
 
