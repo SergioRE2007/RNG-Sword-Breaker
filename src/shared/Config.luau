@@ -224,6 +224,9 @@ Config.Artifacts = {
 }
 Config.StatNames = { damage = "daño", luck = "suerte", coins = "monedas", gems = "gemas" }
 
+-- Decorado del mapa: "japan" (bosque japonés de atardecer, server/SceneryJapan) o "tropical" (la isla de siempre, server/Scenery).
+Config.Theme = "japan"
+
 -- Mapa: un hub circular en el centro y las parcelas en círculo a su alrededor.
 Config.Plot = {
 	Count = 8,
