@@ -431,7 +431,21 @@ local function ring(count: number, radius: number, phase: number, callback: (Vec
 	end
 end
 
+-- El mapa se hace por código: en el lugar de Studio solo valen el Baseplate y el SpawnLocation de fábrica. Cualquier
+-- otra pieza suelta en Workspace (puesta a mano o por accidente) se quita al arrancar: una placa de hierba de 2047
+-- studs sin anclar, que estaba en el lugar, salía empujada hacia arriba y acababa flotando sobre toda la isla,
+-- tapando el cielo.
+local function clearLoose()
+	for _, item in workspace:GetChildren() do
+		if item:IsA("BasePart") and not item:IsA("Terrain") and not item:IsA("SpawnLocation") and item.Name ~= "Baseplate" then
+			warn(`[Scenery] Quitada de Workspace una pieza que no es del juego: {item.Name} (tamaño {item.Size})`)
+			item:Destroy()
+		end
+	end
+end
+
 function Scenery.start()
+	clearLoose()
 	if Config.Theme == "japan" then
 		require(script.Parent.SceneryJapan).start()
 		return
