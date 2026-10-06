@@ -143,7 +143,7 @@ local function buildUi()
 	local decisionTitle = Ui.label(decisionBody, 30)
 	decisionTitle.Position = UDim2.fromOffset(0, 14)
 	decisionTitle.Size = UDim2.new(1, 0, 0, 40)
-	decisionTitle.Text = "¡GRADO OBTENIDO!"
+	decisionTitle.Text = "¿REFORJAR ESTE GRADO?"
 	local decisionGrade = Ui.label(decisionBody, 64)
 	decisionGrade.Position = UDim2.fromOffset(0, 62)
 	decisionGrade.Size = UDim2.new(1, 0, 0, 80)
@@ -166,7 +166,7 @@ local function buildUi()
 	decisionLayout.Padding = UDim.new(0, 18)
 	decisionLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	decisionLayout.Parent = decisionButtons
-	local skipButton = Ui.button(decisionButtons, "Descartar", Ui.COLORS.red)
+	local skipButton = Ui.button(decisionButtons, "Reforjar", Ui.COLORS.red)
 	skipButton.Name = "Skip"
 	skipButton.LayoutOrder = 1
 	skipButton.Size = UDim2.fromOffset(200, 60)
@@ -560,17 +560,20 @@ local function easeOut(alpha: number): number
 	return 1 - (1 - alpha) * (1 - alpha)
 end
 
--- Cuadro "grado obtenido" tras un martillazo a mano: espera a que el jugador elija. Descartar le
--- pide al servidor volver al grado anterior (RevertGrade); Quedarme no hace falta avisar.
+-- Cuadro "¿reforjar?": solo sale cuando el arma ya tiene un grado de los marcados en Ajustes como
+-- deseados (los que paran el auto) y se va a martillar encima. Devuelve true si se puede seguir.
 local choose: ((boolean) -> ())? = nil
-local function askKeep(index: number, previous: number)
-	local entry = GRADES.list[index]
+local function confirmReforge(): boolean
+	local index = currentGradeIndex()
+	local entry = if index then GRADES.list[index] else nil
+	if not entry or not api.state.stop[index] then
+		return true
+	end
 	local percent = Modifiers.formatPercent(Modifiers.percent("grades", index))
 	ui.decisionGrade.Text = `Grado {entry.name}`
 	ui.decisionGrade.TextColor3 = if entry.rainbow then WHITE else entry.color
 	ui.decisionInfo.Text = `{Modifiers.effect(entry)} · {percent}`
-	local old = GRADES.list[previous]
-	ui.decisionOld.Text = if old then `Tu grado actual: <font color="#{(old.color :: Color3):ToHex()}">{old.name}</font>` else "Ahora no tienes grado"
+	ui.decisionOld.Text = "Lo tienes marcado como deseado: si reforjas, lo pierdes"
 	ui.decision.Visible = true
 	if scene then
 		scene.deciding = true
@@ -585,10 +588,7 @@ local function askKeep(index: number, previous: number)
 		task.spawn(thread, keep)
 	end
 	local keep = coroutine.yield()
-	if not keep and scene and scene.placedId then
-		Remotes.RevertGrade:FireServer(scene.placedId)
-		setGradeLabel(if previous > 0 then previous else nil)
-	end
+	return not keep and alive()
 end
 
 -- Un martillazo entero: pide la tirada, levanta el martillo, espera el resultado y golpea.
@@ -600,6 +600,12 @@ local function strike(auto: boolean): boolean
 	end
 	if not api.canAfford() then
 		Ui.toast("No te quedan Cristales de grado", Ui.COLORS.red)
+		return false
+	end
+	if not auto and not confirmReforge() then
+		return false
+	end
+	if striking or scene ~= s or not s.sword then
 		return false
 	end
 	striking = true
@@ -687,9 +693,6 @@ local function strike(auto: boolean): boolean
 		return false
 	end
 	s.hammerFixed = false
-	if not auto and alive() and s.sword then
-		askKeep(index, s.resultPrevious or 0)
-	end
 	striking = false
 	return state.last ~= nil
 end
@@ -797,6 +800,9 @@ local function connectInput()
 		end
 		if not scene.placedId then
 			Ui.toast("Elige un arma primero", Ui.COLORS.red)
+			return
+		end
+		if striking or ui.decision.Visible or not confirmReforge() or state.auto then
 			return
 		end
 		state.auto = true
@@ -1039,7 +1045,8 @@ function ForgeScene.enter()
 		-- Con el cuadro de Quedarme/Descartar abierto el martillo se queda donde estaba y vuelve el cursor.
 		local shown = if s.deciding then s.hammerWasShown == true else (inside or s.hammerFixed)
 		showHammer(shown)
-		UserInputService.MouseIconEnabled = s.deciding == true or not shown
+		-- En auto el martillo va solo: el cursor se queda a la vista para poder pulsar Parar.
+		UserInputService.MouseIconEnabled = s.deciding == true or api.state.auto == true or not shown
 		if not s.hammerFixed then
 			if inside then
 				local target = s.anvil.CFrame * localPoint :: Vector3
@@ -1063,7 +1070,7 @@ function ForgeScene.exit()
 	active = false
 	local s = scene
 	if choose then
-		choose(true) -- al salir con el cuadro abierto, se queda el grado nuevo
+		choose(true) -- al salir con el cuadro abierto no se reforja
 	end
 	ui.decision.Visible = false
 	api.state.auto = false
