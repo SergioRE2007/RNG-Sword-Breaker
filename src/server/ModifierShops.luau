@@ -13,6 +13,7 @@ local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
+local StallSkin = require(script.Parent.StallSkin)
 
 local ModifierShops = {}
 
@@ -116,13 +117,15 @@ local function onAdminSet(player: Player, kind: unknown, id: unknown, index: unk
 end
 
 -- Puesto: mostrador, cuatro postes, toldo de rayas inclinado, cartel flotante y el aviso de
--- "pulsa E". `position` en el suelo; mira hacia el centro del hub.
-local function buildStall(parent: Instance, kind: string, position: Vector3, stripes: { Color3 }, title: string?)
+-- "pulsa E". `position` en el suelo; mira hacia el centro del hub. Con `skinned` usa el
+-- aspecto de `StallSkin` (toldo azul y vendedor) en vez de las piezas sueltas.
+local function buildStall(parent: Instance, kind: string, position: Vector3, stripes: { Color3 }, title: string?, skinned: boolean?)
 	local shopTitle = title or Modifiers.KINDS[kind].title
 	local model = Instance.new("Model")
 	model.Name = "Tienda" .. shopTitle
 	local floor = Config.Plot.FloorHeight
 	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
+	local skin = if skinned then StallSkin.build() else nil
 
 	local function block(name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): Part
 		local item = Instance.new("Part")
@@ -138,29 +141,49 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 		return item
 	end
 
-	local wood = Color3.fromRGB(40, 50, 110)
-	local width, depth = 16, 9
-	local counter = block("Counter", Vector3.new(width, 3.6, 3), base * CFrame.new(0, floor + 1.8, -depth / 2 + 1.5), Color3.fromRGB(245, 245, 250))
-	block("CounterTop", Vector3.new(width + 0.6, 0.5, 3.6), base * CFrame.new(0, floor + 3.85, -depth / 2 + 1.5), wood)
-	for _, x in { -width / 2 + 0.6, width / 2 - 0.6 } do
-		for _, z in { -depth / 2 + 0.6, depth / 2 - 0.6 } do
-			local height = if z < 0 then 9 else 11
-			block("Post", Vector3.new(0.9, height, 0.9), base * CFrame.new(x, floor + height / 2, z), wood)
+	local counter: Part
+	local signHeight = 13
+	if skin then
+		-- El modelo mira hacia -Z; se centra sobre `position` y se apoya en el suelo del hub.
+		local pivot = skin:GetPivot()
+		local boxCFrame, boxSize = skin:GetBoundingBox()
+		local centre = pivot:ToObjectSpace(boxCFrame).Position
+		skin:PivotTo(base * CFrame.new(-centre.X, floor + boxSize.Y / 2 - centre.Y, -centre.Z))
+		for _, item in skin:GetChildren() do
+			item.Parent = model
 		end
-	end
-	-- Toldo: tiras alternas, más alto por detrás.
-	local slope = math.atan2(2, depth)
-	local count = 8
-	for index = 1, count do
-		local x = -width / 2 + (index - 0.5) * width / count
-		local strip = block("Awning", Vector3.new(width / count + 0.05, 0.4, depth / math.cos(slope) + 1.6), base * CFrame.new(x, floor + 10.2, 0) * CFrame.Angles(-slope, 0, 0), stripes[(index - 1) % #stripes + 1])
-		strip.CastShadow = true
+		signHeight = boxSize.Y - 1
+		-- Pieza invisible por delante del mostrador que lleva el cartel y el aviso.
+		counter = block("Counter", Vector3.new(6, 1, 2), base * CFrame.new(0, floor + 3, -boxSize.Z / 2 + 3), Color3.new(1, 1, 1))
+		counter.Transparency = 1
+		counter.CanCollide = false
+		counter.CanQuery = false
+		counter.CastShadow = false
+	else
+		local wood = Color3.fromRGB(40, 50, 110)
+		local width, depth = 16, 9
+		counter = block("Counter", Vector3.new(width, 3.6, 3), base * CFrame.new(0, floor + 1.8, -depth / 2 + 1.5), Color3.fromRGB(245, 245, 250))
+		block("CounterTop", Vector3.new(width + 0.6, 0.5, 3.6), base * CFrame.new(0, floor + 3.85, -depth / 2 + 1.5), wood)
+		for _, x in { -width / 2 + 0.6, width / 2 - 0.6 } do
+			for _, z in { -depth / 2 + 0.6, depth / 2 - 0.6 } do
+				local height = if z < 0 then 9 else 11
+				block("Post", Vector3.new(0.9, height, 0.9), base * CFrame.new(x, floor + height / 2, z), wood)
+			end
+		end
+		-- Toldo: tiras alternas, más alto por detrás.
+		local slope = math.atan2(2, depth)
+		local count = 8
+		for index = 1, count do
+			local x = -width / 2 + (index - 0.5) * width / count
+			local strip = block("Awning", Vector3.new(width / count + 0.05, 0.4, depth / math.cos(slope) + 1.6), base * CFrame.new(x, floor + 10.2, 0) * CFrame.Angles(-slope, 0, 0), stripes[(index - 1) % #stripes + 1])
+			strip.CastShadow = true
+		end
 	end
 
 	-- Cartel con el nombre de la tienda, por encima del toldo y con borde negro grueso.
 	local gui = Instance.new("BillboardGui")
 	gui.Size = UDim2.fromOffset(340, 80)
-	gui.StudsOffset = Vector3.new(0, 13, 0)
+	gui.StudsOffset = Vector3.new(0, signHeight, 0)
 	gui.MaxDistance = 220
 	gui.LightInfluence = 0
 	gui.Parent = counter
@@ -209,8 +232,8 @@ function ModifierShops.start()
 		local angle = math.rad(degrees)
 		return Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
 	end
-	buildStall(map, "traits", at(112.5), { Color3.fromRGB(255, 90, 140), Color3.fromRGB(80, 200, 255), Color3.fromRGB(255, 220, 80), Color3.fromRGB(150, 110, 255) })
-	buildStall(map, "grades", at(157.5), { Color3.fromRGB(170, 90, 255), Color3.fromRGB(245, 245, 250) })
+	buildStall(map, "traits", at(112.5), { Color3.fromRGB(255, 90, 140), Color3.fromRGB(80, 200, 255), Color3.fromRGB(255, 220, 80), Color3.fromRGB(150, 110, 255) }, nil, true)
+	buildStall(map, "grades", at(157.5), { Color3.fromRGB(170, 90, 255), Color3.fromRGB(245, 245, 250) }, nil, true)
 
 	Remotes.RollTrait.OnServerEvent:Connect(function(player, id, count, priority)
 		onRoll(player, "traits", id, count, priority)
