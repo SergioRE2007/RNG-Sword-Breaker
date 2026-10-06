@@ -15,6 +15,7 @@ Config.Test = {
 	TradeBot = true, -- "Bot de pruebas" en la lista de Comercio: acepta y confirma solo, para probar un trato sin otro jugador
 	AllGamepasses = true, -- todos los pases de juego de Config.Gamepasses (para probar sus ventajas sin comprarlos)
 	AllGear = true, -- todos los accesorios (Config.Artifacts) y una pieza de armadura de cada hueco y cada mazmorra al entrar
+	RevealSlow = 1, -- por cuánto se alargan los tiempos de la presentación de las tiradas (client/RollReveal): con 4 se ve a cámara lenta para revisarla en capturas
 	PartyBots = 0, -- compañeros "fantasma" que se unen a tu grupo de mazmorra (cuentan para el tamaño y el escalado, no pelean): para probar con un solo jugador
 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
@@ -144,12 +145,16 @@ Config.Gacha = {
 	-- armas y sin la del objeto) decide cuánto se celebra. Como son tres tiradas a la vez, llegar a un N es más fácil
 	-- de lo que suena. Medido con 120 000 tiradas: llega a 500 una de cada ~70-160, a 2000 una de cada ~180-490 y a
 	-- 25 000 una de cada ~1600-4300 (menos cuanta más suerte).
-	ShowcaseOdds = 2000, -- desde aquí la tirada pasa a pantalla completa (antes 200: salía cada 30 tiradas, demasiado ahora que llegan solas mientras juegas)
+	-- Las tiradas se enseñan en el mundo (client/RollReveal): la energía sale del objeto roto, se destapa el arma y
+	-- vuela al jugador. Desde estos "1 entre N" sube de nivel el espectáculo: Normal por debajo del primero, y luego
+	-- Buena, Genial, Increíble y Premio gordo. Como N cuenta la suerte del jugador, la misma arma se celebra más a
+	-- quien le era más difícil.
+	RevealOdds = { 10, 100, 2000, 25000 },
+	ShowcaseOdds = 2000, -- (solo con FreeRoll) desde aquí la tirada gratis pasa a pantalla completa
 	RevealTimeout = 30, -- si el cliente no avisa de que ha destapado una tirada rara, su aura y aviso salen igual a los N segundos
 	AuraOdds = 500, -- desde aquí el aura se ve en el personaje (también para los demás)
 	AnnounceOdds = 25000, -- desde aquí se anuncia el arma a todo el servidor
 	SellValue = 0, -- gemas por vender una espada (a mano o con la venta automática). 0: las gemas salen de la parcela
-	ShowcaseStay = 3, -- segundos que se queda la animación grande de una tirada de objeto antes de cerrarse sola (con FreeRoll espera a "Continuar")
 	-- Empujón del principio (para enganchar): las primeras BoostRolls tiradas de cada jugador tienen la suerte multiplicada por BoostLuck.
 	BoostRolls = 15,
 	BoostLuck = 30,

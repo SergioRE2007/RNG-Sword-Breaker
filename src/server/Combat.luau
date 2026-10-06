@@ -50,6 +50,8 @@ local function onSwing(player: Player)
 	local _, kind = Stats.weapon(player)
 	for _, part in Destructibles.getInRange(player, root.CFrame, range, kind.arc) do
 		Remotes.Hit:FireAllClients(player, part, part.Position, damage)
+		-- Dónde estaba y cuánto medía, antes de que desaparezca: de ahí sale su premio en la pantalla del jugador.
+		local origin, box = part.Position, part.Size
 		local broken, coins, gems, object = Destructibles.damage(part, damage, player)
 		if broken then
 			PlayerData.addCoins(player, coins)
@@ -58,7 +60,7 @@ local function onSwing(player: Player)
 				PlayerData.addGems(player, gems)
 			end
 			-- Tiradas de arma del objeto: cuántas y con qué suerte se decidió al aparecer (rareza y tamaño).
-			Gacha.give(player, object.luck, "object", object.rolls, { name = broken.name, quality = object.quality })
+			Gacha.give(player, object.luck, "object", object.rolls, { name = broken.name, quality = object.quality, origin = origin, box = box })
 			Traits.onBroken(player, broken)
 			Gear.onBroken(player)
 		end
