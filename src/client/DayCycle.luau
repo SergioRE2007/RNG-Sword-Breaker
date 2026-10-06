@@ -12,15 +12,15 @@ local Performance = require(script.Parent.Performance)
 local DayCycle = {}
 
 local NIGHT = {
-	ambient = Color3.fromRGB(34, 40, 78),
-	outdoor = Color3.fromRGB(44, 52, 98),
+	ambient = Color3.fromRGB(36, 26, 64),
+	outdoor = Color3.fromRGB(46, 34, 84),
 	brightness = 0.35, -- fracción del brillo de día
-	atmosphere = Color3.fromRGB(56, 66, 118),
-	decay = Color3.fromRGB(34, 40, 84),
-	tint = Color3.fromRGB(176, 192, 255),
+	atmosphere = Color3.fromRGB(30, 18, 52), -- cielo de noche: morado oscuro casi negro
+	decay = Color3.fromRGB(22, 12, 40),
+	tint = Color3.fromRGB(196, 176, 255),
 	saturation = -0.1,
 	fogDensity = 0.3, -- niebla de noche: densidad y bruma que se suman a las del día
-	fogHaze = 1.8,
+	fogHaze = 0.6, -- poca bruma: la mucha taparía las estrellas
 	sunBoost = 0.3, -- de día, más claro al mediodía (solo la luz del sol y el ambiente, no las luces del mapa)
 }
 

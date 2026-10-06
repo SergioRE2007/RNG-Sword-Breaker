@@ -259,21 +259,32 @@ function Ambience.start()
 	glints.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.15), NumberSequenceKeypoint.new(1, 1) })
 	glints.Parent = glintZone
 
-	-- Mariposas: revolotean bajas por el césped cerca de la cámara, cada una de un color.
+	-- Mariposas: revolotean bajas por el césped cerca de la cámara, cada una de un color. Dos pares de alas (las de
+	-- delante grandes, con una mancha clara, y las de atrás más pequeñas y oscuras que aletean con un pelín de
+	-- retraso), cuerpo, cabeza y dos antenas.
 	local butterflies = {}
 	local wingColors = { Color3.fromRGB(255, 150, 60), Color3.fromRGB(120, 180, 255), Color3.fromRGB(255, 120, 190), Color3.fromRGB(255, 230, 90), Color3.fromRGB(190, 140, 255) }
-	for index = 1, 28 do
-		local function wing(): Part
-			local item = zone("Wing", Vector3.new(0.6, 0.04, 0.5))
-			item.Transparency = 0
-			item.Color = wingColors[index % #wingColors + 1]
-			item.Material = Enum.Material.SmoothPlastic
-			return item
+	local BODY_COLOR = Color3.fromRGB(52, 36, 40)
+	local function piece(name: string, size: Vector3, color: Color3, shape: Enum.PartType?): Part
+		local item = zone(name, size)
+		item.Transparency = 0
+		item.Color = color
+		item.Material = Enum.Material.SmoothPlastic
+		if shape then
+			item.Shape = shape
 		end
-		local leftWing, rightWing = wing(), wing()
+		return item
+	end
+	for index = 1, 28 do
+		local main = wingColors[index % #wingColors + 1]
+		local back = main:Lerp(Color3.new(0, 0, 0), 0.28)
 		table.insert(butterflies, {
-			left = leftWing,
-			right = rightWing,
+			upper = { piece("WingUpper", Vector3.new(0.95, 0.04, 0.8), main), piece("WingUpper", Vector3.new(0.95, 0.04, 0.8), main) },
+			lower = { piece("WingLower", Vector3.new(0.6, 0.04, 0.55), back), piece("WingLower", Vector3.new(0.6, 0.04, 0.55), back) },
+			spots = { piece("WingSpot", Vector3.new(0.22, 0.05, 0.22), Color3.fromRGB(255, 250, 235)), piece("WingSpot", Vector3.new(0.22, 0.05, 0.22), Color3.fromRGB(255, 250, 235)) },
+			feelers = { piece("Antenna", Vector3.new(0.03, 0.03, 0.5), BODY_COLOR), piece("Antenna", Vector3.new(0.03, 0.03, 0.5), BODY_COLOR) },
+			body = piece("Body", Vector3.new(0.18, 0.18, 0.95), BODY_COLOR),
+			head = piece("Head", Vector3.one * 0.26, BODY_COLOR, Enum.PartType.Ball),
 			-- Cada una tiene su rincón fijo de la isla (no sigue a la cámara).
 			home = Vector3.new(math.cos(index * 2.4) * (60 + index * 9), 0, math.sin(index * 2.4) * (60 + index * 9)),
 			radius = math.random(6, 14),
@@ -314,11 +325,26 @@ function Ambience.start()
 			local position = fly.home + Vector3.new(math.cos(angle) * fly.radius, fly.height + math.sin(now * 2.3 + fly.offset) * 1.2, math.sin(angle * 1.3) * fly.radius)
 			local ahead = Vector3.new(-math.sin(angle), 0, math.cos(angle * 1.3)) * math.sign(fly.speed)
 			local body = CFrame.lookAt(position, position + ahead)
-			local flap = math.rad(55) * math.abs(math.sin(now * 14 + fly.offset))
-			table.insert(parts, fly.left)
-			table.insert(cframes, body * CFrame.new(-0.5, 0, 0) * CFrame.Angles(0, 0, flap) * CFrame.new(-0.3, 0, 0))
-			table.insert(parts, fly.right)
-			table.insert(cframes, body * CFrame.new(0.5, 0, 0) * CFrame.Angles(0, 0, -flap) * CFrame.new(0.3, 0, 0))
+			local flapFront = math.rad(55) * math.abs(math.sin(now * 14 + fly.offset))
+			local flapBack = math.rad(50) * math.abs(math.sin(now * 14 + fly.offset - 0.6))
+			table.insert(parts, fly.body)
+			table.insert(cframes, body)
+			table.insert(parts, fly.head)
+			table.insert(cframes, body * CFrame.new(0, 0.02, -0.55))
+			for slot = 1, 2 do
+				local side = if slot == 1 then -1 else 1
+				-- Las alas nacen pegadas al cuerpo (a 0,12 del centro) y se abren hacia fuera.
+				local hinge = body * CFrame.new(side * 0.12, 0, 0)
+				local upper = hinge * CFrame.new(0, 0, -0.18) * CFrame.Angles(0, 0, -side * flapFront) * CFrame.new(side * 0.475, 0, 0)
+				table.insert(parts, fly.upper[slot])
+				table.insert(cframes, upper)
+				table.insert(parts, fly.spots[slot])
+				table.insert(cframes, upper * CFrame.new(side * 0.12, 0.03, 0.05) * CFrame.Angles(0, math.rad(45), 0))
+				table.insert(parts, fly.lower[slot])
+				table.insert(cframes, hinge * CFrame.new(0, 0, 0.28) * CFrame.Angles(0, 0, -side * flapBack) * CFrame.new(side * 0.3, 0, 0))
+				table.insert(parts, fly.feelers[slot])
+				table.insert(cframes, body * CFrame.new(side * 0.08, 0.14, -0.78) * CFrame.Angles(math.rad(-30), side * math.rad(-14), 0))
+			end
 		end
 
 		-- Hojas: giran un poco alrededor de la copa, cada palmera a su ritmo (a 30 fps basta).
