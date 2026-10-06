@@ -141,7 +141,7 @@ function Destructibles.damage(part: BasePart, amount: number, player: Player)
 	if def.gems > 0 and Chance.roll(def.gemChance or 1) then
 		gems = math.max(1, math.round(def.gems * Stats.gems(player) * rng:NextNumber(Config.GemDrop.min, Config.GemDrop.max)))
 	end
-	Remotes.Broken:FireAllClients(player, part.CFrame, part.Size, part.Color, part.Material, coins, gems)
+	Remotes.Broken:FireAllClients(player, part.CFrame, part.Size, part.Color, part.Material, coins, gems, table.find(Config.Destructibles, def))
 	remove(part)
 	return def, coins, gems
 end

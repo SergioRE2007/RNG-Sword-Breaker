@@ -69,6 +69,14 @@ local function roleLook(role: string, def): (Color3, Enum.Material, number)
 	return def.color, calm(def.material), 0
 end
 
+-- Si hay modelo de Blender de ese objeto (si no, se rompe como una caja normal).
+function ObjectModel.has(index: number): boolean
+	return load()[index] ~= nil
+end
+
+-- También lo usan los trozos al romperse (client/ObjectBreak) para parecerse al modelo.
+ObjectModel.look = roleLook
+
 -- Viste la pieza del objeto `index` de Config.Destructibles con su modelo: la pieza se queda como caja invisible
 -- (es la que se golpea) y las mallas van dentro de ella, quietas. Devuelve false si no hay modelo de ese objeto.
 function ObjectModel.attach(part: BasePart, index: number, def): boolean
