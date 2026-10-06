@@ -397,23 +397,64 @@ def fence(p):
 
 
 def komainu(p):
-    """Komainu: león-perro guardián de piedra sentado sobre un pedestal, con melena dorada. Mira hacia -Z."""
-    p.add("StoneDark", box(3.4, 1.0, 3.8), T(0, 0.5, 0))
-    p.add("Stone", box(3.0, 0.4, 3.4), T(0, 1.2, 0))
-    p.add("Stone", sphere(1.3, 8, 5), T(0, 2.9, 0.5) @ S(1.0, 1.2, 1.4))  # cuerpo sentado
-    p.add("Stone", sphere(1.0, 8, 4), T(0, 3.6, -0.7) @ S(1.1, 1.2, 0.9))  # pecho
+    """Shishi/komainu japonés: león guardián de piedra sentado, con melena de rizos, ojos saltones, boca abierta con
+    colmillos, babero rojo con cascabel dorado, pata sobre una bola y cola de llamas. Mira hacia -Z."""
+    # Pedestal de dos escalones con moldura.
+    p.add("StoneDark", box(4.0, 0.9, 4.6), T(0, 0.45, 0))
+    p.add("Stone", box(3.5, 0.7, 4.1), T(0, 1.25, 0))
+    p.add("StoneDark", box(3.7, 0.2, 4.3), T(0, 1.65, 0))
+    base = 1.75
+    # Cuarto trasero sentado y cuerpo que sube hacia el pecho.
+    p.add("Stone", sphere(1, 11, 6), T(0, base + 1.0, 1.1) @ S(1.25, 1.05, 1.35))
     for s in (-1, 1):
-        p.add("Stone", box(0.6, 2.2, 0.7), T(s * 0.65, 2.3, -1.1))  # patas delanteras
-        p.add("Stone", box(0.7, 0.4, 1.0), T(s * 0.65, 1.5, -1.5))
-        p.add("Stone", sphere(0.5, 6, 3), T(s * 1.0, 2.0, 1.1))  # ancas
-        p.add("Gold", spike(0.2, 0.9, 5), T(s * 0.55, 5.1, -1.4) @ R("Z", -s * 12))  # orejas
-        p.add("Black", sphere(0.14, 5, 3), T(s * 0.4, 4.6, -2.0))  # ojos
-    p.add("Stone", sphere(1.0, 8, 5), T(0, 4.5, -1.3) @ S(1.1, 0.95, 1.0))  # cabeza
-    p.add("StoneDark", box(0.9, 0.35, 0.7), T(0, 4.05, -2.1))  # hocico
-    for i in range(10):  # melena
-        a = 2 * math.pi * i / 10
-        p.add("Gold", spike(0.28, 1.1, 5), T(math.cos(a) * 1.0, 4.5 + math.sin(a) * 0.9, -1.0) @ R("Z", math.degrees(a) - 90) @ R("X", -20))
-    p.add("Gold", spike(0.4, 1.8, 6), T(0, 2.6, 1.8) @ R("X", 60))  # cola
+        p.add("Stone", sphere(1, 9, 5), T(s * 1.05, base + 0.55, 0.6) @ S(0.55, 0.5, 1.0))  # muslos doblados
+        p.add("StoneDark", sphere(1, 7, 4), T(s * 1.0, base + 0.2, -0.2) @ S(0.4, 0.2, 0.55))  # pies traseros
+    p.add("Stone", sphere(1, 11, 6), T(0, base + 2.4, 0.15) @ S(1.1, 1.7, 1.1) @ R("X", -14))  # torso erguido
+    p.add("Stone", sphere(1, 11, 6), T(0, base + 3.1, -0.45) @ S(1.15, 1.15, 1.0))  # pecho
+    # Patas delanteras rectas; la izquierda del animal descansa sobre una bola.
+    for s in (-1, 1):
+        p.branch("Stone", (s * 0.75, base + 3.0, -0.6), (s * 0.78, base + 0.55, -1.6), 0.38, 0.3, 8)
+        p.add("Stone", sphere(1, 8, 4), T(s * 0.78, base + 0.3, -1.9) @ S(0.42, 0.28, 0.6))
+        for k in (-1, 0, 1):
+            p.add("StoneDark", box(0.08, 0.06, 0.28), T(s * 0.78 + k * 0.14, base + 0.12, -2.35))  # dedos
+    p.add("StoneDark", sphere(0.5, 9, 5), T(-0.78, base + 0.5, -2.45))  # bola
+    # Babero rojo con cascabel.
+    p.add("Red", frustum(2.4, 1.8, 1.7, 1.5, 0.7), T(0, base + 3.85, -0.62) @ R("X", 8))
+    p.add("Gold", sphere(0.22, 8, 5), T(0, base + 3.45, -1.45))
+    p.add("Gold", box(0.5, 0.06, 0.06), T(0, base + 3.62, -1.4))
+    # Cabeza: cráneo ancho, hocico plano y nariz, ojos saltones, boca abierta con colmillos y lengua.
+    hy, hz = base + 4.85, -1.0
+    p.add("Stone", sphere(1.15, 12, 7), T(0, hy, hz) @ S(1.1, 0.95, 1.0))
+    p.add("Stone", sphere(0.75, 10, 6), T(0, hy - 0.2, hz - 0.8) @ S(1.1, 0.75, 0.85))  # hocico
+    p.add("StoneDark", sphere(0.36, 8, 5), T(0, hy + 0.05, hz - 1.45) @ S(1.4, 0.8, 0.8))  # nariz ancha
+    p.add("Stone", box(1.6, 0.36, 0.9), T(0, hy - 0.62, hz - 0.95))  # mandíbula
+    p.add("Red", box(1.2, 0.1, 0.7), T(0, hy - 0.4, hz - 0.9))  # interior de la boca
+    p.add("Red", sphere(0.3, 6, 4), T(0, hy - 0.42, hz - 0.8) @ S(1.3, 0.35, 1.5))  # lengua
+    for s in (-1, 1):
+        p.add("White", spike(0.1, 0.35, 5), T(s * 0.5, hy - 0.5, hz - 1.15))  # colmillos de abajo
+        p.add("White", spike(0.1, 0.4, 5), T(s * 0.5, hy - 0.2, hz - 1.15) @ R("X", 180))  # y de arriba
+        p.add("White", sphere(0.3, 8, 5), T(s * 0.55, hy + 0.5, hz - 1.0))  # ojos saltones
+        p.add("Black", sphere(0.15, 6, 4), T(s * 0.57, hy + 0.5, hz - 1.26))
+        p.add("StoneDark", sphere(1, 8, 4), T(s * 0.55, hy + 0.85, hz - 1.0) @ S(0.42, 0.14, 0.2) @ R("Z", s * -18))  # cejas
+        p.add("Stone", sphere(1, 8, 5), T(s * 1.15, hy + 0.7, hz + 0.15) @ S(0.3, 0.38, 0.22) @ R("Z", s * -30))  # orejas
+    # Melena de rizos alrededor de la cabeza, por el cuello y por la espalda.
+    for ring_i, (radius, count, y_off, size) in enumerate(((1.5, 12, 0.1, 0.55), (1.95, 14, 0.0, 0.5), (2.3, 16, -0.2, 0.45))):
+        for i in range(count):
+            a = 2 * math.pi * i / count + ring_i * 0.2
+            if -1.25 < math.atan2(math.sin(a), math.cos(a)) - math.pi / 2 < 1.25 and ring_i == 0:
+                continue  # deja libre la cara
+            x, y = math.cos(a) * radius, math.sin(a) * radius * 0.9
+            role = "Stone" if (i + ring_i) % 2 == 0 else "StoneDark"
+            p.add(role, sphere(1, 7, 4), T(x * 0.9, hy + y_off + y * 0.75, hz + 0.45 + ring_i * 0.35) @ S(size, size, size * 0.55) @ R("Z", math.degrees(a) + 90))
+            p.add("Gold" if i % 4 == 0 else role, sphere(0.16, 5, 3), T(x * 0.9, hy + y_off + y * 0.75, hz + 0.45 + ring_i * 0.35 - 0.2))  # centro del rizo
+    for row in range(3):  # rizos por la espalda
+        for i in range(5):
+            x = (i - 2) * 0.55
+            p.add("Stone" if (i + row) % 2 == 0 else "StoneDark", sphere(1, 7, 4), T(x, base + 3.7 - row * 0.8, 0.55 + row * 0.35) @ S(0.38, 0.36, 0.2) @ R("X", 20))
+    # Cola de llamas que se enrosca hacia arriba.
+    for i in range(6):
+        t = i / 5
+        p.add("Gold" if i % 2 == 0 else "Stone", spike(0.35 - t * 0.05, 1.5 - t * 0.4, 6), T(math.sin(t * 3.1) * 0.9, base + 1.2 + t * 2.0, 2.0 + t * 0.5) @ R("Z", -50 + t * 130) @ R("X", 10))
 
 
 def koinobori(p):
@@ -777,6 +818,7 @@ def main():
     render_preview(os.path.join(OUT_DIR, "mapa_japones3.png"), (16, 18), 1.0)
     render_row(os.path.join(OUT_DIR, "mapa_japones4.png"), 1200.0 + 3 * 14.0, 14.0 * 8)
     render_row(os.path.join(OUT_DIR, "mapa_japones5.png"), 1200.0 + 3 * 14.0, 14.0 * 8, 38.0)
+    render_row(os.path.join(OUT_DIR, "mapa_japones6.png"), 40.0 * list(PIECES).index("Komainu"), 28.0, 25.0)
     print("Exportadas", len(PIECES), "piezas")
 
 

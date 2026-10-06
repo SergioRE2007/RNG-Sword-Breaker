@@ -252,10 +252,10 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 	local gate = direction * (from + 8)
 	if first and PropModel.place(parent, "Torii", CFrame.lookAt(gate, gate + direction), 1.15) then
 		for _, sign in { 1, -1 } do
-			local hang = CFrame.lookAt(gate, gate + direction) * CFrame.new(sign * 4.6, 10.2, 0)
+			local hang = CFrame.lookAt(gate, gate + direction) * CFrame.new(sign * 4.6, 8.2, 0)
 			PropModel.place(parent, "Chochin", hang, 1.1, { Red = hue })
 			local guard = gate + side * sign * 11
-			PropModel.place(parent, "Komainu", CFrame.lookAt(guard, guard + direction), 1.0)
+			PropModel.place(parent, "Komainu", CFrame.lookAt(guard, guard - direction), 1.0) -- mira hacia quien llega del hub
 		end
 	end
 	for distance = from + 34, from + length - 8, 40 do
@@ -387,12 +387,10 @@ function SceneryJapan.start()
 	ring(cfg.Count, 1, 0, function(direction, index)
 		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1), index == 1)
 	end)
-
+	-- Linternas de piedra en el borde del hub, entre las entradas.
 	-- Linternas de piedra y farolillos de colores en el borde del hub, entre las entradas.
 	ring(cfg.Count * 2, cfg.HubRadius - 4, 0.5, function(position, index)
 		local direction = position.Unit
-		lit(PropModel.place(folder, "StoneLantern", CFrame.lookAt(position, position + direction), 1.0), 0.9, 15)
-		local side = Vector3.new(-direction.Z, 0, direction.X)
 		PropModel.place(folder, "Chochin", CFrame.new(position + side * 5 + Vector3.new(0, 5.5, 0)), 1.0, { Red = Color3.fromHSV((index % cfg.Count) / cfg.Count, 0.65, 1) })
 	end)
 
