@@ -138,13 +138,18 @@ Config.MaxSwords = 200
 -- (Config.ObjectRolls, más abajo); el gacha decide qué arma sale con la suerte que le llega.
 Config.Gacha = {
 	FreeRoll = false, -- true: vuelven los botones "Tirar" y "Auto" y la tirada gratis cada RollTime segundos de antes de que las armas salieran de los objetos
-	RollTime = 2, -- (solo con FreeRoll) segundos por tirada sin mejoras
+	RollTime = 2, -- (sin uso: con FreeRoll el tiempo por tirada es el de la mejora "Velocidad de aparición", Stats.rollTime)
 	MinRollTime = 0.5, -- (solo con FreeRoll) nunca se tira más rápido que esto
-	ShowcaseOdds = 200, -- desde "1 entre N" real (rareza / suerte de gacha) la tirada pasa a pantalla completa
+	-- Lo difícil que era un arma para el jugador ("1 entre N", Permanent.odds: arma, metal y tamaño, con su suerte de
+	-- armas y sin la del objeto) decide cuánto se celebra. Como son tres tiradas a la vez, llegar a un N es más fácil
+	-- de lo que suena. Medido con 120 000 tiradas: llega a 500 una de cada ~70-160, a 2000 una de cada ~180-490 y a
+	-- 25 000 una de cada ~1600-4300 (menos cuanta más suerte).
+	ShowcaseOdds = 2000, -- desde aquí la tirada pasa a pantalla completa (antes 200: salía cada 30 tiradas, demasiado ahora que llegan solas mientras juegas)
 	RevealTimeout = 30, -- si el cliente no avisa de que ha destapado una tirada rara, su aura y aviso salen igual a los N segundos
-	AuraOdds = 100, -- desde "1 entre N" real (rareza / suerte de gacha) el aura se ve en el personaje (también para los demás)
+	AuraOdds = 500, -- desde aquí el aura se ve en el personaje (también para los demás)
+	AnnounceOdds = 25000, -- desde aquí se anuncia el arma a todo el servidor
 	SellValue = 0, -- gemas por vender una espada (a mano o con la venta automática). 0: las gemas salen de la parcela
-	ShowcaseStay = 4, -- segundos que se queda la animación grande de una tirada de objeto antes de cerrarse sola (con FreeRoll espera a "Continuar")
+	ShowcaseStay = 3, -- segundos que se queda la animación grande de una tirada de objeto antes de cerrarse sola (con FreeRoll espera a "Continuar")
 	-- Empujón del principio (para enganchar): las primeras BoostRolls tiradas de cada jugador tienen la suerte multiplicada por BoostLuck.
 	BoostRolls = 15,
 	BoostLuck = 30,
@@ -274,9 +279,10 @@ Config.GemDrop = { min = 0.7, max = 1.3 }
 -- ARMAS DESDE LOS OBJETOS. Cada objeto que aparece en una parcela lleva, además de su tipo (la lista de arriba, que
 -- sale según la suerte de parcela), una RAREZA y un TAMAÑO propios, tirados al aparecer. Al romperlo da tiradas de
 -- arma (server/Gacha) con la suerte de armas del jugador multiplicada por la SUERTE DEL OBJETO:
---   suerte del objeto = suerte del tipo * "luck" de su rareza * escala ^ SizeLuckPower      (como mucho MaxLuck)
---   suerte del tipo   = "luck" del objeto en Config.Destructibles o, si no lo pone, su rareza ^ TypeLuckPower
--- La suerte solo multiplica probabilidades, como toda la del juego: un objeto enorme no garantiza ningún arma.
+--   suerte del objeto = "luck" de su rareza * escala ^ SizeLuckPower * "luck" del tipo      (como mucho MaxLuck)
+-- El "luck" del tipo es 1 salvo en los objetos especiales (la Roca de armas, x10). Un objeto común de tamaño
+-- normal da x1: lo de siempre. La suerte solo multiplica probabilidades, como toda la del juego: un objeto enorme
+-- no garantiza ningún arma.
 -- Tiradas = "rolls" de la rareza + "rolls" del tamaño + "rolls" del tipo; la parte decimal es la probabilidad de
 -- una más (1.5 = una, y otra la mitad de las veces), con el tope MaxRolls.
 -- El tamaño multiplica también la vida (escala ^ SizeHpPower) y las monedas y gemas (escala ^ SizeRewardPower).
@@ -285,11 +291,10 @@ Config.GemDrop = { min = 0.7, max = 1.3 }
 -- sus rarezas y de sus tamaños grandes) y "minRarity" (rareza mínima, posición en ObjectRarities). Con eso se hace
 -- un objeto nuevo sin tocar código. Las cuentas están en shared/ObjectSpec.
 Config.ObjectRolls = {
-	TypeLuckPower = 0.1, -- la Caja x1, el Cristal x1.95, el Meteorito x3.98, el Infinito x251
 	SizeLuckPower = 1.5, -- al 70 % x0.59, al 150 % x1.84, al 200 % x2.83, al 250 % x3.95
 	SizeHpPower = 2,
 	SizeRewardPower = 2,
-	MaxLuck = 25000, -- tope de la suerte de un objeto (solo lo roza el último objeto, mítico y colosal)
+	MaxLuck = 1000, -- tope de la suerte de un objeto (una Roca de armas mítica y colosal llega a x790)
 	MaxRolls = 5, -- tope de tiradas de arma de un solo objeto
 	MaxWidth = 30, -- studs: ningún objeto se agranda más que esto de ancho...
 	MaxHeight = 56, -- ...ni de alto (los tipos más grandes llegan a menos escala que los pequeños)

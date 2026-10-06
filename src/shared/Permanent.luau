@@ -42,6 +42,18 @@ function Permanent.rarity(sword: number, metal: number?, size: number?): number
 	return base * (if metalEntry then metalEntry.odds else 1) * (if sizeEntry then sizeEntry.odds else 1)
 end
 
+-- Lo difícil que era sacar esa arma con esa suerte ("1 entre N"). El arma, el metal y el tamaño se tiran por
+-- separado con la misma suerte, así que cada uno cuenta lo que le faltaba a la suerte para llegar a él, y lo que la
+-- suerte ya garantiza cuenta 1. (No vale rareza total / suerte: con suerte 100, el metal de 1 entre 100 sale
+-- siempre, y esa cuenta diría que todas las tiradas son de 1 entre 100.)
+function Permanent.odds(sword: number, metal: number?, size: number?, luck: number): number
+	local function missing(odds: number): number
+		return math.max(odds / luck, 1)
+	end
+	local metalEntry, sizeEntry = entry(Config.Metals, metal), entry(Config.Sizes, size)
+	return missing(Config.Swords[sword].rarity or 1) * (if metalEntry then missing(metalEntry.odds) else 1) * (if sizeEntry then missing(sizeEntry.odds) else 1)
+end
+
 -- Tira un modificador de la lista: se prueba del más raro al más común y la suerte multiplica cada
 -- probabilidad (como con las armas). Devuelve su posición, o 0 si no sale ninguno.
 function Permanent.roll(list, luck: number): number

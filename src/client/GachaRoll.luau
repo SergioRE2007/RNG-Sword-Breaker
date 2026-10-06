@@ -870,6 +870,13 @@ end
 
 -- Tirada --------------------------------------------------------------------------------
 
+-- Tiradas que han llegado del servidor y aún no se han enseñado, en orden de llegada.
+local queue = {}
+local working = false
+-- Última animación grande: de qué tanda era, lo difícil que era el arma y cuándo acabó.
+local shownBatch, shownOdds, shownAt = nil, 0, 0
+local SHOWCASE_GAP = 12 -- segundos tras una animación grande en los que solo sale otra si es más difícil todavía
+
 -- "Cristal · suerte x18.4 · tirada 1/2": el objeto que ha dado la tirada (con el color de su rareza), por cuánto
 -- multiplica la suerte y, si dio varias, cuál es esta.
 local function sourceText(extra): string
@@ -893,8 +900,8 @@ local function spin(index: number, kept: boolean, luck: number, source: string, 
 	panelScale.Scale = 1
 	panelShown = true
 	local rarity = Permanent.rarity(index, metal, size)
-	-- Lo rara que es para el jugador: el servidor la manda sin contar la suerte del objeto que dio la tirada.
-	local odds = if extra and extra.odds then extra.odds else rarity / luck
+	-- Lo difícil que era para el jugador: el servidor lo manda sin contar la suerte del objeto que dio la tirada.
+	local odds = if extra and extra.odds then extra.odds else Permanent.odds(index, metal, size, luck)
 	local big = odds >= Config.Gacha.ShowcaseOdds
 	local tierInfo = Rarity.tier(rarity)
 	local color = tierInfo.color
@@ -924,9 +931,25 @@ local function spin(index: number, kept: boolean, luck: number, source: string, 
 		task.wait(total * 2 * step / (steps * (steps + 1)))
 	end
 
+	-- Las animaciones grandes no se encadenan: de las tiradas de una misma tanda (un objeto que da varias) solo se
+	-- enseña la mejor, y justo después de una (SHOWCASE_GAP) solo sale otra si es aún más difícil. Las demás van
+	-- solo al panel.
+	if big and fromObject then
+		local recent = extra and extra.batch == shownBatch or os.clock() - shownAt < SHOWCASE_GAP
+		if recent and odds <= shownOdds then
+			big = false
+		end
+		for _, other in queue do
+			if extra and other.extra and other.extra.batch == extra.batch and (other.extra.odds or 0) > odds then
+				big = false
+			end
+		end
+	end
 	if big then
+		shownBatch, shownOdds = extra and extra.batch, odds
 		-- Las de los objetos salen solas en mitad de la faena: se cierran solas.
 		showcase(index, kept, odds, metal, size, if fromObject then Config.Gacha.ShowcaseStay elseif auto then 3 else nil)
+		shownAt = os.clock()
 	end
 
 	-- Se para en la que ha tocado.
@@ -1154,10 +1177,6 @@ local function buildOverlay()
 	fit()
 end
 
--- Tiradas que han llegado del servidor y aún no se han enseñado, en orden de llegada.
-local queue = {}
-local working = false
-
 -- Enseña las tiradas de la cola de una en una (las de un objeto con varias tiradas, o las de varios objetos rotos
 -- de un golpe, llegan juntas).
 local function work()
@@ -1175,8 +1194,8 @@ local function work()
 			spinning = false
 		end
 		-- Destapada: el servidor ya puede enseñar su aura y aviso a los demás (misma cuenta que hace él).
-		local odds = if roll.extra and roll.extra.odds then roll.extra.odds else Permanent.rarity(roll.index, roll.metal, roll.size) / roll.luck
-		if odds >= math.min(Config.Gacha.AuraOdds, Config.AnnounceOdds) then
+		local odds = if roll.extra and roll.extra.odds then roll.extra.odds else Permanent.odds(roll.index, roll.metal, roll.size, roll.luck)
+		if odds >= math.min(Config.Gacha.AuraOdds, Config.Gacha.AnnounceOdds) then
 			Remotes.GachaRevealed:FireServer()
 		end
 		if roll.source == "gacha" then

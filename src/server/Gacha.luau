@@ -40,7 +40,7 @@ local pendingReveals = {} -- [player] = { { index, odds } } tiradas raras que a�
 
 -- Desde qué "1 entre N" real hay algo que enseñar a los demás (aura o aviso).
 local function revealOdds(): number
-	return math.min(Config.Gacha.AuraOdds, Config.AnnounceOdds)
+	return math.min(Config.Gacha.AuraOdds, Config.Gacha.AnnounceOdds)
 end
 
 -- Aura en su personaje y, si es muy raro, aviso en el chat con la probabilidad real.
@@ -52,15 +52,31 @@ local function broadcast(player: Player, entry)
 	if entry.odds >= Config.Gacha.AuraOdds then
 		Remotes.GachaAura:FireAllClients(player, entry.index, entry.odds)
 	end
-	if entry.odds >= Config.AnnounceOdds then
+	if entry.odds >= Config.Gacha.AnnounceOdds then
 		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)} (1 entre {Format.short(entry.odds)})!`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
 	end
+end
+
+-- Con la mochila llena: posición de la copia menos rara de las que el jugador no ha tocado (ni equipada, ni con
+-- rasgo, ni con grado), si es menos rara que `rarity`. Las armas llegan solas al romper objetos y la mochila se
+-- llena de las del montón: así una buena no se pierde por falta de sitio. nil si no hay ninguna peor.
+local function worstSpare(data, rarity: number): number?
+	local worst, worstRarity = nil, rarity
+	for position, copy in data.swords do
+		if copy.id ~= data.equipped and (copy.trait or 0) == 0 and (copy.grade or 0) == 0 then
+			local copyRarity = Permanent.rarity(copy.sword, copy.metal, copy.size)
+			if copyRarity < worstRarity then
+				worst, worstRarity = position, copyRarity
+			end
+		end
+	end
+	return worst
 end
 
 -- Saca una espada con la suerte de armas del jugador multiplicada por `boost` (la suerte del objeto
 -- que da la tirada; 1 si no hay) y la guarda como una copia más (se equipa si pega más que
 -- la actual). Se vende sola si es menos rara que el límite de venta automática del jugador o
--- el inventario está lleno. Se lo manda al jugador para que lo enseñe; si es raro para su
+-- el inventario está lleno de armas mejores que ella. Se lo manda al jugador para que lo enseñe; si es raro para su
 -- suerte, queda pendiente el aura en su personaje (y el aviso en el chat si es muy raro), que se
 -- manda a todos cuando su cliente lo destapa. `info` (opcional) = de dónde viene, para enseñarlo:
 -- { name, quality (del objeto), roll, rolls (esta tirada de cuántas) }.
@@ -83,14 +99,21 @@ local function draw(player: Player, boost: number, source: string, info)
 	local metal = Permanent.roll(Config.Metals, luck)
 	local size = Permanent.roll(Config.Sizes, luck)
 	local rarity = Permanent.rarity(index, metal, size)
-	-- Lo rara que es para el jugador (con su suerte, sin la del objeto): es lo que mide el espectáculo, el aura y
-	-- el aviso. Un objeto bueno da armas que para él son difíciles, y se celebran como tales.
-	local odds = rarity / base
-	local kept = rarity >= data.autoSell and #data.swords < Config.MaxSwords
+	-- Lo difícil que era para el jugador (con su suerte, sin la del objeto): es lo que mide el espectáculo, el aura
+	-- y el aviso. Un objeto bueno da armas que para él son difíciles, y se celebran como tales.
+	local odds = Permanent.odds(index, metal, size, base)
+	-- Con la mochila llena, un arma más rara que la peor copia que el jugador no ha tocado se queda con su sitio.
+	local full = #data.swords >= Config.MaxSwords
+	local spare = if full and rarity >= data.autoSell then worstSpare(data, rarity) else nil
+	local kept = rarity >= data.autoSell and (not full or spare ~= nil)
 	if kept then
 		local candidate = { sword = index, trait = 0, grade = 0, metal = metal, size = size }
 		local better = Stats.swordDamage(candidate) > Stats.swordDamage(Stats.equipped(player))
 		PlayerData.edit(player, function(edited)
+			if spare then
+				table.remove(edited.swords, spare)
+				edited.gems += Config.Gacha.SellValue
+			end
 			local id = edited.nextSwordId
 			edited.nextSwordId += 1
 			table.insert(edited.swords, { id = id, sword = index, metal = if metal > 0 then metal else nil, size = if size > 0 then size else nil })
@@ -135,6 +158,8 @@ local function onRevealed(player: Player)
 	end
 end
 
+local batches = 0 -- tandas de tiradas dadas (para numerarlas)
+
 -- Tiradas de arma para el jugador con su suerte de armas multiplicada por `boost`. Es la puerta para cualquier
 -- fuente de tiradas: hoy los objetos de la parcela (source = "object", con `rolls` y `boost` decididos por el
 -- servidor al aparecer el objeto: nada de esto llega del cliente). `info` = { name, quality } de quien las da.
@@ -145,10 +170,12 @@ function Gacha.give(player: Player, boost: number, source: string, rolls: number
 		return
 	end
 	count = math.clamp(math.floor(count), 0, Config.ObjectRolls.MaxRolls)
+	batches += 1
 	for index = 1, count do
 		local extra = if info then table.clone(info) else {}
 		extra.roll = index
 		extra.rolls = count
+		extra.batch = batches -- las tiradas de una misma tanda: el cliente solo enseña en grande la mejor
 		draw(player, boost, source, extra)
 	end
 end

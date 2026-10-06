@@ -51,10 +51,10 @@ local Z = { shadow = 1, card = 2, row = 3, text = 4, bar = 5, barText = 6 }
 -- luz, `sparks` = chispas por segundo, `light` = brillo de la luz, `outline` = contorno, `beam` = grosor del rayo.
 local QUALITY_FX = {
 	[2] = { pad = 0.86, sparks = 3 },
-	[3] = { pad = 0.8, sparks = 6, light = 0.8 },
-	[4] = { pad = 0.72, sparks = 10, light = 1.4, outline = true },
-	[5] = { pad = 0.64, sparks = 16, light = 2, outline = true, beam = 1.6 },
-	[6] = { pad = 0.56, sparks = 26, light = 2.8, outline = true, beam = 3 },
+	[3] = { pad = 0.8, sparks = 6, light = 0.5 },
+	[4] = { pad = 0.74, sparks = 10, light = 0.8, outline = true },
+	[5] = { pad = 0.68, sparks = 16, light = 1.1, outline = true, beam = 1.1 },
+	[6] = { pad = 0.62, sparks = 26, light = 1.4, outline = true, beam = 1.8 },
 }
 
 local decorated: { [BasePart]: { tag: BillboardGui? } } = {}
@@ -114,7 +114,7 @@ local function aura(part: BasePart, color: Color3, fx)
 		lamp.Name = "RarityLight"
 		lamp.Color = color
 		lamp.Brightness = fx.light
-		lamp.Range = 10 + wide
+		lamp.Range = 8 + wide * 0.8
 		lamp.Parent = part
 	end
 	-- En modo rendimiento se quedan la base y poco más (las chispas y la luz las apaga Performance).
@@ -127,15 +127,15 @@ local function aura(part: BasePart, color: Color3, fx)
 		outline.DepthMode = Enum.HighlightDepthMode.Occluded
 		outline.OutlineColor = color
 		outline.FillColor = color
-		outline.FillTransparency = 0.85
+		outline.FillTransparency = 1 -- solo el contorno: el objeto conserva sus colores
 		outline.Parent = part
 	end
 	if fx.beam then
-		local beam = glowPart("RarityBeam", color:Lerp(WHITE, 0.3), 0.55)
+		local beam = glowPart("RarityBeam", color:Lerp(WHITE, 0.3), 0.65)
 		beam.Size = Vector3.new(BEAM_HEIGHT, fx.beam, fx.beam)
 		beam.CFrame = CFrame.new(ground + Vector3.new(0, BEAM_HEIGHT / 2, 0)) * upright
 		beam.Parent = part
-		TweenService:Create(beam, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.82 }):Play()
+		TweenService:Create(beam, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.88 }):Play()
 	end
 end
 

@@ -24,9 +24,9 @@ function ObjectSpec.size(index: number?)
 	return Config.ObjectSizes[index or 1] or Config.ObjectSizes[1]
 end
 
--- Suerte propia del tipo de objeto (def = entrada de Config.Destructibles): los que cuesta más que aparezcan dan más.
+-- Suerte propia del tipo de objeto (def = entrada de Config.Destructibles): 1 salvo en los objetos especiales.
 function ObjectSpec.typeLuck(def): number
-	return def.luck or def.rarity ^ Config.ObjectRolls.TypeLuckPower
+	return def.luck or 1
 end
 
 -- Entre qué escalas puede salir ese tipo: los límites de Config.ObjectSizes, recortados para que no pase de

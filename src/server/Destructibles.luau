@@ -70,27 +70,48 @@ local function describe(def, spec): string
 	return `{def.name} ({table.concat(parts, ", ")})`
 end
 
+-- Lo que le toca a un objeto nuevo de esa parcela: tipo (suerte de parcela), rareza y tamaño (ObjectSpec).
+local function rollSpec(owner: Player)
+	local luck = Stats.luck(owner)
+	local def = rollDef(luck)
+	local spec = ObjectSpec.roll(def, Stats.objectLuck(owner))
+	spec.def = def
+	spec.typeOdds = def.rarity / luck
+	return spec
+end
+
+-- Sitio para ese objeto en la parcela: su tamaño, su radio y dónde va (nil si ahora no cabe).
+local function place(plot, spec): (Vector3, number, Vector3?)
+	local size = spec.def.size * spec.scale
+	local radius = math.max(size.X, size.Z) * 0.7
+	return size, radius, findPosition(plot, radius)
+end
+
 local function spawnIn(plot)
 	local owner = plot.owner
-	-- Lo que le toca al objeto (tipo, rareza y tamaño) se tira una vez: si no cabe, se guarda para el siguiente
-	-- intento en vez de volver a tirar, que haría salir menos de los grandes.
-	local spec = pending[plot]
-	if not spec then
-		local luck = Stats.luck(owner)
-		local def = rollDef(luck)
-		spec = ObjectSpec.roll(def, Stats.objectLuck(owner))
-		spec.def = def
-		spec.typeOdds = def.rarity / luck
+	-- Un objeto grande puede no caber con la parcela llena. Lo que le había tocado no se vuelve a tirar (saldrían
+	-- menos de los grandes): se guarda y se intenta el primero cada vez. Mientras espera, siguen saliendo otros; si
+	-- uno de esos tampoco cabe, se queda guardado el mejor de los dos (el de más suerte).
+	local spec = pending[plot] or rollSpec(owner)
+	local size, radius, position = place(plot, spec)
+	if not position then
+		if not pending[plot] then
+			pending[plot] = spec
+			return
+		end
+		local fresh = rollSpec(owner)
+		local freshSize, freshRadius, freshPosition = place(plot, fresh)
+		if not freshPosition then
+			if fresh.luck > spec.luck then
+				pending[plot] = fresh
+			end
+			return
+		end
+		spec, size, radius, position = fresh, freshSize, freshRadius, freshPosition
+	else
+		pending[plot] = nil
 	end
 	local def = spec.def
-	local size = def.size * spec.scale
-	local radius = math.max(size.X, size.Z) * 0.7
-	local position = findPosition(plot, radius)
-	if not position then
-		pending[plot] = spec
-		return
-	end
-	pending[plot] = nil
 
 	local part = Instance.new("Part")
 	part.Name = def.name
