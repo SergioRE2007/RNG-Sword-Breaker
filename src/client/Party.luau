@@ -34,6 +34,7 @@ local Z_COUNT = 30 -- cuenta atrás, por encima de la ventana
 local Z_INVITE = 70 -- aviso de invitación, por encima de todo lo demás
 
 local state: { [string]: any }? = nil -- el último PartyState
+local pendingZone: number? = nil -- sala que se acaba de pedir abrir (hasta que llega la respuesta del servidor)
 local changed = Instance.new("BindableEvent")
 Party.Changed = changed.Event
 
@@ -165,16 +166,16 @@ local function buildWindow()
 	portrait.Parent = card
 	local portraitFace: Frame? = nil
 
-	local tagline = Ui.label(card, 18)
+	local tagline = Ui.label(card, 20)
 	tagline.Position = UDim2.fromOffset(14, 212)
-	tagline.Size = UDim2.new(1, -28, 0, 46)
+	tagline.Size = UDim2.new(1, -28, 0, 50)
 	tagline.TextWrapped = true
 	tagline.TextYAlignment = Enum.TextYAlignment.Top
 	tagline.TextColor3 = Color3.fromRGB(190, 195, 215)
 
-	local info = Ui.label(card, 19)
-	info.Position = UDim2.fromOffset(18, 262)
-	info.Size = UDim2.new(1, -36, 1, -276)
+	local info = Ui.label(card, 22)
+	info.Position = UDim2.fromOffset(18, 266)
+	info.Size = UDim2.new(1, -36, 1, -278)
 	info.TextXAlignment = Enum.TextXAlignment.Left
 	info.TextYAlignment = Enum.TextYAlignment.Top
 	info.TextWrapped = true
@@ -327,7 +328,10 @@ local function buildWindow()
 
 	local function zoneOf(): number?
 		local mine = state and state.mine
-		return if mine then mine.dungeon else (state and state.room)
+		if mine then
+			return mine.dungeon
+		end
+		return pendingZone or (state and state.room)
 	end
 
 	local function paintCard(zone: number)
@@ -487,14 +491,14 @@ local function buildWindow()
 
 	local function render()
 		local zone = zoneOf()
-		if not state or not zone then
+		if not zone then
 			if window.Visible then
 				window.Visible = false
 			end
 			return
 		end
 		paintCard(zone)
-		local mine = state.mine
+		local mine = if state then state.mine else nil
 		roomView.Visible = mine == nil
 		partyView.Visible = mine ~= nil
 		if mine then
@@ -661,6 +665,7 @@ local function buildWindow()
 	Remotes.PartyState.OnClientEvent:Connect(function(payload)
 		local hadParty = state ~= nil and state.mine ~= nil
 		state = payload
+		pendingZone = nil -- el servidor ya ha contestado: si no hay sala ni grupo, la ventana se cierra sola
 		local mine = payload and payload.mine
 		-- Te han metido en un grupo (invitación aceptada): se abre la ventana.
 		if mine and not hadParty and mine.state == "lobby" and not window.Visible then
@@ -676,6 +681,7 @@ local function buildWindow()
 		if window.Visible then
 			render()
 		else
+			pendingZone = nil
 			picker.Visible = false
 			request("close")
 		end
@@ -684,6 +690,8 @@ local function buildWindow()
 		if prompt:GetAttribute("Shop") == "party" then
 			local zone = prompt:GetAttribute("Dungeon")
 			if type(zone) == "number" then
+				-- Se abre ya (con la zona pedida) y el servidor contesta con el estado de la sala o de tu grupo.
+				pendingZone = zone
 				request("open", zone)
 				if not window.Visible then
 					Ui.toggle("Party")

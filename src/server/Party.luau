@@ -313,6 +313,7 @@ local function launchParty(party)
 	end
 	Dungeons.setLoop(party.leader.player :: Player, party.options.loop)
 	party.state = "running"
+	party.startedAt = os.clock()
 	party.countdownEnds = 0
 	for _, player in players do
 		viewing[player] = nil
@@ -351,6 +352,8 @@ end
 HANDLERS.open = function(player, zoneArg)
 	local zone = validZone(zoneArg)
 	if not zone or Dungeons.isBusy(player) or not nearRoom(player, zone) then
+		-- Se contesta igual (con el estado de ahora), para que la ventana que se abrió a la espera se cierre sola.
+		push(player)
 		return
 	end
 	viewing[player] = zone
@@ -429,7 +432,8 @@ end
 
 HANDLERS.leave = function(player)
 	local party = partyOf[player]
-	if not party or party.state == "running" then
+	-- Con la partida en marcha solo se sale del grupo si ya no estás dentro de ella (moriste o saliste).
+	if not party or (party.state == "running" and Dungeons.isBusy(player)) then
 		return
 	end
 	local member = memberOf(party, player)
@@ -672,6 +676,21 @@ function Party.start()
 			for _, party in table.clone(parties) do
 				if party.state == "lobby" and now - party.activeAt > cfg.WaitTimeout then
 					disband(party, "El grupo se ha deshecho por esperar demasiado.")
+				elseif party.state == "running" and now - (party.startedAt or now) > 10 then
+					-- Quien ya no está en la partida (murió o salió) deja el grupo; hace falta verlo dos veces seguidas
+					-- para no confundirlo con el instante en que "repetir" pasa a los vivos a la arena nueva.
+					for _, member in table.clone(party.members) do
+						if member.player then
+							if Dungeons.isBusy(member.player) then
+								member.idle = 0
+							else
+								member.idle = (member.idle or 0) + 1
+								if member.idle >= 2 then
+									removeMember(party, member)
+								end
+							end
+						end
+					end
 				end
 			end
 		end
