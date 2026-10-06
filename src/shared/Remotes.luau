@@ -19,6 +19,7 @@ local NAMES = {
 	"GachaAura", -- servidor -> clientes: (player, index, odds) aura en el personaje de quien sacó algo raro para su suerte (odds = rareza / suerte)
 	"RollTrait", -- cliente -> servidor: (id) gastar un Cristal de rasgo en esa copia de espada (tienda de Rasgos)
 	"RollGrade", -- cliente -> servidor: (id) gastar Config.GradeCost Cristales de grado en un grado para esa copia (tienda de Grados)
+	"RevertGrade", -- cliente -> servidor: (id) descartar el grado recién tirado a mano en la forja y volver al anterior
 	"ModifierRolled", -- servidor -> cliente: (kind, id, index) resultado de una tirada de rasgo ("traits") o grado ("grades")
 	"ToggleGear", -- cliente -> servidor: (artifactIndex) equipar o quitar un artefacto
 	"Notice", -- servidor -> cliente: (text, color) aviso en pantalla solo para él
