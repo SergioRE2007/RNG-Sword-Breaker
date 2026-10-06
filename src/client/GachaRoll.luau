@@ -971,7 +971,7 @@ local function buildPanel()
 	box.Name = "Box"
 	box.ZIndex = 2
 	Ui.round(box, 14)
-	Ui.gradient(box, Color3.fromRGB(70, 60, 100), Ui.COLORS.panel, 90)
+	Ui.panel(box, Color3.fromRGB(58, 50, 86))
 	Ui.stroke(box, BLACK, 3)
 
 	iconSlot = Instance.new("Frame")

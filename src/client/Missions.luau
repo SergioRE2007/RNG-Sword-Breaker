@@ -75,7 +75,7 @@ function Missions.start()
 		header.Parent = body
 		Ui.round(header, 10)
 		Ui.stroke(header, BLACK, 3)
-		Ui.gradient(header, color:Lerp(WHITE, 0.2), color:Lerp(BLACK, 0.45), 90)
+		Ui.panel(header, color:Lerp(BLACK, 0.12))
 		local name = Ui.label(header, 24)
 		name.Position = UDim2.fromOffset(14, 0)
 		name.Size = UDim2.new(0.5, 0, 1, 0)

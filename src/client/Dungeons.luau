@@ -397,29 +397,37 @@ local function buildFeedback()
 	card.Parent = gui
 	Ui.round(card, 16)
 	Ui.stroke(card, BLACK, 5)
-	Ui.gradient(card, Color3.fromRGB(66, 62, 124), Color3.fromRGB(24, 24, 50), 90)
+	Ui.panel(card, Color3.fromRGB(54, 50, 104))
 	local cardScale = Instance.new("UIScale")
 	cardScale.Parent = card
+	-- El texto va en un marco de dentro: el relleno y la lista no deben mover el brillo ni el canto del panel.
+	local content = Instance.new("Frame")
+	content.Name = "Content"
+	content.Size = UDim2.fromScale(1, 0)
+	content.AutomaticSize = Enum.AutomaticSize.Y
+	content.BackgroundTransparency = 1
+	content.ZIndex = Z_RESULT
+	content.Parent = card
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, 16)
 	padding.PaddingBottom = UDim.new(0, 18)
 	padding.PaddingLeft = UDim.new(0, 20)
 	padding.PaddingRight = UDim.new(0, 20)
-	padding.Parent = card
+	padding.Parent = content
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 6)
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = card
-	local title = Ui.label(card, 34)
+	layout.Parent = content
+	local title = Ui.label(content, 34)
 	title.LayoutOrder = 1
 	title.Size = UDim2.new(1, 0, 0, 42)
 	title.ZIndex = Z_RESULT
-	local subtitle = Ui.label(card, 20)
+	local subtitle = Ui.label(content, 20)
 	subtitle.LayoutOrder = 2
 	subtitle.Size = UDim2.new(1, 0, 0, 26)
 	subtitle.ZIndex = Z_RESULT
-	local loot = Ui.label(card, 20)
+	local loot = Ui.label(content, 20)
 	loot.LayoutOrder = 3
 	loot.Size = UDim2.new(1, 0, 0, 0)
 	loot.AutomaticSize = Enum.AutomaticSize.Y
