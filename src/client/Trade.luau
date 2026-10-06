@@ -102,7 +102,7 @@ local function artifactCell(parent: Instance, index: number): TextButton
 	local artifact = Config.Artifacts[index]
 	local color = Rarity.tier(artifact.rarity).color
 	local cell = Ui.cell(parent, color)
-	Ui.orbIcon(cell, artifact.color)
+	Ui.amuletIcon(cell, artifact.color)
 	Ui.tip(cell, function()
 		return `{artifact.name}\n<font color="{Ui.SOFT}">Accesorio · {Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}</font>`, color
 	end, true)
@@ -113,7 +113,7 @@ end
 local function amountCell(parent: Instance, name: string, color: Color3, amount: number, kind: string): TextButton
 	local cell = Ui.cell(parent, color)
 	if kind == "coins" then
-		Ui.orbIcon(cell, color)
+		Ui.coinIcon(cell, color)
 	elseif kind == "gems" then
 		Ui.gemIcon(cell, color)
 	elseif kind == "missionToken" then
