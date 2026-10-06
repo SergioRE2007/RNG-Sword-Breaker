@@ -288,8 +288,7 @@ local function startProblem(party): string?
 			end
 			if not member.ready and member ~= party.leader then
 				return `Falta que {member.name} marque Listo.`
-			end
-		end
+			end		end
 	end
 	return nil
 end
@@ -365,7 +364,20 @@ HANDLERS.close = function(player)
 	push(player)
 end
 
+-- Quien ya salió de la partida (o murió) sigue apuntado al grupo hasta que el vigilante lo quita: si pide otro grupo
+-- antes, se le saca aquí para que la petición no se pierda.
+local function freeIfOut(player: Player)
+	local party = partyOf[player]
+	if party and party.state == "running" and not Dungeons.isBusy(player) then
+		local member = memberOf(party, player)
+		if member then
+			removeMember(party, member)
+		end
+	end
+end
+
 HANDLERS.create = function(player, zoneArg)
+	freeIfOut(player)
 	local zone = validZone(zoneArg)
 	if not zone or partyOf[player] or not nearRoom(player, zone) then
 		return
@@ -380,6 +392,7 @@ HANDLERS.create = function(player, zoneArg)
 end
 
 HANDLERS.solo = function(player, zoneArg)
+	freeIfOut(player)
 	local zone = validZone(zoneArg)
 	if not zone or partyOf[player] or not nearRoom(player, zone) then
 		return
@@ -397,6 +410,7 @@ HANDLERS.join = function(player, idArg)
 	if type(idArg) ~= "number" then
 		return
 	end
+	freeIfOut(player)
 	local party = parties[idArg]
 	if partyOf[player] or not party or party.state ~= "lobby" then
 		return
@@ -436,6 +450,8 @@ HANDLERS.leave = function(player)
 	if not party or (party.state == "running" and Dungeons.isBusy(player)) then
 		return
 	end
+	-- El cliente cierra la ventana al salir, y su "close" de después lo corta el límite de frecuencia.
+	viewing[player] = nil
 	local member = memberOf(party, player)
 	if member then
 		removeMember(party, member)
@@ -573,6 +589,7 @@ HANDLERS.respond = function(player, leaderId, accept)
 		notice(player, "La invitación ha caducado.")
 		return
 	end
+	freeIfOut(player)
 	local party = partyOf[leader]
 	if partyOf[player] or not party or party.state ~= "lobby" or party.leader.player ~= leader then
 		notice(player, "Ese grupo ya no está abierto.")
