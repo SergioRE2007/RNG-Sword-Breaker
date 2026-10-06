@@ -15,6 +15,7 @@ require(script.DayCycle).start() -- antes de DungeonFx, que lo enciende y apaga 
 require(script.DungeonFx).start()
 require(script.RoomSigns).start()
 require(script.GachaRoll).start()
+require(script.RollReveal).start()
 require(script.SkillTree).start()
 require(script.Effects).start()
 require(script.WeaponAura).start()
