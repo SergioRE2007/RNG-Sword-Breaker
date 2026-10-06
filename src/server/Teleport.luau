@@ -1,12 +1,14 @@
 -- Transporte desde la barra de arriba (Hub, Casa, Tiendas): el cliente pide un destino con el
--- remote Teleport y aquí se valida y se mueve al personaje. "dungeon" es el portal de mazmorras, "home" es la parcela del jugador
--- (Plots), "hub" el centro junto al gacha y "shops" delante de los puestos de Rasgos y Grados
--- (ModifierShops los pone entre los caminos de 112.5° y 157.5°, a HubRadius - 18).
+-- remote Teleport y aquí se valida y se mueve al personaje. "dungeon" es la plaza del lobby subterráneo de mazmorras
+-- (DungeonLobby), "home" es la parcela del jugador (Plots), "hub" el centro junto a la boca del pozo de las mazmorras y
+-- "shops" delante de los puestos de Rasgos y Grados (ModifierShops los pone entre los caminos de 112.5° y 157.5°,
+-- a HubRadius - 18).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local DungeonLobby = require(script.Parent.DungeonLobby)
 local Plots = require(script.Parent.Plots)
 
 local Teleport = {}
@@ -18,8 +20,8 @@ local lastTravel = {} -- [player] = os.clock() del último viaje
 local function destination(player: Player, where: unknown): CFrame?
 	local floor = Config.Plot.FloorHeight + 3
 	if where == "hub" then
-		-- Delante de la máquina del gacha, mirándola.
-		return CFrame.lookAt(Vector3.new(0, floor, 16), Vector3.new(0, floor, 0))
+		-- En el centro, a un lado de la boca del pozo de las mazmorras, mirándola.
+		return CFrame.lookAt(Vector3.new(0, floor, 38), Vector3.new(0, floor, 0))
 	elseif where == "shops" then
 		-- Entre los dos puestos, mirándolos.
 		local angle = math.rad(135)
@@ -27,11 +29,8 @@ local function destination(player: Player, where: unknown): CFrame?
 		local stand = direction * (Config.Plot.HubRadius - 40) + Vector3.new(0, floor, 0)
 		return CFrame.lookAt(stand, stand + direction)
 	elseif where == "dungeon" then
-		-- Delante del portal de mazmorras (Dungeons lo pone a HubRadius - 18), mirándolo.
-		local angle = math.rad(Config.Dungeon.PortalAngle)
-		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
-		local stand = direction * (Config.Plot.HubRadius - 32) + Vector3.new(0, floor, 0)
-		return CFrame.lookAt(stand, stand + direction)
+		-- Abajo, en la plaza del lobby subterráneo (si no se ha podido construir, junto a la boca del pozo, en el hub).
+		return DungeonLobby.plazaCFrame() or CFrame.lookAt(Vector3.new(0, floor, 38), Vector3.new(0, floor, 0))
 	elseif where == "home" then
 		local plot = Plots.get(player)
 		return plot and plot.spawn.CFrame + Vector3.new(0, 4, 0)

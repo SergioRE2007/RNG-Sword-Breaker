@@ -1,10 +1,14 @@
--- Mazmorras: portal en el hub y una arena aparte para cada jugador que entra. El cliente solo pide entrar
--- (EnterDungeon con la dificultad) o salir; aquí se valida, se construye la arena lejos de la isla, salen
--- las oleadas de Config.Dungeon.Waves, se mueve a los enemigos, se aplica el daño en los dos sentidos y se
--- reparten los premios (Loot). Los golpes del jugador llegan por Combat (Dungeons.strike).
--- Estado para el cliente en atributos del Player: Dungeon (dificultad, 0 = fuera), DungeonWave, DungeonWaves,
--- DungeonLeft (enemigos vivos), DungeonEnds (hora del servidor a la que se acaba el tiempo) y DungeonLoop (si
--- tiene puesto "repetir": al superarla empieza otra igual sin volver al hub; morir o salir corta el bucle).
+-- Mazmorras: una arena aparte para cada partida, lejos de la isla, que se juega solo o en grupo (1 a
+-- Config.Party.MaxSize jugadores). Quien las lanza (server/Party, con el grupo ya validado, vía Dungeons.launch) pasa la
+-- lista de jugadores y la zona; aquí se construye la arena con el tema de la zona,
+-- salen las oleadas, se mueve a los enemigos (cada uno persigue al jugador vivo más cercano), se aplica el daño en los
+-- dos sentidos y se reparten los premios (Loot: cada jugador vivo tira por cada enemigo y por terminar). Los golpes
+-- llegan por Combat (Dungeons.strike). La vida y la cantidad de enemigos suben con el tamaño del grupo
+-- (Config.Party.Scaling).
+-- Estado para el cliente en atributos del Player: Dungeon (zona, 0 = fuera), DungeonRun (id de la partida: los de
+-- su grupo llevan el mismo), DungeonWave, DungeonWaves, DungeonLeft (enemigos vivos), DungeonEnds (hora del servidor a
+-- la que se acaba el tiempo) y DungeonLoop (si el jugador tiene puesto "repetir": si es el líder, al superarla empieza
+-- otra igual sin volver al lobby).
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,178 +17,120 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Destructibles = require(script.Parent.Destructibles)
+local DungeonLobby = require(script.Parent.DungeonLobby)
+local DungeonThemes = require(script.Parent.DungeonThemes)
 local Loot = require(script.Parent.Loot)
-local Plots = require(script.Parent.Plots)
 
 local Dungeons = {}
 
 local cfg = Config.Dungeon
 local random = Random.new()
 
-local runs = {} -- [Player] = partida en curso
+-- run = { id, index, level, theme, waves, slot, origin, model, members = { [Player] = member }, order = { member },
+--   leader = member?, size, playerCount, hpMult, countMult, enemies = { [body] = enemy }, left, wave, state, ends,
+--   nextWave, context, ended }. member = { player = Player?, ghost = true?, name, summary, slot }. Los "fantasmas" (solo en Studio, para
+--   probar el escalado y las bajas con un único jugador) cuentan en el tamaño del grupo pero no pelean ni cobran.
+local runs = {} -- [run] = true: partidas en curso
+local runOf = {} -- [Player] = su partida
 local looping = {} -- [Player] = true si quiere repetir la mazmorra en bucle
-local begin -- se define más abajo (la usa win para repetir)
-local lastEnter = {} -- [Player] = os.clock() de su última entrada
-local portalPosition: Vector3 -- en el suelo del hub
-local portalFront: CFrame -- donde se deja al jugador al volver
-
-local STONE = { Color3.fromRGB(72, 70, 88), Color3.fromRGB(58, 56, 72) }
-local GLOW = Color3.fromRGB(170, 90, 255)
-
-local function block(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): Part
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Anchored = true
-	part.Size = size
-	part.CFrame = cframe
-	part.Color = color
-	part.Material = material or Enum.Material.Slate
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	part.Parent = parent
-	return part
-end
-
-local function disc(parent: Instance, name: string, center: Vector3, radius: number, height: number, color: Color3, material: Enum.Material): Part
-	local part = block(parent, name, Vector3.new(height, radius * 2, radius * 2), CFrame.new(center) * CFrame.Angles(0, 0, math.rad(90)), color, material)
-	part.Shape = Enum.PartType.Cylinder
-	return part
-end
-
--- Portal ---------------------------------------------------------------------------------
-
--- Arco de piedra con un disco de cristal que gira (lo anima el cliente: etiqueta PortalSwirl), runas, cartel
--- y el aviso de "pulsa E". Mira hacia el centro del hub.
-local function buildPortal(parent: Instance)
-	local floor = Config.Plot.FloorHeight
-	local angle = math.rad(cfg.PortalAngle)
-	local radius = Config.Plot.HubRadius - 18
-	portalPosition = Vector3.new(math.cos(angle) * radius, floor, math.sin(angle) * radius)
-	local base = CFrame.lookAt(portalPosition, Vector3.new(0, floor, 0))
-	portalFront = base * CFrame.new(0, 3.5, -12)
-
-	local model = Instance.new("Model")
-	model.Name = "PortalMazmorras"
-
-	-- Escalones.
-	block(model, "Step", Vector3.new(20, 0.8, 9), base * CFrame.new(0, 0.4, 0), STONE[1])
-	block(model, "Step", Vector3.new(16, 0.8, 6), base * CFrame.new(0, 1.2, 0.5), STONE[2])
-	-- Pilares y arco de dovelas.
-	local opening, pillarHeight = 5.5, 9
-	for _, side in { -1, 1 } do
-		block(model, "Pillar", Vector3.new(2.6, pillarHeight, 2.6), base * CFrame.new(side * (opening + 1.3), 1.6 + pillarHeight / 2, 0.5), STONE[1])
-		block(model, "Cap", Vector3.new(3.2, 0.8, 3.2), base * CFrame.new(side * (opening + 1.3), 1.6 + pillarHeight + 0.4, 0.5), STONE[2])
-		local rune = block(model, "Rune", Vector3.new(0.9, 0.9, 0.3), base * CFrame.new(side * (opening + 1.3), 6, -0.95), GLOW, Enum.Material.Neon)
-		rune.CanCollide = false
-	end
-	local archCenter = base * CFrame.new(0, 1.6 + pillarHeight + 0.8, 0.5)
-	local stones = 7
-	for index = 1, stones do
-		local turn = math.rad(180 * (index - 0.5) / stones)
-		local arm = opening + 1.3
-		block(model, "Arch", Vector3.new(3.2, 2.6, 2.6), archCenter * CFrame.new(math.cos(turn) * arm, math.sin(turn) * arm, 0) * CFrame.Angles(0, 0, turn - math.pi / 2), STONE[index % 2 + 1])
-	end
-
-	-- Disco del portal: cristal morado, sin Neon (pieza grande). El cliente lo gira y le pone partículas.
-	local swirl = block(model, "Swirl", Vector3.new(0.5, opening * 2, opening * 2 + 6), base * CFrame.new(0, 1.6 + pillarHeight / 2 + 1.4, 0.5) * CFrame.Angles(0, math.rad(90), 0), GLOW, Enum.Material.Glass)
-	swirl.Shape = Enum.PartType.Cylinder
-	swirl.Transparency = 0.25
-	swirl.CanCollide = false
-	swirl.CastShadow = false
-	CollectionService:AddTag(swirl, "PortalSwirl")
-	local light = Instance.new("PointLight")
-	light.Color = GLOW
-	light.Range = 26
-	light.Brightness = 1.4
-	light.Parent = swirl
-
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(380, 80)
-	gui.StudsOffset = Vector3.new(0, 17, 0)
-	gui.MaxDistance = 220
-	gui.LightInfluence = 0
-	gui.Parent = swirl
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 48
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Text = "MAZMORRAS"
-	label.Parent = gui
-	local outline = Instance.new("UIStroke")
-	outline.Color = Color3.new(0, 0, 0)
-	outline.Thickness = 3.5
-	outline.Parent = label
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new(Color3.fromRGB(200, 130, 255), Color3.fromRGB(255, 110, 140))
-	gradient.Parent = label
-	CollectionService:AddTag(gui, "ShopSign") -- el cliente (ModifierShops) lo anima como los de las tiendas
-
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Entrar"
-	prompt.ObjectText = "Mazmorras"
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 16
-	prompt.RequiresLineOfSight = false
-	prompt:SetAttribute("Shop", "dungeons")
-	prompt.Parent = swirl
-
-	model.Parent = parent
-end
+local usedSlots = {} -- [número] = true: huecos de arena ocupados
+local nextRunId = 0
 
 -- Arena ----------------------------------------------------------------------------------
 
--- Plataforma redonda de piedra con muro, antorchas y un emblema del color de la dificultad.
-local function buildArena(origin: Vector3, level): Model
+-- La arena de la zona: suelo, muro, techo y adornos según su tema de Config.DungeonThemes (server/DungeonThemes).
+local function buildArena(origin: Vector3, level, theme): Model
 	local model = Instance.new("Model")
 	model.Name = "Mazmorra"
-	local radius = cfg.ArenaRadius
-
-	disc(model, "Floor", origin - Vector3.new(0, 2, 0), radius + 4, 4, STONE[2], Enum.Material.Slate)
-	local ring = disc(model, "Ring", origin + Vector3.new(0, 0.05, 0), radius * 0.7, 0.1, STONE[1], Enum.Material.Cobblestone)
-	ring.CanCollide = false
-	local emblem = disc(model, "Emblem", origin + Vector3.new(0, 0.1, 0), 7, 0.1, level.color:Lerp(Color3.new(0, 0, 0), 0.6), Enum.Material.Slate)
-	emblem.CanCollide = false
-
-	local segments = 28
-	local width = 2 * math.pi * (radius + 2) / segments + 0.6
-	for index = 1, segments do
-		local turn = (index - 1) / segments * math.pi * 2
-		local outward = Vector3.new(math.cos(turn), 0, math.sin(turn))
-		local facing = CFrame.lookAt(origin + outward * (radius + 2), origin)
-		local tall = index % 4 == 1
-		local height = if tall then 22 else 15
-		block(model, "Wall", Vector3.new(width, height, 4), facing * CFrame.new(0, height / 2, 0), STONE[index % 2 + 1])
-		if tall then
-			local torch = block(model, "Torch", Vector3.new(1.4, 1.4, 1.4), facing * CFrame.new(0, 12, -3), Color3.fromRGB(255, 160, 60), Enum.Material.Neon)
-			torch.CanCollide = false
-			local light = Instance.new("PointLight")
-			light.Color = level.color:Lerp(Color3.fromRGB(255, 170, 80), 0.5)
-			light.Range = 40
-			light.Brightness = 1.6
-			light.Parent = torch
-		end
-	end
-	-- Muro invisible por encima, para que no se pueda salir saltando.
-	for index = 1, segments do
-		local turn = (index - 1) / segments * math.pi * 2
-		local facing = CFrame.lookAt(origin + Vector3.new(math.cos(turn), 0, math.sin(turn)) * (radius + 2), origin)
-		local barrier = block(model, "Barrier", Vector3.new(width, 60, 2), facing * CFrame.new(0, 45, 0), STONE[1])
-		barrier.Transparency = 1
-		barrier.CanQuery = false
-		barrier.CastShadow = false
-	end
+	DungeonThemes.build(model, origin, cfg.ArenaRadius, level, theme)
 	model.Parent = workspace
 	return model
 end
 
 -- Enemigos -------------------------------------------------------------------------------
 
--- Adornos por tipo de enemigo ("look" en Config.Enemies): piezas pequeñas soldadas al cuerpo.
-local function decorate(body: Part, def)
-	local size = def.size
-	local function add(name: string, partSize: Vector3, offset: CFrame, color: Color3, material: Enum.Material?)
+-- Adornos de cada "look" (Config.Enemies y los skins de Config.DungeonThemes; un enemigo puede llevar varios):
+-- piezas pequeñas soldadas al cuerpo. Un look nuevo es una función más aquí. `add` pone una pieza (devuelve la
+-- pieza); `size` es el tamaño del cuerpo; `color` su color. La cara es -Z.
+local GOLD = Color3.fromRGB(255, 205, 60)
+local BONE = Color3.fromRGB(240, 235, 215)
+local LOOKS: { [string]: (add: (string, Vector3, CFrame, Color3, Enum.Material?) -> Part, size: Vector3, color: Color3) -> () } = {}
+
+LOOKS.horns = function(add, size)
+	for _, side in { -1, 1 } do
+		add("Horn", Vector3.new(size.X * 0.14, size.Y * 0.35, size.X * 0.14), CFrame.new(side * size.X * 0.36, size.Y * 0.62, 0) * CFrame.Angles(0, 0, math.rad(-side * 18)), BONE)
+	end
+end
+
+LOOKS.crown = function(add, size)
+	add("Crown", Vector3.new(size.X * 0.5, size.Y * 0.1, size.Z * 0.5), CFrame.new(0, size.Y * 0.55, 0), GOLD, Enum.Material.Foil)
+	for index = 1, 4 do
+		local turn = index * math.pi / 2
+		add("Spike", Vector3.new(size.X * 0.08, size.Y * 0.16, size.X * 0.08), CFrame.new(math.cos(turn) * size.X * 0.2, size.Y * 0.68, math.sin(turn) * size.Z * 0.2), GOLD, Enum.Material.Foil)
+	end
+end
+
+-- Hojas en la cabeza (bosque, nebulosa): láminas verdes inclinadas.
+LOOKS.leaf = function(add, size, color)
+	local green = color:Lerp(Color3.fromRGB(70, 190, 80), 0.6)
+	for index, lean in { -26, 0, 26 } do
+		add("Leaf", Vector3.new(size.X * 0.2, size.Y * 0.34, size.X * 0.05), CFrame.new((index - 2) * size.X * 0.2, size.Y * 0.64, 0) * CFrame.Angles(0, 0, math.rad(lean)), green)
+	end
+end
+
+LOOKS.antlers = function(add, size)
+	local wood = Color3.fromRGB(128, 96, 64)
+	for _, side in { -1, 1 } do
+		add("Antler", Vector3.new(size.X * 0.08, size.Y * 0.5, size.X * 0.08), CFrame.new(side * size.X * 0.3, size.Y * 0.68, 0) * CFrame.Angles(0, 0, math.rad(-side * 20)), wood, Enum.Material.Wood)
+		add("Prong", Vector3.new(size.X * 0.06, size.Y * 0.24, size.X * 0.06), CFrame.new(side * size.X * 0.46, size.Y * 0.8, 0) * CFrame.Angles(0, 0, math.rad(-side * 55)), wood, Enum.Material.Wood)
+	end
+end
+
+-- Capucha: un bloque oscuro sobre la cabeza.
+LOOKS.hood = function(add, size, color)
+	add("Hood", Vector3.new(size.X * 1.05, size.Y * 0.24, size.Z * 1.05), CFrame.new(0, size.Y * 0.4, size.Z * 0.01), color:Lerp(Color3.new(0, 0, 0), 0.55))
+end
+
+LOOKS.spikes = function(add, size, color)
+	for index = 1, 5 do
+		local turn = index / 5 * math.pi * 2
+		add("Spike", Vector3.new(size.X * 0.1, size.Y * 0.24, size.X * 0.1), CFrame.new(math.cos(turn) * size.X * 0.28, size.Y * 0.58, math.sin(turn) * size.Z * 0.28), color:Lerp(Color3.new(1, 1, 1), 0.45))
+	end
+end
+
+-- Llamitas en la cabeza (brillan, pero son pequeñas).
+LOOKS.flame = function(add, size)
+	for index, lean in { -14, 0, 14 } do
+		add("Flame", Vector3.new(size.X * 0.12, size.Y * 0.3, size.X * 0.12), CFrame.new((index - 2) * size.X * 0.16, size.Y * 0.62, 0) * CFrame.Angles(0, 0, math.rad(lean)), Color3.fromRGB(255, 150, 50), Enum.Material.Neon)
+	end
+end
+
+LOOKS.halo = function(add, size)
+	local ring = add("Halo", Vector3.new(size.Y * 0.06, size.X * 0.8, size.X * 0.8), CFrame.new(0, size.Y * 0.78, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 245, 190), Enum.Material.Neon)
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Transparency = 0.15
+end
+
+LOOKS.helmet = function(add, size)
+	add("Helmet", Vector3.new(size.X * 1.04, size.Y * 0.2, size.Z * 1.04), CFrame.new(0, size.Y * 0.42, 0), Color3.fromRGB(235, 190, 60), Enum.Material.Metal)
+	add("Lamp", Vector3.new(size.X * 0.18, size.X * 0.18, size.X * 0.14), CFrame.new(0, size.Y * 0.46, -size.Z / 2 - 0.3), Color3.fromRGB(255, 244, 190), Enum.Material.Neon)
+end
+
+-- Calavera: cuencas negras tras los ojos y dientes.
+LOOKS.skull = function(add, size)
+	local eye = size.X * 0.2
+	for _, side in { -1, 1 } do
+		add("Socket", Vector3.new(eye * 1.55, eye * 1.8, 0.2), CFrame.new(side * size.X * 0.22, size.Y * 0.15, -size.Z / 2 - 0.05), Color3.new(0, 0, 0))
+	end
+	for index = -1.5, 1.5 do
+		add("Tooth", Vector3.new(size.X * 0.07, size.Y * 0.1, 0.3), CFrame.new(index * size.X * 0.1, -size.Y * 0.2, -size.Z / 2 - 0.3), Color3.new(1, 1, 1))
+	end
+end
+
+-- Cuerpo ya creado: ojos, boca y los adornos del look (nombre o lista de nombres).
+local function decorate(body: Part, look: (string | { string })?)
+	local size = body.Size
+	local function add(name: string, partSize: Vector3, offset: CFrame, color: Color3, material: Enum.Material?): Part
 		local part = Instance.new("Part")
 		part.Name = name
 		part.Size = partSize
@@ -199,6 +145,7 @@ local function decorate(body: Part, def)
 		weld.Part1 = part
 		weld.Parent = part
 		part.Parent = body
+		return part
 	end
 	-- Ojos (la cara es -Z).
 	local eye = size.X * 0.2
@@ -207,16 +154,11 @@ local function decorate(body: Part, def)
 		add("Pupil", Vector3.new(eye * 0.45, eye * 0.6, 0.3), CFrame.new(side * size.X * 0.22, size.Y * 0.12, -size.Z / 2 - 0.2), Color3.new(0, 0, 0))
 	end
 	add("Mouth", Vector3.new(size.X * 0.4, size.Y * 0.07, 0.3), CFrame.new(0, -size.Y * 0.2, -size.Z / 2 - 0.1), Color3.new(0, 0, 0))
-	if def.look == "horns" or def.look == "crown" then
-		for _, side in { -1, 1 } do
-			add("Horn", Vector3.new(size.X * 0.14, size.Y * 0.35, size.X * 0.14), CFrame.new(side * size.X * 0.36, size.Y * 0.62, 0) * CFrame.Angles(0, 0, math.rad(-side * 18)), Color3.fromRGB(240, 235, 215))
-		end
-	end
-	if def.look == "crown" then
-		add("Crown", Vector3.new(size.X * 0.5, size.Y * 0.1, size.Z * 0.5), CFrame.new(0, size.Y * 0.55, 0), Color3.fromRGB(255, 205, 60), Enum.Material.Foil)
-		for index = 1, 4 do
-			local turn = index * math.pi / 2
-			add("Spike", Vector3.new(size.X * 0.08, size.Y * 0.16, size.X * 0.08), CFrame.new(math.cos(turn) * size.X * 0.2, size.Y * 0.68, math.sin(turn) * size.Z * 0.2), Color3.fromRGB(255, 205, 60), Enum.Material.Foil)
+	local names = if type(look) == "table" then look elseif look then { look } else {}
+	for _, name in names do
+		local make = LOOKS[name]
+		if make then
+			make(add, size, body.Color)
 		end
 	end
 end
@@ -224,28 +166,31 @@ end
 local function spawnEnemy(run, key: string)
 	local def = Config.Enemies[key]
 	local level = run.level
+	-- Cómo se ve en esta zona (nombre, color, adornos y escala del tema); sus números siguen siendo los de Config.Enemies.
+	local skin = DungeonThemes.skin(run.theme, key)
+	local size: Vector3 = def.size * ((skin and skin.scale) or 1)
 	local turn = random:NextNumber(0, math.pi * 2)
 	local distance = cfg.ArenaRadius * random:NextNumber(0.55, 0.85)
-	local position = run.origin + Vector3.new(math.cos(turn) * distance, def.size.Y / 2 + 1, math.sin(turn) * distance)
+	local position = run.origin + Vector3.new(math.cos(turn) * distance, size.Y / 2 + 1, math.sin(turn) * distance)
 
 	local body = Instance.new("Part")
-	body.Name = def.name
-	body.Size = def.size
-	body.Color = def.color
+	body.Name = (skin and skin.name) or def.name
+	body.Size = size
+	body.Color = (skin and skin.color) or def.color
 	body.Material = Enum.Material.SmoothPlastic
 	body.TopSurface = Enum.SurfaceType.Smooth
 	body.BottomSurface = Enum.SurfaceType.Smooth
 	body.CustomPhysicalProperties = PhysicalProperties.new(1, 0, 0) -- sin rozamiento: lo mueve LinearVelocity
 	body.CFrame = CFrame.lookAt(position, Vector3.new(run.origin.X, position.Y, run.origin.Z))
-	local hp = def.hp * level.hp
+	local hp = def.hp * level.hp * run.hpMult
 	body:SetAttribute("HP", hp)
 	body:SetAttribute("MaxHP", hp)
 	CollectionService:AddTag(body, "Enemy")
-	decorate(body, def)
+	decorate(body, (skin and skin.look) or def.look)
 
 	local attachment = Instance.new("Attachment")
 	attachment.Parent = body
-	local mass = def.size.X * def.size.Y * def.size.Z
+	local mass = size.X * size.Y * size.Z
 	local velocity = Instance.new("LinearVelocity")
 	velocity.Attachment0 = attachment
 	velocity.RelativeTo = Enum.ActuatorRelativeTo.World
@@ -265,26 +210,128 @@ local function spawnEnemy(run, key: string)
 
 	body.Parent = run.model
 	body:SetNetworkOwner(nil)
-	run.enemies[body] = { def = def, hp = hp, velocity = velocity, align = align, nextAttack = os.clock() + def.attackTime * 0.5, mass = mass }
-	run.alive += 1
+	run.enemies[body] = { def = def, size = size, hp = hp, velocity = velocity, align = align, nextAttack = os.clock() + def.attackTime * 0.5, mass = mass }
+	run.left += 1
 end
 
 -- Partidas -------------------------------------------------------------------------------
 
+local function takeSlot(): number?
+	for slot = 1, cfg.MaxRuns do
+		if not usedSlots[slot] then
+			usedSlots[slot] = true
+			return slot
+		end
+	end
+	return nil
+end
+
+local function hasPlayers(run): boolean
+	for _, member in run.order do
+		if member.player then
+			return true
+		end
+	end
+	return false
+end
+
+-- Dónde se deja al jugador al acabar la partida: en la sala de esa zona, en el lobby subterráneo (o, si el lobby no se
+-- ha podido construir, junto a la boca del pozo, en el hub).
+local HUB_SPOT = CFrame.new(0, Config.Plot.FloorHeight + 3, 38)
+local function returnPoint(run, member): CFrame
+	return DungeonLobby.returnCFrame(run.index, member.slot or 1, run.playerCount or 1) or HUB_SPOT
+end
+
+local function clearAttributes(player: Player)
+	player:SetAttribute("Dungeon", 0)
+	player:SetAttribute("DungeonRun", 0)
+end
+
+local function result(run, member, won: boolean, reason: string)
+	local player = member.player
+	if player and player.Parent then
+		Remotes.DungeonEvent:FireClient(player, "result", { won = won, reason = reason, level = run.index, loot = member.summary })
+	end
+end
+
+-- Para la lista de la partida: los jugadores que siguen dentro.
 local function publish(run)
-	local player = run.player
-	player:SetAttribute("DungeonWave", run.wave)
-	player:SetAttribute("DungeonLeft", run.alive)
+	for _, member in run.order do
+		local player = member.player
+		if player and player.Parent then
+			player:SetAttribute("DungeonWave", run.wave)
+			player:SetAttribute("DungeonLeft", run.left)
+		end
+	end
+end
+
+local endRun
+
+-- Saca a un miembro de la partida (muerte, salida, desconexión o fin). Si ya no queda ningún jugador, acaba la partida.
+local function detach(run, member, bringBack: boolean)
+	local index = table.find(run.order, member)
+	if not index then
+		return
+	end
+	table.remove(run.order, index)
+	local player = member.player
+	if player then
+		run.members[player] = nil
+		if runOf[player] == run then
+			runOf[player] = nil
+		end
+		if player.Parent then
+			clearAttributes(player)
+			if bringBack then
+				local character = player.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if humanoid and humanoid.Health > 0 then
+					character:PivotTo(returnPoint(run, member))
+				end
+			end
+		end
+	end
+	if run.leader == member then
+		run.leader = nil
+		for _, other in run.order do
+			if other.player then
+				run.leader = other
+				break
+			end
+		end
+	end
+	if not run.ended and not hasPlayers(run) then
+		endRun(run, false)
+	end
+end
+
+-- Termina la partida: saca a todos (devolviéndolos al lobby si toca) y borra la arena.
+function endRun(run, bringBack: boolean)
+	if run.ended then
+		return
+	end
+	run.ended = true
+	runs[run] = nil
+	for _, member in table.clone(run.order) do
+		detach(run, member, bringBack)
+	end
+	usedSlots[run.slot] = nil
+	run.model:Destroy()
+	local onEnd = run.onEnd
+	run.onEnd = nil
+	if onEnd then
+		task.spawn(onEnd)
+	end
 end
 
 local function startWave(run)
 	run.wave += 1
 	run.state = "fighting"
-	for _, entry in cfg.Waves[run.wave] do
+	for _, entry in run.waves[run.wave] do
 		local key, count = entry[1], entry[2]
 		local def = Config.Enemies[key]
 		if def then
-			local total = if def.scaleCount == false then count else math.ceil(count * run.level.count)
+			local total = if def.scaleCount == false then count else math.ceil(count * run.level.count * run.countMult)
 			for _ = 1, total do
 				spawnEnemy(run, key)
 			end
@@ -293,63 +340,101 @@ local function startWave(run)
 	publish(run)
 end
 
--- Termina la partida: borra la arena y, si toca, devuelve al jugador al portal.
-local function finish(run, bringBack: boolean)
-	local player = run.player
-	if runs[player] ~= run then
-		return
-	end
-	runs[player] = nil
-	if player.Parent then
-		player:SetAttribute("Dungeon", 0)
-		if bringBack then
-			local character = player.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 then
-				character:PivotTo(portalFront)
-			end
+local launch
+
+-- Tras ganar: otra igual con los que siguen vivos (la arena vieja se borra cuando ya está lista la nueva).
+local function restart(old, survivors: { Player }, ghosts: number)
+	runs[old] = nil
+	old.ended = true
+	-- Los que siguen vivos pasan a la partida nueva (sus atributos no se tocan); lo que quede en la vieja son fantasmas.
+	for _, player in survivors do
+		local member = old.members[player]
+		old.members[player] = nil
+		runOf[player] = nil
+		local index = table.find(old.order, member)
+		if index then
+			table.remove(old.order, index)
 		end
 	end
-	run.model:Destroy()
-end
-
-local function result(run, won: boolean, reason: string)
-	if run.player.Parent then
-		Remotes.DungeonEvent:FireClient(run.player, "result", { won = won, reason = reason, level = run.index, loot = run.summary })
+	local onEnd = old.onEnd
+	old.onEnd = nil
+	local new = launch(survivors, old.index, { ghosts = ghosts, onEnd = onEnd })
+	usedSlots[old.slot] = nil
+	old.model:Destroy()
+	if not new then
+		if onEnd then
+			task.spawn(onEnd)
+		end
+		for number, player in survivors do
+			if player.Parent then
+				clearAttributes(player)
+				local character = player.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if humanoid and humanoid.Health > 0 then
+					character:PivotTo(returnPoint(old, { slot = number }))
+				end
+			end
+		end
 	end
 end
 
 local function win(run)
 	run.state = "won"
-	Loot.roll(run.player, cfg.ClearDrops, run.context, run.summary)
-	result(run, true, "clear")
+	for _, member in run.order do
+		if member.player then
+			Loot.roll(member.player, cfg.ClearDrops, run.context, member.summary)
+			result(run, member, true, "clear")
+		end
+	end
 	task.delay(cfg.ExitDelay, function()
-		local player = run.player
-		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-		if runs[player] == run and looping[player] and humanoid and humanoid.Health > 0 then
-			-- Repetir: se cambia la arena por una nueva sin sacarlo de ella.
-			finish(run, false)
-			begin(player, run.index)
+		if run.ended or not runs[run] then
+			return
+		end
+		local survivors = {}
+		local ghosts = 0
+		for _, member in run.order do
+			local player = member.player
+			if not player then
+				ghosts += 1
+				continue
+			end
+			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if player.Parent and humanoid and humanoid.Health > 0 then
+				table.insert(survivors, player)
+			end
+		end
+		local leader = run.leader and run.leader.player
+		if #survivors > 0 and leader and looping[leader] then
+			restart(run, survivors, ghosts)
 		else
-			finish(run, true)
+			endRun(run, true)
 		end
 	end)
 end
 
-local function kill(run, body: BasePart)
+local function kill(run, body: BasePart, killer: Player)
 	local enemy = run.enemies[body]
 	run.enemies[body] = nil
-	run.alive -= 1
-	-- Mismo aviso que al romper un objeto: escombros y sonido en el cliente.
-	Remotes.Broken:FireClient(run.player, run.player, body.CFrame, body.Size, body.Color, body.Material, 0, 0)
+	run.left -= 1
+	-- Mismo aviso que al romper un objeto: escombros y sonido en el cliente de cada jugador.
+	for _, member in run.order do
+		local player = member.player
+		if player and player.Parent then
+			Remotes.Broken:FireClient(player, killer, body.CFrame, body.Size, body.Color, body.Material, 0, 0)
+		end
+	end
 	body:Destroy()
-	Loot.roll(run.player, enemy.def.drops, run.context, run.summary)
+	for _, member in table.clone(run.order) do
+		if member.player and member.player.Parent then
+			Loot.roll(member.player, enemy.def.drops, run.context, member.summary)
+		end
+	end
 	publish(run)
 end
 
 -- Espadazo del jugador (lo llama Combat con el daño y el alcance ya calculados en el servidor).
 function Dungeons.strike(player: Player, origin: CFrame, range: number, arc: number, damage: number)
-	local run = runs[player]
+	local run = runOf[player]
 	if not run or run.state ~= "fighting" then
 		return
 	end
@@ -361,10 +446,17 @@ function Dungeons.strike(player: Player, origin: CFrame, range: number, arc: num
 	end
 	for _, body in hit do
 		local enemy = run.enemies[body]
-		Remotes.Hit:FireClient(player, player, body, body.Position, damage)
+		if not enemy then
+			continue
+		end
+		for _, member in run.order do
+			if member.player and member.player.Parent then
+				Remotes.Hit:FireClient(member.player, player, body, body.Position, damage)
+			end
+		end
 		enemy.hp -= damage
 		if enemy.hp <= 0 then
-			kill(run, body)
+			kill(run, body, player)
 		else
 			body:SetAttribute("HP", enemy.hp)
 			-- Empujón hacia atrás.
@@ -379,29 +471,46 @@ end
 
 local function step()
 	local now = os.clock()
-	for player, run in runs do
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	for run in runs do
 		if run.state == "loading" then
 			continue
 		end
-		if not root or not humanoid or humanoid.Health <= 0 then
-			result(run, false, "dead")
-			finish(run, false)
+		local won = run.state == "won"
+
+		-- Quién sigue en pie: el que muere o se va de la arena sale de la partida (con su cartel, salvo tras ganar).
+		local targets = {}
+		for _, member in table.clone(run.order) do
+			local player = member.player
+			if not player then
+				continue
+			end
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if not root or not humanoid or humanoid.Health <= 0 then
+				if not won then
+					result(run, member, false, "dead")
+				end
+				detach(run, member, false)
+			elseif (root.Position - run.origin).Magnitude > cfg.ArenaRadius + 80 then
+				-- Se ha ido de la arena (barra de transporte, caída...).
+				if not won then
+					result(run, member, false, "left")
+				end
+				detach(run, member, false)
+			else
+				table.insert(targets, { member = member, player = player, root = root, humanoid = humanoid })
+			end
+		end
+		if run.ended or won then
 			continue
 		end
-		-- Se ha ido de la arena (barra de transporte, caída...).
-		if (root.Position - run.origin).Magnitude > cfg.ArenaRadius + 80 then
-			finish(run, false)
-			continue
-		end
-		if run.state == "won" then
-			continue
-		end
+
 		if now >= run.ends then
-			result(run, false, "time")
-			finish(run, true)
+			for _, target in targets do
+				result(run, target.member, false, "time")
+			end
+			endRun(run, true)
 			continue
 		end
 		if run.state == "waiting" then
@@ -417,25 +526,37 @@ local function step()
 			-- Si se cae de la plataforma vuelve a entrar por el borde.
 			if body.Position.Y < run.origin.Y - 20 then
 				body.AssemblyLinearVelocity = Vector3.zero
-				body.CFrame = CFrame.new(run.origin + Vector3.new(0, def.size.Y / 2 + 2, cfg.ArenaRadius * 0.6))
+				body.CFrame = CFrame.new(run.origin + Vector3.new(0, enemy.size.Y / 2 + 2, cfg.ArenaRadius * 0.6))
 			end
-			local offset = root.Position - body.Position
+			-- Persigue al jugador vivo más cercano.
+			local target, closest = nil, math.huge
+			for _, candidate in targets do
+				local offset = candidate.root.Position - body.Position
+				local distance = Vector3.new(offset.X, 0, offset.Z).Magnitude
+				if distance < closest then
+					target, closest = candidate, distance
+				end
+			end
+			if not target then
+				break
+			end
+			local offset = target.root.Position - body.Position
 			local flat = Vector3.new(offset.X, 0, offset.Z)
-			local gap = flat.Magnitude - def.size.X / 2 - 1
+			local gap = flat.Magnitude - enemy.size.X / 2 - 1
 			local direction = if flat.Magnitude > 0.1 then flat.Unit else Vector3.zAxis
 			enemy.align.CFrame = CFrame.lookAt(Vector3.zero, direction)
 			local speed = if gap > def.attackRange * 0.6 then def.speed else 0
 			enemy.velocity.PlaneVelocity = Vector2.new(direction.X, direction.Z) * speed
-			if gap <= def.attackRange and math.abs(offset.Y) < def.size.Y + 6 and now >= enemy.nextAttack then
+			if gap <= def.attackRange and math.abs(offset.Y) < enemy.size.Y + 6 and now >= enemy.nextAttack then
 				enemy.nextAttack = now + def.attackTime
 				local amount = def.damage * power
-				humanoid:TakeDamage(amount)
-				Remotes.DungeonEvent:FireClient(player, "hurt", { amount = amount, from = body })
+				target.humanoid:TakeDamage(amount)
+				Remotes.DungeonEvent:FireClient(target.player, "hurt", { amount = amount, from = body })
 			end
 		end
 
-		if run.alive <= 0 then
-			if run.wave >= #cfg.Waves then
+		if run.left <= 0 then
+			if run.wave >= #run.waves then
 				win(run)
 			else
 				run.state = "waiting"
@@ -445,101 +566,159 @@ local function step()
 	end
 end
 
--- Empieza una partida en esa dificultad (ya validada por quien llama): arena nueva y jugador dentro.
-function begin(player: Player, index: number)
-	local now = os.clock()
+-- Empieza una partida en esa zona con esos jugadores (ya validados por quien llama: el grupo, la sala...).
+-- Devuelve la partida, o nil si no se ha podido (zona inexistente, alguien ya dentro o muerto, sin huecos de arena).
+-- `opts.ghosts` = miembros fantasma (solo en Studio, para probar el escalado con un único jugador).
+function launch(players: { Player }, index: number, opts: { ghosts: number?, onEnd: (() -> ())? }?)
 	local level = Config.Dungeons[index]
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not level or runs[player] or not character or not humanoid or humanoid.Health <= 0 then
-		return
+	if not level or #players == 0 or #players > Config.Party.MaxSize then
+		return nil
+	end
+	for _, player in players do
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if runOf[player] or not player.Parent or not character or not humanoid or humanoid.Health <= 0 then
+			return nil
+		end
+	end
+	local slot = takeSlot()
+	if not slot then
+		return nil
 	end
 
-	-- Un hueco por jugador: el de su parcela.
-	local plot = Plots.get(player)
-	local slot = if plot then plot.index else 0
+	local ghosts = if RunService:IsStudio() and opts and opts.ghosts then math.max(0, math.floor(opts.ghosts)) else 0
+	local size = #players + ghosts
 	local origin = cfg.Origin + Vector3.new(slot * cfg.Spacing, 0, 0)
+	local theme = DungeonThemes.get(level)
+	nextRunId += 1
 	local run = {
-		player = player,
-		players = { player }, -- de momento se entra solo; la lista queda preparada para grupos
+		id = nextRunId,
 		index = index,
 		level = level,
+		theme = theme,
+		waves = theme.waves or cfg.Waves,
+		slot = slot,
 		origin = origin,
-		model = buildArena(origin, level),
+		model = buildArena(origin, level, theme),
+		members = {},
+		order = {},
+		size = size,
+		hpMult = 1 + Config.Party.Scaling.hp * (size - 1),
+		countMult = 1 + Config.Party.Scaling.count * (size - 1),
 		enemies = {},
-		alive = 0,
+		left = 0,
 		wave = 0,
 		state = "loading",
-		ends = now + cfg.TimeLimit,
+		ends = os.clock() + cfg.TimeLimit,
 		nextWave = 0,
-		summary = Loot.summary(),
 		context = { level = index, loot = level.loot, qualityLuck = level.qualityLuck },
+		ended = false,
+		onEnd = if opts then opts.onEnd else nil,
 	}
-	runs[player] = run
+	run.playerCount = #players
+	for number, player in players do
+		local member = { player = player, name = player.DisplayName, summary = Loot.summary(), slot = number }
+		run.members[player] = member
+		table.insert(run.order, member)
+		runOf[player] = run
+	end
+	run.leader = run.order[1]
+	for number = 1, ghosts do
+		table.insert(run.order, { ghost = true, name = `Bot {number}`, summary = Loot.summary() })
+	end
+	runs[run] = true
 
-	-- Con StreamingEnabled la arena puede no haberle llegado aún: se pide antes de moverlo.
-	pcall(function()
-		player:RequestStreamAroundAsync(origin, 5)
-	end)
-	if runs[player] ~= run then
-		return
+	-- Con StreamingEnabled la arena puede no haberle llegado aún: se pide antes de moverlos.
+	for _, player in players do
+		pcall(function()
+			player:RequestStreamAroundAsync(origin, 5)
+		end)
 	end
-	if not character.Parent or humanoid.Health <= 0 then
-		finish(run, false)
-		return
+	if run.ended then
+		return nil
 	end
-	character:PivotTo(CFrame.new(origin + Vector3.new(0, 4, 0)))
-	humanoid.Health = humanoid.MaxHealth
+
+	-- Cada uno aparece en un punto de un círculo pequeño alrededor del centro, mirando a él.
+	local joined = 0
+	for _, member in table.clone(run.order) do
+		local player = member.player
+		if not player then
+			continue
+		end
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not player.Parent or not character or not character.Parent or not humanoid or humanoid.Health <= 0 then
+			detach(run, member, false)
+			continue
+		end
+		joined += 1
+		local turn = (joined - 1) / math.max(#players, 1) * math.pi * 2
+		local spot = origin + Vector3.new(math.cos(turn) * 7, 4, math.sin(turn) * 7)
+		character:PivotTo(if #players == 1 then CFrame.new(origin + Vector3.new(0, 4, 0)) else CFrame.lookAt(spot, origin + Vector3.new(0, 4, 0)))
+		humanoid.Health = humanoid.MaxHealth
+	end
+	if run.ended then
+		return nil
+	end
+
 	run.ends = os.clock() + cfg.TimeLimit
 	run.nextWave = os.clock() + cfg.WaveDelay
 	run.state = "waiting"
-	player:SetAttribute("DungeonWaves", #cfg.Waves)
-	player:SetAttribute("DungeonWave", 0)
-	player:SetAttribute("DungeonLeft", 0)
-	player:SetAttribute("DungeonEnds", workspace:GetServerTimeNow() + cfg.TimeLimit)
-	player:SetAttribute("Dungeon", index)
+	for _, member in run.order do
+		local player = member.player
+		if player then
+			player:SetAttribute("DungeonWaves", #run.waves)
+			player:SetAttribute("DungeonWave", 0)
+			player:SetAttribute("DungeonLeft", 0)
+			player:SetAttribute("DungeonEnds", workspace:GetServerTimeNow() + cfg.TimeLimit)
+			player:SetAttribute("DungeonRun", run.id)
+			player:SetAttribute("Dungeon", index)
+		end
+	end
+	return run
 end
 
-local function onEnter(player: Player, index: unknown)
-	local now = os.clock()
-	local level = if type(index) == "number" then Config.Dungeons[index] else nil
-	if not level or runs[player] or now - (lastEnter[player] or 0) < cfg.EnterCooldown then
-		return
+-- El jugador sale de su partida (botón "Salir"). No vale mientras carga ni ya ganada.
+function Dungeons.leave(player: Player)
+	local run = runOf[player]
+	local member = run and run.members[player]
+	if run and member and run.state ~= "loading" and run.state ~= "won" then
+		result(run, member, false, "left")
+		detach(run, member, true)
 	end
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not root or not humanoid or humanoid.Health <= 0 then
-		return
-	end
-	if (root.Position - portalPosition).Magnitude > cfg.EnterDistance then
-		return
-	end
-	lastEnter[player] = now
-	begin(player, index :: number)
+end
+
+-- Lanza una partida (lo hace server/Party al iniciar un grupo, ya validado). Ver `launch`; `opts.onEnd` se llama cuando
+-- la partida termina del todo (también si se repite: solo al final de la última).
+function Dungeons.launch(players: { Player }, index: number, opts: { ghosts: number?, onEnd: (() -> ())? }?)
+	return launch(players, index, opts)
+end
+
+-- ¿Está ya en una partida? (el grupo lo pregunta antes de nada)
+function Dungeons.isBusy(player: Player): boolean
+	return runOf[player] ~= nil
+end
+
+-- "Repetir": si el jugador lidera la partida, al superarla empieza otra igual con los que sigan vivos. Se queda puesto
+-- entre partidas (la ventana del grupo y el botón del panel de la partida lo cambian).
+function Dungeons.setLoop(player: Player, enabled: boolean)
+	looping[player] = if enabled then true else nil
+	player:SetAttribute("DungeonLoop", enabled)
+end
+
+function Dungeons.getLoop(player: Player): boolean
+	return looping[player] == true
 end
 
 local function onLoop(player: Player, enabled: unknown)
-	looping[player] = enabled == true or nil
-	player:SetAttribute("DungeonLoop", enabled == true)
-end
-
-local function onLeave(player: Player)
-	local run = runs[player]
-	if run and run.state ~= "loading" and run.state ~= "won" then
-		result(run, false, "left")
-		finish(run, true)
-	end
+	Dungeons.setLoop(player, enabled == true)
 end
 
 function Dungeons.start()
-	buildPortal(workspace:WaitForChild("Map"))
-
-	Remotes.EnterDungeon.OnServerEvent:Connect(onEnter)
-	Remotes.LeaveDungeon.OnServerEvent:Connect(onLeave)
+	Remotes.LeaveDungeon.OnServerEvent:Connect(Dungeons.leave)
 	Remotes.SetDungeonLoop.OnServerEvent:Connect(onLoop)
 	local function onPlayer(player: Player)
-		player:SetAttribute("Dungeon", 0)
+		clearAttributes(player)
 		player:SetAttribute("DungeonLoop", false)
 	end
 	Players.PlayerAdded:Connect(onPlayer)
@@ -547,11 +726,11 @@ function Dungeons.start()
 		onPlayer(player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		local run = runs[player]
-		if run then
-			finish(run, false)
+		local run = runOf[player]
+		local member = run and run.members[player]
+		if run and member then
+			detach(run, member, false)
 		end
-		lastEnter[player] = nil
 		looping[player] = nil
 	end)
 	RunService.Heartbeat:Connect(step)

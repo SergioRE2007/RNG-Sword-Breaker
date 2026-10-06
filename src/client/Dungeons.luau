@@ -1,14 +1,12 @@
--- Mazmorras en el cliente: ventana del portal (una tarjeta por dificultad de Config.Dungeons), panel de la
--- partida (oleada, enemigos, tiempo y vida), cartel con el resultado y animación del portal del hub.
--- Todo lo decide el servidor (server/Dungeons): aquí solo se pide entrar o salir y se pinta lo que publica
--- en los atributos Dungeon, DungeonWave, DungeonWaves, DungeonLeft y DungeonEnds.
--- Para dejarlo solo (AFK): "Repetir" (DungeonLoop, lo lleva el servidor: al superarla empieza otra igual) y
+-- Mazmorras en el cliente, durante la partida: panel (zona, oleada, enemigos, tiempo y vida), tira con la vida de
+-- los compañeros de grupo y cartel con el resultado. Se entra por las salas del lobby (client/Party).
+-- Todo lo decide el servidor (server/Dungeons): aquí solo se pide salir y se pinta lo que publica en los atributos
+-- Dungeon, DungeonRun (los del mismo grupo comparten partida), DungeonWave, DungeonWaves, DungeonLeft y DungeonEnds.
+-- Para dejarlo solo (AFK): "Repetir" (DungeonLoop, lo lleva el servidor si lideras: al superarla empieza otra igual) y
 -- "Auto" (aquí: el personaje anda hacia el enemigo más cercano y le pega, con los mismos espadazos que un clic).
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -16,6 +14,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Stats = require(ReplicatedStorage.Shared.Stats)
+local Party = require(script.Parent.Party)
 local Performance = require(script.Parent.Performance)
 local SwordController = require(script.Parent.SwordController)
 local Sfx = require(script.Parent.Sfx)
@@ -30,9 +29,7 @@ local BLACK = Color3.new(0, 0, 0)
 local GOLD = Color3.fromRGB(255, 215, 90)
 local GOOD = Color3.fromRGB(110, 230, 120)
 local BAD = Color3.fromRGB(255, 110, 110)
-local CLOSE_DISTANCE = 34 -- la ventana se cierra al alejarse del portal
-local CARD_WIDTH = 172 -- ancho de cada tarjeta de dificultad
-local CARD_GAP = 10
+local PANEL_WIDTH = 720 -- panel de la partida
 
 -- Capas (la interfaz ordena el ZIndex globalmente; valores absolutos de este módulo).
 local Z_HURT = 40 -- destello rojo al recibir un golpe
@@ -47,261 +44,6 @@ local REASONS = {
 
 local function hex(color: Color3): string
 	return "#" .. color:ToHex()
-end
-
--- Daño por golpe del enemigo más flojo y del más fuerte en esa dificultad.
-local function enemyHits(level): (number, number)
-	local low, high = math.huge, 0
-	for _, enemy in Config.Enemies do
-		local hit = enemy.damage * level.power
-		low, high = math.min(low, hit), math.max(high, hit)
-	end
-	return low, high
-end
-
--- Cara de enemigo hecha con marcos: el "retrato" de cada tarjeta.
-local function face(parent: Instance, color: Color3)
-	local head = Instance.new("Frame")
-	head.Name = "Face"
-	head.AnchorPoint = Vector2.new(0.5, 0.5)
-	head.Position = UDim2.fromScale(0.5, 0.5)
-	head.Size = UDim2.fromScale(0.82, 0.82)
-	head.BackgroundColor3 = WHITE
-	head.BorderSizePixel = 0
-	head.Parent = parent
-	Ui.round(head, 12)
-	Ui.stroke(head, BLACK, 3)
-	Ui.gradient(head, color:Lerp(WHITE, 0.3), color:Lerp(BLACK, 0.3), 90)
-	for _, x in { 0.3, 0.7 } do
-		local eye = Instance.new("Frame")
-		eye.AnchorPoint = Vector2.new(0.5, 0.5)
-		eye.Position = UDim2.fromScale(x, 0.4)
-		eye.Size = UDim2.fromScale(0.22, 0.28)
-		eye.BackgroundColor3 = WHITE
-		eye.BorderSizePixel = 0
-		eye.Parent = head
-		Ui.round(eye, 4)
-		local pupil = Instance.new("Frame")
-		pupil.AnchorPoint = Vector2.new(0.5, 0.5)
-		pupil.Position = UDim2.fromScale(0.5, 0.6)
-		pupil.Size = UDim2.fromScale(0.5, 0.55)
-		pupil.BackgroundColor3 = BLACK
-		pupil.BorderSizePixel = 0
-		pupil.Parent = eye
-		Ui.round(pupil, 3)
-	end
-	local mouth = Instance.new("Frame")
-	mouth.AnchorPoint = Vector2.new(0.5, 0.5)
-	mouth.Position = UDim2.fromScale(0.5, 0.74)
-	mouth.Size = UDim2.fromScale(0.42, 0.09)
-	mouth.BackgroundColor3 = BLACK
-	mouth.BorderSizePixel = 0
-	mouth.Parent = head
-	Ui.round(mouth, 3)
-	return head
-end
-
--- Ventana del portal ---------------------------------------------------------------------
-
-local function buildMenu()
-	local window, body = Ui.window("Dungeons", "Mazmorras", Vector2.new(940, 560), function(parent)
-		Ui.starIcon(parent, Color3.fromRGB(215, 160, 255))
-	end)
-
-	-- Tus números, para comparar con lo que pide cada dificultad.
-	local mine = Ui.label(body, 20)
-	mine.Name = "Mine"
-	mine.Position = UDim2.fromOffset(16, 6)
-	mine.Size = UDim2.new(1, -32, 0, 32)
-	mine.TextXAlignment = Enum.TextXAlignment.Left
-	-- Repetir en bucle: arriba a la derecha, vale para la mazmorra en la que se entre.
-	local loopButton = Ui.button(body, "", Ui.COLORS.gray)
-	loopButton.Name = "Loop"
-	loopButton.AnchorPoint = Vector2.new(1, 0)
-	loopButton.Position = UDim2.new(1, -12, 0, 3)
-	loopButton.Size = UDim2.fromOffset(190, 36)
-	loopButton.TextSize = 19
-	local function paintLoop()
-		local on = player:GetAttribute("DungeonLoop") == true
-		loopButton.Text = if on then "Repetir: SÍ" else "Repetir: NO"
-		loopButton.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
-	end
-	loopButton.Activated:Connect(function()
-		Remotes.SetDungeonLoop:FireServer(player:GetAttribute("DungeonLoop") ~= true)
-	end)
-	player:GetAttributeChangedSignal("DungeonLoop"):Connect(paintLoop)
-	paintLoop()
-
-	local note = Ui.label(body, 16)
-	note.AnchorPoint = Vector2.new(1, 0)
-	note.Position = UDim2.new(1, -212, 0, 6)
-	note.Size = UDim2.new(0.45, 0, 0, 32)
-	note.TextXAlignment = Enum.TextXAlignment.Right
-	note.TextColor3 = Color3.fromRGB(190, 195, 215)
-	note.Text = `{#Config.Dungeons} mazmorras · {#cfg.Waves} oleadas · la última con jefe · {math.floor(cfg.TimeLimit / 60)} min`
-
-	-- Las tarjetas van en una fila que se desliza de lado: caben CARDS_SHOWN a la vez.
-	local row = Instance.new("ScrollingFrame")
-	row.Name = "Cards"
-	row.Position = UDim2.fromOffset(10, 44)
-	row.Size = UDim2.new(1, -20, 1, -50)
-	row.BackgroundTransparency = 1
-	row.BorderSizePixel = 0
-	row.ScrollingDirection = Enum.ScrollingDirection.X
-	row.ScrollBarThickness = 10
-	row.ScrollBarImageColor3 = Color3.fromRGB(150, 130, 255)
-	row.CanvasSize = UDim2.new()
-	row.AutomaticCanvasSize = Enum.AutomaticSize.X
-	row.Parent = body
-	local rowPadding = Instance.new("UIPadding")
-	rowPadding.PaddingLeft = UDim.new(0, 4)
-	rowPadding.PaddingRight = UDim.new(0, 4)
-	rowPadding.PaddingTop = UDim.new(0, 4)
-	rowPadding.Parent = row
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.Padding = UDim.new(0, CARD_GAP)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = row
-
-	local cards = {}
-	for index, level in Config.Dungeons do
-		local card = Instance.new("Frame")
-		card.Name = "Card" .. index
-		card.LayoutOrder = index
-		card.Size = UDim2.new(0, CARD_WIDTH, 1, -22) -- deja sitio a la barra de desplazamiento
-		card.BackgroundColor3 = WHITE
-		card.BorderSizePixel = 0
-		card.Parent = row
-		Ui.round(card, 12)
-		Ui.stroke(card, BLACK, 3)
-		Ui.panel(card, Color3.fromRGB(52, 56, 100):Lerp(level.color, 0.12))
-
-		-- Cabecera del color de la dificultad.
-		local head = Instance.new("Frame")
-		head.Name = "Head"
-		head.Position = UDim2.fromOffset(6, 6)
-		head.Size = UDim2.new(1, -12, 0, 44)
-		head.BackgroundColor3 = WHITE
-		head.BorderSizePixel = 0
-		head.Parent = card
-		Ui.round(head, 9)
-		Ui.stroke(head, BLACK, 2.5)
-		Ui.gradient(head, level.color:Lerp(WHITE, 0.25), level.color:Lerp(BLACK, 0.4), 90)
-		local name = Ui.label(head, 26)
-		name.Size = UDim2.fromScale(1, 1)
-		name.Text = string.upper(level.name)
-		name.TextScaled = true
-		local nameLimit = Instance.new("UITextSizeConstraint")
-		nameLimit.MaxTextSize = 26
-		nameLimit.MinTextSize = 14
-		nameLimit.Parent = name
-		local namePad = Instance.new("UIPadding")
-		namePad.PaddingLeft = UDim.new(0, 6)
-		namePad.PaddingRight = UDim.new(0, 6)
-		namePad.Parent = name
-
-		-- Retrato del enemigo, flotando.
-		local portrait = Instance.new("Frame")
-		portrait.Name = "Portrait"
-		portrait.AnchorPoint = Vector2.new(0.5, 0)
-		portrait.Position = UDim2.new(0.5, 0, 0, 58)
-		portrait.Size = UDim2.fromOffset(84, 84)
-		portrait.BackgroundTransparency = 1
-		portrait.Parent = card
-		local head3 = face(portrait, level.color)
-		if not Performance.get() then
-			TweenService:Create(head3, TweenInfo.new(1.4 + index * 0.13, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromScale(0.5, 0.42), Rotation = if index % 2 == 0 then 4 else -4 }):Play()
-		end
-
-		-- Datos: una lista de líneas cortas.
-		local info = Ui.label(card, 17)
-		info.Name = "Info"
-		info.Position = UDim2.fromOffset(12, 148)
-		info.Size = UDim2.new(1, -20, 1, -148 - 70)
-		info.TextXAlignment = Enum.TextXAlignment.Left
-		info.TextYAlignment = Enum.TextYAlignment.Top
-		info.TextWrapped = true
-		info.LineHeight = 1.12
-
-		local enter = Ui.button(card, "Entrar", Ui.COLORS.green)
-		enter.Name = "Enter"
-		enter.AnchorPoint = Vector2.new(0.5, 1)
-		enter.Position = UDim2.new(0.5, 0, 1, -10)
-		enter.Size = UDim2.new(1, -20, 0, 54)
-		enter.TextSize = 26
-		Ui.sparkle(enter, 5 + index * 0.4)
-		enter.Activated:Connect(function()
-			Remotes.EnterDungeon:FireServer(index)
-			window.Visible = false
-		end)
-		cards[index] = { info = info, enter = enter, level = level }
-	end
-
-	local function refresh()
-		if not window.Visible then
-			return
-		end
-		local damage = Stats.damage(player)
-		local health = Stats.maxHealth(player)
-		mine.Text = `Tu daño <font color="#ff9a6a">{Format.multiplier(damage)}</font>  ·  Tu vida <font color="#ff6e6e">{Format.short(health)}</font>`
-		for _, card in cards do
-			local level = card.level
-			local low, high = enemyHits(level)
-			local strong = damage >= level.hp
-			-- "Aguantas" si el golpe más fuerte no te quita más de media vida.
-			local tough = high <= health / 2
-			local soft = Ui.SOFT
-			card.info.Text = table.concat({
-				`<font size="14" color="{soft}">Daño recomendado</font>`,
-				`<font size="25" color="{hex(if strong then GOOD else BAD)}">{Format.short(level.hp)}</font>`,
-				`<font size="14" color="{soft}">Golpe enemigo</font>`,
-				`<font size="21" color="{hex(if tough then GOOD else BAD)}">{Format.short(low)} a {Format.short(high)}</font>`,
-				`<font size="14" color="{soft}">Premios</font>`,
-				`<font size="17" color="{hex(GOLD)}">Armadura {level.set}</font>`,
-				`<font color="{soft}">Stats</font> x{Format.short(level.power)}`,
-				`<font color="{soft}">Calidad</font> x{Format.short(level.qualityLuck)}`,
-				`<font color="{soft}">Cristales</font> x{Format.short(level.loot)}`,
-			}, "\n")
-			-- Se puede entrar siempre; el color avisa de si vas justo.
-			card.enter.BackgroundColor3 = if strong and tough then Ui.COLORS.green elseif strong or tough then Ui.COLORS.orange else Ui.COLORS.red
-		end
-	end
-	window:GetPropertyChangedSignal("Visible"):Connect(function()
-		refresh()
-		if window.Visible then
-			-- Se abre enseñando la dificultad más alta para la que te llega el daño (con una más fácil a su izquierda).
-			local best = 1
-			for index, level in Config.Dungeons do
-				if Stats.damage(player) >= level.hp then
-					best = index
-				end
-			end
-			row.CanvasPosition = Vector2.new(math.max(0, (best - 2) * (CARD_WIDTH + CARD_GAP)), 0)
-		end
-	end)
-	player.AttributeChanged:Connect(refresh)
-
-	-- Abrir junto al portal y cerrar al alejarse.
-	local openAt: Vector3? = nil
-	ProximityPromptService.PromptTriggered:Connect(function(prompt)
-		if prompt:GetAttribute("Shop") == "dungeons" then
-			local parent = prompt.Parent
-			openAt = if parent and parent:IsA("BasePart") then parent.Position else nil
-			Ui.toggle("Dungeons")
-		end
-	end)
-	task.spawn(function()
-		while true do
-			task.wait(0.5)
-			local character = player.Character
-			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if openAt and root and window.Visible and (root.Position - openAt).Magnitude > CLOSE_DISTANCE then
-				window.Visible = false
-				openAt = nil
-			end
-		end
-	end)
 end
 
 -- Pelea automática ------------------------------------------------------------------------
@@ -365,7 +107,7 @@ local function buildRunPanel()
 	panel.Name = "DungeonRun"
 	panel.AnchorPoint = Vector2.new(0.5, 0)
 	panel.Position = UDim2.new(0.5, 0, 0, 84)
-	panel.Size = UDim2.fromOffset(640, 104)
+	panel.Size = UDim2.fromOffset(PANEL_WIDTH, 104)
 	panel.BackgroundColor3 = WHITE
 	panel.BorderSizePixel = 0
 	panel.Visible = false
@@ -379,13 +121,15 @@ local function buildRunPanel()
 	local title = Ui.label(panel, 26)
 	title.Name = "Title"
 	title.Position = UDim2.fromOffset(20, 6)
-	title.Size = UDim2.new(1, -370, 0, 32)
+	title.Size = UDim2.new(1, -390, 0, 32)
 	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextTruncate = Enum.TextTruncate.AtEnd
 	local detail = Ui.label(panel, 18)
 	detail.Name = "Detail"
 	detail.Position = UDim2.fromOffset(20, 38)
-	detail.Size = UDim2.new(1, -370, 0, 24)
+	detail.Size = UDim2.new(1, -390, 0, 24)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
+	detail.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local leave = Ui.button(panel, "Salir", Ui.COLORS.red)
 	leave.Name = "Leave"
@@ -416,7 +160,10 @@ local function buildRunPanel()
 		autoButton.BackgroundColor3 = if autoFight then Ui.COLORS.green else Ui.COLORS.gray
 		loopButton.Text = if loop then "Repetir: SÍ" else "Repetir: NO"
 		loopButton.BackgroundColor3 = if loop then Ui.COLORS.green else Ui.COLORS.gray
+		-- Repetir lo decide el líder del grupo.
+		loopButton.Visible = Party.isLeader()
 	end
+	Party.Changed:Connect(paintToggles)
 	autoButton.Activated:Connect(function()
 		autoFight = not autoFight
 		paintToggles()
@@ -500,10 +247,10 @@ local function buildRunPanel()
 		end
 		local wave = player:GetAttribute("DungeonWave") or 0
 		local waves = player:GetAttribute("DungeonWaves") or #cfg.Waves
-		title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>  ·  Oleada {math.max(wave, 1)}/{waves}`
+		title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>`
 		local left = math.max(0, (player:GetAttribute("DungeonEnds") or 0) - workspace:GetServerTimeNow())
 		local enemies = player:GetAttribute("DungeonLeft") or 0
-		detail.Text = `<font color="{Ui.SOFT}">Enemigos</font> {if wave == 0 then "..." else tostring(enemies)}  <font color="{Ui.SOFT}">·  Tiempo</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
+		detail.Text = `<font color="{Ui.SOFT}">Oleada</font> {math.max(wave, 1)}/{waves}  <font color="{Ui.SOFT}">·  Enemigos</font> {if wave == 0 then "..." else tostring(enemies)}  <font color="{Ui.SOFT}">·</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
 		if wave ~= shownWave and wave > 0 then
 			shownWave = wave
 			Sfx.play("roll")
@@ -523,6 +270,99 @@ local function buildRunPanel()
 		end
 	end)
 	refresh()
+end
+
+-- Equipo ---------------------------------------------------------------------------------
+
+-- Los compañeros de la partida (los que llevan el mismo DungeonRun): su nombre y su vida, bajo el panel.
+local function buildTeam()
+	local list = Instance.new("Frame")
+	list.Name = "DungeonTeam"
+	list.AnchorPoint = Vector2.new(0.5, 0)
+	list.Position = UDim2.new(0.5, 0, 0, 84 + 104 + 8)
+	list.Size = UDim2.fromOffset(300, 0)
+	list.AutomaticSize = Enum.AutomaticSize.Y
+	list.BackgroundTransparency = 1
+	list.Visible = false
+	list.Parent = Ui.hud()
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 4)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.Name
+	layout.Parent = list
+
+	local rows: { [Player]: { frame: Frame, fill: Frame, gradient: UIGradient } } = {}
+	local function makeRow(mate: Player)
+		local row = Instance.new("Frame")
+		row.Name = mate.Name
+		row.Size = UDim2.fromOffset(300, 30)
+		row.BackgroundColor3 = WHITE
+		row.BorderSizePixel = 0
+		row.Parent = list
+		Ui.round(row, 9)
+		Ui.stroke(row, BLACK, 3)
+		Ui.panel(row, Color3.fromRGB(44, 46, 92))
+		local name = Ui.label(row, 16)
+		name.Position = UDim2.fromOffset(8, 0)
+		name.Size = UDim2.new(0.42, -8, 1, 0)
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		name.Text = mate.DisplayName
+		local track = Instance.new("Frame")
+		track.AnchorPoint = Vector2.new(1, 0.5)
+		track.Position = UDim2.new(1, -8, 0.5, 0)
+		track.Size = UDim2.new(0.58, -12, 0, 14)
+		track.BackgroundColor3 = Ui.COLORS.dark
+		track.BorderSizePixel = 0
+		track.Parent = row
+		Ui.round(track, 7)
+		Ui.stroke(track, BLACK, 2)
+		local fill = Instance.new("Frame")
+		fill.Size = UDim2.fromScale(1, 1)
+		fill.BackgroundColor3 = WHITE
+		fill.BorderSizePixel = 0
+		fill.Parent = track
+		Ui.round(fill, 7)
+		local gradient = Instance.new("UIGradient")
+		gradient.Rotation = 90
+		gradient.Parent = fill
+		return { frame = row, fill = fill, gradient = gradient }
+	end
+
+	local function update()
+		local run = player:GetAttribute("DungeonRun") or 0
+		local present: { [Player]: boolean } = {}
+		if run > 0 and (player:GetAttribute("Dungeon") or 0) > 0 then
+			for _, mate in Players:GetPlayers() do
+				if mate ~= player and mate:GetAttribute("DungeonRun") == run then
+					present[mate] = true
+					local row = rows[mate]
+					if not row then
+						row = makeRow(mate)
+						rows[mate] = row
+					end
+					local humanoid = mate.Character and mate.Character:FindFirstChildOfClass("Humanoid")
+					local ratio = if humanoid then math.clamp(humanoid.Health / math.max(humanoid.MaxHealth, 1), 0, 1) else 0
+					row.fill.Size = UDim2.fromScale(ratio, 1)
+					local color = BAD:Lerp(GOOD, ratio)
+					row.gradient.Color = ColorSequence.new(color:Lerp(WHITE, 0.3), color:Lerp(BLACK, 0.25))
+				end
+			end
+		end
+		for mate, row in rows do
+			if not present[mate] then
+				row.frame:Destroy()
+				rows[mate] = nil
+			end
+		end
+		list.Visible = next(rows) ~= nil
+	end
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			update()
+		end
+	end)
 end
 
 -- Golpes recibidos y resultado -----------------------------------------------------------
@@ -633,69 +473,11 @@ local function buildFeedback()
 	end)
 end
 
--- Portal del hub -------------------------------------------------------------------------
-
--- Esquirlas que dan vueltas delante del disco y chispas que salen de él (solo en este cliente).
-local function animatePortal(swirl: BasePart)
-	local shards = {}
-	local folder = Instance.new("Folder")
-	folder.Name = "PortalFx"
-	folder.Parent = workspace
-	for index = 1, 8 do
-		local shard = Instance.new("Part")
-		shard.Name = "Shard"
-		shard.Anchored = true
-		shard.CanCollide = false
-		shard.CanQuery = false
-		shard.CanTouch = false
-		shard.CastShadow = false
-		shard.Size = Vector3.one * (0.5 + (index % 3) * 0.25)
-		shard.Color = swirl.Color:Lerp(WHITE, 0.25 + (index % 2) * 0.3)
-		shard.Material = Enum.Material.Neon -- piezas pequeñas
-		shard.Parent = folder
-		shards[index] = shard
-	end
-	local sparks = Instance.new("ParticleEmitter")
-	sparks.Name = "Sparks"
-	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-	sparks.Color = ColorSequence.new(swirl.Color:Lerp(WHITE, 0.4))
-	sparks.LightEmission = 0.7
-	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) })
-	sparks.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
-	sparks.Lifetime = NumberRange.new(1, 1.8)
-	sparks.Rate = 10
-	sparks.Speed = NumberRange.new(1.5, 3)
-	sparks.SpreadAngle = Vector2.new(180, 180)
-	sparks.Parent = swirl
-	swirl.Destroying:Connect(function()
-		folder:Destroy()
-	end)
-
-	local radius = swirl.Size.Y / 2 * 0.72
-	RunService.RenderStepped:Connect(function()
-		if Performance.get() or not swirl.Parent then
-			return
-		end
-		local now = os.clock()
-		for index, shard in shards do
-			-- El eje del cilindro es X: se gira alrededor de él, en dos anillos que van en sentidos contrarios.
-			local inner = index % 2 == 0
-			local turn = now * (if inner then -1.3 else 0.9) + index * math.pi / 4
-			local arm = radius * (if inner then 0.55 else 1) + math.sin(now * 2 + index) * 0.25
-			shard.CFrame = swirl.CFrame * CFrame.Angles(turn, 0, 0) * CFrame.new(0.6, arm, 0) * CFrame.Angles(now * 2, now * 1.3, 0)
-		end
-	end)
-end
-
 function Dungeons.start()
-	buildMenu()
 	buildRunPanel()
+	buildTeam()
 	buildFeedback()
 	task.spawn(runAutoFight)
-	for _, swirl in CollectionService:GetTagged("PortalSwirl") do
-		task.spawn(animatePortal, swirl)
-	end
-	CollectionService:GetInstanceAddedSignal("PortalSwirl"):Connect(animatePortal)
 end
 
 return Dungeons
