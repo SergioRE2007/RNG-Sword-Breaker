@@ -69,6 +69,9 @@ local function buildUi()
 	local function fit()
 		local size = workspace.CurrentCamera.ViewportSize
 		scale.Scale = math.clamp(size.Y / 720, 0.7, 1.25)
+		-- El UIScale agranda también al marco: se encoge a la inversa para que llene la pantalla justa
+		-- (si no, con pantallas grandes Salir, Arma y Auto quedan fuera por la derecha).
+		root.Size = UDim2.fromScale(1 / scale.Scale, 1 / scale.Scale)
 	end
 	fit()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
