@@ -26,11 +26,14 @@ Hecho:
   invitación de Party y de Trade, filas de ModifierShops, título y resumen de SkillTree. Probado: HUD, trato, mochila y
   árbol de mejoras abren sin errores.
 
+- [x] Pestañas de Backpack con `Ui.setSelected`; sonido suave (`tick`) al pasar el ratón por un botón (no en casillas).
+- [x] Medido en partida: al pulsar, el labio baja de 6 a 2,5 px y el botón encoge a 0,95; con el `HudRoot` a 0,55 el
+  labio queda en 3,9 px y la línea de brillo se subió a 3 px para que no desaparezca.
+
 Falta (en este orden):
-- [ ] Resto del paso 4: pestañas de Backpack con `Ui.setSelected` (hoy guardan su `stroke` en `tabs[name]`); paneles de
-  Missions, PassShop, GachaRoll y la tarjeta de Dungeons (esta tiene `UIListLayout`: hace falta un marco de contenido
-  dentro, como en `StatsDock.Stats.Content`); sonido suave al pasar el ratón.
-- [ ] Comprobar el modo rendimiento y el `HudRoot` a escala 0.55.
+- [ ] Paneles de Missions, PassShop, GachaRoll y la tarjeta de Dungeons (esta tiene `UIListLayout`: hace falta un marco
+  de contenido dentro, como en `StatsDock.Stats.Content`).
+- [ ] Probar con el modo rendimiento activado (el código lo respeta, pero no se ha mirado en partida).
 - [ ] Paso 6, segunda pasada: capturas de cada pantalla, revisor Haiku (visual) y Sonnet (código).
 - [ ] Avisar al compañero antes de juntar (toca `Ui` y `Hud`).
 

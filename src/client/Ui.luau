@@ -125,7 +125,7 @@ function Ui.bevel(instance: GuiObject)
 	shine.Name = "Shine"
 	shine.AnchorPoint = Vector2.new(0.5, 0)
 	shine.Position = UDim2.new(0.5, 0, 0, 3)
-	shine.Size = UDim2.new(1, -radius * 2, 0, 2)
+	shine.Size = UDim2.new(1, -radius * 2, 0, 3) -- 3 px: con el HUD encogido a 0.55 aún se ve
 	shine.BackgroundColor3 = WHITE
 	shine.BackgroundTransparency = 0.35
 	shine.BorderSizePixel = 0
@@ -429,6 +429,10 @@ function Ui.pressable(item: GuiButton, grow: number?)
 		over = true
 		to(big, 0.18, Enum.EasingStyle.Back)
 		tween(hover, { BackgroundTransparency = 0.86 }, 0.12)
+		-- Solo los botones (los que tienen labio): en una rejilla de casillas sería un repiqueteo.
+		if base then
+			Sfx.play("tick", 0.3)
+		end
 	end)
 	item.MouseLeave:Connect(function()
 		over = false
