@@ -15,6 +15,7 @@ Config.Test = {
 	TradeBot = true, -- "Bot de pruebas" en la lista de Comercio: acepta y confirma solo, para probar un trato sin otro jugador
 	AllGamepasses = true, -- todos los pases de juego de Config.Gamepasses (para probar sus ventajas sin comprarlos)
 	AllGear = true, -- todos los accesorios (Config.Artifacts) y una pieza de armadura de cada hueco y cada mazmorra al entrar
+	PartyBots = 0, -- compañeros "fantasma" que se unen a tu grupo de mazmorra (cuentan para el tamaño y el escalado, no pelean): para probar con un solo jugador
 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
@@ -328,7 +329,8 @@ Config.Dungeon = {
 	WaveDelay = 2, -- pausa entre oleadas
 	ExitDelay = 4, -- segundos en la arena tras ganar, antes de volver al hub
 	Origin = Vector3.new(0, 200, 3000), -- centro de la primera arena, lejos de la isla
-	Spacing = 400, -- separación entre las arenas de cada jugador
+	Spacing = 400, -- separación entre las arenas de cada partida
+	MaxRuns = 10, -- partidas a la vez (cada una ocupa un hueco de arena; con "repetir" se necesita uno de sobra un momento)
 	ArenaRadius = 60,
 	-- Oleadas: lista de { enemigo (clave de Config.Enemies), cantidad }. La cantidad se multiplica por "count" de la dificultad.
 	Waves = {
@@ -342,6 +344,22 @@ Config.Dungeon = {
 		{ kind = "item", item = "traitCrystal", chance = 1, min = 1, max = 2 },
 		{ kind = "item", item = "gradeCrystal", chance = 1, min = 1, max = 2 },
 	},
+}
+
+-- GRUPOS de mazmorra (server/Dungeons, server/Party). MaxSize = jugadores por grupo (se puede subir sin tocar código);
+-- StartCountdown = segundos de cuenta atrás tras "Iniciar"; WaitTimeout = segundos que un grupo puede esperar sin empezar
+-- antes de deshacerse; InviteTime = lo que dura una invitación; ActionCooldown = espera mínima entre peticiones de un
+-- jugador; RoomDistance = a qué distancia del altar de una sala hay que estar. Scaling = por cada jugador de más, la vida
+-- de los enemigos sube hp (0,75 = +75 %) y su cantidad count (los jefes no suben de cantidad).
+Config.Party = {
+	MaxSize = 4,
+	MinSize = 1,
+	StartCountdown = 3,
+	WaitTimeout = 600,
+	InviteTime = 30,
+	ActionCooldown = 0.25,
+	RoomDistance = 22,
+	Scaling = { hp = 0.75, count = 0.5 },
 }
 
 -- Mazmorras (zonas), de menor a mayor. El jugador solo ve "name" (la zona) y "tagline"; "difficulty" es la etiqueta

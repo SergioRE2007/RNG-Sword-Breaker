@@ -33,6 +33,7 @@ local BAD = Color3.fromRGB(255, 110, 110)
 local CLOSE_DISTANCE = 34 -- la ventana se cierra al alejarse del portal
 local CARD_WIDTH = 172 -- ancho de cada tarjeta de dificultad
 local CARD_GAP = 10
+local PANEL_WIDTH = 720 -- panel de la partida
 
 -- Capas (la interfaz ordena el ZIndex globalmente; valores absolutos de este módulo).
 local Z_HURT = 40 -- destello rojo al recibir un golpe
@@ -365,7 +366,7 @@ local function buildRunPanel()
 	panel.Name = "DungeonRun"
 	panel.AnchorPoint = Vector2.new(0.5, 0)
 	panel.Position = UDim2.new(0.5, 0, 0, 84)
-	panel.Size = UDim2.fromOffset(640, 104)
+	panel.Size = UDim2.fromOffset(PANEL_WIDTH, 104)
 	panel.BackgroundColor3 = WHITE
 	panel.BorderSizePixel = 0
 	panel.Visible = false
@@ -379,13 +380,15 @@ local function buildRunPanel()
 	local title = Ui.label(panel, 26)
 	title.Name = "Title"
 	title.Position = UDim2.fromOffset(20, 6)
-	title.Size = UDim2.new(1, -370, 0, 32)
+	title.Size = UDim2.new(1, -390, 0, 32)
 	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextTruncate = Enum.TextTruncate.AtEnd
 	local detail = Ui.label(panel, 18)
 	detail.Name = "Detail"
 	detail.Position = UDim2.fromOffset(20, 38)
-	detail.Size = UDim2.new(1, -370, 0, 24)
+	detail.Size = UDim2.new(1, -390, 0, 24)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
+	detail.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local leave = Ui.button(panel, "Salir", Ui.COLORS.red)
 	leave.Name = "Leave"
@@ -500,10 +503,10 @@ local function buildRunPanel()
 		end
 		local wave = player:GetAttribute("DungeonWave") or 0
 		local waves = player:GetAttribute("DungeonWaves") or #cfg.Waves
-		title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>  ·  Oleada {math.max(wave, 1)}/{waves}`
+		title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>`
 		local left = math.max(0, (player:GetAttribute("DungeonEnds") or 0) - workspace:GetServerTimeNow())
 		local enemies = player:GetAttribute("DungeonLeft") or 0
-		detail.Text = `<font color="{Ui.SOFT}">Enemigos</font> {if wave == 0 then "..." else tostring(enemies)}  <font color="{Ui.SOFT}">·  Tiempo</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
+		detail.Text = `<font color="{Ui.SOFT}">Oleada</font> {math.max(wave, 1)}/{waves}  <font color="{Ui.SOFT}">·  Enemigos</font> {if wave == 0 then "..." else tostring(enemies)}  <font color="{Ui.SOFT}">·</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
 		if wave ~= shownWave and wave > 0 then
 			shownWave = wave
 			Sfx.play("roll")
@@ -523,6 +526,99 @@ local function buildRunPanel()
 		end
 	end)
 	refresh()
+end
+
+-- Equipo ---------------------------------------------------------------------------------
+
+-- Los compañeros de la partida (los que llevan el mismo DungeonRun): su nombre y su vida, bajo el panel.
+local function buildTeam()
+	local list = Instance.new("Frame")
+	list.Name = "DungeonTeam"
+	list.AnchorPoint = Vector2.new(0.5, 0)
+	list.Position = UDim2.new(0.5, 0, 0, 84 + 104 + 8)
+	list.Size = UDim2.fromOffset(300, 0)
+	list.AutomaticSize = Enum.AutomaticSize.Y
+	list.BackgroundTransparency = 1
+	list.Visible = false
+	list.Parent = Ui.hud()
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 4)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.Name
+	layout.Parent = list
+
+	local rows: { [Player]: { frame: Frame, fill: Frame, gradient: UIGradient } } = {}
+	local function makeRow(mate: Player)
+		local row = Instance.new("Frame")
+		row.Name = mate.Name
+		row.Size = UDim2.fromOffset(300, 30)
+		row.BackgroundColor3 = WHITE
+		row.BorderSizePixel = 0
+		row.Parent = list
+		Ui.round(row, 9)
+		Ui.stroke(row, BLACK, 3)
+		Ui.panel(row, Color3.fromRGB(44, 46, 92))
+		local name = Ui.label(row, 16)
+		name.Position = UDim2.fromOffset(8, 0)
+		name.Size = UDim2.new(0.42, -8, 1, 0)
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		name.Text = mate.DisplayName
+		local track = Instance.new("Frame")
+		track.AnchorPoint = Vector2.new(1, 0.5)
+		track.Position = UDim2.new(1, -8, 0.5, 0)
+		track.Size = UDim2.new(0.58, -12, 0, 14)
+		track.BackgroundColor3 = Ui.COLORS.dark
+		track.BorderSizePixel = 0
+		track.Parent = row
+		Ui.round(track, 7)
+		Ui.stroke(track, BLACK, 2)
+		local fill = Instance.new("Frame")
+		fill.Size = UDim2.fromScale(1, 1)
+		fill.BackgroundColor3 = WHITE
+		fill.BorderSizePixel = 0
+		fill.Parent = track
+		Ui.round(fill, 7)
+		local gradient = Instance.new("UIGradient")
+		gradient.Rotation = 90
+		gradient.Parent = fill
+		return { frame = row, fill = fill, gradient = gradient }
+	end
+
+	local function update()
+		local run = player:GetAttribute("DungeonRun") or 0
+		local present: { [Player]: boolean } = {}
+		if run > 0 and (player:GetAttribute("Dungeon") or 0) > 0 then
+			for _, mate in Players:GetPlayers() do
+				if mate ~= player and mate:GetAttribute("DungeonRun") == run then
+					present[mate] = true
+					local row = rows[mate]
+					if not row then
+						row = makeRow(mate)
+						rows[mate] = row
+					end
+					local humanoid = mate.Character and mate.Character:FindFirstChildOfClass("Humanoid")
+					local ratio = if humanoid then math.clamp(humanoid.Health / math.max(humanoid.MaxHealth, 1), 0, 1) else 0
+					row.fill.Size = UDim2.fromScale(ratio, 1)
+					local color = BAD:Lerp(GOOD, ratio)
+					row.gradient.Color = ColorSequence.new(color:Lerp(WHITE, 0.3), color:Lerp(BLACK, 0.25))
+				end
+			end
+		end
+		for mate, row in rows do
+			if not present[mate] then
+				row.frame:Destroy()
+				rows[mate] = nil
+			end
+		end
+		list.Visible = next(rows) ~= nil
+	end
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			update()
+		end
+	end)
 end
 
 -- Golpes recibidos y resultado -----------------------------------------------------------
@@ -690,6 +786,7 @@ end
 function Dungeons.start()
 	buildMenu()
 	buildRunPanel()
+	buildTeam()
 	buildFeedback()
 	task.spawn(runAutoFight)
 	for _, swirl in CollectionService:GetTagged("PortalSwirl") do
