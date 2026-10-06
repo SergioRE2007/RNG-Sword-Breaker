@@ -220,7 +220,7 @@ function Backpack.start()
 		for key, frame in panes do
 			local opening = key == name and not frame.Visible
 			frame.Visible = key == name
-			tabs[key].stroke.Color = if key == name then Color3.new(1, 1, 1) else Color3.new(0, 0, 0)
+			Ui.setSelected(tabs[key].button, key == name)
 			-- La pestaña elegida se asoma un poco más y el contenido entra deslizándose.
 			TweenService:Create(tabs[key].button, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 				Position = UDim2.fromOffset(if key == name then -118 else -108, tabs[key].y),
@@ -315,7 +315,7 @@ function Backpack.start()
 	bar.Parent = swordsPane
 	Ui.round(bar, 10)
 	Ui.stroke(bar, Color3.new(0, 0, 0), 2)
-	Ui.gradient(bar, Color3.fromRGB(58, 52, 96), Color3.fromRGB(20, 20, 34), 90)
+	Ui.panel(bar, Color3.fromRGB(46, 42, 78))
 
 	local detail = Ui.label(swordsPane, 19)
 	detail.Name = "Detail"

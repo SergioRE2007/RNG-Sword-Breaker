@@ -736,7 +736,7 @@ local function buildInvite()
 	card.Parent = Ui.screen()
 	Ui.round(card, 14)
 	Ui.stroke(card, BLACK, 4)
-	Ui.gradient(card, Color3.fromRGB(70, 60, 130), Color3.fromRGB(26, 24, 56), 90)
+	Ui.panel(card, Color3.fromRGB(56, 50, 108))
 	local scale = Instance.new("UIScale")
 	scale.Parent = card
 	local text = Ui.label(card, 22)

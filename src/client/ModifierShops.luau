@@ -932,7 +932,7 @@ local function buildShop(kind: string)
 		frame.ZIndex = Z.roulette
 		frame.Parent = main
 		Ui.round(frame, 10)
-		Ui.gradient(frame, Color3.fromRGB(62, 66, 86), Color3.fromRGB(30, 32, 44), 90)
+		Ui.panel(frame, Color3.fromRGB(52, 55, 74))
 		Ui.stripes(frame, Vector2.new(492, 347), 26, 0.95, Z.roulette)
 		roulette = frame
 		frame:GetPropertyChangedSignal("Visible"):Connect(function()

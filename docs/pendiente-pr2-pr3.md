@@ -8,6 +8,42 @@ de dos tipos ("Quiero" / "Te doy") y se juntan a `main` tras probar cada PR sin 
 caducar, rechazos y spam; falta verlo con dos jugadores reales y no ha pasado revisor Sonnet). Del PR 1 ya pasó el revisor
 Sonnet y sus arreglos van en la rama `mazmorras-revision`; sigue sin probarse con dos jugadores reales. **Queda el PR 3.**
 
+### Progreso del PR 3 (rama `ui-profundidad`; se va actualizando con cada commit)
+
+Hecho:
+- [x] Paso 1, núcleo: `Ui.STYLE`; `Ui.bevel` con labio de abajo más grueso (crece con el botón, 3 a 7 px) y línea de brillo
+  `Shine`; `Ui.pressable` con aclarado al pasar el ratón (`Hover`) y hundido al pulsar (`Press` + labio aplastado + 0.95);
+  `AutoButtonColor = false` en `Ui.button`; las piezas del relieve siguen el `ZIndex` del botón.
+
+- [x] Paso 2, helpers nuevos: `Ui.shadow` (sombra exterior: hijo una capa por debajo; sustituye a la idea de
+  `Ui.iconButton`, no hace falta contenedor), `Ui.socket` (zócalo del icono), `Ui.pill`, `Ui.setSelected`,
+  `Ui.setEnabled`, `Ui.field`. No se hizo `Ui.coinIcon` (el `orbIcon` ya hace de moneda).
+- [x] Paso 3, HUD: contadores con `Ui.pill` y zócalo; transporte, menú, engranaje y pestaña de estadísticas con sombra
+  y zócalo; la caja de estadísticas es `Ui.panel` (las filas pasan a `StatsDock.Stats.Content`). "Mazmorras" ya estaba.
+
+- [x] Paso 4 (parte): pestañas de Trade y botón "Sugerir" con `Ui.setSelected` (y la primera pestaña ya sale marcada);
+  cajas de texto de Trade y Settings con `Ui.field`; a `Ui.panel`: barra de Backpack, barra de ArmorPane, tarjeta de
+  invitación de Party y de Trade, filas de ModifierShops, título y resumen de SkillTree. Probado: HUD, trato, mochila y
+  árbol de mejoras abren sin errores.
+
+- [x] Pestañas de Backpack con `Ui.setSelected`; sonido suave (`tick`) al pasar el ratón por un botón (no en casillas).
+- [x] Medido en partida: al pulsar, el labio baja de 6 a 2,5 px y el botón encoge a 0,95; con el `HudRoot` a 0,55 el
+  labio queda en 3,9 px y la línea de brillo se subió a 3 px para que no desaparezca.
+
+- [x] Paneles: cabeceras de Missions, panel del gacha (`GachaBar`) y cartel de resultado de mazmorra (su texto pasa a
+  `DungeonResult.Content`). PassShop no tenía paneles planos.
+- [x] Modo rendimiento probado en partida: el botón no rebota (escala 1) pero se sigue viendo el aclarado y el hundido.
+
+- [x] Revisores (6 oct 2026). Sonnet (código): nada roto; aplicado que el botón se suelte aunque el dedo se levante
+  fuera (`InputEnded`), que las casillas no lleven `Hover` ni `Press` (solo los botones con relieve) y quitado
+  `Ui.setEnabled`, que nadie usaba y chocaba con el estado de pulsado. Haiku (capturas): sombras, zócalos y relieve bien;
+  sin cambios (sus pegas eran de cosas anteriores a esta pasada: el amarillo del título de mazmorra superada y el gris
+  de los botones apagados).
+
+Falta:
+- [ ] Paso 6, segunda pasada: capturas de cada pantalla, revisor Haiku (visual) y Sonnet (código).
+- [ ] Avisar al compañero antes de juntar (toca `Ui` y `Hud`).
+
 Antes de empezar: `git switch main`, `git pull`, `rojo serve`, y leer `CLAUDE.md` (ya está al día con lo del PR 1).
 Para la UI, cargar las skills `roblox-ui-engineer` y `roblox-ui-designer`. Pendiente además del PR 1: probar los grupos con
 dos jugadores reales y pasar un revisor Sonnet de código.

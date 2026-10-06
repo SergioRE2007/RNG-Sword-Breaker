@@ -143,16 +143,11 @@ function Settings.start()
 	sellBox.AnchorPoint = Vector2.new(1, 0.5)
 	sellBox.Position = UDim2.new(1, -14, 0.5, 0)
 	sellBox.Size = UDim2.fromOffset(130, 50)
-	sellBox.BackgroundColor3 = Ui.COLORS.dark
-	sellBox.TextColor3 = WHITE
-	sellBox.PlaceholderColor3 = Color3.fromRGB(140, 145, 165)
 	sellBox.PlaceholderText = "no vender"
-	sellBox.Font = Ui.FONT
 	sellBox.TextSize = 22
 	sellBox.ClearTextOnFocus = false
 	sellBox.Parent = sellRow
-	Ui.round(sellBox, 8)
-	Ui.stroke(sellBox, BLACK, 2)
+	Ui.field(sellBox)
 	local function paintSell()
 		if not sellBox:IsFocused() then
 			local autoSell = player:GetAttribute("AutoSell") or 0
@@ -181,6 +176,7 @@ function Settings.start()
 	button.Position = UDim2.fromOffset(14, 66)
 	button.Size = UDim2.fromOffset(56, 56)
 	Ui.gearIcon(button)
+	Ui.shadow(button)
 	button.Activated:Connect(function()
 		Ui.toggle("Settings")
 	end)

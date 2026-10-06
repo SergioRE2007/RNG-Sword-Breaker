@@ -37,8 +37,14 @@ Ui.COLORS = {
 	coins = Color3.fromRGB(255, 185, 30),
 }
 
+-- Medidas comunes del relieve: borde negro, labio de abajo (parte del alto del botón), radios y lo que crece
+-- o se encoge un botón al pasar el ratón y al pulsarlo.
+Ui.STYLE = { border = 3, lip = 0.13, radius = 12, cellRadius = 10, hover = 1.07, press = 0.95 }
+
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
+-- Piezas del relieve de un botón (Ui.bevel y Ui.pressable), por nombre.
+local RELIEF = { "Rim", "Gloss", "Shine", "Base", "Hover", "Press" }
 
 function Ui.round(instance: GuiObject, radius: number)
 	local corner = Instance.new("UICorner")
@@ -114,17 +120,50 @@ function Ui.bevel(instance: GuiObject)
 	fade.Transparency = NumberSequence.new(0.6, 0.95)
 	fade.Parent = gloss
 
-	-- Franja oscura abajo (el "grosor" del botón).
+	-- Línea de brillo pegada al borde de arriba: el filo donde da la luz.
+	local shine = Instance.new("Frame")
+	shine.Name = "Shine"
+	shine.AnchorPoint = Vector2.new(0.5, 0)
+	shine.Position = UDim2.new(0.5, 0, 0, 3)
+	shine.Size = UDim2.new(1, -radius * 2, 0, 3) -- 3 px: con el HUD encogido a 0.55 aún se ve
+	shine.BackgroundColor3 = WHITE
+	shine.BackgroundTransparency = 0.35
+	shine.BorderSizePixel = 0
+	shine.Parent = instance
+	Ui.round(shine, 1)
+
+	-- Labio oscuro abajo (el "grosor" del botón): crece con el botón, entre 3 y 7 px, y se oscurece hacia abajo.
+	-- Ui.pressable lo aplasta al pulsar.
 	local base = Instance.new("Frame")
 	base.Name = "Base"
 	base.AnchorPoint = Vector2.new(0.5, 1)
-	base.Position = UDim2.new(0.5, 0, 1, -3)
-	base.Size = UDim2.new(1, -12, 0, 4)
+	base.Position = UDim2.new(0.5, 0, 1, -2)
+	base.Size = UDim2.new(1, -6, Ui.STYLE.lip, 0)
 	base.BackgroundColor3 = BLACK
-	base.BackgroundTransparency = 0.78
 	base.BorderSizePixel = 0
 	base.Parent = instance
-	Ui.round(base, 2)
+	Ui.round(base, math.max(radius - 5, 2))
+	local limit = Instance.new("UISizeConstraint")
+	limit.MinSize = Vector2.new(0, 3)
+	limit.MaxSize = Vector2.new(math.huge, 7)
+	limit.Parent = base
+	local shade = Instance.new("UIGradient")
+	shade.Rotation = 90
+	shade.Transparency = NumberSequence.new(0.86, 0.6)
+	shade.Parent = base
+
+	-- La interfaz ordena el ZIndex globalmente: si a un botón se le sube la capa a mano, su relieve se quedaba
+	-- por debajo y se veía plano. Las piezas del relieve (y las de Ui.pressable) siguen la capa del botón.
+	local function follow()
+		for _, name in RELIEF do
+			local part = instance:FindFirstChild(name)
+			if part then
+				(part :: GuiObject).ZIndex = instance.ZIndex
+			end
+		end
+	end
+	follow()
+	instance:GetPropertyChangedSignal("ZIndex"):Connect(follow)
 end
 
 function Ui.label(parent: Instance, textSize: number): TextLabel
@@ -142,15 +181,17 @@ end
 function Ui.button(parent: Instance, text: string, color: Color3): TextButton
 	local item = Instance.new("TextButton")
 	item.BackgroundColor3 = color
+	-- Los estados (ratón encima, pulsado) los pinta Ui.pressable, no el oscurecido de Roblox.
+	item.AutoButtonColor = false
 	item.TextColor3 = WHITE
 	item.Font = Ui.FONT
 	item.TextSize = 17
 	item.TextWrapped = true
 	item.Text = text
 	item.Parent = parent
-	Ui.round(item, 12)
+	Ui.round(item, Ui.STYLE.radius)
 	Ui.bevel(item)
-	Ui.stroke(item, BLACK, 3)
+	Ui.stroke(item, BLACK, Ui.STYLE.border)
 	Ui.textStroke(item, 2)
 	Ui.pressable(item)
 	return item
@@ -217,6 +258,97 @@ function Ui.panel(frame: GuiObject, base: Color3, accent: Color3?)
 	end
 end
 
+-- Sombra exterior: una copia oscura del marco, caída `drop` px, una capa por debajo (la interfaz ordena el ZIndex
+-- globalmente, así que un hijo con menos ZIndex que su padre se pinta detrás). Separa del fondo lo que flota
+-- sobre el juego (HUD). Sigue la capa del marco si se le cambia.
+function Ui.shadow(frame: GuiObject, drop: number?): Frame
+	local corner = frame:FindFirstChildOfClass("UICorner")
+	local shadow = Instance.new("Frame")
+	shadow.Name = "Shadow"
+	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+	shadow.Position = UDim2.new(0.5, 0, 0.5, drop or 5)
+	shadow.Size = UDim2.new(1, Ui.STYLE.border * 2, 1, Ui.STYLE.border * 2)
+	shadow.BackgroundColor3 = BLACK
+	shadow.BackgroundTransparency = 0.62
+	shadow.BorderSizePixel = 0
+	shadow.ZIndex = frame.ZIndex - 1
+	shadow.Parent = frame
+	Ui.round(shadow, (if corner then corner.CornerRadius.Offset else 10) + Ui.STYLE.border)
+	frame:GetPropertyChangedSignal("ZIndex"):Connect(function()
+		shadow.ZIndex = frame.ZIndex - 1
+	end)
+	return shadow
+end
+
+-- Zócalo de un icono: hueco oscuro y redondo, hundido en el botón, para que el icono no flote suelto. Va antes
+-- que el icono.
+function Ui.socket(iconBox: GuiObject): Frame
+	local socket = Instance.new("Frame")
+	socket.Name = "Socket"
+	socket.AnchorPoint = Vector2.new(0.5, 0.5)
+	socket.Position = UDim2.fromScale(0.5, 0.5)
+	socket.Size = UDim2.fromScale(0.98, 0.98)
+	socket.BackgroundColor3 = BLACK
+	socket.BackgroundTransparency = 0.72
+	socket.BorderSizePixel = 0
+	socket.ZIndex = iconBox.ZIndex
+	socket.Parent = iconBox
+	Ui.round(socket, 100)
+	-- Más oscuro arriba (sombra del borde) y un filo claro abajo, como un hueco iluminado desde arriba.
+	local depth = Instance.new("UIGradient")
+	depth.Rotation = 90
+	depth.Transparency = NumberSequence.new(0, 0.55)
+	depth.Parent = socket
+	local edge = Ui.stroke(socket, WHITE, 1.5)
+	edge.Transparency = 0.7
+	local light = Instance.new("UIGradient")
+	light.Rotation = 90
+	light.Transparency = NumberSequence.new(1, 0)
+	light.Parent = edge
+	return socket
+end
+
+-- Contador o chip con relieve: fondo del color, labio, borde negro y sombra exterior.
+function Ui.pill(frame: GuiObject, color: Color3, radius: number?)
+	frame.BackgroundColor3 = color
+	Ui.round(frame, radius or 14)
+	Ui.bevel(frame)
+	Ui.stroke(frame, BLACK, Ui.STYLE.border)
+	Ui.shadow(frame)
+end
+
+-- Marca un botón (pestaña, opción) como elegido: borde blanco. El primer UIStroke directo del botón es su borde.
+function Ui.setSelected(button: GuiObject, selected: boolean)
+	local stroke = button:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = if selected then WHITE else BLACK
+	end
+end
+
+-- Caja de texto con el estilo del juego: hueco oscuro, borde negro, sombra por dentro arriba y filo claro abajo.
+-- Sin degradado en la propia caja: teñiría también lo que se escribe.
+function Ui.field(box: TextBox)
+	box.BackgroundColor3 = Ui.COLORS.dark
+	box.TextColor3 = WHITE
+	box.PlaceholderColor3 = Color3.fromRGB(120, 124, 140)
+	box.Font = Ui.FONT
+	Ui.round(box, 8)
+	Ui.stroke(box, BLACK, 2)
+	for _, edge in { { 0, BLACK, 0.55, 5 }, { 1, WHITE, 0.8, 2 } } do
+		local line = Instance.new("Frame")
+		line.Name = if edge[1] == 0 then "Shade" else "Edge"
+		line.AnchorPoint = Vector2.new(0.5, edge[1])
+		line.Position = UDim2.new(0.5, 0, edge[1], if edge[1] == 0 then 1 else -1)
+		line.Size = UDim2.new(1, -8, 0, edge[4])
+		line.BackgroundColor3 = edge[2]
+		line.BackgroundTransparency = edge[3]
+		line.BorderSizePixel = 0
+		line.ZIndex = box.ZIndex
+		line.Parent = box
+		Ui.round(line, 3)
+	end
+end
+
 -- Pone `root` y todo lo suyo en la capa `z`. La interfaz ordena el ZIndex globalmente: un botón con
 -- relieve (Ui.button) subido de capa dejaba su brillo, su canto y su icono por debajo, y se veía plano.
 -- Con todo en la misma capa manda el orden del árbol y el relieve vuelve a quedar encima.
@@ -229,37 +361,108 @@ function Ui.layer(root: GuiObject, z: number)
 	end
 end
 
--- Rebote al pasar el ratón (crece) y al pulsar (se hunde). Vale para cualquier botón o casilla.
+-- Estados de un botón o casilla. Al pasar el ratón crece y se aclara; al pulsar se hunde: encoge, el labio de
+-- abajo (el `Base` de Ui.bevel, si lo tiene) se aplasta y le cae una sombra por arriba. En modo rendimiento
+-- no hay rebotes, pero el aclarado y el hundido se siguen viendo (sin animar).
 function Ui.pressable(item: GuiButton, grow: number?)
 	local scale = Instance.new("UIScale")
 	scale.Name = "PressScale"
 	scale.Parent = item
-	local big = grow or 1.07
-	local function to(value: number, time: number, style: Enum.EasingStyle)
+	local big = grow or Ui.STYLE.hover
+	local corner = item:FindFirstChildOfClass("UICorner")
+	local radius = if corner then corner.CornerRadius.Offset else 10
+	local function overlay(name: string, color: Color3): Frame
+		local frame = Instance.new("Frame")
+		frame.Name = name
+		frame.Size = UDim2.fromScale(1, 1)
+		frame.BackgroundColor3 = color
+		frame.BackgroundTransparency = 1
+		frame.BorderSizePixel = 0
+		frame.ZIndex = item.ZIndex
+		frame.Parent = item
+		Ui.round(frame, radius)
+		return frame
+	end
+	-- Solo los botones con relieve (los de Ui.bevel) llevan aclarado y sombra de pulsado. Las casillas se quedan
+	-- con el rebote: hay rejillas de cientos y serían muchas piezas de más.
+	local base = item:FindFirstChild("Base")
+	local hover: Frame? = nil
+	local press: Frame? = nil
+	if base then
+		hover = overlay("Hover", WHITE)
+		press = overlay("Press", BLACK)
+		-- La sombra de pulsado cae desde arriba y se apaga hacia abajo.
+		local fall = Instance.new("UIGradient")
+		fall.Rotation = 90
+		fall.Transparency = NumberSequence.new(0, 0.7)
+		fall.Parent = press
+	end
+
+	local function tween(target: Instance, goal, time: number, style: Enum.EasingStyle?)
 		if Performance.get() then
-			scale.Scale = 1 -- modo rendimiento: sin rebotes
+			for property, value in goal do
+				(target :: any)[property] = value
+			end
 			return
 		end
-		TweenService:Create(scale, TweenInfo.new(time, style, Enum.EasingDirection.Out), { Scale = value }):Play()
+		TweenService:Create(target, TweenInfo.new(time, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal):Play()
+	end
+	local function to(value: number, time: number, style: Enum.EasingStyle)
+		-- Modo rendimiento: sin rebotes.
+		tween(scale, { Scale = if Performance.get() then 1 else value }, time, style)
 	end
 	local over = false
+	local function pressed(down: boolean)
+		if press and base then
+			tween(press, { BackgroundTransparency = if down then 0.72 else 1 }, 0.07)
+			tween(base, { Size = UDim2.new(1, -6, if down then 0.02 else Ui.STYLE.lip, 0) }, if down then 0.07 else 0.16)
+		end
+	end
+	local function lit(on: boolean)
+		if hover then
+			tween(hover, { BackgroundTransparency = if on then 0.86 else 1 }, 0.12)
+		end
+	end
+	local held: RBXScriptConnection? = nil
+	local function release()
+		if held then
+			held:Disconnect()
+			held = nil
+		end
+		to(if over then big else 1, 0.2, Enum.EasingStyle.Back)
+		pressed(false)
+	end
 	item.Activated:Connect(function()
 		Sfx.play("click")
 	end)
 	item.MouseEnter:Connect(function()
 		over = true
 		to(big, 0.18, Enum.EasingStyle.Back)
+		lit(true)
+		-- Solo los botones (los que tienen labio): en una rejilla de casillas sería un repiqueteo.
+		if base then
+			Sfx.play("tick", 0.3)
+		end
 	end)
 	item.MouseLeave:Connect(function()
 		over = false
-		to(1, 0.15, Enum.EasingStyle.Quad)
+		lit(false)
+		release()
 	end)
 	item.MouseButton1Down:Connect(function()
-		to(0.93, 0.07, Enum.EasingStyle.Quad)
+		to(Ui.STYLE.press, 0.07, Enum.EasingStyle.Quad)
+		pressed(true)
+		-- Se suelta aunque el dedo o el ratón se levanten fuera del botón (al arrastrar una lista en táctil no
+		-- llegan ni MouseButton1Up ni MouseLeave, y se quedaba hundido).
+		if not held then
+			held = UserInputService.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					release()
+				end
+			end)
+		end
 	end)
-	item.MouseButton1Up:Connect(function()
-		to(if over then big else 1, 0.2, Enum.EasingStyle.Back)
-	end)
+	item.MouseButton1Up:Connect(release)
 end
 
 -- Brillo blanco en diagonal que cruza el botón cada pocos segundos (la hace el bucle de `shines`).
