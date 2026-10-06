@@ -249,6 +249,7 @@ Config.Plot = {
 	Size = 100, -- lado de la parcela (múltiplo de 20: la valla va en tramos de 10 con la entrada en el centro)
 	RingRadius = 250, -- distancia del centro del mapa al centro de cada parcela
 	HubRadius = 90,
+	LimitRadius = 425, -- radio del muro invisible que cierra el mapa (server/MapBounds); la orilla de la isla queda a 382
 	FloorHeight = 0.4,
 	SpawnInterval = 1.5, -- segundos entre apariciones de objetos en una parcela (sin mejoras: la rama "Velocidad de aparición" lo baja)
 	MinSpawnInterval = 0.3, -- nunca aparecen más rápido que esto

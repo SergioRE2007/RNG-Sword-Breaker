@@ -9,6 +9,7 @@ require(script.Passes).start()
 require(script.Plots).start()
 require(script.Teleport).start()
 require(script.Scenery).start()
+require(script.MapBounds).start()
 require(script.DungeonLobby).start() -- después de Plots y Scenery: corta el suelo de la isla
 require(script.TempleEntrance).start() -- después de DungeonLobby: viste su entrada como un templo japonés
 require(script.LightLift).start() -- después de DungeonLobby: el ascensor de luz del pozo

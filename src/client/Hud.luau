@@ -1,6 +1,6 @@
--- Interfaz fija: barra de transporte arriba (Hub, Casa, Trades, Mazmorras), monedas y gemas abajo a la
+-- Interfaz fija: barra de transporte arriba (Hub, Casa, Mazmorras), monedas y gemas abajo a la
 -- izquierda, cuadro de estadísticas abajo a la derecha (daño, suertes y el nivel de cada mejora,
--- como el resumen de la pantalla de Mejoras), menú a la izquierda y avisos.
+-- como el resumen de la pantalla de Mejoras), menú a la izquierda (Mochila, Renacer, Mejoras, Tienda y Trades) y avisos.
 -- La mochila está en Backpack, las mejoras en SkillTree, el gacha en GachaRoll y el estilo en Ui.
 -- El transporte lo hace el servidor (Teleport); aquí solo se pide y se pone un destello.
 local Players = game:GetService("Players")
@@ -210,9 +210,6 @@ function Hud.start()
 			Ui.compassIcon(parent, Color3.fromRGB(60, 150, 230))
 		end },
 		{ "home", "Casa", Color3.fromRGB(50, 190, 240), houseIcon },
-		{ "trades", "Trades", Color3.fromRGB(40, 170, 200), function(parent)
-			Ui.tradeIcon(parent, Color3.fromRGB(120, 230, 255))
-		end },
 		{ "dungeon", "Mazmorras", Ui.COLORS.purple, function(parent)
 			Ui.gateIcon(parent, Color3.fromRGB(190, 110, 255))
 		end, 236 },
@@ -236,10 +233,6 @@ function Hud.start()
 		label.Text = entry[2]
 		Ui.sparkle(button, 5)
 		button.Activated:Connect(function()
-			if entry[1] == "trades" then
-				Ui.toggle("TradeList") -- abre la lista de Comercio, no transporta
-				return
-			end
 			Remotes.Teleport:FireServer(entry[1])
 			flash.BackgroundTransparency = 0.2
 			TweenService:Create(flash, TweenInfo.new(0.45), { BackgroundTransparency = 1 }):Play()
@@ -369,6 +362,10 @@ function Hud.start()
 		end },
 		{ "PassShop", "Tienda", Color3.fromRGB(40, 185, 110), function(parent)
 			Ui.shopIcon(parent, Color3.fromRGB(235, 70, 70))
+		end },
+		-- Abre la lista de Comercio (antes iba arriba, con los botones de transporte: pedido por el usuario).
+		{ "TradeList", "Trades", Color3.fromRGB(40, 170, 200), function(parent)
+			Ui.tradeIcon(parent, Color3.fromRGB(120, 230, 255))
 		end },
 	}
 	for order, entry in menuItems do
