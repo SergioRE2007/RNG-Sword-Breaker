@@ -21,7 +21,7 @@ local part, disc, cylinder, deco, small, lantern = DungeonThemes.part, DungeonTh
 local STONE_A = Color3.fromRGB(78, 76, 98)
 local STONE_B = Color3.fromRGB(62, 60, 80)
 local DARK = Color3.fromRGB(42, 40, 56)
-local ACCENT = Color3.fromRGB(176, 124, 255) -- el violeta del portal de siempre
+local ACCENT = Color3.fromRGB(176, 124, 255) -- violeta de las runas y los faroles del lobby
 local BLACK = Color3.new(0, 0, 0)
 
 local FLOOR = cfg.Floor

@@ -43,6 +43,7 @@ Cada zona tiene sus archivos. Si cada uno se queda en la suya, no hay conflictos
 | **Mejoras** | `Shop` | `SkillTree` | `Upgrades` |
 | **Mapa y objetos** | `Plots`, `Scenery`, `Destructibles` | `Ambience` | — |
 | **Combate y efectos** | `Combat`, `Movement`, `CollisionGroups` | `Effects` | `Chance` |
+| **Mazmorras y grupos** (zonas, lobby subterráneo, partidas cooperativas) | `Dungeons`, `DungeonLobby`, `DungeonThemes`, `Party` | `Dungeons`, `Party`, `DungeonFx`, `RoomSigns`, `DungeonCard` | `DungeonInfo` |
 
 ### Archivos compartidos (cuidado)
 
