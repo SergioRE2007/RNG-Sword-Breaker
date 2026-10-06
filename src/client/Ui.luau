@@ -325,16 +325,6 @@ function Ui.setSelected(button: GuiObject, selected: boolean)
 	end
 end
 
--- Botón que se puede o no se puede pulsar: apagado se ve gris y no responde.
-function Ui.setEnabled(button: GuiButton, enabled: boolean)
-	button.Active = enabled
-	button.Interactable = enabled
-	local press = button:FindFirstChild("Press")
-	if press then
-		(press :: Frame).BackgroundTransparency = if enabled then 1 else 0.45
-	end
-end
-
 -- Caja de texto con el estilo del juego: hueco oscuro, borde negro, sombra por dentro arriba y filo claro abajo.
 -- Sin degradado en la propia caja: teñiría también lo que se escribe.
 function Ui.field(box: TextBox)
@@ -393,14 +383,20 @@ function Ui.pressable(item: GuiButton, grow: number?)
 		Ui.round(frame, radius)
 		return frame
 	end
-	local hover = overlay("Hover", WHITE)
-	local press = overlay("Press", BLACK)
-	-- La sombra de pulsado cae desde arriba y se apaga hacia abajo.
-	local fall = Instance.new("UIGradient")
-	fall.Rotation = 90
-	fall.Transparency = NumberSequence.new(0, 0.7)
-	fall.Parent = press
+	-- Solo los botones con relieve (los de Ui.bevel) llevan aclarado y sombra de pulsado. Las casillas se quedan
+	-- con el rebote: hay rejillas de cientos y serían muchas piezas de más.
 	local base = item:FindFirstChild("Base")
+	local hover: Frame? = nil
+	local press: Frame? = nil
+	if base then
+		hover = overlay("Hover", WHITE)
+		press = overlay("Press", BLACK)
+		-- La sombra de pulsado cae desde arriba y se apaga hacia abajo.
+		local fall = Instance.new("UIGradient")
+		fall.Rotation = 90
+		fall.Transparency = NumberSequence.new(0, 0.7)
+		fall.Parent = press
+	end
 
 	local function tween(target: Instance, goal, time: number, style: Enum.EasingStyle?)
 		if Performance.get() then
@@ -417,10 +413,24 @@ function Ui.pressable(item: GuiButton, grow: number?)
 	end
 	local over = false
 	local function pressed(down: boolean)
-		tween(press, { BackgroundTransparency = if down then 0.72 else 1 }, 0.07)
-		if base then
+		if press and base then
+			tween(press, { BackgroundTransparency = if down then 0.72 else 1 }, 0.07)
 			tween(base, { Size = UDim2.new(1, -6, if down then 0.02 else Ui.STYLE.lip, 0) }, if down then 0.07 else 0.16)
 		end
+	end
+	local function lit(on: boolean)
+		if hover then
+			tween(hover, { BackgroundTransparency = if on then 0.86 else 1 }, 0.12)
+		end
+	end
+	local held: RBXScriptConnection? = nil
+	local function release()
+		if held then
+			held:Disconnect()
+			held = nil
+		end
+		to(if over then big else 1, 0.2, Enum.EasingStyle.Back)
+		pressed(false)
 	end
 	item.Activated:Connect(function()
 		Sfx.play("click")
@@ -428,7 +438,7 @@ function Ui.pressable(item: GuiButton, grow: number?)
 	item.MouseEnter:Connect(function()
 		over = true
 		to(big, 0.18, Enum.EasingStyle.Back)
-		tween(hover, { BackgroundTransparency = 0.86 }, 0.12)
+		lit(true)
 		-- Solo los botones (los que tienen labio): en una rejilla de casillas sería un repiqueteo.
 		if base then
 			Sfx.play("tick", 0.3)
@@ -436,18 +446,23 @@ function Ui.pressable(item: GuiButton, grow: number?)
 	end)
 	item.MouseLeave:Connect(function()
 		over = false
-		to(1, 0.15, Enum.EasingStyle.Quad)
-		tween(hover, { BackgroundTransparency = 1 }, 0.15)
-		pressed(false)
+		lit(false)
+		release()
 	end)
 	item.MouseButton1Down:Connect(function()
 		to(Ui.STYLE.press, 0.07, Enum.EasingStyle.Quad)
 		pressed(true)
+		-- Se suelta aunque el dedo o el ratón se levanten fuera del botón (al arrastrar una lista en táctil no
+		-- llegan ni MouseButton1Up ni MouseLeave, y se quedaba hundido).
+		if not held then
+			held = UserInputService.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					release()
+				end
+			end)
+		end
 	end)
-	item.MouseButton1Up:Connect(function()
-		to(if over then big else 1, 0.2, Enum.EasingStyle.Back)
-		pressed(false)
-	end)
+	item.MouseButton1Up:Connect(release)
 end
 
 -- Brillo blanco en diagonal que cruza el botón cada pocos segundos (la hace el bucle de `shines`).

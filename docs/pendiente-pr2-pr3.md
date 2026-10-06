@@ -34,8 +34,13 @@ Hecho:
   `DungeonResult.Content`). PassShop no tenía paneles planos.
 - [x] Modo rendimiento probado en partida: el botón no rebota (escala 1) pero se sigue viendo el aclarado y el hundido.
 
-Falta (en este orden):
-- [ ] Aplicar lo que digan los revisores (Sonnet para el código, Haiku para las capturas): lanzados el 6 oct 2026.
+- [x] Revisores (6 oct 2026). Sonnet (código): nada roto; aplicado que el botón se suelte aunque el dedo se levante
+  fuera (`InputEnded`), que las casillas no lleven `Hover` ni `Press` (solo los botones con relieve) y quitado
+  `Ui.setEnabled`, que nadie usaba y chocaba con el estado de pulsado. Haiku (capturas): sombras, zócalos y relieve bien;
+  sin cambios (sus pegas eran de cosas anteriores a esta pasada: el amarillo del título de mazmorra superada y el gris
+  de los botones apagados).
+
+Falta:
 - [ ] Paso 6, segunda pasada: capturas de cada pantalla, revisor Haiku (visual) y Sonnet (código).
 - [ ] Avisar al compañero antes de juntar (toca `Ui` y `Hud`).
 
