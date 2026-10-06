@@ -315,7 +315,7 @@ function Backpack.start()
 	bar.Parent = swordsPane
 	Ui.round(bar, 10)
 	Ui.stroke(bar, Color3.new(0, 0, 0), 2)
-	Ui.gradient(bar, Color3.fromRGB(58, 52, 96), Color3.fromRGB(20, 20, 34), 90)
+	Ui.panel(bar, Color3.fromRGB(46, 42, 78))
 
 	local detail = Ui.label(swordsPane, 19)
 	detail.Name = "Detail"

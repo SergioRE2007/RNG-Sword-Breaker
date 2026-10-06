@@ -311,7 +311,7 @@ function SkillTree.start()
 	titleBack.Parent = overlay
 	Ui.round(titleBack, 14)
 	Ui.stroke(titleBack, Color3.new(0, 0, 0), 3)
-	Ui.gradient(titleBack, Color3.fromRGB(40, 44, 80), Color3.fromRGB(16, 18, 36), 90)
+	Ui.panel(titleBack, Color3.fromRGB(34, 38, 70))
 	heading.AnchorPoint = Vector2.new(0.5, 0)
 	heading.Position = UDim2.new(0.5, 0, 0, 100)
 	heading.Size = UDim2.fromOffset(520, 34)
@@ -360,7 +360,7 @@ function SkillTree.start()
 	summary.Parent = overlay
 	Ui.round(summary, 12)
 	Ui.stroke(summary, BLACK, 3)
-	Ui.gradient(summary, Color3.fromRGB(58, 48, 110), Color3.fromRGB(18, 18, 40), 90)
+	Ui.panel(summary, Color3.fromRGB(46, 40, 92))
 	local summaryRows = {}
 	for row, name in Config.UpgradeOrder do
 		local upgrade = Config.Upgrades[name]

@@ -21,10 +21,15 @@ Hecho:
 - [x] Paso 3, HUD: contadores con `Ui.pill` y zócalo; transporte, menú, engranaje y pestaña de estadísticas con sombra
   y zócalo; la caja de estadísticas es `Ui.panel` (las filas pasan a `StatsDock.Stats.Content`). "Mazmorras" ya estaba.
 
+- [x] Paso 4 (parte): pestañas de Trade y botón "Sugerir" con `Ui.setSelected` (y la primera pestaña ya sale marcada);
+  cajas de texto de Trade y Settings con `Ui.field`; a `Ui.panel`: barra de Backpack, barra de ArmorPane, tarjeta de
+  invitación de Party y de Trade, filas de ModifierShops, título y resumen de SkillTree. Probado: HUD, trato, mochila y
+  árbol de mejoras abren sin errores.
+
 Falta (en este orden):
-- [ ] Paso 4, barrido: pestañas con `Ui.setSelected` (Backpack, Trade), campos con `Ui.field` (Trade, Settings),
-  paneles sueltos a `Ui.panel` (Backpack `count/bar`, ArmorPane, Missions, PassShop, Dungeons, GachaRoll, SkillTree, Trade),
-  sonido suave al pasar el ratón.
+- [ ] Resto del paso 4: pestañas de Backpack con `Ui.setSelected` (hoy guardan su `stroke` en `tabs[name]`); paneles de
+  Missions, PassShop, GachaRoll y la tarjeta de Dungeons (esta tiene `UIListLayout`: hace falta un marco de contenido
+  dentro, como en `StatsDock.Stats.Content`); sonido suave al pasar el ratón.
 - [ ] Comprobar el modo rendimiento y el `HudRoot` a escala 0.55.
 - [ ] Paso 6, segunda pasada: capturas de cada pantalla, revisor Haiku (visual) y Sonnet (código).
 - [ ] Avisar al compañero antes de juntar (toca `Ui` y `Hud`).

@@ -237,7 +237,7 @@ function ArmorPane.build(pane: Frame, helpers)
 	bar.Parent = pane
 	Ui.round(bar, 10)
 	Ui.stroke(bar, BLACK, 2)
-	Ui.gradient(bar, Color3.fromRGB(58, 52, 96), Color3.fromRGB(20, 20, 34), 90)
+	Ui.panel(bar, Color3.fromRGB(46, 42, 78))
 
 	local equipButton = Ui.button(pane, "Equipar", Ui.COLORS.blue)
 	equipButton.Name = "Equip"

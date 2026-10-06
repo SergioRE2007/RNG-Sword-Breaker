@@ -306,7 +306,7 @@ local function buildInvite()
 	card.Parent = Ui.screen()
 	Ui.round(card, 14)
 	Ui.stroke(card, BLACK, 4)
-	Ui.gradient(card, Color3.fromRGB(60, 80, 130), Color3.fromRGB(24, 28, 54), 90)
+	Ui.panel(card, Color3.fromRGB(50, 66, 110))
 	local scale = Instance.new("UIScale")
 	scale.Parent = card
 	local text = Ui.label(card, 22)
@@ -491,17 +491,12 @@ local function buildTrade()
 		box.Name = "Box"
 		box.AnchorPoint = Vector2.new(1, 0.5)
 		box.Size = UDim2.fromOffset(92, 32)
-		box.BackgroundColor3 = Ui.COLORS.dark
-		box.TextColor3 = WHITE
 		box.PlaceholderText = "0"
-		box.PlaceholderColor3 = Color3.fromRGB(120, 124, 140)
-		box.Font = Ui.FONT
 		box.TextSize = 19
 		box.ClearTextOnFocus = false
 		box.Text = ""
 		box.Parent = frame
-		Ui.round(box, 8)
-		Ui.stroke(box, BLACK, 2)
+		Ui.field(box)
 		local function small(buttonName: string, text: string, buttonColor: Color3, width: number): TextButton
 			local button = Ui.button(frame, text, buttonColor)
 			button.Name = buttonName
@@ -677,14 +672,12 @@ local function buildTrade()
 		button.Activated:Connect(function()
 			tab = entry[1]
 			for name, other in tabButtons do
-				local stroke = other:FindFirstChildOfClass("UIStroke")
-				if stroke then
-					stroke.Color = if name == tab then WHITE else BLACK
-				end
+				Ui.setSelected(other, name == tab)
 			end
 			buildStock()
 		end)
 	end
+	Ui.setSelected(tabButtons[tab], true)
 
 	-- Barra de abajo: en qué paso se está y los botones.
 	local status = Ui.label(body, 20)
@@ -911,10 +904,7 @@ local function buildTrade()
 	function setSuggesting(on: boolean)
 		local was = suggesting
 		suggesting = on and current ~= nil and current.state == "editing"
-		local stroke = suggestButton:FindFirstChildOfClass("UIStroke")
-		if stroke then
-			stroke.Color = if suggesting then WHITE else BLACK
-		end
+		Ui.setSelected(suggestButton, suggesting)
 		suggestButton.BackgroundColor3 = if suggesting then GOLD else Ui.COLORS.blue
 		-- Solo al entrar o salir del modo: cada estado que llega pasa por aquí y no debe borrar lo que se está escribiendo.
 		if was ~= suggesting then
