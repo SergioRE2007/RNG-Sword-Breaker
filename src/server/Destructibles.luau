@@ -131,7 +131,8 @@ function Destructibles.damage(part: BasePart, amount: number, player: Player)
 	end
 
 	object.hp -= amount
-	if object.hp > 0 then
+	-- Con una tolerancia: restar números con decimales deja a veces una pizca (1e-13) y haría falta un golpe más.
+	if object.hp > object.def.hp * 1e-9 then
 		part:SetAttribute("HP", object.hp)
 		return nil
 	end
