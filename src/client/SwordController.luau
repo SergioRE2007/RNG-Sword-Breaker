@@ -46,10 +46,44 @@ local function hook(instance: Instance)
 	end
 end
 
+-- Al entrar en la partida, el servidor pone la espada en la mano antes de que este cliente esté listo: se ve en la
+-- mano, pero Roblox no la da por equipada y los clics no hacían nada hasta cambiar de arma. Si un arma está en la
+-- mano y no llega su aviso de equipada, se suelta: el servidor (Swords) la vuelve a poner, y esa vez llega bien.
+local RETRIES = 5 -- intentos por partida, por si algo raro la dejara soltándose sin parar
+local retries = 0
+
+local function ensureEquipped(instance: Instance)
+	if not (instance:IsA("Tool") and instance:GetAttribute("Sword")) then
+		return
+	end
+	local equipped = false
+	local connection = instance.Equipped:Connect(function()
+		equipped = true
+	end)
+	task.delay(0.6, function()
+		connection:Disconnect()
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not equipped and humanoid and instance.Parent == character and retries < RETRIES then
+			retries += 1
+			humanoid:UnequipTools()
+		end
+	end)
+end
+
 local function watch(container: Instance)
-	container.ChildAdded:Connect(hook)
+	local inHand = container == player.Character
+	container.ChildAdded:Connect(function(child)
+		hook(child)
+		if inHand then
+			ensureEquipped(child)
+		end
+	end)
 	for _, child in container:GetChildren() do
 		hook(child)
+		if inHand then
+			ensureEquipped(child)
+		end
 	end
 end
 
