@@ -174,7 +174,7 @@ function Hud.start()
 
 	-- Monedas y gemas, abajo a la izquierda.
 	local _, setCoins = counter(gui, "Coins", 1, Ui.COLORS.coins, function(parent)
-		Ui.orbIcon(parent, Color3.fromRGB(255, 220, 90))
+		Ui.coinIcon(parent, Color3.fromRGB(255, 220, 90))
 	end)
 	local _, setGems = counter(gui, "Gems", 2, Ui.COLORS.purple, function(parent)
 		Ui.gemIcon(parent, Color3.fromRGB(220, 160, 255))
@@ -207,14 +207,14 @@ function Hud.start()
 
 	local destinations = {
 		{ "hub", "Hub", Color3.fromRGB(255, 175, 40), function(parent)
-			Ui.orbIcon(parent, Color3.fromRGB(255, 120, 60))
+			Ui.compassIcon(parent, Color3.fromRGB(60, 150, 230))
 		end },
 		{ "home", "Casa", Color3.fromRGB(50, 190, 240), houseIcon },
 		{ "trades", "Trades", Color3.fromRGB(40, 170, 200), function(parent)
-			Ui.orbIcon(parent, Color3.fromRGB(200, 245, 255))
+			Ui.tradeIcon(parent, Color3.fromRGB(120, 230, 255))
 		end },
 		{ "dungeon", "Mazmorras", Ui.COLORS.purple, function(parent)
-			Ui.starIcon(parent, Color3.fromRGB(235, 200, 255))
+			Ui.gateIcon(parent, Color3.fromRGB(190, 110, 255))
 		end, 236 },
 	}
 	for order, entry in destinations do
@@ -362,13 +362,13 @@ function Hud.start()
 			Ui.backpackIcon(parent, Color3.fromRGB(240, 150, 60))
 		end },
 		{ "Rebirth", "Renacer", Ui.COLORS.orange, function(parent)
-			Ui.starIcon(parent, Color3.fromRGB(255, 235, 120))
+			Ui.rebirthIcon(parent, Color3.fromRGB(255, 225, 120))
 		end },
 		{ "Upgrades", "Mejoras", Ui.COLORS.green, function(parent)
 			Ui.upgradeIcon(parent, Color3.fromRGB(255, 205, 60))
 		end },
 		{ "PassShop", "Tienda", Color3.fromRGB(40, 185, 110), function(parent)
-			Ui.gemIcon(parent, Color3.fromRGB(190, 255, 210))
+			Ui.shopIcon(parent, Color3.fromRGB(235, 70, 70))
 		end },
 	}
 	for order, entry in menuItems do

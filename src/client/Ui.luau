@@ -1173,6 +1173,159 @@ function Ui.upgradeIcon(parent: Instance, color: Color3)
 	end
 end
 
+local GOLD = Color3.fromRGB(240, 192, 60)
+
+-- Círculo con borde negro (sin relleno si `color` es nil): base de varios iconos.
+local function disc(parent: Instance, size: number, position: UDim2, color: Color3): Frame
+	return piece(parent, UDim2.fromScale(size, size), position, color, 100)
+end
+
+local function shine(parent: Instance, size: UDim2, position: UDim2)
+	local spot = piece(parent, size, position, WHITE, 100)
+	spot.BackgroundTransparency = 0.4
+	local line = spot:FindFirstChildOfClass("UIStroke")
+	if line then
+		line:Destroy()
+	end
+	return spot
+end
+
+-- Moneda: canto dorado, cara con una estrella grabada y un reflejo.
+function Ui.coinIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	local rim = disc(holder, 0.9, UDim2.fromScale(0.5, 0.5), GOLD:Lerp(color, 0.15))
+	Ui.gradient(rim, WHITE, Color3.fromRGB(170, 140, 90), 60)
+	local face = disc(rim, 0.74, UDim2.fromScale(0.5, 0.5), GOLD:Lerp(WHITE, 0.15))
+	Ui.gradient(face, WHITE, Color3.fromRGB(190, 160, 100), 120)
+	for _, turn in { 0, 45 } do
+		local arm = piece(face, UDim2.fromScale(0.34, 0.34), UDim2.fromScale(0.5, 0.5), GOLD:Lerp(Color3.fromRGB(150, 100, 20), 0.45), 3)
+		arm.Rotation = turn
+		local line = arm:FindFirstChildOfClass("UIStroke")
+		if line then
+			line.Thickness = 1
+		end
+	end
+	shine(rim, UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.3, 0.18)).Rotation = -35
+end
+
+-- Brújula (el centro del mapa): aro, esfera y aguja roja y blanca.
+function Ui.compassIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	local ring = disc(holder, 0.92, UDim2.fromScale(0.5, 0.5), GOLD)
+	Ui.gradient(ring, WHITE, Color3.fromRGB(170, 140, 90), 60)
+	local face = disc(ring, 0.78, UDim2.fromScale(0.5, 0.5), color)
+	Ui.gradient(face, WHITE, Color3.fromRGB(150, 150, 170), 80)
+	for _, spot in { Vector2.new(0.5, 0.1), Vector2.new(0.9, 0.5), Vector2.new(0.5, 0.9), Vector2.new(0.1, 0.5) } do
+		local tick = piece(face, UDim2.fromScale(0.08, 0.08), UDim2.fromScale(spot.X, spot.Y), WHITE, 100)
+		local line = tick:FindFirstChildOfClass("UIStroke")
+		if line then
+			line.Thickness = 1
+		end
+	end
+	local needle = Instance.new("Frame")
+	needle.AnchorPoint = Vector2.new(0.5, 0.5)
+	needle.Position = UDim2.fromScale(0.5, 0.5)
+	needle.Size = UDim2.fromScale(0.2, 0.74)
+	needle.BackgroundTransparency = 1
+	needle.Rotation = 40
+	needle.Parent = face
+	local north = piece(needle, UDim2.fromScale(1, 0.5), UDim2.fromScale(0.5, 0.25), Color3.fromRGB(235, 70, 70), 3)
+	north.Rotation = 0
+	local south = piece(needle, UDim2.fromScale(1, 0.5), UDim2.fromScale(0.5, 0.75), WHITE, 3)
+	south.Rotation = 0
+	disc(face, 0.12, UDim2.fromScale(0.5, 0.5), GOLD)
+end
+
+-- Intercambio: dos flechas opuestas (una blanca, otra del color).
+function Ui.tradeIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	for index, dir in { 1, -1 } do
+		local y = if index == 1 then 0.32 else 0.68
+		local tint = if index == 1 then WHITE else color
+		local bar = piece(holder, UDim2.fromScale(0.5, 0.15), UDim2.fromScale(0.5 - dir * 0.08, y), tint, 4)
+		Ui.gradient(bar, WHITE, Color3.fromRGB(170, 170, 180), 90)
+		local head = piece(holder, UDim2.fromScale(0.26, 0.26), UDim2.fromScale(0.5 + dir * 0.28, y), tint, 4)
+		head.Rotation = 45
+		Ui.gradient(head, WHITE, Color3.fromRGB(170, 170, 180), 45)
+	end
+end
+
+-- Puerta de mazmorra: arco de piedra con un portal que brilla dentro y escalones.
+function Ui.gateIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	local stone = Color3.fromRGB(150, 150, 165)
+	local function arch(width: number, top: number, bottom: number, tint: Color3)
+		local cap = piece(holder, UDim2.fromScale(width, width), UDim2.fromScale(0.5, top), tint, 100)
+		local post = piece(holder, UDim2.fromScale(width, bottom - top), UDim2.fromScale(0.5, (top + bottom) / 2), tint, 0)
+		return cap, post
+	end
+	local cap, post = arch(0.7, 0.34, 0.8, stone)
+	Ui.gradient(cap, WHITE, Color3.fromRGB(150, 150, 170), 90)
+	Ui.gradient(post, WHITE, Color3.fromRGB(150, 150, 170), 90)
+	local innerCap, innerPost = arch(0.44, 0.38, 0.8, color:Lerp(BLACK, 0.65))
+	for _, part in { innerCap, innerPost } do
+		Ui.gradient(part, color, color:Lerp(BLACK, 0.7), 90)
+	end
+	disc(holder, 0.2, UDim2.fromScale(0.5, 0.6), color:Lerp(WHITE, 0.5)).BackgroundTransparency = 0.25
+	for index, width in { 0.84, 0.72 } do
+		local step = piece(holder, UDim2.fromScale(width, 0.08), UDim2.fromScale(0.5, 0.86 + (index - 1) * 0.08), stone:Lerp(BLACK, 0.2 * index), 2)
+		step.ZIndex = holder.ZIndex
+	end
+end
+
+-- Puesto de tienda: toldo a rayas, mostrador de madera y una moneda encima.
+function Ui.shopIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	local counter = piece(holder, UDim2.fromScale(0.72, 0.4), UDim2.fromScale(0.5, 0.72), Color3.fromRGB(150, 100, 60), 4)
+	Ui.gradient(counter, WHITE, Color3.fromRGB(150, 140, 130), 90)
+	piece(counter, UDim2.fromScale(1, 0.18), UDim2.fromScale(0.5, 0.1), Color3.fromRGB(110, 70, 40), 0)
+	for index = 1, 5 do
+		local stripe = piece(holder, UDim2.fromScale(0.17, 0.26), UDim2.fromScale(0.5 + (index - 3) * 0.16, 0.3), if index % 2 == 1 then color else WHITE, 3)
+		Ui.gradient(stripe, WHITE, Color3.fromRGB(170, 170, 180), 90)
+	end
+	disc(holder, 0.22, UDim2.fromScale(0.5, 0.56), GOLD).ZIndex = holder.ZIndex + 1
+end
+
+-- Renacer: flecha circular (ocho tramos con un hueco y la punta) y una chispa en el centro.
+function Ui.rebirthIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	local radius = 0.33
+	for step = 0, 6 do
+		local angle = math.rad(-70 + step * 42)
+		local seg = piece(holder, UDim2.fromScale(0.2, 0.13), UDim2.fromScale(0.5 + math.cos(angle) * radius, 0.5 + math.sin(angle) * radius), color, 4)
+		seg.Rotation = math.deg(angle) + 90
+		Ui.gradient(seg, WHITE, Color3.fromRGB(190, 170, 120), 90)
+	end
+	local tipAngle = math.rad(-70 + 7 * 42 - 8)
+	local tip = piece(holder, UDim2.fromScale(0.27, 0.27), UDim2.fromScale(0.5 + math.cos(tipAngle) * radius, 0.5 + math.sin(tipAngle) * radius), color, 4)
+	tip.Rotation = math.deg(tipAngle) + 135
+	Ui.gradient(tip, WHITE, Color3.fromRGB(190, 170, 120), 45)
+	local spark = piece(holder, UDim2.fromScale(0.2, 0.2), UDim2.fromScale(0.5, 0.5), color:Lerp(WHITE, 0.5), 3)
+	spark.Rotation = 45
+end
+
+-- Accesorio: colgante dorado con una gema tallada abajo.
+function Ui.amuletIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	local chain = disc(holder, 0.62, UDim2.fromScale(0.5, 0.38), GOLD)
+	chain.BackgroundTransparency = 1
+	local line = chain:FindFirstChildOfClass("UIStroke")
+	if line then
+		line.Color = GOLD
+		line.Thickness = 5
+	end
+	piece(holder, UDim2.fromScale(0.2, 0.12), UDim2.fromScale(0.5, 0.68), GOLD, 3)
+	local stone = piece(holder, UDim2.fromScale(0.34, 0.34), UDim2.fromScale(0.5, 0.82), color, 4)
+	stone.Rotation = 45
+	Ui.gradient(stone, WHITE, Color3.fromRGB(150, 150, 170), 45)
+	shine(stone, UDim2.fromScale(0.3, 0.3), UDim2.fromScale(0.3, 0.3))
+end
+
 -- Hexágono (punta arriba) de `width` de ancho, hecho con tres rectángulos girados.
 -- Devuelve el contenedor y sus tres piezas, para poder cambiarles el color.
 function Ui.hex(parent: Instance, width: number, color: Color3)
@@ -1500,7 +1653,7 @@ local function toastIcon(parent: Frame, text: string, color: Color3)
 	if string.find(lower, "gema", 1, true) or string.find(lower, "cristal", 1, true) then
 		Ui.gemIcon(parent, color)
 	elseif string.find(lower, "moneda", 1, true) then
-		Ui.orbIcon(parent, color)
+		Ui.coinIcon(parent, color)
 	elseif string.find(lower, "espada", 1, true) or string.find(lower, "hacha", 1, true) or string.find(lower, "lanza", 1, true) or string.find(lower, "martillo", 1, true) or string.find(lower, "arma", 1, true) then
 		Ui.swordIcon(parent, color)
 	elseif color.R > 0.7 and color.G < 0.5 and color.B < 0.5 then

@@ -243,7 +243,7 @@ function Backpack.start()
 			Ui.boxIcon(parent, Color3.fromRGB(255, 210, 90))
 		end,
 		Gear = function(parent)
-			Ui.gemIcon(parent, Color3.fromRGB(230, 170, 255))
+			Ui.amuletIcon(parent, Color3.fromRGB(230, 170, 255))
 		end,
 		Armor = function(parent)
 			ArmorPane.icon(parent, Color3.fromRGB(200, 210, 230))
@@ -618,7 +618,7 @@ function Backpack.start()
 		local cell = Ui.cell(gearGrid, Rarity.tier(artifact.rarity).color)
 		cell.Name = "Artifact" .. index
 		cell.LayoutOrder = -index
-		Ui.orbIcon(cell, artifact.color)
+		Ui.amuletIcon(cell, artifact.color)
 		Ui.cellLabel(cell, `{Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}`)
 		Ui.tip(cell, function()
 			return artifactTip(index)
@@ -668,7 +668,7 @@ function Backpack.start()
 					icon:Destroy()
 				end
 				if artifact then
-					Ui.orbIcon(entry.cell, artifact.color)
+					Ui.amuletIcon(entry.cell, artifact.color)
 				end
 			end
 			local color = if artifact then Rarity.tier(artifact.rarity).color else Ui.COLORS.gray
