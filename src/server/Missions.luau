@@ -135,7 +135,7 @@ function Missions.start()
 		Color3.fromRGB(255, 190, 40),
 		Color3.fromRGB(60, 200, 110),
 		Color3.fromRGB(245, 245, 250),
-	}, "Misiones")
+	}, "Misiones", true)
 end
 
 return Missions
