@@ -1281,7 +1281,7 @@ local function buildShop(kind: string)
 		if kind == "traits" then
 			Remotes.RollTrait:FireServer(state.selected, state.count, table.concat(state.priority, ","))
 		else
-			Remotes.RollGrade:FireServer(state.selected, state.onResult ~= nil and not state.auto) -- a mano en la forja se puede descartar
+			Remotes.RollGrade:FireServer(state.selected)
 		end
 		-- Si el servidor no contesta (demasiado pronto), se puede volver a pedir.
 		task.delay(1.5, function()
