@@ -9,6 +9,7 @@ require(script.Passes).start()
 require(script.Plots).start()
 require(script.Teleport).start()
 require(script.Scenery).start()
+require(script.DungeonLobby).start() -- después de Plots y Scenery: corta el suelo de la isla
 require(script.Destructibles).start()
 require(script.Movement).start()
 require(script.Swords).start()

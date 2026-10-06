@@ -76,12 +76,12 @@ local function disc(parent: Instance, name: string, center: Vector3, radius: num
 end
 
 -- Farol: cubito de neón (el color oscurecido, para que el brillo del juego no lo deje blanco) y una luz puntual.
-local function lantern(parent: Instance, cframe: CFrame, color: Color3, range: number?): Part
+local function lantern(parent: Instance, cframe: CFrame, color: Color3, range: number?, brightness: number?): Part
 	local lamp = small(part(parent, "Torch", Vector3.new(1.2, 1.2, 1.2), cframe, color:Lerp(BLACK, 0.35), Enum.Material.Neon))
 	local light = Instance.new("PointLight")
 	light.Color = color
 	light.Range = range or 36
-	light.Brightness = 1.6
+	light.Brightness = brightness or 1.6
 	light.Parent = lamp
 	return lamp
 end
@@ -563,6 +563,7 @@ function DungeonThemes.dressRoom(model: Instance, roomCF: CFrame, width: number,
 end
 
 DungeonThemes.part = part
+DungeonThemes.stalactite = stalactite
 DungeonThemes.disc = disc
 DungeonThemes.cylinder = cylinder
 DungeonThemes.ball = ball

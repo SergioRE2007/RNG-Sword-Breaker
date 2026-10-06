@@ -17,6 +17,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Destructibles = require(script.Parent.Destructibles)
+local DungeonLobby = require(script.Parent.DungeonLobby)
 local DungeonThemes = require(script.Parent.DungeonThemes)
 local Loot = require(script.Parent.Loot)
 
@@ -26,8 +27,8 @@ local cfg = Config.Dungeon
 local random = Random.new()
 
 -- run = { id, index, level, theme, waves, slot, origin, model, members = { [Player] = member }, order = { member },
---   leader = member?, size, hpMult, countMult, enemies = { [body] = enemy }, left, wave, state, ends, nextWave,
---   context, ended }. member = { player = Player?, ghost = true?, name, summary }. Los "fantasmas" (solo en Studio, para
+--   leader = member?, size, playerCount, hpMult, countMult, enemies = { [body] = enemy }, left, wave, state, ends,
+--   nextWave, context, ended }. member = { player = Player?, ghost = true?, name, summary, slot }. Los "fantasmas" (solo en Studio, para
 --   probar el escalado y las bajas con un único jugador) cuentan en el tamaño del grupo pero no pelean ni cobran.
 local runs = {} -- [run] = true: partidas en curso
 local runOf = {} -- [Player] = su partida
@@ -336,9 +337,9 @@ local function hasPlayers(run): boolean
 	return false
 end
 
--- Dónde se deja al jugador al acabar la partida.
-local function returnPoint(run, player: Player): CFrame
-	return portalFront
+-- Dónde se deja al jugador al acabar la partida: en la sala de esa zona, en el lobby subterráneo.
+local function returnPoint(run, member): CFrame
+	return DungeonLobby.returnCFrame(run.index, member.slot or 1, run.playerCount or 1) or portalFront
 end
 
 local function clearAttributes(player: Player)
@@ -385,7 +386,7 @@ local function detach(run, member, bringBack: boolean)
 				local character = player.Character
 				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 				if humanoid and humanoid.Health > 0 then
-					character:PivotTo(returnPoint(run, player))
+					character:PivotTo(returnPoint(run, member))
 				end
 			end
 		end
@@ -454,13 +455,13 @@ local function restart(old, survivors: { Player }, ghosts: number)
 	usedSlots[old.slot] = nil
 	old.model:Destroy()
 	if not new then
-		for _, player in survivors do
+		for number, player in survivors do
 			if player.Parent then
 				clearAttributes(player)
 				local character = player.Character
 				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 				if humanoid and humanoid.Health > 0 then
-					character:PivotTo(returnPoint(old, player))
+					character:PivotTo(returnPoint(old, { slot = number }))
 				end
 			end
 		end
@@ -703,8 +704,9 @@ function launch(players: { Player }, index: number, opts: { ghosts: number? }?)
 		context ={ level = index, loot = level.loot, qualityLuck = level.qualityLuck },
 		ended = false,
 	}
-	for _, player in players do
-		local member = { player = player, name = player.DisplayName, summary = Loot.summary() }
+	run.playerCount = #players
+	for number, player in players do
+		local member = { player = player, name = player.DisplayName, summary = Loot.summary(), slot = number }
 		run.members[player] = member
 		table.insert(run.order, member)
 		runOf[player] = run

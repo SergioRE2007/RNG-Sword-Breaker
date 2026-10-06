@@ -362,6 +362,39 @@ Config.Party = {
 	Scaling = { hp = 0.75, count = 0.5 },
 }
 
+-- LOBBY SUBTERRÁNEO de mazmorras (server/DungeonLobby): una boca en el centro del hub, una escalera de caracol que baja
+-- hasta una caverna con una sala por zona de Config.Dungeons. Alturas Y: el suelo de la isla está en 0,4 y el mar y la
+-- base debajo; el lobby va por debajo de todo. HoleRadius/RimRadius = boca y borde de piedra; Floor/Ceiling = suelo y
+-- techo del lobby; ZoneY = por debajo de esta altura el cliente pone la luz del lobby (client/DungeonFx);
+-- StepsPerTurn/StepRise = peldaños por vuelta y lo que baja cada uno; ExitAngle = hacia dónde sale la escalera (grados);
+-- Rooms = las salas en anillo (la primera en FirstAngle; Radius/Width/Depth/Height en studs; crecen solas si hay más zonas).
+-- "light" y "fx" = ambiente del lobby (mismo formato que Config.DungeonThemes).
+Config.DungeonLobby = {
+	HoleRadius = 13.5,
+	RimRadius = 19.5,
+	Floor = -80,
+	Ceiling = -22,
+	CavernRadius = 122,
+	PlazaRadius = 46,
+	ZoneY = -28,
+	PillarRadius = 4.5,
+	StairOuter = 13.6,
+	StepsPerTurn = 24,
+	StepRise = 1,
+	ExitAngle = 270,
+	Rooms = { FirstAngle = 285, Radius = 90, Width = 30, Depth = 30, Height = 22 },
+	light = {
+		clock = 0,
+		ambient = Color3.fromRGB(96, 104, 144),
+		outdoor = Color3.fromRGB(84, 92, 130),
+		brightness = 1.2,
+		atmosphere = { color = Color3.fromRGB(62, 72, 112), decay = Color3.fromRGB(40, 50, 92), density = 0.32, haze = 2, glare = 0 },
+		tint = Color3.fromRGB(228, 234, 255),
+		saturation = 0.08,
+	},
+	fx = { kind = "motes", color = Color3.fromRGB(170, 200, 255) },
+}
+
 -- Mazmorras (zonas), de menor a mayor. El jugador solo ve "name" (la zona) y "tagline"; "difficulty" es la etiqueta
 -- interna del equilibrio (Fácil … Infinito) y no se enseña. "id" = clave estable (la usa Config.DungeonThemes).
 -- "hp" = daño por golpe recomendado: la vida de un enemigo es su hp (en golpes) por
