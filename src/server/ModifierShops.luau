@@ -14,6 +14,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 local StallSkin = require(script.Parent.StallSkin)
+local Stations = require(script.Parent.Stations)
 
 local ModifierShops = {}
 
@@ -116,6 +117,50 @@ local function onAdminSet(player: Player, kind: unknown, id: unknown, index: unk
 	end)
 end
 
+-- Cartel con el nombre de la tienda y el aviso "pulsa E" (el cliente además abre la ventana al
+-- acercarse). Van en `counter`, una pieza por delante del puesto.
+local function addSignAndPrompt(counter: Part, kind: string, shopTitle: string, stripes: { Color3 }, signHeight: number)
+	-- Cartel con el nombre de la tienda, por encima del toldo y con borde negro grueso.
+	local gui = Instance.new("BillboardGui")
+	gui:SetAttribute("SignHeight", signHeight)
+	gui.Size = UDim2.fromOffset(340, 80)
+	gui.StudsOffset = Vector3.new(0, signHeight, 0)
+	gui.MaxDistance = 220
+	gui.LightInfluence = 0
+	gui.Parent = counter
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextSize = 48
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Text = string.upper(shopTitle)
+	label.Parent = gui
+	local outline = Instance.new("UIStroke")
+	outline.Color = Color3.new(0, 0, 0)
+	outline.Thickness = 3.5
+	outline.Parent = label
+	local keys = {}
+	for index, color in stripes do
+		table.insert(keys, ColorSequenceKeypoint.new((index - 1) / math.max(#stripes - 1, 1), color))
+	end
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new(keys)
+	gradient.Parent = label
+	-- El cliente (ModifierShops) lo hace girar, latir y flotar.
+	CollectionService:AddTag(gui, "ShopSign")
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Abrir"
+	prompt.ObjectText = shopTitle
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt:SetAttribute("Shop", kind)
+	prompt.Parent = counter
+	CollectionService:AddTag(prompt, "ShopStation")
+end
+
 -- Puesto: mostrador, cuatro postes, toldo de rayas inclinado, cartel flotante y el aviso de
 -- "pulsa E". `position` en el suelo; mira hacia el centro del hub. Con `skinned` usa el
 -- aspecto de `StallSkin` (toldo azul y vendedor) en vez de las piezas sueltas.
@@ -180,44 +225,15 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 		end
 	end
 
-	-- Cartel con el nombre de la tienda, por encima del toldo y con borde negro grueso.
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(340, 80)
-	gui.StudsOffset = Vector3.new(0, signHeight, 0)
-	gui.MaxDistance = 220
-	gui.LightInfluence = 0
-	gui.Parent = counter
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 48
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Text = string.upper(shopTitle)
-	label.Parent = gui
-	local outline = Instance.new("UIStroke")
-	outline.Color = Color3.new(0, 0, 0)
-	outline.Thickness = 3.5
-	outline.Parent = label
-	local keys = {}
-	for index, color in stripes do
-		table.insert(keys, ColorSequenceKeypoint.new((index - 1) / math.max(#stripes - 1, 1), color))
-	end
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new(keys)
-	gradient.Parent = label
-	-- El cliente (ModifierShops) lo hace girar, latir y flotar.
-	CollectionService:AddTag(gui, "ShopSign")
+	addSignAndPrompt(counter, kind, shopTitle, stripes, signHeight)
 
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Abrir"
-	prompt.ObjectText = shopTitle
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 14
-	prompt.RequiresLineOfSight = false
-	prompt:SetAttribute("Shop", kind)
-	prompt.Parent = counter
+	model.Parent = parent
+end
 
+-- Estación hecha con piezas (Forja, Mesa de encantamiento): `build` es Stations.forge o enchanter.
+local function buildStation(parent: Instance, kind: string, position: Vector3, stripes: { Color3 }, build: (Vector3) -> (Model, Part, number))
+	local model, counter, signHeight = build(position)
+	addSignAndPrompt(counter, kind, Modifiers.KINDS[kind].title, stripes, signHeight)
 	model.Parent = parent
 end
 
@@ -232,8 +248,8 @@ function ModifierShops.start()
 		local angle = math.rad(degrees)
 		return Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
 	end
-	buildStall(map, "traits", at(112.5), { Color3.fromRGB(255, 90, 140), Color3.fromRGB(80, 200, 255), Color3.fromRGB(255, 220, 80), Color3.fromRGB(150, 110, 255) }, nil, true)
-	buildStall(map, "grades", at(157.5), { Color3.fromRGB(170, 90, 255), Color3.fromRGB(245, 245, 250) }, nil, true)
+	buildStation(map, "traits", at(112.5), { Color3.fromRGB(255, 90, 140), Color3.fromRGB(80, 200, 255), Color3.fromRGB(255, 220, 80), Color3.fromRGB(150, 110, 255) }, Stations.enchanter)
+	buildStation(map, "grades", at(157.5), { Color3.fromRGB(255, 150, 40), Color3.fromRGB(255, 80, 40), Color3.fromRGB(255, 220, 90) }, Stations.forge)
 
 	Remotes.RollTrait.OnServerEvent:Connect(function(player, id, count, priority)
 		onRoll(player, "traits", id, count, priority)
