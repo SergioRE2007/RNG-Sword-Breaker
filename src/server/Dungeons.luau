@@ -361,7 +361,9 @@ local function restart(old, survivors: { Player }, ghosts: number)
 	local new = launch(survivors, old.index, { ghosts = ghosts, onEnd = onEnd })
 	usedSlots[old.slot] = nil
 	old.model:Destroy()
-	if not new then
+	if new then
+		new.owner = old.owner
+	else
 		if onEnd then
 			task.spawn(onEnd)
 		end
@@ -403,8 +405,7 @@ local function win(run)
 				table.insert(survivors, player)
 			end
 		end
-		local leader = run.leader and run.leader.player
-		if #survivors > 0 and leader and looping[leader] then
+		if #survivors > 0 and looping[run.owner] then
 			restart(run, survivors, ghosts)
 		else
 			endRun(run, true)
@@ -623,6 +624,8 @@ function launch(players: { Player }, index: number, opts: { ghosts: number?, onE
 		runOf[player] = run
 	end
 	run.leader = run.order[1]
+	-- Quien la lanzó: su "Repetir" es el que vale aunque caiga y pase a liderar otro.
+	run.owner = players[1]
 	for number = 1, ghosts do
 		table.insert(run.order, { ghost = true, name = `Bot {number}`, summary = Loot.summary() })
 	end
