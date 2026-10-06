@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Chance = require(ReplicatedStorage.Shared.Chance)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local ObjectModel = require(ReplicatedStorage.Shared.ObjectModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
@@ -68,6 +69,9 @@ local function spawnIn(plot)
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.CFrame = plot.cframe * CFrame.new(position + Vector3.new(0, def.size.Y / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+	local index = table.find(Config.Destructibles, def) :: number
+	ObjectModel.attach(part, index, def)
+	part:SetAttribute("Index", index)
 	part:SetAttribute("HP", def.hp)
 	part:SetAttribute("MaxHP", def.hp)
 	CollectionService:AddTag(part, "Destructible")
@@ -139,12 +143,23 @@ function Destructibles.damage(part: BasePart, amount: number, player: Player)
 	if def.gems > 0 and Chance.roll(def.gemChance or 1) then
 		gems = math.max(1, math.round(def.gems * Stats.gems(player) * rng:NextNumber(Config.GemDrop.min, Config.GemDrop.max)))
 	end
-	Remotes.Broken:FireAllClients(player, part.CFrame, part.Size, part.Color, part.Material, coins, gems)
+	Remotes.Broken:FireAllClients(player, part.CFrame, part.Size, part.Color, part.Material, coins, gems, table.find(Config.Destructibles, def))
 	remove(part)
 	return def, coins, gems
 end
 
+-- Al importar un .fbx de Blender en Studio el modelo se queda suelto en Workspace (grande y gris): las mallas buenas
+-- ya vienen de Shared.ObjectMeshes / ArmorMeshes, así que se borra cualquier resto con las marcas Axis_* de Blender.
+local function clearImports()
+	for _, item in workspace:GetChildren() do
+		if item ~= folder and (item:IsA("Model") or item:IsA("Folder")) and item:FindFirstChild("Axis_Origin", true) then
+			item:Destroy()
+		end
+	end
+end
+
 function Destructibles.start()
+	clearImports()
 	folder = Instance.new("Folder")
 	folder.Name = "Destructibles"
 	folder.Parent = workspace

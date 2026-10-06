@@ -5,8 +5,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Format = require(ReplicatedStorage.Shared.Format)
+local ObjectModel = require(ReplicatedStorage.Shared.ObjectModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local ObjectBreak = require(script.Parent.ObjectBreak)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 
@@ -183,8 +185,14 @@ function Effects.start()
 		end
 	end)
 
-	Remotes.Broken.OnClientEvent:Connect(function(breaker: Player, cframe: CFrame, size: Vector3, color: Color3, material: Enum.Material, reward: number, gems: number)
-		shatter(cframe, size, color, material)
+	Remotes.Broken.OnClientEvent:Connect(function(breaker: Player, cframe: CFrame, size: Vector3, color: Color3, material: Enum.Material, reward: number, gems: number, objectIndex: number?)
+		if objectIndex and ObjectModel.has(objectIndex) then
+			if not Performance.get() then
+				ObjectBreak.play(cframe, size, objectIndex)
+			end
+		else
+			shatter(cframe, size, color, material)
+		end
 		Sfx.play("break_", if breaker == player then 1 else 0.4)
 		if breaker == player then
 			healthBar.Enabled = false
