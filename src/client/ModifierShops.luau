@@ -415,6 +415,9 @@ local function buildShop(kind: string)
 		end
 	end
 
+	-- "Volver" de cada capa en la escena de la forja (ver más abajo); fuera de ella solo cierra la capa.
+	local backHandlers: { [string]: () -> () } = {}
+
 	-- Capas que tapan la parte izquierda: elegir espada y elegir con qué se para el automático.
 	local function overlay(name: string, titleText: string): (Frame, ScrollingFrame)
 		local frame = Instance.new("Frame")
@@ -460,7 +463,11 @@ local function buildShop(kind: string)
 		back.TextSize = 24
 		Ui.layer(back, Z.overlay + 4) -- por encima de las casillas de la lista, con su relieve
 		back.Activated:Connect(function()
-			frame.Visible = false
+			if state.onPick and backHandlers[name] then
+				backHandlers[name]()
+			else
+				frame.Visible = false
+			end
 		end)
 		return frame, list
 	end
@@ -1339,6 +1346,17 @@ local function buildShop(kind: string)
 		state.waiting = false
 		refresh()
 	end)
+
+	-- En la forja la tarjeta de la izquierda no se enseña nunca: Volver de los ajustes lleva a la lista de
+	-- armas y Volver de la lista de armas cierra la ventana (y se vuelve a la forja).
+	backHandlers.StopAt = function()
+		stopper.Visible = false
+		rebuildPicker()
+		picker.Visible = true
+	end
+	backHandlers.Picker = function()
+		window.Visible = false
+	end
 
 	slot.Activated:Connect(function()
 		rebuildPicker()
