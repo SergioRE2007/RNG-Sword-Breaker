@@ -13,7 +13,7 @@ local NAMES = {
 	"BuyAllUpgrades", -- cliente -> servidor: subir todas las mejoras que se puedan pagar
 	"SwingFx", -- servidor -> los demás clientes: (player) ese jugador ha dado un espadazo
 	"Hit", -- servidor -> clientes: (player, part, position, damage)
-	"Broken", -- servidor -> clientes: (player, cframe, size, color, material, reward, gems)
+	"Broken", -- servidor -> clientes: (player, cframe, size, color, material, reward, gems, índice del objeto en Config.Destructibles; sin él, los enemigos)
 	"GachaRolled", -- servidor -> cliente: (index, kept, luck, source) espada sacada; kept = false si se vendió sola; source = "gacha" o "roca"
 	"GachaRevealed", -- cliente -> servidor: ya he destapado mi siguiente tirada rara (para mandar su aura y aviso a todos)
 	"GachaAura", -- servidor -> clientes: (player, index, odds) aura en el personaje de quien sacó algo raro para su suerte (odds = rareza / suerte)
