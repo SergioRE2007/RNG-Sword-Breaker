@@ -238,9 +238,9 @@ Config.Plot = {
 -- la suerte del jugador multiplica esa probabilidad. El primero es el de relleno.
 -- "gems" = gemas que suelta (solo los raros). "dropsSword" = al romperse da una espada.
 Config.Destructibles = {
-	{ name = "Caja", rarity = 1, hp = 1.7, reward = 2, gems = 0, size = Vector3.new(3, 3, 3), color = Color3.fromRGB(170, 125, 75), material = Enum.Material.WoodPlanks },
-	{ name = "Barril", rarity = 4, hp = 3.2, reward = 10, gems = 0, size = Vector3.new(3, 4.5, 3), color = Color3.fromRGB(120, 75, 45), material = Enum.Material.Wood },
-	{ name = "Roca", rarity = 20, hp = 6.9, reward = 60, gems = 1, size = Vector3.new(5, 4, 5), color = Color3.fromRGB(110, 110, 115), material = Enum.Material.Slate },
+	{ name = "Caja", rarity = 1, hp = 2, reward = 2, gems = 0, size = Vector3.new(3, 3, 3), color = Color3.fromRGB(170, 125, 75), material = Enum.Material.WoodPlanks },
+	{ name = "Barril", rarity = 4, hp = 3, reward = 10, gems = 0, size = Vector3.new(3, 4.5, 3), color = Color3.fromRGB(120, 75, 45), material = Enum.Material.Wood },
+	{ name = "Roca", rarity = 20, hp = 7, reward = 60, gems = 1, size = Vector3.new(5, 4, 5), color = Color3.fromRGB(110, 110, 115), material = Enum.Material.Slate },
 	{ name = "Pilar", rarity = 120, hp = 17, reward = 500, gems = 8, size = Vector3.new(4, 12, 4), color = Color3.fromRGB(225, 220, 205), material = Enum.Material.Marble },
 	{ name = "Cristal", rarity = 800, hp = 43, reward = 5000, gems = 60, size = Vector3.new(7, 11, 7), color = Color3.fromRGB(110, 220, 255), material = Enum.Material.Glass },
 	{ name = "Roca de armas", rarity = 2000, hp = 23, reward = 0, gems = 0, dropsSword = true, size = Vector3.new(6, 6, 6), color = Color3.fromRGB(255, 120, 40), material = Enum.Material.Neon },
