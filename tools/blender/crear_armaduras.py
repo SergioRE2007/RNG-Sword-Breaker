@@ -215,7 +215,7 @@ def pauldron(p, kind, base="Base", acc="Trim", dark="Dark", scale=1.0):
             p.add(acc, box(0.12, 0.12, 0.12), m @ T(s * 0.1, 0.3, -0.45))
         elif kind == "spike":
             p.add(base, sphere(0.58, 9, 5), m @ S(1, 0.65, 1.1))
-            p.add(dark, spike(0.28, 1.3), m @ T(s * 0.15, 0.1, 0) @ R("Z", -s * 40))
+            p.add(dark, spike(0.26, 0.95), m @ T(s * 0.12, 0.1, 0) @ R("Z", -s * 30))
             p.add(acc, torus(0.5, 0.05, 16, 4), m @ T(0, -0.1, 0))
         elif kind == "wing":
             for i, ang in enumerate((10, 38, 66)):
@@ -510,7 +510,7 @@ def chest_12(p):  # infinito: ∞ y capa de cuchillas
             verts.append((x + nx * 0.05 * math.cos(b), y + ny * 0.05 * math.cos(b), 0.05 * math.sin(b)))
     faces = [(i * m + j, ((i + 1) % n) * m + j, ((i + 1) % n) * m + (j + 1) % m, i * m + (j + 1) % m) for i in range(n) for j in range(m)]
     p.add("Glow", (verts, faces), T(0, 0.05, -0.7))
-    pauldron(p, "spike", "Base", "Trim", "Dark", 1.3)
+    pauldron(p, "spike", "Base", "Trim", "Dark", 1.05)
     collar(p, "spiked", "Trim")
     for x, h in ((-0.7, 1.7), (0.0, 2.1), (0.7, 1.7)):
         p.add("Dark", frustum(0.3, 0.06, 0.1, 0.04, h), T(x, -0.9 + 0.15, 0.72) @ R("X", 8))
