@@ -173,8 +173,8 @@ function Settings.start()
 	-- Botón con engranaje, arriba a la izquierda (bajo los botones de Roblox, que ocupan la esquina).
 	local button = Ui.button(gui, "", Ui.COLORS.gray)
 	button.Name = "SettingsButton"
-	button.Position = UDim2.fromOffset(14, 66)
-	button.Size = UDim2.fromOffset(56, 56)
+	button.Position = UDim2.fromOffset(168, 14) -- a la derecha del botón del chat
+	button.Size = UDim2.fromOffset(44, 44)
 	Ui.gearIcon(button)
 	Ui.shadow(button)
 	button.Activated:Connect(function()
