@@ -69,7 +69,9 @@ local function spawnIn(plot)
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.CFrame = plot.cframe * CFrame.new(position + Vector3.new(0, def.size.Y / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
-	ObjectModel.attach(part, table.find(Config.Destructibles, def) :: number, def)
+	local index = table.find(Config.Destructibles, def) :: number
+	ObjectModel.attach(part, index, def)
+	part:SetAttribute("Index", index)
 	part:SetAttribute("HP", def.hp)
 	part:SetAttribute("MaxHP", def.hp)
 	CollectionService:AddTag(part, "Destructible")
