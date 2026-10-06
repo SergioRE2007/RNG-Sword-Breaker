@@ -1555,7 +1555,7 @@ function ModifierShops.start()
 			if root then
 				for _, prompt in CollectionService:GetTagged("ShopStation") do
 					local shop = windows[prompt:GetAttribute("Shop")]
-					local anchor = prompt.Parent
+					local anchor = if prompt:IsA("BasePart") then prompt else prompt.Parent
 					if not shop or not anchor or not anchor:IsA("BasePart") then
 						continue
 					end
