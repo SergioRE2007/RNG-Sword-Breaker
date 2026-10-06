@@ -124,9 +124,10 @@ local function buildUi()
 	-- Cuadro tras un martillazo a mano: quedarse con el grado nuevo o descartarlo y volver al anterior.
 	local decision = Instance.new("Frame")
 	decision.Name = "Decision"
-	decision.AnchorPoint = Vector2.new(0.5, 0.5)
-	decision.Position = UDim2.fromScale(0.5, 0.5)
-	decision.Size = UDim2.fromOffset(470, 330)
+	-- Arriba, para no tapar el yunque, el arma ni el martillo mientras se decide.
+	decision.AnchorPoint = Vector2.new(0.5, 0)
+	decision.Position = UDim2.new(0.5, 0, 0, 56)
+	decision.Size = UDim2.fromOffset(470, 300)
 	decision.Visible = false
 	decision.ZIndex = 30
 	decision.Parent = root
@@ -572,9 +573,15 @@ local function askKeep(index: number, previous: number)
 	local old = GRADES.list[previous]
 	ui.decisionOld.Text = if old then `Tu grado actual: <font color="#{(old.color :: Color3):ToHex()}">{old.name}</font>` else "Ahora no tienes grado"
 	ui.decision.Visible = true
+	if scene then
+		scene.deciding = true
+	end
 	local thread = coroutine.running()
 	choose = function(keep: boolean)
 		choose = nil
+		if scene then
+			scene.deciding = false
+		end
 		ui.decision.Visible = false
 		task.spawn(thread, keep)
 	end
@@ -1026,13 +1033,14 @@ function ForgeScene.enter()
 
 		-- Martillo: solo existe mientras el ratón está sobre el yunque (AREA); fuera de ahí se esconde y
 		-- vuelve el cursor normal, para poder pulsar Salir, Ajustes, etc.
-		local point = if api.window.Visible then nil else mousePoint(s.planeY)
+		local point = if api.window.Visible or s.deciding then nil else mousePoint(s.planeY)
 		local localPoint = if point then s.anvil.CFrame:PointToObjectSpace(point) else nil
 		local inside = localPoint ~= nil and localPoint.X >= AREA.minX and localPoint.X <= AREA.maxX and localPoint.Z >= AREA.minZ and localPoint.Z <= AREA.maxZ
 		s.inArea = inside
-		local shown = inside or s.hammerFixed
+		-- Con el cuadro de Quedarme/Descartar abierto el martillo se queda donde estaba y vuelve el cursor.
+		local shown = if s.deciding then s.hammerWasShown == true else (inside or s.hammerFixed)
 		showHammer(shown)
-		UserInputService.MouseIconEnabled = not shown
+		UserInputService.MouseIconEnabled = s.deciding == true or not shown
 		if not s.hammerFixed then
 			if inside then
 				local target = s.anvil.CFrame * localPoint :: Vector3
