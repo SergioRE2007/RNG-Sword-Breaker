@@ -86,24 +86,24 @@ end
 
 local function setLighting()
 	Lighting.ClockTime = 17.4 -- atardecer dorado
-	Lighting.Brightness = 2.1
-	Lighting.Ambient = Color3.fromRGB(122, 96, 132)
-	Lighting.OutdoorAmbient = Color3.fromRGB(176, 136, 160)
+	Lighting.Brightness = 2.5
+	Lighting.Ambient = Color3.fromRGB(138, 108, 146)
+	Lighting.OutdoorAmbient = Color3.fromRGB(192, 146, 170)
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 176, 130)
 	Lighting.ColorShift_Bottom = Color3.fromRGB(255, 190, 215)
 	Lighting.GlobalShadows = true
 	Lighting.ShadowSoftness = 0.4
 
 	local color = Instance.new("ColorCorrectionEffect")
-	color.Saturation = 0.18
+	color.Saturation = 0.22
 	color.Contrast = 0.1
 	color.TintColor = Color3.fromRGB(255, 236, 238)
 	color.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.22
+	bloom.Intensity = 0.32
 	bloom.Size = 22
-	bloom.Threshold = 1.35
+	bloom.Threshold = 1.25
 	bloom.Parent = Lighting
 
 	local atmosphere = Instance.new("Atmosphere")
@@ -231,7 +231,7 @@ local function lit(model: Model?, brightness: number, range: number)
 end
 
 -- Camino de losas hasta cada parcela, con un torii a la entrada y linternas de piedra a los lados.
-local function path(parent: Instance, direction: Vector3, from: number, to: number, hue: Color3, tunnel: boolean)
+local function path(parent: Instance, direction: Vector3, from: number, to: number, hue: Color3, first: boolean)
 	local width = 18
 	local tile = 9
 	local side = Vector3.new(-direction.Z, 0, direction.X)
@@ -248,29 +248,20 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 		local middle = direction * (from + length / 2) + side * sign * (width / 2 + 0.6) + Vector3.new(0, 0.6, 0)
 		decor(part(parent, "Curb", Vector3.new(1.2, 0.5, length), facing + middle, Color3.fromRGB(238, 52, 62), Enum.Material.SmoothPlastic))
 	end
+	-- Solo el primer camino lleva torii (con sus farolillos y dos guardianes de piedra); los demás quedan abiertos.
 	local gate = direction * (from + 8)
-	local torii = PropModel.place(parent, "Torii", CFrame.lookAt(gate, gate + direction), 1.15)
-	if torii then
+	if first and PropModel.place(parent, "Torii", CFrame.lookAt(gate, gate + direction), 1.15) then
 		for _, sign in { 1, -1 } do
 			local hang = CFrame.lookAt(gate, gate + direction) * CFrame.new(sign * 4.6, 10.2, 0)
 			PropModel.place(parent, "Chochin", hang, 1.1, { Red = hue })
+			local guard = gate + side * sign * 11
+			PropModel.place(parent, "Komainu", CFrame.lookAt(guard, guard + direction), 1.0)
 		end
 	end
 	for distance = from + 34, from + length - 8, 40 do
 		for _, sign in { 1, -1 } do
 			local spot = direction * distance + side * sign * (width / 2 + 3.5)
 			lit(PropModel.place(parent, "StoneLantern", CFrame.lookAt(spot, spot + side * -sign), 1.1), 0.9, 16)
-		end
-	end
-	-- Guardianes de piedra a los pies del torii, y en dos caminos un túnel de toriis pequeños.
-	for _, sign in { 1, -1 } do
-		local guard = gate + side * sign * 11
-		PropModel.place(parent, "Komainu", CFrame.lookAt(guard, guard + direction), 1.0)
-	end
-	if tunnel then
-		for step = 1, 6 do
-			local spot = direction * (from + 8 + step * 13)
-			PropModel.place(parent, "Torii", CFrame.lookAt(spot, spot + direction), 0.95)
 		end
 	end
 	for distance = from + 50, from + length - 20, 55 do
@@ -356,6 +347,38 @@ local function mountain(parent: Instance, position: Vector3, size: number, heigh
 	decor(part(parent, "Snow", Vector3.one * snow, CFrame.new(peak - Vector3.new(0, snow * math.sqrt(3) / 2 - 0.5, 0)) * spin * MOUNTAIN_TILT, Color3.fromRGB(255, 240, 246), Enum.Material.SmoothPlastic))
 end
 
+-- Animales que pasean por su rincón (el cliente, JapanFx, los mueve): velocidad en studs por segundo y tamaño.
+local CRITTERS = {
+	Panda = { speed = 1.3, scale = 1.0 },
+	RedPanda = { speed = 2.0, scale = 1.0 },
+	Tiger = { speed = 3.0, scale = 1.0 },
+	Fox = { speed = 3.4, scale = 1.0 },
+	Tanuki = { speed = 1.8, scale = 1.0 },
+	Deer = { speed = 2.8, scale = 1.0 },
+	Crane = { speed = 1.0, scale = 1.0 },
+}
+
+local function critter(parent: Instance, kind: string, position: Vector3, radius: number)
+	local info = CRITTERS[kind]
+	local home = Vector3.new(position.X, 0.3, position.Z)
+	local model = PropModel.place(parent, kind, CFrame.new(home) * turn(), info.scale)
+	if model then
+		model:SetAttribute("Home", home)
+		model:SetAttribute("Radius", radius)
+		model:SetAttribute("Speed", info.speed * rng:NextNumber(0.85, 1.15))
+		model:SetAttribute("Kind", kind)
+		CollectionService:AddTag(model, "Critter")
+	end
+end
+
+-- Un grupito de animales alrededor de un punto, a unos pasos unos de otros.
+local function herd(parent: Instance, kind: string, center: Vector3, count: number, spread: number, radius: number)
+	for index = 1, count do
+		local angle = index / count * math.pi * 2 + rng:NextNumber(0, 1)
+		critter(parent, kind, center + Vector3.new(math.cos(angle) * spread, 0, math.sin(angle) * spread), radius)
+	end
+end
+
 function SceneryJapan.start()
 	setLighting()
 
@@ -372,7 +395,7 @@ function SceneryJapan.start()
 
 	-- Caminos con torii y linternas, con el farolillo del color de cada parcela.
 	ring(cfg.Count, 1, 0, function(direction, index)
-		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1), index == 1 or index == 5)
+		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1), index == 1)
 	end)
 
 	-- Linternas de piedra y farolillos de colores en el borde del hub, entre las entradas.
@@ -432,6 +455,28 @@ function SceneryJapan.start()
 	end)
 	ring(34, islandRadius - 28, 0.7, function(position)
 		grove(folder, position + Vector3.new(rng:NextNumber(-8, 8), 0, rng:NextNumber(-8, 8)))
+	end)
+
+	-- Animales: zorros y tanukis cerca del hub, grullas en los estanques, ciervos en los jardines zen, pandas y
+	-- pandas rojos entre el bambú y tigres junto a las rocas del borde.
+	ring(cfg.Count, cfg.HubRadius + 28, 0.5, function(position, index)
+		herd(folder, if index % 2 == 0 then "Tanuki" else "Fox", position + Vector3.new(14, 0, 10), 2, 4, 8)
+	end)
+	ring(cfg.Count, middle, 0.5, function(position, index)
+		if index == 1 or index == 5 then
+			herd(folder, "Crane", position + Vector3.new(0, 0, 27), 2, 4, 3)
+		elseif index == 3 or index == 7 then
+			herd(folder, "Deer", position - position.Unit * 17, 3, 6, 9)
+		else
+			herd(folder, "Panda", position + Vector3.new(16, 0, 14), 2, 5, 7)
+			herd(folder, "RedPanda", position + Vector3.new(-16, 0, 18), 2, 4, 7)
+		end
+	end)
+	ring(cfg.Count, cfg.RingRadius, 0.5, function(position, index)
+		herd(folder, if index % 2 == 0 then "Tiger" else "RedPanda", position + Vector3.new(20, 0, -14), if index % 2 == 0 then 1 else 2, 4, 12)
+	end)
+	ring(cfg.Count, cfg.RingRadius + 45, 0.5, function(position, index)
+		herd(folder, if index % 3 == 0 then "Tiger" else "Panda", position + Vector3.new(-22, 0, 16), 2, 5, 10)
 	end)
 
 	-- Pétalos y matas de hierba por el césped libre.

@@ -46,9 +46,57 @@ local function paint(plot, owned: boolean)
 	end
 end
 
+-- Muro japonés (tsuijibei) para el mapa japonés: zócalo de piedra, pared blanca con una franja del color de la
+-- parcela, tejadillo de tejas azules y pilares de piedra con remate; la entrada del lado del hub lleva dos pilares
+-- más altos. Mismo recorrido y mismo hueco que la valla de siempre.
+local WALL_STONE = Color3.fromRGB(150, 146, 168)
+local WALL_PLASTER = Color3.fromRGB(252, 246, 238)
+local WALL_ROOF = Color3.fromRGB(54, 70, 124)
+local GATE_RED = Color3.fromRGB(232, 52, 62)
+
+local function stone(part: Part, material: Enum.Material?)
+	part.Material = material or Enum.Material.Slate
+	return part
+end
+
+local function buildWall(model: Instance, cframe: CFrame, index: number)
+	local half = Config.Plot.Size / 2
+	local segments = Config.Plot.Size / TILE
+	local band = plotColor(index, 0.9)
+
+	for side = 0, 3 do
+		local line = cframe * CFrame.Angles(0, side * math.pi / 2, 0) * CFrame.new(0, 0, -half)
+		for segment = 1, segments do
+			local x = -half + (segment - 1) * TILE
+			local isGate = side == 0 and (segment == segments / 2 or segment == segments / 2 + 1)
+			local gatePost = side == 0 and (segment == segments / 2 or segment == segments / 2 + 2)
+			if not (side == 0 and segment == segments / 2 + 1) then
+				-- Pilar de piedra con un remate de teja (más alto y rojo en la entrada).
+				local height = if gatePost then 8.4 else 6
+				local width = if gatePost then 2.4 else 1.9
+				stone(block(model, "Post", Vector3.new(width, height, width), line * CFrame.new(x, height / 2, 0), WALL_STONE))
+				block(model, "PostCap", Vector3.new(width + 1.2, 0.6, width + 1.2), line * CFrame.new(x, height + 0.3, 0), if gatePost then GATE_RED else WALL_ROOF)
+				block(model, "PostTop", Vector3.new(width * 0.5, 0.5, width * 0.5), line * CFrame.new(x, height + 0.85, 0), if gatePost then Color3.fromRGB(255, 210, 70) else WALL_STONE)
+			end
+			if not isGate then
+				local middle = line * CFrame.new(x + TILE / 2, 0, 0)
+				stone(block(model, "WallBase", Vector3.new(TILE, 1.5, 1.9), middle * CFrame.new(0, 0.75, 0), WALL_STONE))
+				block(model, "Wall", Vector3.new(TILE, 3.0, 1.3), middle * CFrame.new(0, 3.0, 0), WALL_PLASTER)
+				block(model, "WallBand", Vector3.new(TILE, 0.4, 1.4), middle * CFrame.new(0, 2.2, 0), band)
+				block(model, "WallRoof", Vector3.new(TILE, 0.5, 2.6), middle * CFrame.new(0, 4.75, 0), WALL_ROOF)
+				block(model, "WallRidge", Vector3.new(TILE, 0.4, 1.3), middle * CFrame.new(0, 5.2, 0), WALL_ROOF:Lerp(Color3.new(1, 1, 1), 0.15))
+			end
+		end
+	end
+end
+
 -- Valla de postes, dos travesaños y aspas, del color de la parcela, con un hueco de entrada
 -- en el lado del hub.
 local function buildFence(model: Instance, cframe: CFrame, index: number)
+	if JAPAN then
+		buildWall(model, cframe, index)
+		return
+	end
 	local half = Config.Plot.Size / 2
 	local segments = Config.Plot.Size / TILE
 	local rail = plotColor(index, 0.95)

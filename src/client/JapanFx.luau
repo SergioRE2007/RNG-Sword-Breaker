@@ -13,6 +13,7 @@ local JapanFx = {}
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local KOI_RANGE = 220
+local CRITTER_RANGE = 240
 
 local function emitterPart(name: string): Part
 	local anchor = Instance.new("Part")
@@ -147,6 +148,22 @@ function JapanFx.start()
 	track(koi, "Koi")
 	track(lamps, "LanternGlow")
 
+	-- Estado de cada animal (posición, hacia dónde mira y a dónde va); parten de su casa.
+	local critters: { [Model]: { pos: Vector3, facing: Vector3, target: Vector3?, wait: number, phase: number } } = {}
+	local function addCritter(model: Instance)
+		local home = model:GetAttribute("Home")
+		if model:IsA("Model") and home then
+			local look = model:GetPivot().LookVector
+			critters[model] = { pos = home, facing = Vector3.new(look.X, 0, look.Z), target = nil, wait = math.random() * 4, phase = math.random() * 6.28 }
+		end
+	end
+	CollectionService:GetInstanceAddedSignal("Critter"):Connect(function(model)
+		task.defer(addCritter, model) -- los atributos llegan con el modelo, pero por si acaso
+	end)
+	for _, model in CollectionService:GetTagged("Critter") do
+		addCritter(model)
+	end
+
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		local camera = workspace.CurrentCamera
@@ -171,6 +188,41 @@ function JapanFx.start()
 					local spot = center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
 					local heading = Vector3.new(-math.sin(angle), 0, math.cos(angle)) * math.sign(model:GetAttribute("Speed"))
 					model:PivotTo(CFrame.lookAt(spot, spot + heading) * CFrame.Angles(0, math.sin(now * 5 + angle) * 0.18, 0))
+				end
+			end
+		end
+
+		-- Los animales pasean por su rincón: eligen un punto, andan hasta él dando saltitos, descansan y repiten.
+		for model, state in critters do
+			if not model.Parent then
+				critters[model] = nil
+			elseif (state.pos - position).Magnitude < CRITTER_RANGE then
+				local home = model:GetAttribute("Home")
+				local speed = model:GetAttribute("Speed")
+				local hop = 0
+				if state.wait > 0 then
+					state.wait -= dt
+					hop = math.sin(now * 2 + state.phase) * 0.03 -- respira
+				else
+					if not state.target then
+						local angle = math.random() * math.pi * 2
+						local distance = math.sqrt(math.random()) * model:GetAttribute("Radius")
+						state.target = home + Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
+					end
+					local offset = state.target - state.pos
+					if offset.Magnitude < 0.5 then
+						state.target = nil
+						state.wait = 2 + math.random() * 5
+					else
+						local step = offset.Unit
+						state.facing = state.facing:Lerp(step, math.min(dt * 5, 1))
+						state.pos += step * math.min(speed * dt, offset.Magnitude)
+						hop = math.abs(math.sin(now * speed * 2.4 + state.phase)) * 0.14
+					end
+				end
+				if state.facing.Magnitude > 0.01 then
+					local spot = state.pos + Vector3.new(0, hop, 0)
+					model:PivotTo(CFrame.lookAt(spot, spot + state.facing))
 				end
 			end
 		end

@@ -65,6 +65,9 @@ local LOOKS = {
 	White = { Color3.fromRGB(255, 250, 242), Enum.Material.SmoothPlastic, 0 },
 	Black = { Color3.fromRGB(42, 34, 52), Enum.Material.SmoothPlastic, 0 },
 	Water = { Color3.fromRGB(80, 205, 225), Enum.Material.Glass, 0.2 },
+	Fur = { Color3.fromRGB(214, 96, 44), Enum.Material.SmoothPlastic, 0 },
+	Cream = { Color3.fromRGB(255, 240, 222), Enum.Material.SmoothPlastic, 0 },
+	Tan = { Color3.fromRGB(216, 164, 104), Enum.Material.SmoothPlastic, 0 },
 }
 
 function PropModel.has(name: string): boolean
@@ -104,10 +107,8 @@ function PropModel.place(parent: Instance, name: string, cframe: CFrame, scale: 
 		mesh.Size = piece.size * factor
 		mesh.CFrame = cframe * CFrame.new(piece.offset.Position * factor) * piece.offset.Rotation
 		mesh.Parent = model
-		if not model.PrimaryPart then
-			model.PrimaryPart = mesh
-		end
 	end
+	model.WorldPivot = cframe -- el pivote es el suelo de la pieza: así PivotTo la mueve por los pies
 	model.Parent = parent
 	return model
 end
