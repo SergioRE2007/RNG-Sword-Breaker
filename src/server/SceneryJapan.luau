@@ -86,9 +86,9 @@ end
 
 local function setLighting()
 	Lighting.ClockTime = 17.4 -- atardecer dorado
-	Lighting.Brightness = 2.5
-	Lighting.Ambient = Color3.fromRGB(138, 108, 146)
-	Lighting.OutdoorAmbient = Color3.fromRGB(192, 146, 170)
+	Lighting.Brightness = 2.1
+	Lighting.Ambient = Color3.fromRGB(128, 100, 136)
+	Lighting.OutdoorAmbient = Color3.fromRGB(178, 136, 160)
 	Lighting.ColorShift_Top = Color3.fromRGB(255, 176, 130)
 	Lighting.ColorShift_Bottom = Color3.fromRGB(255, 190, 215)
 	Lighting.GlobalShadows = true
@@ -310,8 +310,25 @@ local function petals(parent: Instance, around: Vector3, count: number, spread: 
 end
 
 local function tree(parent: Instance, position: Vector3)
+	-- Claro entre árboles: se salta una parte para que no sea un muro de copas.
+	if rng:NextNumber() < 0.4 then
+		return
+	end
 	local name = TREES[rng:NextInteger(1, #TREES)]
-	PropModel.place(parent, name, CFrame.new(position) * turn(), rng:NextNumber(0.85, 1.25))
+	local scale = rng:NextNumber(3.0, 4.5)
+	PropModel.place(parent, name, CFrame.new(position) * turn(), scale)
+	-- Hitbox del tronco: cilindro invisible que bloquea el paso.
+	local trunk = Instance.new("Part")
+	trunk.Name = "TreeTrunk"
+	trunk.Shape = Enum.PartType.Cylinder
+	trunk.Size = Vector3.new(10 * scale, 2.6 * scale, 2.6 * scale)
+	trunk.CFrame = CFrame.new(position + Vector3.new(0, 5 * scale, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	trunk.Anchored = true
+	trunk.CanCollide = true
+	trunk.CanQuery = false
+	trunk.CanTouch = false
+	trunk.Transparency = 1
+	trunk.Parent = parent
 	if name ~= "Pine" then
 		petals(parent, position, 14, 9)
 	end
@@ -342,10 +359,10 @@ local CRITTERS = {
 	Panda = { speed = 1.3, scale = 1.0 },
 	RedPanda = { speed = 2.0, scale = 1.0 },
 	Tiger = { speed = 3.0, scale = 1.0 },
-	Fox = { speed = 3.4, scale = 1.0 },
-	Tanuki = { speed = 1.8, scale = 1.0 },
-	Deer = { speed = 2.8, scale = 1.0 },
-	Crane = { speed = 1.0, scale = 1.0 },
+	Fox = { speed = 3.4, scale = 2.0 },
+	Tanuki = { speed = 1.8, scale = 2.0 },
+	Deer = { speed = 2.8, scale = 2.0 },
+	Crane = { speed = 1.0, scale = 2.0 },
 }
 
 local function critter(parent: Instance, kind: string, position: Vector3, radius: number)
@@ -449,27 +466,27 @@ function SceneryJapan.start()
 		grove(folder, position + Vector3.new(rng:NextNumber(-8, 8), 0, rng:NextNumber(-8, 8)))
 	end)
 
-	-- Animales: zorros y tanukis cerca del hub, grullas en los estanques, ciervos en los jardines zen, pandas y
-	-- pandas rojos entre el bambú y tigres junto a las rocas del borde.
-	ring(cfg.Count, cfg.HubRadius + 28, 0.5, function(position, index)
-		herd(folder, if index % 2 == 0 then "Tanuki" else "Fox", position + Vector3.new(14, 0, 10), 2, 4, 8)
-	end)
-	ring(cfg.Count, middle, 0.5, function(position, index)
-		if index == 1 or index == 5 then
-			herd(folder, "Crane", position + Vector3.new(0, 0, 27), 2, 4, 3)
-		elseif index == 3 or index == 7 then
-			herd(folder, "Deer", position - position.Unit * 17, 3, 6, 9)
-		else
-			herd(folder, "Panda", position + Vector3.new(16, 0, 14), 2, 5, 7)
-			herd(folder, "RedPanda", position + Vector3.new(-16, 0, 18), 2, 4, 7)
+	-- Sin animales (quitados a petición del usuario): `herd` y `CRITTERS` siguen ahí por si vuelven.
+
+	-- Luces de las parcelas (de noche las enciende el cliente): linternas sobre los pilares del muro, en las esquinas,
+	-- en el medio de los otros tres lados y en los dos pilares altos de la entrada. Mismo reparto que
+	-- Plots.buildWall: el -Z de la parcela mira al hub, el muro está a Size / 2 y sus pilares miden 6 (8,4 los de la
+	-- entrada) más el remate.
+	local plot = Config.Plot
+	local half = plot.Size / 2
+	local lampSpots = {
+		Vector3.new(-half, 7.1, -half), Vector3.new(half, 7.1, -half), Vector3.new(-half, 7.1, half), Vector3.new(half, 7.1, half),
+		Vector3.new(0, 7.1, half), Vector3.new(-half, 7.1, 0), Vector3.new(half, 7.1, 0),
+		Vector3.new(-10, 9.5, -half), Vector3.new(10, 9.5, -half),
+	}
+	for index = 1, plot.Count do
+		local angle = (index - 1) / plot.Count * math.pi * 2
+		local center = Vector3.new(math.cos(angle) * plot.RingRadius, plot.FloorHeight, math.sin(angle) * plot.RingRadius)
+		local frame = CFrame.lookAt(center, Vector3.new(0, plot.FloorHeight, 0))
+		for _, spot in lampSpots do
+			lit(PropModel.place(folder, "StoneLantern", frame * CFrame.new(spot), 0.8), 1.4, 26)
 		end
-	end)
-	ring(cfg.Count, cfg.RingRadius, 0.5, function(position, index)
-		herd(folder, if index % 2 == 0 then "Tiger" else "RedPanda", position + Vector3.new(20, 0, -14), if index % 2 == 0 then 1 else 2, 4, 12)
-	end)
-	ring(cfg.Count, cfg.RingRadius + 45, 0.5, function(position, index)
-		herd(folder, if index % 3 == 0 then "Tiger" else "Panda", position + Vector3.new(-22, 0, 16), 2, 5, 10)
-	end)
+	end
 
 	-- Pétalos y matas de hierba por el césped libre.
 	local placed = 0

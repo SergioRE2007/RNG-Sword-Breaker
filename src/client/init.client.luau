@@ -11,6 +11,7 @@ require(script.Trade).start()
 require(script.ModifierShops).start()
 require(script.Dungeons).start()
 require(script.Party).start()
+require(script.DayCycle).start() -- antes de DungeonFx, que lo enciende y apaga según la zona
 require(script.DungeonFx).start()
 require(script.RoomSigns).start()
 require(script.GachaRoll).start()

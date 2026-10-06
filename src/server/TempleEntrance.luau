@@ -1,9 +1,8 @@
--- Entrada de las mazmorras como un templo japonés místico (Config.Theme = "japan"): un pabellón octogonal de dos
--- tejados sobre la boca del pozo, ocho columnas laqueadas en rojo, cuerda sagrada con papeles, farolillos violeta,
--- toriis alrededor y mucha magia: círculos de runas que giran flotando, un rayo de luz violeta que sube al cielo,
--- fuegos fatuos que orbitan y niebla mágica que sale del pozo. Se construye después de DungeonLobby, que es quien
--- abre el pozo y pone el borde de piedra y el cartel. El cliente (JapanFx) mueve los círculos, los fuegos fatuos y el
--- rayo con las etiquetas MagicCircle, Wisp, SpiritBeam y MagicMist. Todo es decoración: no afecta al juego.
+-- Entrada de las mazmorras como un santuario místico (Config.Theme = "japan"): un templo abierto de dos tejados,
+-- centrado justo encima de la boca del pozo y de su ascensor de luz (LightLift), igual por los cuatro lados, con
+-- columnas rojas, tejados escalonados, farolillos y magia: dos círculos de runas que giran. Se
+-- construye después de DungeonLobby, que es quien abre el pozo y pone el borde de piedra y el cartel. El cliente
+-- (JapanFx) mueve los círculos con la etiqueta MagicCircle. Casi todo es decoración: solo las columnas tienen colisión.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -17,9 +16,13 @@ local CYAN = Color3.fromRGB(110, 232, 255)
 local PINK = Color3.fromRGB(255, 140, 222)
 local GOLD = Color3.fromRGB(255, 208, 64)
 local LACQUER = Color3.fromRGB(226, 48, 62)
-local PILLARS = 8
-local PILLAR_RADIUS = 18
-local PILLAR_HEIGHT = 15
+local BLACK = Color3.fromRGB(44, 36, 54)
+local STONE = Color3.fromRGB(170, 166, 190)
+local PLASTER = Color3.fromRGB(240, 228, 214)
+local WOOD = Color3.fromRGB(122, 78, 62)
+
+local SIDE = 46 -- lado de la planta cuadrada del templo, centrada sobre la boca
+local COLUMN_HEIGHT = 15
 
 local function part(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material): Part
 	local item = Instance.new("Part")
@@ -50,41 +53,46 @@ local function polar(angle: number, radius: number, y: number): Vector3
 	return Vector3.new(math.cos(angle) * radius, y, math.sin(angle) * radius)
 end
 
--- Columna laqueada: base de piedra, fuste rojo, bandas doradas arriba y abajo y capitel negro.
-local function pillar(parent: Instance, position: Vector3)
+-- Columna laqueada: base de piedra, fuste rojo, bandas doradas y capitel negro.
+local function pillar(parent: Instance, position: Vector3, height: number)
 	local base = CFrame.new(position)
-	local stone = part(parent, "PillarBase", Vector3.new(4.2, 0.9, 4.2), base * CFrame.new(0, 0.45, 0), Color3.fromRGB(170, 166, 190), Enum.Material.Slate)
+	local stone = part(parent, "PillarBase", Vector3.new(0.9, 3.6, 3.6), base * CFrame.new(0, 0.45, 0) * CFrame.Angles(0, 0, math.rad(90)), STONE, Enum.Material.Slate)
 	stone.Shape = Enum.PartType.Cylinder
-	stone.CFrame = base * CFrame.new(0, 0.45, 0) * CFrame.Angles(0, 0, math.rad(90))
-	stone.Size = Vector3.new(0.9, 4.2, 4.2)
-	local shaft = part(parent, "Pillar", Vector3.new(PILLAR_HEIGHT - 1.4, 2.3, 2.3), base * CFrame.new(0, 0.9 + (PILLAR_HEIGHT - 1.4) / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), LACQUER, Enum.Material.SmoothPlastic)
+	local shaft = part(parent, "Pillar", Vector3.new(height - 1.2, 2.2, 2.2), base * CFrame.new(0, 0.9 + (height - 1.2) / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), LACQUER, Enum.Material.SmoothPlastic)
 	shaft.Shape = Enum.PartType.Cylinder
-	for _, y in { 1.8, PILLAR_HEIGHT - 2.2 } do
-		local band = part(parent, "PillarBand", Vector3.new(0.5, 2.7, 2.7), base * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), GOLD, Enum.Material.Metal)
+	for _, y in { 1.8, height - 1.6 } do
+		local band = decor(part(parent, "PillarBand", Vector3.new(0.5, 2.6, 2.6), base * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), GOLD, Enum.Material.Metal))
 		band.Shape = Enum.PartType.Cylinder
 	end
-	part(parent, "PillarCap", Vector3.new(3.4, 0.8, 3.4), base * CFrame.new(0, PILLAR_HEIGHT - 0.4, 0), Color3.fromRGB(44, 36, 54), Enum.Material.SmoothPlastic)
+	part(parent, "PillarCap", Vector3.new(3.4, 0.8, 3.4), base * CFrame.new(0, height - 0.4, 0), BLACK, Enum.Material.SmoothPlastic)
 end
 
--- Cuerda sagrada entre dos columnas: tramos blancos que cuelgan en curva, con papeles en zigzag.
-local function rope(parent: Instance, from: Vector3, to: Vector3)
-	local steps = 8
-	local previous = from
-	for step = 1, steps do
-		local t = step / steps
-		local sag = math.sin(t * math.pi) * 1.8
-		local point = from:Lerp(to, t) - Vector3.new(0, sag, 0)
-		local middle = (previous + point) / 2
-		local length = (point - previous).Magnitude
-		decor(part(parent, "Rope", Vector3.new(0.5, 0.5, length + 0.15), CFrame.lookAt(middle, point), Color3.fromRGB(255, 250, 240), Enum.Material.Fabric))
-		if step % 2 == 0 and step < steps then
-			for tag = -1, 1 do
-				local shide = decor(part(parent, "Shide", Vector3.new(0.9, 1.5, 0.08), CFrame.lookAt(point + Vector3.new(tag * 0.5, -1.0 - (tag % 2) * 0.3, 0), point + Vector3.new(tag * 0.5, -1.0, 1)) * CFrame.Angles(0, 0, math.rad(tag * 14)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic))
-				shide.Transparency = 0.05
-			end
-		end
-		previous = point
+-- Farolillo del templo: pone una luz violeta en su papel y lo marca para que el cliente la encienda de noche.
+local function lampLight(model: Model?)
+	local paper = model and model:FindFirstChild("Paper")
+	if paper then
+		local light = Instance.new("PointLight")
+		light.Color = VIOLET
+		light.Brightness = 0.08
+		light.Range = 8
+		light:SetAttribute("Base", 0.1) -- brillo casi mínimo: el cliente (JapanFx) lo escala por la noche
+		light.Parent = paper
+		CollectionService:AddTag(paper, "LanternGlow")
 	end
+end
+
+-- Tejado escalonado de planta cuadrada, igual por los cuatro lados: `count` losas que se estrechan de `from` a `to` de
+-- lado, cada una con un canto dorado. Devuelve la altura de la cara superior de la última.
+local function roofTiers(parent: Instance, y0: number, from: number, to: number, count: number): number
+	local rise = 1.4
+	for tier = 0, count - 1 do
+		local side = from + (to - from) * tier / math.max(count - 1, 1)
+		local y = y0 + tier * rise
+		decor(part(parent, "RoofTier", Vector3.new(side, 1.2, side), CFrame.new(0, y + 0.6, 0), BLACK, Enum.Material.SmoothPlastic))
+		-- El canto dorado sobresale por abajo (0,1) para que su cara no coincida con la de la losa y parpadee.
+		decor(part(parent, "RoofTrim", Vector3.new(side + 0.5, 0.3, side + 0.5), CFrame.new(0, y + 0.05, 0), GOLD, Enum.Material.Metal))
+	end
+	return y0 + (count - 1) * rise + 1.2
 end
 
 -- Círculo mágico que gira: anillo de runas, runas sueltas y una estrella de seis puntas hecha con dos triángulos.
@@ -118,14 +126,55 @@ local function magicCircle(parent: Instance, name: string, y: number, radius: nu
 	CollectionService:AddTag(model, "MagicCircle")
 end
 
+-- El templo: abierto y centrado sobre la boca (y su ascensor), igual por los cuatro lados: columnas en el perímetro
+-- (con un hueco libre en medio de cada lado), vigas, farolillos y dos tejados escalonados. Sin suelo ni muros: se
+-- pisa el del hub.
+local function shrine(folder: Folder, top: number)
+	local edge = SIDE / 2 - 2 -- las columnas están a esta distancia del centro
+	local height = COLUMN_HEIGHT
+
+	-- Columnas: solo dos por esquina, una a cada lado de la esquina.
+	for _, sx in { -1, 1 } do
+		for _, sz in { -1, 1 } do
+			pillar(folder, Vector3.new(sx * edge, top, sz * (edge - 5)), height)
+			pillar(folder, Vector3.new(sx * (edge - 5), top, sz * edge), height)
+		end
+	end
+	-- Vigas negras con friso dorado en los cuatro lados.
+	for _, sign in { -1, 1 } do
+		part(folder, "Beam", Vector3.new(SIDE, 1.2, 1.6), CFrame.new(0, top + height + 0.4, sign * edge), BLACK, Enum.Material.SmoothPlastic)
+		decor(part(folder, "BeamTrim", Vector3.new(SIDE, 0.25, 1.9), CFrame.new(0, top + height - 0.4, sign * edge), GOLD, Enum.Material.Metal))
+		part(folder, "Beam", Vector3.new(1.6, 1.2, SIDE), CFrame.new(sign * edge, top + height + 0.4, 0), BLACK, Enum.Material.SmoothPlastic)
+		decor(part(folder, "BeamTrim", Vector3.new(1.9, 0.25, SIDE), CFrame.new(sign * edge, top + height - 0.4, 0), GOLD, Enum.Material.Metal))
+	end
+
+	-- Tejado bajo (el alero sobresale de las columnas), un cuerpo alto encima y el tejado alto con su remate.
+	local lowTop = roofTiers(folder, top + height + 1, SIDE + 12, SIDE - 16, 5)
+	local bodySide = SIDE - 22
+	part(folder, "UpperBody", Vector3.new(bodySide, 7, bodySide), CFrame.new(0, lowTop + 3, 0), PLASTER, Enum.Material.SmoothPlastic)
+	decor(part(folder, "UpperBeam", Vector3.new(bodySide + 0.8, 0.8, bodySide + 0.8), CFrame.new(0, lowTop + 6.6, 0), WOOD, Enum.Material.Wood))
+	local highTop = roofTiers(folder, lowTop + 7, bodySide + 10, 5, 6)
+	local spire = decor(part(folder, "Finial", Vector3.one * 3, CFrame.new(0, highTop + 1.2, 0), GOLD, Enum.Material.Metal))
+	spire.Shape = Enum.PartType.Ball
+	decor(part(folder, "FinialRod", Vector3.new(0.6, 5, 0.6), CFrame.new(0, highTop + 3, 0), GOLD, Enum.Material.Metal))
+
+	-- Farolillos violeta colgando del alero, por los cuatro lados.
+	for _, i in { -edge * 5 / 6, -edge / 2, -edge / 6, edge / 6, edge / 2, edge * 5 / 6 } do
+		for _, sign in { -1, 1 } do
+			lampLight(PropModel.place(folder, "Chochin", CFrame.new(i, top + height - 4.2, sign * (edge + 1.6)), 1.3, { Red = VIOLET }))
+			lampLight(PropModel.place(folder, "Chochin", CFrame.new(sign * (edge + 1.6), top + height - 4.2, i), 1.3, { Red = VIOLET }))
+		end
+	end
+end
+
 function TempleEntrance.start()
 	if Config.Theme ~= "japan" then
 		return
 	end
 	local top = Config.Plot.FloorHeight
 
-	-- Fuera lo que puso DungeonLobby sobre el borde (ocho pilares de piedra con farol): el templo ocupa su lugar. El
-	-- cartel sube al interior del pabellón.
+	-- Fuera lo que puso DungeonLobby sobre el borde (ocho pilares de piedra con farol): la boca queda libre para el
+	-- ascensor. El cartel flota algo más alto sobre ella.
 	local lobby = workspace:FindFirstChild("Lobby")
 	local entrance = lobby and lobby:FindFirstChild("EntradaMazmorras")
 	if entrance then
@@ -136,7 +185,7 @@ function TempleEntrance.start()
 		end
 		local sign = entrance:FindFirstChild("Sign")
 		if sign and sign:IsA("BasePart") then
-			sign.CFrame = CFrame.new(0, top + 12.3, 0)
+			sign.CFrame = CFrame.new(0, top + 10, 0)
 		end
 	end
 
@@ -144,66 +193,12 @@ function TempleEntrance.start()
 	folder.Name = "TemploMazmorras"
 	folder.Parent = workspace
 
-	-- Columnas en los vértices del octógono, vigas negras entre ellas, cuerda sagrada y farolillos violeta.
-	for index = 1, PILLARS do
-		local angle = (index - 1) / PILLARS * math.pi * 2
-		local nextAngle = index / PILLARS * math.pi * 2
-		local here = polar(angle, PILLAR_RADIUS, top)
-		local next = polar(nextAngle, PILLAR_RADIUS, top)
-		pillar(folder, here)
-		local beamMiddle = (here + next) / 2 + Vector3.new(0, PILLAR_HEIGHT - 2.6, 0)
-		part(folder, "Beam", Vector3.new(1.0, 1.2, (next - here).Magnitude), CFrame.lookAt(beamMiddle, beamMiddle + (next - here)), Color3.fromRGB(44, 36, 54), Enum.Material.SmoothPlastic)
-		part(folder, "BeamTrim", Vector3.new(1.2, 0.25, (next - here).Magnitude + 0.2), CFrame.lookAt(beamMiddle + Vector3.new(0, -0.7, 0), beamMiddle + Vector3.new(0, -0.7, 0) + (next - here)), GOLD, Enum.Material.Metal)
-		rope(folder, here + Vector3.new(0, PILLAR_HEIGHT - 4.4, 0), next + Vector3.new(0, PILLAR_HEIGHT - 4.4, 0))
-		local lampAt = (here + next) / 2 + Vector3.new(0, PILLAR_HEIGHT - 3.2 - 2.3 - 0.2, 0)
-		PropModel.place(folder, "Chochin", CFrame.new(lampAt), 1.2, { Red = VIOLET })
-	end
+	shrine(folder, top)
 
-	-- Tejado octogonal de dos pisos (modelo de Blender).
-	PropModel.place(folder, "TempleRoof", CFrame.new(0, top + PILLAR_HEIGHT, 0), 1.0)
-
-	-- Magia: dos círculos de runas que giran en sentidos contrarios, un rayo de luz y fuegos fatuos.
+	-- Magia sobre la boca: dos círculos de runas que giran en sentidos contrarios (sin rayo, fuegos fatuos ni niebla,
+	-- quitados porque se veían rotos).
 	magicCircle(folder, "CircleLow", top + 5.5, 9.5, 0.35, VIOLET, CYAN, 12)
 	magicCircle(folder, "CircleHigh", top + 8.5, 5.5, -0.55, PINK, CYAN, 8)
-
-	local beam = decor(part(folder, "SpiritBeam", Vector3.new(80, 11, 11), CFrame.new(0, top + 40, 0) * CFrame.Angles(0, 0, math.rad(90)), VIOLET, Enum.Material.Neon))
-	beam.Shape = Enum.PartType.Cylinder
-	beam.Transparency = 0.84
-	CollectionService:AddTag(beam, "SpiritBeam")
-	local core = decor(part(folder, "SpiritCore", Vector3.new(80, 3, 3), CFrame.new(0, top + 40, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(230, 210, 255), Enum.Material.Neon))
-	core.Shape = Enum.PartType.Cylinder
-	core.Transparency = 0.55
-	CollectionService:AddTag(core, "SpiritBeam")
-
-	for index = 1, 10 do
-		local wisp = decor(part(folder, "Wisp", Vector3.one * 0.9, CFrame.new(0, top + 6, 0), if index % 3 == 0 then PINK elseif index % 3 == 1 then CYAN else VIOLET, Enum.Material.Neon))
-		wisp.Shape = Enum.PartType.Ball
-		local light = Instance.new("PointLight")
-		light.Color = wisp.Color
-		light.Range = 11
-		light.Brightness = 0.9
-		light.Parent = wisp
-		wisp:SetAttribute("Radius", 12 + (index % 4) * 3.5)
-		wisp:SetAttribute("Height", top + 3 + (index % 5) * 2.6)
-		wisp:SetAttribute("Speed", (0.35 + (index % 3) * 0.15) * (if index % 2 == 0 then 1 else -1))
-		wisp:SetAttribute("Phase", index * 0.63)
-		CollectionService:AddTag(wisp, "Wisp")
-	end
-
-	local mist = decor(part(folder, "MagicMist", Vector3.new(24, 1, 24), CFrame.new(0, top + 1, 0), VIOLET, Enum.Material.SmoothPlastic))
-	mist.Transparency = 1
-	CollectionService:AddTag(mist, "MagicMist")
-
-	-- Toriis alrededor, mirando al templo, con farolillos violeta, y linternas de piedra entre ellos.
-	for index = 1, 4 do
-		local angle = math.rad(22.5 + (index - 1) * 90)
-		local spot = polar(angle, 44, top)
-		PropModel.place(folder, "Torii", CFrame.lookAt(spot, Vector3.new(0, top, 0)), 0.9)
-		for _, sign in { 1, -1 } do
-			local hang = CFrame.lookAt(spot, Vector3.new(0, top, 0)) * CFrame.new(sign * 4.0, 7.1, 0)
-			PropModel.place(folder, "Chochin", hang, 0.95, { Red = VIOLET })
-		end
-	end
 end
 
 return TempleEntrance

@@ -354,6 +354,10 @@ end
 
 -- Un anillo por adorno: con count 2 salen dos, de distinto radio y con su propia inclinación.
 PROPS.orbitRing = function(ctx, cf, spec, edge, ringIndex)
+	-- Quitados a petición del usuario (los círculos del techo): el adorno sigue en los temas, pero no se construye.
+	if true then
+		return
+	end
 	local color = spec.color or ctx.torch
 	local tilt = CFrame.Angles(math.rad(ctx.rng:NextNumber(14, 30)), ctx.rng:NextNumber(0, math.pi), math.rad(ctx.rng:NextNumber(-12, 12)))
 	local radius = ctx.ringRadii[ringIndex] or ctx.ringRadii[1]

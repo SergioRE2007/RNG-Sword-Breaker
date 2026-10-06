@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Performance = require(script.Parent.Performance)
+local DayCycle = require(script.Parent.DayCycle)
 
 local DungeonFx = {}
 
@@ -162,13 +163,35 @@ local function profileOf(name: string): ({ [string]: any }?, { kind: string, col
 	return surface, nil
 end
 
+-- Menos brillo en el lobby y las mazmorras (pedido por el usuario): la superficie no se toca.
+local function dimLook(light: { [string]: any }, name: string): { [string]: any }
+	if name == "surface" then
+		return light
+	end
+	local look = table.clone(light)
+	look.brightness = (light.brightness or 1) * (if name == "lobby" then 0.8 else 0.6)
+	return look
+end
+
 local function enter(name: string)
 	zone = name
 	local light, fx = profileOf(name)
+	-- En la superficie manda el ciclo de día y noche: se funde hacia la luz de ahora y, al acabar, él toma el relevo.
+	DayCycle.setActive(false)
+	if name == "surface" then
+		light = DayCycle.profile() or light
+	end
 	if light then
-		applyLight(light)
+		applyLight(dimLook(light, name))
 	end
 	startFx(fx)
+	if name == "surface" then
+		task.delay(FADE.Time + 0.1, function()
+			if zone == "surface" then
+				DayCycle.setActive(true)
+			end
+		end)
+	end
 end
 
 function DungeonFx.start()
@@ -180,9 +203,12 @@ function DungeonFx.start()
 			waited += 0.25
 		end
 		surface = snapshot()
+		DayCycle.setBase(surface)
 		local name = currentZone()
 		if name ~= "surface" then
 			enter(name)
+		else
+			DayCycle.setActive(true)
 		end
 		while true do
 			task.wait(0.25)
