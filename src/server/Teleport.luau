@@ -29,16 +29,8 @@ local function destination(player: Player, where: unknown): CFrame?
 		local stand = direction * (Config.Plot.HubRadius - 40) + Vector3.new(0, floor, 0)
 		return CFrame.lookAt(stand, stand + direction)
 	elseif where == "dungeon" then
-		-- Abajo, en la plaza del lobby subterráneo.
-		local plaza = DungeonLobby.plazaCFrame()
-		if plaza then
-			return plaza
-		end
-		-- (Si el lobby no se ha podido construir: delante del portal de siempre, que Dungeons pone a HubRadius - 18.)
-		local angle = math.rad(Config.Dungeon.PortalAngle)
-		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
-		local stand = direction * (Config.Plot.HubRadius - 32) + Vector3.new(0, floor, 0)
-		return CFrame.lookAt(stand, stand + direction)
+		-- Abajo, en la plaza del lobby subterráneo (si no se ha podido construir, junto a la boca del pozo, en el hub).
+		return DungeonLobby.plazaCFrame() or CFrame.lookAt(Vector3.new(0, floor, 38), Vector3.new(0, floor, 0))
 	elseif where == "home" then
 		local plot = Plots.get(player)
 		return plot and plot.spawn.CFrame + Vector3.new(0, 4, 0)

@@ -215,7 +215,7 @@ function Hud.start()
 		{ "shops", "Tiendas", Color3.fromRGB(70, 200, 90), function(parent)
 			Ui.boxIcon(parent, Color3.fromRGB(255, 210, 90))
 		end },
-		{ "dungeon", "Mazmorra", Ui.COLORS.purple, function(parent)
+		{ "dungeon", "Mazmorras", Ui.COLORS.purple, function(parent)
 			Ui.starIcon(parent, Color3.fromRGB(235, 200, 255))
 		end, 236 },
 	}

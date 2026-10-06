@@ -320,11 +320,8 @@ Config.Armor = {
 	},
 }
 
--- MAZMORRAS (portal del hub). Cada jugador entra solo a su arena. Números a ojo, sin equilibrar.
+-- MAZMORRAS (partida): cada grupo juega en su arena. Números a ojo, sin equilibrar.
 Config.Dungeon = {
-	PortalAngle = 67.5, -- grados alrededor del hub (hueco libre entre dos caminos), a HubRadius - 18
-	EnterDistance = 30, -- hay que estar así de cerca del portal para entrar
-	EnterCooldown = 3, -- segundos mínimos entre entradas
 	TimeLimit = 300, -- segundos para terminar la mazmorra
 	WaveDelay = 2, -- pausa entre oleadas
 	ExitDelay = 4, -- segundos en la arena tras ganar, antes de volver al hub

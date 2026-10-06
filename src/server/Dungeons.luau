@@ -1,6 +1,6 @@
 -- Mazmorras: una arena aparte para cada partida, lejos de la isla, que se juega solo o en grupo (1 a
--- Config.Party.MaxSize jugadores). Quien las lanza (por ahora el portal viejo del hub y más adelante las salas del
--- lobby, vía Dungeons.launch) pasa la lista de jugadores y la zona; aquí se construye la arena con el tema de la zona,
+-- Config.Party.MaxSize jugadores). Quien las lanza (server/Party, con el grupo ya validado, vía Dungeons.launch) pasa la
+-- lista de jugadores y la zona; aquí se construye la arena con el tema de la zona,
 -- salen las oleadas, se mueve a los enemigos (cada uno persigue al jugador vivo más cercano), se aplica el daño en los
 -- dos sentidos y se reparten los premios (Loot: cada jugador vivo tira por cada enemigo y por terminar). Los golpes
 -- llegan por Combat (Dungeons.strike). La vida y la cantidad de enemigos suben con el tamaño del grupo
@@ -35,108 +35,6 @@ local runOf = {} -- [Player] = su partida
 local looping = {} -- [Player] = true si quiere repetir la mazmorra en bucle
 local usedSlots = {} -- [número] = true: huecos de arena ocupados
 local nextRunId = 0
-local lastEnter = {} -- [Player] = os.clock() de su última entrada por el portal
-local portalPosition: Vector3 -- en el suelo del hub
-local portalFront: CFrame -- donde se deja al jugador al volver
-
-local STONE = { Color3.fromRGB(72, 70, 88), Color3.fromRGB(58, 56, 72) }
-local GLOW = Color3.fromRGB(170, 90, 255)
-
-local function block(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): Part
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Anchored = true
-	part.Size = size
-	part.CFrame = cframe
-	part.Color = color
-	part.Material = material or Enum.Material.Slate
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	part.Parent = parent
-	return part
-end
-
--- Portal ---------------------------------------------------------------------------------
-
--- Arco de piedra con un disco de cristal que gira (lo anima el cliente: etiqueta PortalSwirl), runas, cartel
--- y el aviso de "pulsa E". Mira hacia el centro del hub.
-local function buildPortal(parent: Instance)
-	local floor = Config.Plot.FloorHeight
-	local angle = math.rad(cfg.PortalAngle)
-	local radius = Config.Plot.HubRadius - 18
-	portalPosition = Vector3.new(math.cos(angle) * radius, floor, math.sin(angle) * radius)
-	local base = CFrame.lookAt(portalPosition, Vector3.new(0, floor, 0))
-	portalFront = base * CFrame.new(0, 3.5, -12)
-
-	local model = Instance.new("Model")
-	model.Name = "PortalMazmorras"
-
-	-- Escalones.
-	block(model, "Step", Vector3.new(20, 0.8, 9), base * CFrame.new(0, 0.4, 0), STONE[1])
-	block(model, "Step", Vector3.new(16, 0.8, 6), base * CFrame.new(0, 1.2, 0.5), STONE[2])
-	-- Pilares y arco de dovelas.
-	local opening, pillarHeight = 5.5, 9
-	for _, side in { -1, 1 } do
-		block(model, "Pillar", Vector3.new(2.6, pillarHeight, 2.6), base * CFrame.new(side * (opening + 1.3), 1.6 + pillarHeight / 2, 0.5), STONE[1])
-		block(model, "Cap", Vector3.new(3.2, 0.8, 3.2), base * CFrame.new(side * (opening + 1.3), 1.6 + pillarHeight + 0.4, 0.5), STONE[2])
-		local rune = block(model, "Rune", Vector3.new(0.9, 0.9, 0.3), base * CFrame.new(side * (opening + 1.3), 6, -0.95), GLOW, Enum.Material.Neon)
-		rune.CanCollide = false
-	end
-	local archCenter = base * CFrame.new(0, 1.6 + pillarHeight + 0.8, 0.5)
-	local stones = 7
-	for index = 1, stones do
-		local turn = math.rad(180 * (index - 0.5) / stones)
-		local arm = opening + 1.3
-		block(model, "Arch", Vector3.new(3.2, 2.6, 2.6), archCenter * CFrame.new(math.cos(turn) * arm, math.sin(turn) * arm, 0) * CFrame.Angles(0, 0, turn - math.pi / 2), STONE[index % 2 + 1])
-	end
-
-	-- Disco del portal: cristal morado, sin Neon (pieza grande). El cliente lo gira y le pone partículas.
-	local swirl = block(model, "Swirl", Vector3.new(0.5, opening * 2, opening * 2 + 6), base * CFrame.new(0, 1.6 + pillarHeight / 2 + 1.4, 0.5) * CFrame.Angles(0, math.rad(90), 0), GLOW, Enum.Material.Glass)
-	swirl.Shape = Enum.PartType.Cylinder
-	swirl.Transparency = 0.25
-	swirl.CanCollide = false
-	swirl.CastShadow = false
-	CollectionService:AddTag(swirl, "PortalSwirl")
-	local light = Instance.new("PointLight")
-	light.Color = GLOW
-	light.Range = 26
-	light.Brightness = 1.4
-	light.Parent = swirl
-
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(380, 80)
-	gui.StudsOffset = Vector3.new(0, 17, 0)
-	gui.MaxDistance = 220
-	gui.LightInfluence = 0
-	gui.Parent = swirl
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 48
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Text = "MAZMORRAS"
-	label.Parent = gui
-	local outline = Instance.new("UIStroke")
-	outline.Color = Color3.new(0, 0, 0)
-	outline.Thickness = 3.5
-	outline.Parent = label
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new(Color3.fromRGB(200, 130, 255), Color3.fromRGB(255, 110, 140))
-	gradient.Parent = label
-	CollectionService:AddTag(gui, "ShopSign") -- el cliente (ModifierShops) lo anima como los de las tiendas
-
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Entrar"
-	prompt.ObjectText = "Mazmorras"
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 16
-	prompt.RequiresLineOfSight = false
-	prompt:SetAttribute("Shop", "dungeons")
-	prompt.Parent = swirl
-
-	model.Parent = parent
-end
 
 -- Arena ----------------------------------------------------------------------------------
 
@@ -337,9 +235,11 @@ local function hasPlayers(run): boolean
 	return false
 end
 
--- Dónde se deja al jugador al acabar la partida: en la sala de esa zona, en el lobby subterráneo.
+-- Dónde se deja al jugador al acabar la partida: en la sala de esa zona, en el lobby subterráneo (o, si el lobby no se
+-- ha podido construir, junto a la boca del pozo, en el hub).
+local HUB_SPOT = CFrame.new(0, Config.Plot.FloorHeight + 3, 38)
 local function returnPoint(run, member): CFrame
-	return DungeonLobby.returnCFrame(run.index, member.slot or 1, run.playerCount or 1) or portalFront
+	return DungeonLobby.returnCFrame(run.index, member.slot or 1, run.playerCount or 1) or HUB_SPOT
 end
 
 local function clearAttributes(player: Player)
@@ -417,6 +317,11 @@ function endRun(run, bringBack: boolean)
 	end
 	usedSlots[run.slot] = nil
 	run.model:Destroy()
+	local onEnd = run.onEnd
+	run.onEnd = nil
+	if onEnd then
+		task.spawn(onEnd)
+	end
 end
 
 local function startWave(run)
@@ -451,10 +356,15 @@ local function restart(old, survivors: { Player }, ghosts: number)
 			table.remove(old.order, index)
 		end
 	end
-	local new = launch(survivors, old.index, { ghosts = ghosts })
+	local onEnd = old.onEnd
+	old.onEnd = nil
+	local new = launch(survivors, old.index, { ghosts = ghosts, onEnd = onEnd })
 	usedSlots[old.slot] = nil
 	old.model:Destroy()
 	if not new then
+		if onEnd then
+			task.spawn(onEnd)
+		end
 		for number, player in survivors do
 			if player.Parent then
 				clearAttributes(player)
@@ -659,7 +569,7 @@ end
 -- Empieza una partida en esa zona con esos jugadores (ya validados por quien llama: el grupo, la sala...).
 -- Devuelve la partida, o nil si no se ha podido (zona inexistente, alguien ya dentro o muerto, sin huecos de arena).
 -- `opts.ghosts` = miembros fantasma (solo en Studio, para probar el escalado con un único jugador).
-function launch(players: { Player }, index: number, opts: { ghosts: number? }?)
+function launch(players: { Player }, index: number, opts: { ghosts: number?, onEnd: (() -> ())? }?)
 	local level = Config.Dungeons[index]
 	if not level or #players == 0 or #players > Config.Party.MaxSize then
 		return nil
@@ -701,8 +611,9 @@ function launch(players: { Player }, index: number, opts: { ghosts: number? }?)
 		state = "loading",
 		ends = os.clock() + cfg.TimeLimit,
 		nextWave = 0,
-		context ={ level = index, loot = level.loot, qualityLuck = level.qualityLuck },
+		context = { level = index, loot = level.loot, qualityLuck = level.qualityLuck },
 		ended = false,
+		onEnd = if opts then opts.onEnd else nil,
 	}
 	run.playerCount = #players
 	for number, player in players do
@@ -777,7 +688,9 @@ function Dungeons.leave(player: Player)
 	end
 end
 
-function Dungeons.launch(players: { Player }, index: number, opts: { ghosts: number? }?)
+-- Lanza una partida (lo hace server/Party al iniciar un grupo, ya validado). Ver `launch`; `opts.onEnd` se llama cuando
+-- la partida termina del todo (también si se repite: solo al final de la última).
+function Dungeons.launch(players: { Player }, index: number, opts: { ghosts: number?, onEnd: (() -> ())? }?)
 	return launch(players, index, opts)
 end
 
@@ -786,35 +699,22 @@ function Dungeons.isBusy(player: Player): boolean
 	return runOf[player] ~= nil
 end
 
--- Entrada solo por el portal del hub (hasta que lo sustituyan las salas del lobby).
-local function onEnter(player: Player, index: unknown)
-	local now = os.clock()
-	local level = if type(index) == "number" then Config.Dungeons[index] else nil
-	if not level or runOf[player] or now - (lastEnter[player] or 0) < cfg.EnterCooldown then
-		return
-	end
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not root or not humanoid or humanoid.Health <= 0 then
-		return
-	end
-	if (root.Position - portalPosition).Magnitude > cfg.EnterDistance then
-		return
-	end
-	lastEnter[player] = now
-	launch({ player }, index :: number, { ghosts = Config.Test.PartyBots })
+-- "Repetir": si el jugador lidera la partida, al superarla empieza otra igual con los que sigan vivos. Se queda puesto
+-- entre partidas (la ventana del grupo y el botón del panel de la partida lo cambian).
+function Dungeons.setLoop(player: Player, enabled: boolean)
+	looping[player] = if enabled then true else nil
+	player:SetAttribute("DungeonLoop", enabled)
+end
+
+function Dungeons.getLoop(player: Player): boolean
+	return looping[player] == true
 end
 
 local function onLoop(player: Player, enabled: unknown)
-	looping[player] = enabled == true or nil
-	player:SetAttribute("DungeonLoop", enabled == true)
+	Dungeons.setLoop(player, enabled == true)
 end
 
 function Dungeons.start()
-	buildPortal(workspace:WaitForChild("Map"))
-
-	Remotes.EnterDungeon.OnServerEvent:Connect(onEnter)
 	Remotes.LeaveDungeon.OnServerEvent:Connect(Dungeons.leave)
 	Remotes.SetDungeonLoop.OnServerEvent:Connect(onLoop)
 	local function onPlayer(player: Player)
@@ -831,7 +731,6 @@ function Dungeons.start()
 		if run and member then
 			detach(run, member, false)
 		end
-		lastEnter[player] = nil
 		looping[player] = nil
 	end)
 	RunService.Heartbeat:Connect(step)
