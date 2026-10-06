@@ -1,5 +1,6 @@
--- Gacha en el cliente: enseña las tiradas de arma. Las dan los objetos de la parcela al romperse (llegan
--- solas, a rachas, y se enseñan en orden); con Config.Gacha.FreeRoll están además los botones "Tirar" y "Auto".
+-- La tirada gratis de antes (botones "Tirar" y "Auto"), que solo existe con Config.Gacha.FreeRoll: sin ella, las
+-- armas salen de los objetos de la parcela y se enseñan en el mundo (client/RollReveal), y de este módulo solo
+-- queda en marcha el aura en el personaje de quien saca algo raro (la ven todos).
 -- Arriba, el panel del gacha: pasan espadas al azar, cada vez más despacio, y se para en la que
 -- ha tocado con un aura según lo rara que era para su suerte (brillo, rayos, chispas, arcoíris).
 -- Si la tirada es muy buena para la suerte de gacha del jugador (Config.Gacha.ShowcaseOdds), el
@@ -14,7 +15,6 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
-local ObjectSpec = require(ReplicatedStorage.Shared.ObjectSpec)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -433,7 +433,6 @@ local glowStroke: UIStroke
 local iconSlot: Frame
 local title: TextLabel
 local detail: TextLabel
-local sourceLine: TextLabel -- de dónde viene la tirada (el objeto roto y su suerte)
 local progress: Frame? -- barra del tiempo por tirada (solo con Config.Gacha.FreeRoll)
 local panelScale: UIScale
 local sparkleArea: Frame
@@ -873,56 +872,29 @@ end
 -- Tiradas que han llegado del servidor y aún no se han enseñado, en orden de llegada.
 local queue = {}
 local working = false
--- Última animación grande: de qué tanda era, lo difícil que era el arma y cuándo acabó.
-local shownBatch, shownOdds, shownAt = nil, 0, 0
-local SHOWCASE_GAP = 12 -- segundos tras una animación grande en los que solo sale otra si es más difícil todavía
-
--- "Cristal · suerte x18.4 · tirada 1/2": el objeto que ha dado la tirada (con el color de su rareza), por cuánto
--- multiplica la suerte y, si dio varias, cuál es esta.
-local function sourceText(extra): string
-	local rarity = ObjectSpec.rarity(extra.quality)
-	local text = `<font color="#{rarity.color:Lerp(WHITE, 0.2):ToHex()}">{extra.name or "Objeto"}</font>  ·  suerte x{Format.multiplier(extra.boost or 1)}`
-	if (extra.rolls or 1) > 1 then
-		text ..= `  ·  tirada {extra.roll}/{extra.rolls}`
-	end
-	return text
-end
 
 -- Pasa espadas en el panel y se para en la que ha tocado. Si es muy buena para la suerte del
--- jugador, antes de pararse la enseña en grande. `backlog` = tiradas que esperan detrás: las de
--- los objetos llegan a rachas y, cuantas más haya, menos se entretiene cada una.
-local function spin(index: number, kept: boolean, luck: number, source: string, metal: number?, size: number?, extra, backlog: number)
+-- jugador, antes de pararse la enseña en grande.
+local function spin(index: number, kept: boolean, luck: number, metal: number?, size: number?, extra)
 	while spinning or showcasing do
 		task.wait(0.1)
 	end
 	spinning = true
+	Sfx.play("roll")
 	clearAura()
 	panelScale.Scale = 1
 	panelShown = true
 	local rarity = Permanent.rarity(index, metal, size)
-	-- Lo difícil que era para el jugador: el servidor lo manda sin contar la suerte del objeto que dio la tirada.
+	-- Lo difícil que era para el jugador (el servidor lo manda ya calculado).
 	local odds = if extra and extra.odds then extra.odds else Permanent.odds(index, metal, size, luck)
 	local big = odds >= Config.Gacha.ShowcaseOdds
 	local tierInfo = Rarity.tier(rarity)
 	local color = tierInfo.color
-	local fromObject = source == "object"
-	sourceLine.Text = if fromObject and extra then sourceText(extra) else ""
 
-	-- Pasan espadas, cada vez más despacio (deja un poco de tiempo para ver el resultado). Las de los objetos,
-	-- más corto, y sin giro si se amontonan.
-	local total, steps = Stats.rollTime(player) * 0.65, 12
-	if fromObject then
-		total, steps = 0.45, 6
-		if backlog >= 4 and not big then
-			steps = 0
-		elseif backlog >= 1 then
-			total, steps = 0.2, 3
-		end
-	end
-	if steps > 0 then
-		Sfx.play("roll")
-		detail.Text = "Tirando..."
-	end
+	-- Pasan espadas, cada vez más despacio (deja un poco de tiempo para ver el resultado).
+	detail.Text = "Tirando..."
+	local total = Stats.rollTime(player) * 0.65
+	local steps = 12
 	for step = 1, steps do
 		showSword(teaseIndex())
 		Sfx.play("tick")
@@ -931,25 +903,8 @@ local function spin(index: number, kept: boolean, luck: number, source: string, 
 		task.wait(total * 2 * step / (steps * (steps + 1)))
 	end
 
-	-- Las animaciones grandes no se encadenan: de las tiradas de una misma tanda (un objeto que da varias) solo se
-	-- enseña la mejor, y justo después de una (SHOWCASE_GAP) solo sale otra si es aún más difícil. Las demás van
-	-- solo al panel.
-	if big and fromObject then
-		local recent = extra and extra.batch == shownBatch or os.clock() - shownAt < SHOWCASE_GAP
-		if recent and odds <= shownOdds then
-			big = false
-		end
-		for _, other in queue do
-			if extra and other.extra and other.extra.batch == extra.batch and (other.extra.odds or 0) > odds then
-				big = false
-			end
-		end
-	end
 	if big then
-		shownBatch, shownOdds = extra and extra.batch, odds
-		-- Las de los objetos salen solas en mitad de la faena: se cierran solas.
-		showcase(index, kept, odds, metal, size, if fromObject then Config.Gacha.ShowcaseStay elseif auto then 3 else nil)
-		shownAt = os.clock()
+		showcase(index, kept, odds, metal, size, if auto then 3 else nil)
 	end
 
 	-- Se para en la que ha tocado.
@@ -971,10 +926,6 @@ local function spin(index: number, kept: boolean, luck: number, source: string, 
 		Sfx.play("rare")
 	end
 	panelAura(luckTier, Rarity.tier(odds).color)
-	-- Con más tiradas esperando, esta se queda un momento a la vista (más si es buena) antes de la siguiente.
-	if backlog > 0 then
-		task.wait(if luckTier >= 3 then 0.9 elseif backlog >= 8 then 0.12 else 0.3)
-	end
 	spinning = false
 
 	-- Pasado un rato, el panel vuelve a su estado de reposo.
@@ -1042,7 +993,7 @@ local function buildPanel()
 	Ui.round(iconSlot, 10)
 	Ui.stroke(iconSlot, BLACK, 2)
 
-	-- Tres renglones a la derecha del arma: su nombre, su rareza y probabilidad, y de dónde ha salido la tirada.
+	-- Dos renglones a la derecha del arma: su nombre, y su rareza y probabilidad.
 	title = Ui.label(box, 24)
 	title.Name = "Title"
 	title.Position = UDim2.fromOffset(106, 9)
@@ -1057,18 +1008,8 @@ local function buildPanel()
 	detail.Size = UDim2.new(1, -116, 0, 22)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.TextTruncate = Enum.TextTruncate.AtEnd
-	detail.Text = if Config.Gacha.FreeRoll then "¡Gratis! Pulsa Tirar" else "Rompe objetos de tu parcela"
+	detail.Text = "¡Gratis! Pulsa Tirar"
 	detail.ZIndex = 4
-
-	sourceLine = Ui.label(box, 15)
-	sourceLine.Name = "Source"
-	sourceLine.Position = UDim2.fromOffset(106, 63)
-	sourceLine.Size = UDim2.new(1, -116, 0, 22)
-	sourceLine.TextXAlignment = Enum.TextXAlignment.Left
-	sourceLine.TextTruncate = Enum.TextTruncate.AtEnd
-	sourceLine.TextColor3 = Color3.fromRGB(185, 192, 214)
-	sourceLine.Text = ""
-	sourceLine.ZIndex = 4
 
 	-- Barra del tiempo que falta para la siguiente tirada gratis.
 	if Config.Gacha.FreeRoll then
@@ -1095,7 +1036,7 @@ local function buildPanel()
 	sparkleArea.ZIndex = 6
 
 	showSword(2)
-	title.Text = if Config.Gacha.FreeRoll then "Gacha de espadas" else "Tiradas de arma"
+	title.Text = "Gacha de espadas"
 	title.TextColor3 = WHITE
 end
 
@@ -1184,7 +1125,7 @@ local function work()
 	while #queue > 0 do
 		local roll = table.remove(queue, 1)
 		-- Si algo falla a mitad, que no se quede atascado el gacha (ni la tirada automática).
-		local ok, problem = pcall(spin, roll.index, roll.kept, roll.luck, roll.source, roll.metal, roll.size, roll.extra, #queue)
+		local ok, problem = pcall(spin, roll.index, roll.kept, roll.luck, roll.metal, roll.size, roll.extra)
 		if not ok then
 			warn(`[GachaRoll] {problem}`)
 			overlay.Enabled = false
@@ -1253,24 +1194,31 @@ local function buildButtons(): (Frame, TextButton)
 end
 
 function GachaRoll.start()
-	buildPanel()
-	buildOverlay()
-
-	local bar: Frame?, rollButton: TextButton? = nil, nil
-	if Config.Gacha.FreeRoll then
-		bar, rollButton = buildButtons()
-	end
-
-	Remotes.GachaRolled.OnClientEvent:Connect(function(index: number, kept: boolean, luck: number, source: string, metal: number?, size: number?, extra)
-		table.insert(queue, { index = index, kept = kept, luck = luck, source = source, metal = metal, size = size, extra = extra })
-		if not working then
-			task.spawn(work)
-		end
-	end)
+	-- El aura en el personaje de quien saca algo raro se ve siempre.
 	Remotes.GachaAura.OnClientEvent:Connect(characterAura)
 	Players.PlayerRemoving:Connect(function(who)
 		if auras[who] then
 			auras[who]()
+		end
+	end)
+	-- Lo demás (panel de arriba, animación a pantalla completa y botones) es la tirada gratis de antes: sin ella,
+	-- las tiradas se enseñan en el mundo (client/RollReveal) y aquí no hay nada que construir.
+	if not Config.Gacha.FreeRoll then
+		return
+	end
+
+	buildPanel()
+	buildOverlay()
+	local bar: Frame?, rollButton: TextButton? = buildButtons()
+
+	-- Solo las tiradas gratis: las de los objetos son de RollReveal.
+	Remotes.GachaRolled.OnClientEvent:Connect(function(index: number, kept: boolean, luck: number, source: string, metal: number?, size: number?, extra)
+		if source ~= "gacha" then
+			return
+		end
+		table.insert(queue, { index = index, kept = kept, luck = luck, source = source, metal = metal, size = size, extra = extra })
+		if not working then
+			task.spawn(work)
 		end
 	end)
 
