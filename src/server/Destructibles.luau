@@ -148,7 +148,18 @@ function Destructibles.damage(part: BasePart, amount: number, player: Player)
 	return def, coins, gems
 end
 
+-- Al importar un .fbx de Blender en Studio el modelo se queda suelto en Workspace (grande y gris): las mallas buenas
+-- ya vienen de Shared.ObjectMeshes / ArmorMeshes, así que se borra cualquier resto con las marcas Axis_* de Blender.
+local function clearImports()
+	for _, item in workspace:GetChildren() do
+		if item ~= folder and (item:IsA("Model") or item:IsA("Folder")) and item:FindFirstChild("Axis_Origin", true) then
+			item:Destroy()
+		end
+	end
+end
+
 function Destructibles.start()
+	clearImports()
 	folder = Instance.new("Folder")
 	folder.Name = "Destructibles"
 	folder.Parent = workspace
