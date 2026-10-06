@@ -1281,7 +1281,7 @@ local function buildShop(kind: string)
 		if kind == "traits" then
 			Remotes.RollTrait:FireServer(state.selected, state.count, table.concat(state.priority, ","))
 		else
-			Remotes.RollGrade:FireServer(state.selected)
+			Remotes.RollGrade:FireServer(state.selected, state.onResult ~= nil and not state.auto) -- a mano en la forja se puede descartar
 		end
 		-- Si el servidor no contesta (demasiado pronto), se puede volver a pedir.
 		task.delay(1.5, function()
@@ -1315,14 +1315,14 @@ local function buildShop(kind: string)
 		refresh()
 	end
 
-	Remotes.ModifierRolled.OnClientEvent:Connect(function(rolledKind: string, id: number, index: number, rolls: { number }?)
+	Remotes.ModifierRolled.OnClientEvent:Connect(function(rolledKind: string, id: number, index: number, rolls: { number }?, previous: number?)
 		if rolledKind ~= kind then
 			return
 		end
 		state.last = index
 		-- Forja (Grados): la escena de la forja enseña el resultado con el martillazo.
 		if state.onResult and id == state.selected then
-			state.onResult(index)
+			state.onResult(index, previous or 0)
 			state.waiting = false
 			refresh()
 			return

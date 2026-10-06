@@ -16,6 +16,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 local Ui = require(script.Parent.Ui)
@@ -25,6 +26,7 @@ local ForgeScene = {}
 local player = Players.LocalPlayer
 local GRADES = Modifiers.KINDS.grades
 local WHITE = Color3.new(1, 1, 1)
+local BLACK = Color3.new(0, 0, 0)
 local SPARK_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
 
 -- Martillo del ratón (en grados: ángulo del mango sobre el plano del yunque).
@@ -119,6 +121,64 @@ local function buildUi()
 	local auto = side("Auto", "Auto", Ui.COLORS.red, 2)
 	local settings = side("Settings", "Ajustes", Ui.COLORS.gray, 3)
 
+	-- Cuadro tras un martillazo a mano: quedarse con el grado nuevo o descartarlo y volver al anterior.
+	local decision = Instance.new("Frame")
+	decision.Name = "Decision"
+	-- Arriba, para no tapar el yunque, el arma ni el martillo mientras se decide.
+	decision.AnchorPoint = Vector2.new(0.5, 0)
+	decision.Position = UDim2.new(0.5, 0, 0, 56)
+	decision.Size = UDim2.fromOffset(470, 300)
+	decision.Visible = false
+	decision.ZIndex = 30
+	decision.Parent = root
+	Ui.round(decision, 14)
+	Ui.stroke(decision, BLACK, 4)
+	Ui.panel(decision, Color3.fromRGB(44, 40, 90))
+	Ui.shadow(decision)
+	local decisionBody = Instance.new("Frame")
+	decisionBody.Name = "Content"
+	decisionBody.Size = UDim2.fromScale(1, 1)
+	decisionBody.BackgroundTransparency = 1
+	decisionBody.ZIndex = 31
+	decisionBody.Parent = decision
+	local decisionTitle = Ui.label(decisionBody, 30)
+	decisionTitle.Position = UDim2.fromOffset(0, 14)
+	decisionTitle.Size = UDim2.new(1, 0, 0, 40)
+	decisionTitle.Text = "¡GRADO OBTENIDO!"
+	local decisionGrade = Ui.label(decisionBody, 64)
+	decisionGrade.Position = UDim2.fromOffset(0, 62)
+	decisionGrade.Size = UDim2.new(1, 0, 0, 80)
+	local decisionInfo = Ui.label(decisionBody, 22)
+	decisionInfo.Position = UDim2.fromOffset(0, 146)
+	decisionInfo.Size = UDim2.new(1, 0, 0, 30)
+	local decisionOld = Ui.label(decisionBody, 20)
+	decisionOld.Position = UDim2.fromOffset(0, 182)
+	decisionOld.Size = UDim2.new(1, 0, 0, 30)
+	local decisionButtons = Instance.new("Frame")
+	decisionButtons.Size = UDim2.new(1, -40, 0, 64)
+	decisionButtons.AnchorPoint = Vector2.new(0.5, 1)
+	decisionButtons.Position = UDim2.new(0.5, 0, 1, -20)
+	decisionButtons.BackgroundTransparency = 1
+	decisionButtons.ZIndex = 31
+	decisionButtons.Parent = decisionBody
+	local decisionLayout = Instance.new("UIListLayout")
+	decisionLayout.FillDirection = Enum.FillDirection.Horizontal
+	decisionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	decisionLayout.Padding = UDim.new(0, 18)
+	decisionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	decisionLayout.Parent = decisionButtons
+	local skipButton = Ui.button(decisionButtons, "Descartar", Ui.COLORS.red)
+	skipButton.Name = "Skip"
+	skipButton.LayoutOrder = 1
+	skipButton.Size = UDim2.fromOffset(200, 60)
+	skipButton.TextSize = 28
+	local keepButton = Ui.button(decisionButtons, "Quedarme", Ui.COLORS.green)
+	keepButton.Name = "Keep"
+	keepButton.LayoutOrder = 2
+	keepButton.Size = UDim2.fromOffset(200, 60)
+	keepButton.TextSize = 28
+	Ui.layer(decision, 30) -- todo en una capa: manda el orden del árbol y el relieve queda encima
+
 	local flash = Instance.new("Frame")
 	flash.Name = "Flash"
 	flash.Size = UDim2.fromScale(1, 1)
@@ -159,7 +219,7 @@ local function buildUi()
 	gradeInfo.Position = UDim2.fromScale(0, 0.62)
 	gradeInfo.Size = UDim2.fromScale(1, 0.3)
 
-	ui = { gui = gui, gradeBox = gradeBox, gradeScale = gradeScale, gradeLabel = gradeLabel, gradeRainbow = gradeRainbow, gradeInfo = gradeInfo, hint = hint, cost = cost, exit = exit, weapon = weapon, auto = auto, settings = settings, flash = flash, big = big, bigScale = bigScale }
+	ui = { decision = decision, decisionGrade = decisionGrade, decisionInfo = decisionInfo, decisionOld = decisionOld, skip = skipButton, keep = keepButton, gui = gui, gradeBox = gradeBox, gradeScale = gradeScale, gradeLabel = gradeLabel, gradeRainbow = gradeRainbow, gradeInfo = gradeInfo, hint = hint, cost = cost, exit = exit, weapon = weapon, auto = auto, settings = settings, flash = flash, big = big, bigScale = bigScale }
 end
 
 local function refreshUi()
@@ -501,6 +561,37 @@ local function easeOut(alpha: number): number
 	return 1 - (1 - alpha) * (1 - alpha)
 end
 
+-- Cuadro "grado obtenido" tras un martillazo a mano: espera a que el jugador elija. Descartar le
+-- pide al servidor volver al grado anterior (RevertGrade); Quedarme no hace falta avisar.
+local choose: ((boolean) -> ())? = nil
+local function askKeep(index: number, previous: number)
+	local entry = GRADES.list[index]
+	local percent = Modifiers.formatPercent(Modifiers.percent("grades", index))
+	ui.decisionGrade.Text = `Grado {entry.name}`
+	ui.decisionGrade.TextColor3 = if entry.rainbow then WHITE else entry.color
+	ui.decisionInfo.Text = `{Modifiers.effect(entry)} · {percent}`
+	local old = GRADES.list[previous]
+	ui.decisionOld.Text = if old then `Tu grado actual: <font color="#{(old.color :: Color3):ToHex()}">{old.name}</font>` else "Ahora no tienes grado"
+	ui.decision.Visible = true
+	if scene then
+		scene.deciding = true
+	end
+	local thread = coroutine.running()
+	choose = function(keep: boolean)
+		choose = nil
+		if scene then
+			scene.deciding = false
+		end
+		ui.decision.Visible = false
+		task.spawn(thread, keep)
+	end
+	local keep = coroutine.yield()
+	if not keep and scene and scene.placedId then
+		Remotes.RevertGrade:FireServer(scene.placedId)
+		setGradeLabel(if previous > 0 then previous else nil)
+	end
+end
+
 -- Un martillazo entero: pide la tirada, levanta el martillo, espera el resultado y golpea.
 -- Devuelve false si no se pudo (sin cristales, sin arma, el servidor no contestó).
 local function strike(auto: boolean): boolean
@@ -597,6 +688,9 @@ local function strike(auto: boolean): boolean
 		return false
 	end
 	s.hammerFixed = false
+	if not auto and alive() and s.sword then
+		askKeep(index, s.resultPrevious or 0)
+	end
 	striking = false
 	return state.last ~= nil
 end
@@ -651,7 +745,7 @@ local function connectInput()
 		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
 			return
 		end
-		if api.window.Visible or os.clock() - scene.enteredAt < 0.9 then
+		if api.window.Visible or ui.decision.Visible or os.clock() - scene.enteredAt < 0.9 then
 			return
 		end
 		if not scene.placedId then
@@ -672,6 +766,16 @@ local function connectInput()
 				end
 				refreshUi()
 			end)
+		end
+	end))
+	table.insert(s.connections, ui.skip.Activated:Connect(function()
+		if choose then
+			choose(false)
+		end
+	end))
+	table.insert(s.connections, ui.keep.Activated:Connect(function()
+		if choose then
+			choose(true)
 		end
 	end))
 	table.insert(s.connections, ui.exit.Activated:Connect(function()
@@ -844,9 +948,10 @@ function ForgeScene.enter()
 		api.closeWindow()
 		placeSword(true)
 	end
-	api.state.onResult = function(index: number)
+	api.state.onResult = function(index: number, previous: number?)
 		if scene then
 			scene.resultIndex = index
+			scene.resultPrevious = previous or 0
 			scene.resultReady = true
 		end
 	end
@@ -928,13 +1033,14 @@ function ForgeScene.enter()
 
 		-- Martillo: solo existe mientras el ratón está sobre el yunque (AREA); fuera de ahí se esconde y
 		-- vuelve el cursor normal, para poder pulsar Salir, Ajustes, etc.
-		local point = if api.window.Visible then nil else mousePoint(s.planeY)
+		local point = if api.window.Visible or s.deciding then nil else mousePoint(s.planeY)
 		local localPoint = if point then s.anvil.CFrame:PointToObjectSpace(point) else nil
 		local inside = localPoint ~= nil and localPoint.X >= AREA.minX and localPoint.X <= AREA.maxX and localPoint.Z >= AREA.minZ and localPoint.Z <= AREA.maxZ
 		s.inArea = inside
-		local shown = inside or s.hammerFixed
+		-- Con el cuadro de Quedarme/Descartar abierto el martillo se queda donde estaba y vuelve el cursor.
+		local shown = if s.deciding then s.hammerWasShown == true else (inside or s.hammerFixed)
 		showHammer(shown)
-		UserInputService.MouseIconEnabled = not shown
+		UserInputService.MouseIconEnabled = s.deciding == true or not shown
 		if not s.hammerFixed then
 			if inside then
 				local target = s.anvil.CFrame * localPoint :: Vector3
@@ -957,6 +1063,10 @@ function ForgeScene.exit()
 	end
 	active = false
 	local s = scene
+	if choose then
+		choose(true) -- al salir con el cuadro abierto, se queda el grado nuevo
+	end
+	ui.decision.Visible = false
 	api.state.auto = false
 	api.state.forge = nil
 	api.state.onPick = nil

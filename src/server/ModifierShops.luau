@@ -37,7 +37,11 @@ end
 -- `count` = cuántas veces tira el rasgo de golpe (1, 3 o las del pase de juego, un cristal cada una): se queda con el más raro
 -- y, si empatan en rareza, con el tipo que va antes en `priority` (el orden que ha puesto el jugador en
 -- la tienda; se guarda en sus datos).
-local function onRoll(player: Player, kind: string, id: unknown, count: unknown, priority: unknown)
+-- Forja, tirada a mano: el grado nuevo ya está puesto, pero el jugador puede descartarlo y volver al
+-- que tenía (RevertGrade). Solo vale para la última tirada y mientras la espada siga igual.
+local pendingGrade = {} -- [player] = { id, previous (0 = sin grado), rolled }
+
+local function onRoll(player: Player, kind: string, id: unknown, count: unknown, priority: unknown, manual: unknown)
 	local now = os.clock()
 	-- Pase de juego: los grados se tiran más rápido (con un 20 % de margen para el retraso de la red).
 	local speed = if kind == "grades" then Stats.perk(player, "gradeSpeed") or 1 else 1
@@ -82,11 +86,15 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 			index = rolled
 		end
 	end
+	local previous = copy[info.field] or 0
 	PlayerData.edit(player, function()
 		copy[info.field] = index
 	end)
+	if kind == "grades" then
+		pendingGrade[player] = if manual == true then { id = id, previous = previous, rolled = index } else nil
+	end
 	-- `rolls` = todas las tiradas, en orden, para que el cliente las enseñe en la ruleta.
-	Remotes.ModifierRolled:FireClient(player, kind, id, index, rolls)
+	Remotes.ModifierRolled:FireClient(player, kind, id, index, rolls, previous)
 
 	local entry = info.list[index]
 	local odds = Modifiers.odds(kind, index)
@@ -261,8 +269,20 @@ function ModifierShops.start()
 	Remotes.RollTrait.OnServerEvent:Connect(function(player, id, count, priority)
 		onRoll(player, "traits", id, count, priority)
 	end)
-	Remotes.RollGrade.OnServerEvent:Connect(function(player, id)
-		onRoll(player, "grades", id)
+	Remotes.RollGrade.OnServerEvent:Connect(function(player, id, manual)
+		onRoll(player, "grades", id, nil, nil, manual)
+	end)
+	Remotes.RevertGrade.OnServerEvent:Connect(function(player, id)
+		local pending = pendingGrade[player]
+		pendingGrade[player] = nil
+		local data = PlayerData.read(player)
+		local copy = data and PlayerData.findSword(data, id)
+		if not pending or pending.id ~= id or not copy or copy.grade ~= pending.rolled then
+			return
+		end
+		PlayerData.edit(player, function()
+			copy.grade = if pending.previous == 0 then nil else pending.previous
+		end)
 	end)
 	Remotes.AdminSetModifier.OnServerEvent:Connect(onAdminSet)
 	-- El cliente enseña el botón "Admin" de las tiendas si lleva este atributo.
@@ -275,6 +295,7 @@ function ModifierShops.start()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		lastRoll[player] = nil
+		pendingGrade[player] = nil
 	end)
 end
 
