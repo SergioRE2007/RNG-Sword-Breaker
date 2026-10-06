@@ -432,6 +432,10 @@ local function ring(count: number, radius: number, phase: number, callback: (Vec
 end
 
 function Scenery.start()
+	if Config.Theme == "japan" then
+		require(script.Parent.SceneryJapan).start()
+		return
+	end
 	setLighting()
 
 	local cfg = Config.Plot
