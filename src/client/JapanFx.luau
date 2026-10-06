@@ -112,6 +112,29 @@ local function incense(spot: BasePart)
 	smoke.Parent = spot
 end
 
+-- Niebla mágica que sube del pozo del templo: motas violeta y cian que giran despacio hacia arriba.
+local function magicMist(spot: BasePart)
+	for _, spec in { { Color3.fromRGB(176, 124, 255), 22, 6 }, { Color3.fromRGB(110, 232, 255), 12, 9 } } do
+		local mist = Instance.new("ParticleEmitter")
+		mist.Name = "MagicMist"
+		mist.Texture = SPARKLE
+		mist.Color = ColorSequence.new(spec[1])
+		mist.LightEmission = 1
+		mist.Shape = Enum.ParticleEmitterShape.Cylinder
+		mist.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+		mist.Rate = spec[2]
+		mist.Lifetime = NumberRange.new(3.5, 6)
+		mist.Speed = NumberRange.new(spec[3] * 0.6, spec[3])
+		mist.EmissionDirection = Enum.NormalId.Top
+		mist.SpreadAngle = Vector2.new(12, 12)
+		mist.Acceleration = Vector3.new(0, 1.5, 0)
+		mist.RotSpeed = NumberRange.new(-90, 90)
+		mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(0.5, 0.9), NumberSequenceKeypoint.new(1, 0) })
+		mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.15), NumberSequenceKeypoint.new(1, 1) })
+		mist.Parent = spot
+	end
+end
+
 function JapanFx.start()
 	if Config.Theme ~= "japan" then
 		return
@@ -124,7 +147,7 @@ function JapanFx.start()
 	motes().Parent = low
 
 	-- Luciérnagas e incienso donde el servidor puso las marcas.
-	for tag, make in { FireflySpot = fireflies, SmokeSpot = incense } do
+	for tag, make in { FireflySpot = fireflies, SmokeSpot = incense, MagicMist = magicMist } do
 		CollectionService:GetInstanceAddedSignal(tag):Connect(make)
 		for _, item in CollectionService:GetTagged(tag) do
 			make(item)
@@ -144,6 +167,10 @@ function JapanFx.start()
 		end
 	end
 	track(lamps, "LanternGlow")
+	local circles, wisps, beams = {}, {}, {}
+	track(circles, "MagicCircle")
+	track(wisps, "Wisp")
+	track(beams, "SpiritBeam")
 
 	-- Estado de cada animal (posición, hacia dónde mira y a dónde va); parten de su casa.
 	local critters: { [Model]: { pos: Vector3, facing: Vector3, target: Vector3?, wait: number, phase: number } } = {}
@@ -207,6 +234,35 @@ function JapanFx.start()
 					local spot = state.pos + Vector3.new(0, hop, 0)
 					model:PivotTo(CFrame.lookAt(spot, spot + state.facing))
 				end
+			end
+		end
+
+		-- Templo de las mazmorras: los círculos de runas giran, los fuegos fatuos orbitan y el rayo late.
+		for model in circles do
+			if model.Parent then
+				local pivot = model:GetPivot()
+				model:PivotTo(CFrame.new(pivot.Position) * CFrame.Angles(0, now * model:GetAttribute("Speed"), 0))
+			else
+				circles[model] = nil
+			end
+		end
+		for wisp in wisps do
+			local ball = wisp :: BasePart
+			if ball.Parent then
+				local angle = now * ball:GetAttribute("Speed") + ball:GetAttribute("Phase")
+				local radius = ball:GetAttribute("Radius") + math.sin(now * 0.8 + ball:GetAttribute("Phase")) * 1.2
+				ball.CFrame = CFrame.new(Vector3.new(math.cos(angle) * radius, ball:GetAttribute("Height") + math.sin(now * 1.7 + ball:GetAttribute("Phase")) * 0.9, math.sin(angle) * radius))
+			else
+				wisps[wisp] = nil
+			end
+		end
+		for beam in beams do
+			local column = beam :: BasePart
+			if column.Parent then
+				local wave = 0.5 + 0.5 * math.sin(now * 1.6 + column.Size.Y)
+				column.Transparency = (if column.Size.Y > 5 then 0.8 else 0.5) + 0.1 * wave
+			else
+				beams[beam] = nil
 			end
 		end
 
