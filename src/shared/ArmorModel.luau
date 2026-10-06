@@ -98,6 +98,10 @@ local function load()
 	return templates
 end
 
+-- Cuánto se suben las mallas sobre la parte del cuerpo (en studs del modelo): el casco y las grebas se veían
+-- demasiado bajos en el personaje de verdad.
+local LIFT = { helmet = 0.3, legs = 0.3 }
+
 -- Color, material y transparencia de cada papel de las mallas.
 local function roleLook(role: string, set, trim: Color3): (Color3, Enum.Material, number)
 	if role == "Dark" then
@@ -159,7 +163,7 @@ local function shapes(parent: Instance, slot: string, quality: number, level: nu
 			part.Massless = true
 			part.CastShadow = piece.role ~= "Glow"
 			part.Parent = parent
-			place(part, CFrame.new(piece.offset.Position * scale) * piece.offset.Rotation)
+			place(part, CFrame.new(piece.offset.Position * scale + Vector3.new(0, (LIFT[slot] or 0) * scale.Y, 0)) * piece.offset.Rotation)
 		end
 		return
 	end
