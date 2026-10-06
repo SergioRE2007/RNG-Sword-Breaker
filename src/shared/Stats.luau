@@ -138,10 +138,23 @@ function Stats.gachaLuck(player: Player): number
 	return upgrade(player, "gachaLuck") * luckBonus(player) * Stats.rebirthBonus(player, "gachaLuck")
 end
 
--- Segundos por tirada del gacha: la mejora "Velocidad de tirada" (que ya parte de Config.Gacha.RollTime)
--- entre la velocidad de tirada de la armadura, con un mínimo. Aquí se multiplicarán también los gamepass.
+-- Segundos por tirada gratis del gacha (solo con Config.Gacha.FreeRoll): la mejora "Velocidad de aparición"
+-- entre la de la armadura, con un mínimo.
 function Stats.rollTime(player: Player): number
 	return math.max(upgrade(player, "rollSpeed") / (1 + armor(player, "rollSpeed")), Config.Gacha.MinRollTime)
+end
+
+-- Segundos entre apariciones de objetos en la parcela del jugador: la mejora "Velocidad de aparición" (que parte
+-- de Config.Plot.SpawnInterval) entre la de la armadura, con un mínimo. Aquí se multiplicarán también los gamepass.
+function Stats.spawnTime(player: Player): number
+	return math.max(upgrade(player, "rollSpeed") / (1 + armor(player, "rollSpeed")), Config.Plot.MinSpawnInterval)
+end
+
+-- Suerte de la rareza y del tamaño de los objetos de la parcela (multiplica sus probabilidades: Config.ObjectRarities
+-- y ObjectSizes). No es la suerte de parcela, que decide el tipo de objeto. De base 1: aquí se sumarán las mejoras
+-- de parcela o los pases que la suban (ventaja "objectLuck").
+function Stats.objectLuck(player: Player): number
+	return Stats.perk(player, "objectLuck") or 1
 end
 
 -- Monedas: artefactos, y el rasgo y el grado de la espada equipada.

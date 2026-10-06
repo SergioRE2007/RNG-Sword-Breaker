@@ -1,4 +1,5 @@
 -- Efectos visuales locales: números de daño, barra de vida, temblor y escombros con físicas.
+local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -6,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local Format = require(ReplicatedStorage.Shared.Format)
 local ObjectModel = require(ReplicatedStorage.Shared.ObjectModel)
+local ObjectSpec = require(ReplicatedStorage.Shared.ObjectSpec)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local ObjectBreak = require(script.Parent.ObjectBreak)
@@ -17,6 +19,8 @@ local Effects = {}
 local FRAGMENT_LIFETIME = 2.5
 local FRAGMENT_FADE = 0.5
 local HEALTH_BAR_TIMEOUT = 2
+local POPUP_HEIGHT = 12 -- altura máxima sobre el suelo a la que salen los premios de un objeto roto
+local ROLL_POPUP_SCALE = 1.5 -- desde este tamaño (escala) se anuncian las tiradas de un objeto aunque sea común y dé una sola
 
 local player = Players.LocalPlayer
 local rng = Random.new()
@@ -25,14 +29,16 @@ local healthBar, healthFill, healthLabel
 local healthConnection
 local healthToken = 0
 
-local function popup(position: Vector3, text: string, color: Color3)
+-- Texto que sube y se apaga. `emphasis` (1 si no se pone) lo agranda y lo deja más rato: para lo importante.
+local function popup(position: Vector3, text: string, color: Color3, emphasis: number?)
+	local grow = emphasis or 1
 	local anchor = Instance.new("Attachment")
 	anchor.WorldPosition = position + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1))
 	anchor.Parent = workspace.Terrain
 
 	local gui = Instance.new("BillboardGui")
 	gui.Adornee = anchor
-	gui.Size = UDim2.fromOffset(160, 40)
+	gui.Size = UDim2.fromOffset(160 + 200 * (grow - 1), 40 * grow)
 	gui.AlwaysOnTop = true
 	gui.Parent = anchor
 
@@ -41,15 +47,18 @@ local function popup(position: Vector3, text: string, color: Color3)
 	label.BackgroundTransparency = 1
 	label.Text = text
 	label.TextColor3 = color
-	label.TextStrokeTransparency = 0.3
+	label.TextStrokeTransparency = if grow > 1 then 0 else 0.3
 	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 24
+	label.TextSize = 24 * grow
 	label.Parent = gui
 
-	local info = TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local life = 0.8 * grow
+	local info = TweenInfo.new(life, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	TweenService:Create(gui, info, { StudsOffset = Vector3.new(0, 4, 0) }):Play()
-	TweenService:Create(label, info, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
-	Debris:AddItem(anchor, 0.9)
+	-- Lo importante se queda a la vista casi todo el rato y se apaga al final.
+	local fade = if grow > 1 then TweenInfo.new(life * 0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, life * 0.65) else info
+	TweenService:Create(label, fade, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	Debris:AddItem(anchor, life + 0.1)
 end
 
 local function createHealthBar()
@@ -179,13 +188,15 @@ function Effects.start()
 			if part.Anchored then
 				shake(part)
 			end
-			if hitter == player then
+			-- La vida de los objetos de la parcela ya la enseña su cartel (client/ObjectInfo); la barra es para los enemigos.
+			if hitter == player and not CollectionService:HasTag(part, "Destructible") then
 				showHealth(part)
 			end
 		end
 	end)
 
-	Remotes.Broken.OnClientEvent:Connect(function(breaker: Player, cframe: CFrame, size: Vector3, color: Color3, material: Enum.Material, reward: number, gems: number, objectIndex: number?)
+	-- `info` = { quality, scale, luck, rolls } del objeto roto (sin él, un enemigo de mazmorra).
+	Remotes.Broken.OnClientEvent:Connect(function(breaker: Player, cframe: CFrame, size: Vector3, color: Color3, material: Enum.Material, reward: number, gems: number, objectIndex: number?, info)
 		if objectIndex and ObjectModel.has(objectIndex) then
 			if not Performance.get() then
 				ObjectBreak.play(cframe, size, objectIndex)
@@ -193,15 +204,32 @@ function Effects.start()
 		else
 			shatter(cframe, size, color, material)
 		end
+		-- Cuanto mejor era el objeto (su rareza), más espectáculo al romperse.
+		local quality = if info then info.quality or 1 else 1
+		if quality > 1 and not Performance.get() then
+			ObjectBreak.burst(cframe, size, quality)
+		end
 		Sfx.play("break_", if breaker == player then 1 else 0.4)
 		if breaker == player then
 			healthBar.Enabled = false
-			local top = cframe.Position + Vector3.new(0, size.Y / 2 + 1, 0)
+			-- Los números salen a la altura de los ojos aunque el objeto sea altísimo.
+			local top = cframe.Position + Vector3.new(0, math.min(size.Y / 2 + 1, POPUP_HEIGHT - size.Y / 2), 0)
 			if reward > 0 then
 				popup(top, "+" .. Format.short(reward), Color3.fromRGB(255, 215, 70))
 			end
 			if gems > 0 then
 				popup(top + Vector3.new(0, 2, 0), `+{Format.short(gems)} gemas`, Color3.fromRGB(190, 110, 255))
+			end
+			-- Tiradas de arma que ha dado: se anuncian cuando el objeto tenía algo de especial (varias tiradas, rareza
+			-- o buen tamaño); las de un objeto corriente ya se ven en el panel de arriba.
+			if info and info.rolls > 0 and (info.rolls > 1 or info.scale >= ROLL_POPUP_SCALE or quality > 1) then
+				local rolls = if info.rolls == 1 then "1 tirada" else `¡{info.rolls} tiradas!`
+				popup(top + Vector3.new(0, 4.5, 0), `{rolls}  ·  suerte x{Format.multiplier(info.luck)}`, ObjectSpec.rarity(quality).color:Lerp(Color3.new(1, 1, 1), 0.25), if quality >= 4 or info.rolls > 1 then 1.5 else 1.15)
+			end
+			if quality >= 5 then
+				Sfx.play("win")
+			elseif quality >= 3 then
+				Sfx.play("rare")
 			end
 		end
 	end)

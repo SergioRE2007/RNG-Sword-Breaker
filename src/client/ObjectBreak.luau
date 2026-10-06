@@ -92,6 +92,79 @@ local function flash(shape: Enum.PartType, cframe: CFrame, from: Vector3, to: Ve
 	Debris:AddItem(part, time + 0.1)
 end
 
+-- Espectáculo de más al romperse un objeto de rareza `quality` (posición en Config.ObjectRarities), del color de esa
+-- rareza y cada vez mayor: ondas en el suelo y chispas (Poco común y Rara), destello y luz (Épica), rayo de luz
+-- hacia el cielo (Legendaria) y una segunda explosión (Mítica). Los comunes no lo llevan.
+function ObjectBreak.burst(cframe: CFrame, size: Vector3, quality: number)
+	local rarity = Config.ObjectRarities[quality]
+	if not rarity or quality <= 1 then
+		return
+	end
+	local tier = quality - 1 -- 1 (Poco común) a 5 (Mítica)
+	local color = rarity.color
+	local light = color:Lerp(Color3.new(1, 1, 1), 0.35)
+	local wide = math.max(size.X, size.Z)
+	local ground = cframe.Position - Vector3.new(0, size.Y / 2 - 0.25, 0)
+	local flat = CFrame.new(ground) * CFrame.Angles(0, 0, math.pi / 2)
+
+	local function wave(delay: number)
+		task.delay(delay, function()
+			flash(Enum.PartType.Cylinder, flat, Vector3.new(0.25, wide, wide), Vector3.new(0.25, wide * (2.5 + tier), wide * (2.5 + tier)), color, 0.25, 0.5 + tier * 0.06)
+		end)
+	end
+	for index = 1, math.min(tier, 4) do
+		wave((index - 1) * 0.12)
+	end
+
+	local anchor = Instance.new("Part")
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.one
+	anchor.CFrame = CFrame.new(cframe.Position.X, ground.Y + math.min(size.Y / 2, 6), cframe.Position.Z)
+	anchor.Parent = workspace
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Color = ColorSequence.new(Color3.new(1, 1, 1), color)
+	sparks.LightEmission = 1
+	sparks.Rate = 0
+	sparks.Lifetime = NumberRange.new(0.7, 1.2 + tier * 0.15)
+	sparks.Speed = NumberRange.new(14 + tier * 6, 26 + tier * 10)
+	sparks.SpreadAngle = Vector2.new(180, 180)
+	sparks.Drag = 2
+	sparks.Acceleration = Vector3.new(0, -18, 0)
+	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6 + tier * 0.25), NumberSequenceKeypoint.new(1, 0) })
+	sparks.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+	sparks.Parent = anchor
+	sparks:Emit(10 + tier * 14)
+	Debris:AddItem(anchor, 2.5)
+
+	if tier >= 3 then
+		flash(Enum.PartType.Ball, CFrame.new(anchor.Position), Vector3.one * wide * 0.5, Vector3.one * wide * (1.6 + tier * 0.4), light, 0.35, 0.3)
+		local lamp = Instance.new("PointLight")
+		lamp.Color = color
+		lamp.Brightness = tier
+		lamp.Range = 16 + tier * 6
+		lamp.Parent = anchor
+		TweenService:Create(lamp, TweenInfo.new(0.8), { Brightness = 0 }):Play()
+	end
+	if tier >= 4 then
+		local thick = 2 + tier
+		flash(Enum.PartType.Cylinder, CFrame.new(ground + Vector3.new(0, 60, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+			Vector3.new(120, thick, thick), Vector3.new(120, 0.3, 0.3), light, 0.3, 0.9 + tier * 0.1)
+	end
+	if tier >= 5 then
+		task.delay(0.25, function()
+			if anchor.Parent then
+				sparks:Emit(60)
+			end
+			flash(Enum.PartType.Ball, CFrame.new(anchor.Position), Vector3.one * wide, Vector3.one * wide * 4.5, light, 0.45, 0.45)
+		end)
+	end
+end
+
 -- Rompe el objeto `index` de Config.Destructibles que estaba en `cframe` con la caja `size`.
 function ObjectBreak.play(cframe: CFrame, size: Vector3, index: number)
 	local def = Config.Destructibles[index]

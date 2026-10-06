@@ -1,4 +1,7 @@
--- Objetos rompibles: aparecen dentro de la parcela de cada jugador según sus mejoras.
+-- Objetos rompibles: aparecen dentro de la parcela de cada jugador según sus mejoras. Cada uno sale con un tipo
+-- (Config.Destructibles, según la suerte de parcela), una rareza y un tamaño propios (shared/ObjectSpec), que
+-- deciden su vida, su premio y las tiradas de arma que da al romperse. Todo eso lo decide y lo guarda el servidor;
+-- los atributos de la pieza (Quality, Size, Scale, Luck, Rolls) son solo para que el cliente lo enseñe.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -6,6 +9,7 @@ local Chance = require(ReplicatedStorage.Shared.Chance)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local ObjectModel = require(ReplicatedStorage.Shared.ObjectModel)
+local ObjectSpec = require(ReplicatedStorage.Shared.ObjectSpec)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
@@ -14,10 +18,16 @@ local Plots = require(script.Parent.Plots)
 
 local Destructibles = {}
 
-local objects = {} -- [Part] = { def, hp, plot, localPosition, radius }
+-- [Part] = { def, hp, maxHp, plot, localPosition, radius, quality, size, scale, luck, rolls, reward }
+-- (quality, size, scale, luck, rolls y reward salen de ObjectSpec.roll al aparecer).
+local objects = {}
 local counts = {} -- [plot] = número de objetos vivos
+local pending = {} -- [plot] = objeto ya tirado que aún no ha cabido en la parcela (se vuelve a intentar)
+local nextSpawn = {} -- [plot] = os.clock() en que le toca aparecer al siguiente
 local rng = Random.new()
 local folder
+
+local SPAWN_TICK = 0.1 -- cada cuánto se mira si a alguna parcela le toca objeto
 
 -- Prueba del más raro al más común; la suerte multiplica cada probabilidad.
 local function rollDef(luck: number)
@@ -51,36 +61,86 @@ local function findPosition(plot, radius: number): Vector3?
 	return nil
 end
 
+-- "Cristal (Legendaria, Enorme)": el objeto con lo que tiene de especial.
+local function describe(def, spec): string
+	local parts = { ObjectSpec.rarity(spec.quality).name }
+	if spec.size > 1 then
+		table.insert(parts, ObjectSpec.size(spec.size).name)
+	end
+	return `{def.name} ({table.concat(parts, ", ")})`
+end
+
 local function spawnIn(plot)
-	local luck = Stats.luck(plot.owner)
-	local def = rollDef(luck)
-	local radius = math.max(def.size.X, def.size.Z) * 0.7
+	local owner = plot.owner
+	-- Lo que le toca al objeto (tipo, rareza y tamaño) se tira una vez: si no cabe, se guarda para el siguiente
+	-- intento en vez de volver a tirar, que haría salir menos de los grandes.
+	local spec = pending[plot]
+	if not spec then
+		local luck = Stats.luck(owner)
+		local def = rollDef(luck)
+		spec = ObjectSpec.roll(def, Stats.objectLuck(owner))
+		spec.def = def
+		spec.typeOdds = def.rarity / luck
+	end
+	local def = spec.def
+	local size = def.size * spec.scale
+	local radius = math.max(size.X, size.Z) * 0.7
 	local position = findPosition(plot, radius)
 	if not position then
+		pending[plot] = spec
 		return
 	end
+	pending[plot] = nil
 
 	local part = Instance.new("Part")
 	part.Name = def.name
 	part.Anchored = true
-	part.Size = def.size
+	part.Size = size
 	part.Color = def.color
 	part.Material = def.material
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
-	part.CFrame = plot.cframe * CFrame.new(position + Vector3.new(0, def.size.Y / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+	part.CFrame = plot.cframe * CFrame.new(position + Vector3.new(0, size.Y / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
 	local index = table.find(Config.Destructibles, def) :: number
-	ObjectModel.attach(part, index, def)
+	ObjectModel.attach(part, index, def, spec.scale)
 	part:SetAttribute("Index", index)
-	part:SetAttribute("HP", def.hp)
-	part:SetAttribute("MaxHP", def.hp)
+	part:SetAttribute("HP", spec.hp)
+	part:SetAttribute("MaxHP", spec.hp)
+	part:SetAttribute("Quality", spec.quality)
+	part:SetAttribute("Size", spec.size)
+	part:SetAttribute("Scale", spec.scale)
+	part:SetAttribute("Luck", spec.luck)
+	part:SetAttribute("Rolls", spec.rolls)
+	part:SetAttribute("Owner", owner.UserId)
 	CollectionService:AddTag(part, "Destructible")
-	objects[part] = { def = def, hp = def.hp, plot = plot, localPosition = position, radius = radius }
+	objects[part] = {
+		def = def,
+		hp = spec.hp,
+		maxHp = spec.hp,
+		plot = plot,
+		localPosition = position,
+		radius = radius,
+		quality = spec.quality,
+		size = spec.size,
+		scale = spec.scale,
+		luck = spec.luck,
+		rolls = spec.rolls,
+		reward = spec.reward,
+	}
 	counts[plot] = (counts[plot] or 0) + 1
 	part.Parent = folder
 
-	if def.rarity / luck >= Config.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡A {plot.owner.DisplayName} le ha aparecido {def.name} (1 entre {Format.short(def.rarity)})!`, def.color)
+	if spec.typeOdds >= Config.AnnounceOdds then
+		Remotes.Announce:FireAllClients(`¡A {owner.DisplayName} le ha aparecido {def.name} (1 entre {Format.short(def.rarity)})!`, def.color)
+	end
+	-- Rareza y tamaño fuera de lo normal: aviso al dueño y, si es muy raro, a todos.
+	local rarity = ObjectSpec.rarity(spec.quality)
+	if spec.odds >= Config.ObjectRolls.NoticeOdds then
+		local rolls = if spec.rolls == 1 then "1 tirada" else `{spec.rolls} tiradas`
+		Remotes.Notice:FireClient(owner, `¡Te ha aparecido {describe(def, spec)}!\nSuerte de armas x{Format.multiplier(spec.luck)} · {rolls}`, rarity.color)
+	end
+	if spec.odds >= Config.ObjectRolls.AnnounceOdds then
+		Remotes.Announce:FireAllClients(`¡A {owner.DisplayName} le ha aparecido {describe(def, spec)}: suerte de armas x{Format.multiplier(spec.luck)}!`, rarity.color)
 	end
 end
 
@@ -122,8 +182,9 @@ function Destructibles.getInRange(player: Player, origin: CFrame, range: number,
 	return found
 end
 
--- Si el golpe rompe el objeto devuelve su definición (Config.Destructibles) y las monedas y
--- gemas que da al jugador (con sus multiplicadores); si sigue en pie, nil.
+-- Si el golpe rompe el objeto devuelve su definición (Config.Destructibles), las monedas y gemas que da al
+-- jugador (con sus multiplicadores) y la ficha del objeto ({ quality, size, scale, luck, rolls... }: lo que
+-- se decidió al aparecer); si sigue en pie, nil.
 function Destructibles.damage(part: BasePart, amount: number, player: Player)
 	local object = objects[part]
 	if not object then
@@ -132,21 +193,27 @@ function Destructibles.damage(part: BasePart, amount: number, player: Player)
 
 	object.hp -= amount
 	-- Con una tolerancia: restar números con decimales deja a veces una pizca (1e-13) y haría falta un golpe más.
-	if object.hp > object.def.hp * 1e-9 then
+	if object.hp > object.maxHp * 1e-9 then
 		part:SetAttribute("HP", object.hp)
 		return nil
 	end
 
 	local def = object.def
-	local coins = def.reward * Stats.coins(player)
+	-- Redondeado y con un mínimo de 1: un objeto pequeño no puede dar "+0".
+	local coins = if def.reward > 0 then math.max(1, math.round(def.reward * object.reward * Stats.coins(player))) else 0
 	-- Gemas: probabilidad propia del objeto y cantidad con algo de azar (Config.GemDrop).
 	local gems = 0
 	if def.gems > 0 and Chance.roll(def.gemChance or 1) then
-		gems = math.max(1, math.round(def.gems * Stats.gems(player) * rng:NextNumber(Config.GemDrop.min, Config.GemDrop.max)))
+		gems = math.max(1, math.round(def.gems * object.reward * Stats.gems(player) * rng:NextNumber(Config.GemDrop.min, Config.GemDrop.max)))
 	end
-	Remotes.Broken:FireAllClients(player, part.CFrame, part.Size, part.Color, part.Material, coins, gems, table.find(Config.Destructibles, def))
+	Remotes.Broken:FireAllClients(player, part.CFrame, part.Size, part.Color, part.Material, coins, gems, table.find(Config.Destructibles, def), {
+		quality = object.quality,
+		scale = object.scale,
+		luck = object.luck,
+		rolls = object.rolls,
+	})
 	remove(part)
-	return def, coins, gems
+	return def, coins, gems, object
 end
 
 -- Al importar un .fbx de Blender en Studio el modelo se queda suelto en Workspace (grande y gris): las mallas buenas
@@ -171,14 +238,24 @@ function Destructibles.start()
 				remove(part)
 			end
 		end
+		pending[plot] = nil
+		nextSpawn[plot] = nil
 	end)
 
+	-- Cada parcela tiene su ritmo: el de la "Velocidad de aparición" de su dueño (Stats.spawnTime).
 	task.spawn(function()
 		while true do
-			task.wait(Config.Plot.SpawnInterval)
+			task.wait(SPAWN_TICK)
+			local now = os.clock()
 			for _, plot in Plots.all() do
-				if plot.owner then
-					local capacity = Upgrades.value("capacity", PlayerData.getUpgrade(plot.owner, "capacity"))
+				local owner = plot.owner
+				local due = nextSpawn[plot] or now
+				if owner and now >= due then
+					-- El siguiente cuenta desde cuando le tocaba a este (así el tick no le quita ritmo), salvo que vaya
+					-- muy retrasada: los que no han salido no se recuperan de golpe.
+					local interval = Stats.spawnTime(owner)
+					nextSpawn[plot] = math.max(due, now - interval) + interval
+					local capacity = Upgrades.value("capacity", PlayerData.getUpgrade(owner, "capacity"))
 					if (counts[plot] or 0) < capacity then
 						spawnIn(plot)
 					end

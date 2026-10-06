@@ -1,5 +1,7 @@
--- Gacha de espadas: tiradas gratis desde cualquier sitio (una cada Stats.rollTime segundos)
--- e inventario (equipar, vender y venta automática). No hay nada suyo en el mapa.
+-- Gacha de espadas: el motor de las tiradas de arma ("con esta suerte, ¿qué arma ha salido?") y la única puerta
+-- por la que una tirada entrega una espada. Las tiradas las piden los objetos de la parcela al romperse
+-- (Gacha.give, desde Combat) y, solo con Config.Gacha.FreeRoll, el botón de tirada gratis de antes. Lleva también
+-- el inventario (equipar, vender y venta automática). No hay nada suyo en el mapa.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Chance = require(ReplicatedStorage.Shared.Chance)
@@ -55,30 +57,35 @@ local function broadcast(player: Player, entry)
 	end
 end
 
--- Saca una espada con suerte `luck` y la guarda como una copia más (se equipa si pega más que
+-- Saca una espada con la suerte de armas del jugador multiplicada por `boost` (la suerte del objeto
+-- que da la tirada; 1 si no hay) y la guarda como una copia más (se equipa si pega más que
 -- la actual). Se vende sola si es menos rara que el límite de venta automática del jugador o
 -- el inventario está lleno. Se lo manda al jugador para que lo enseñe; si es raro para su
 -- suerte, queda pendiente el aura en su personaje (y el aviso en el chat si es muy raro), que se
--- manda a todos cuando su cliente lo destapa.
-local function draw(player: Player, luck: number, source: string)
+-- manda a todos cuando su cliente lo destapa. `info` (opcional) = de dónde viene, para enseñarlo:
+-- { name, quality (del objeto), roll, rolls (esta tirada de cuántas) }.
+local function draw(player: Player, boost: number, source: string, info)
 	local data = PlayerData.read(player)
 	if not data then
 		return
 	end
-	-- Empujón del principio: las primeras tiradas de cada jugador llevan mucha suerte extra.
-	if source == "gacha" then
-		if data.gachaRolls < Config.Gacha.BoostRolls then
-			luck *= Config.Gacha.BoostLuck
-		end
-		data.gachaRolls += 1
+	-- Suerte del jugador sin la ayuda del objeto. Empujón del principio: las primeras tiradas de cada jugador
+	-- llevan mucha suerte extra.
+	local base = Stats.gachaLuck(player)
+	if data.gachaRolls < Config.Gacha.BoostRolls then
+		base *= Config.Gacha.BoostLuck
 	end
+	data.gachaRolls += 1
+	local luck = base * boost
 	local index = roll(luck)
 	local sword = Config.Swords[index]
 	-- Metal y tamaño se tiran a la vez que el arma y son permanentes (Config.Metals, Config.Sizes).
 	local metal = Permanent.roll(Config.Metals, luck)
 	local size = Permanent.roll(Config.Sizes, luck)
 	local rarity = Permanent.rarity(index, metal, size)
-	local odds = rarity / luck
+	-- Lo rara que es para el jugador (con su suerte, sin la del objeto): es lo que mide el espectáculo, el aura y
+	-- el aviso. Un objeto bueno da armas que para él son difíciles, y se celebran como tales.
+	local odds = rarity / base
 	local kept = rarity >= data.autoSell and #data.swords < Config.MaxSwords
 	if kept then
 		local candidate = { sword = index, trait = 0, grade = 0, metal = metal, size = size }
@@ -94,10 +101,11 @@ local function draw(player: Player, luck: number, source: string)
 	else
 		PlayerData.addGems(player, Config.Gacha.SellValue)
 	end
-	Remotes.GachaRolled:FireClient(player, index, kept, luck, source, metal, size)
-	if source == "gacha" then
-		Missions.add(player, "gacha")
-	end
+	local extra = if info then table.clone(info) else {}
+	extra.boost = boost
+	extra.odds = odds
+	Remotes.GachaRolled:FireClient(player, index, kept, luck, source, metal, size, extra)
+	Missions.add(player, "gacha")
 	if rarity >= 1e6 then
 		Missions.add(player, "rareSword")
 	end
@@ -127,21 +135,39 @@ local function onRevealed(player: Player)
 	end
 end
 
--- Espada gratis (p. ej. la roca de armas) con la suerte de gacha multiplicada por `luckMultiplier`.
-function Gacha.give(player: Player, luckMultiplier: number, source: string)
-	draw(player, Stats.gachaLuck(player) * luckMultiplier, source)
+-- Tiradas de arma para el jugador con su suerte de armas multiplicada por `boost`. Es la puerta para cualquier
+-- fuente de tiradas: hoy los objetos de la parcela (source = "object", con `rolls` y `boost` decididos por el
+-- servidor al aparecer el objeto: nada de esto llega del cliente). `info` = { name, quality } de quien las da.
+function Gacha.give(player: Player, boost: number, source: string, rolls: number?, info)
+	-- Por si una fuente mal configurada pide de más (x ~= x descarta NaN).
+	local count = rolls or 1
+	if count ~= count or boost ~= boost or boost <= 0 then
+		return
+	end
+	count = math.clamp(math.floor(count), 0, Config.ObjectRolls.MaxRolls)
+	for index = 1, count do
+		local extra = if info then table.clone(info) else {}
+		extra.roll = index
+		extra.rolls = count
+		draw(player, boost, source, extra)
+	end
 end
 
 local lastRoll = {} -- [player] = os.clock() de su última tirada
 
+-- Tirada gratis del botón: solo existe con Config.Gacha.FreeRoll (si no, las tiradas salen de los objetos y una
+-- petición del cliente no da nada).
 local function onRoll(player: Player)
+	if not Config.Gacha.FreeRoll then
+		return
+	end
 	-- Un poco de margen por el retraso de la red.
 	local now = os.clock()
 	if now - (lastRoll[player] or 0) < Stats.rollTime(player) * 0.85 then
 		return
 	end
 	lastRoll[player] = now
-	draw(player, Stats.gachaLuck(player), "gacha")
+	draw(player, 1, "gacha")
 end
 
 local function onEquip(player: Player, id: unknown)

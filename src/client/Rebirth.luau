@@ -25,7 +25,7 @@ local STATS = {
 	{ "coins", "Monedas", Color3.fromRGB(255, 200, 60) },
 	{ "damage", "Daño", Color3.fromRGB(255, 130, 90) },
 	{ "luck", "Suerte", Color3.fromRGB(110, 225, 110) },
-	{ "gachaLuck", "Suerte de gacha", Color3.fromRGB(190, 130, 255) },
+	{ "gachaLuck", "Suerte de armas", Color3.fromRGB(190, 130, 255) },
 }
 
 function Rebirth.start()
