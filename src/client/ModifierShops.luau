@@ -17,6 +17,7 @@ local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Backpack = require(script.Parent.Backpack)
+local ForgeScene = require(script.Parent.ForgeScene)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
@@ -877,6 +878,9 @@ local function buildShop(kind: string)
 				state.selected = copy.id
 				picker.Visible = false
 				refresh()
+				if state.onPick then
+					state.onPick()
+				end
 			end)
 		end
 	end
@@ -1309,6 +1313,13 @@ local function buildShop(kind: string)
 			return
 		end
 		state.last = index
+		-- Forja (Grados): la escena de la forja enseña el resultado con el martillazo.
+		if state.onResult and id == state.selected then
+			state.onResult(index)
+			state.waiting = false
+			refresh()
+			return
+		end
 		-- Rasgos: ruleta con todas las tiradas y, al acabar, el resultado de siempre.
 		if roulette and rolls and id == state.selected and window.Visible then
 			task.spawn(function()
@@ -1369,7 +1380,9 @@ local function buildShop(kind: string)
 	end)
 	window:GetPropertyChangedSignal("Visible"):Connect(function()
 		if not window.Visible then
-			state.auto = false
+			if not state.onResult then
+				state.auto = false
+			end
 			picker.Visible = false
 			stopper.Visible = false
 			if roulette then
@@ -1398,7 +1411,35 @@ local function buildShop(kind: string)
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()
-	return windowName, window
+	-- Para la escena de la forja (ForgeScene): usa la ventana solo para elegir espada y los ajustes del auto.
+	local api = {
+		state = state,
+		window = window,
+		selectedCopy = selectedCopy,
+		canAfford = canAfford,
+		request = request,
+		refresh = refresh,
+		speed = speed,
+		openPicker = function()
+			if not window.Visible then
+				Ui.toggle(windowName)
+			end
+			rebuildPicker()
+			stopper.Visible = false
+			picker.Visible = true
+		end,
+		openSettings = function()
+			if not window.Visible then
+				Ui.toggle(windowName)
+			end
+			picker.Visible = false
+			stopper.Visible = true
+		end,
+		closeWindow = function()
+			window.Visible = false
+		end,
+	}
+	return windowName, window, api
 end
 
 function ModifierShops.start()
@@ -1485,8 +1526,11 @@ function ModifierShops.start()
 
 	local windows = {}
 	for _, kind in { "traits", "grades" } do
-		local name, window = buildShop(kind)
+		local name, window, api = buildShop(kind)
 		windows[kind] = { name = name, frame = window }
+		if kind == "grades" then
+			ForgeScene.bind(api)
+		end
 	end
 
 	-- Abrir junto al puesto y cerrar al alejarse.
@@ -1494,7 +1538,9 @@ function ModifierShops.start()
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
 		local kind = prompt:GetAttribute("Shop")
 		local shop = kind and windows[kind]
-		if shop then
+		if kind == "grades" then
+			ForgeScene.toggle()
+		elseif shop then
 			local parent = prompt.Parent
 			openAt = if parent and parent:IsA("BasePart") then parent.Position else nil
 			Ui.toggle(shop.name)
@@ -1516,7 +1562,9 @@ function ModifierShops.start()
 					local distance = (root.Position - anchor.Position).Magnitude
 					if distance < OPEN_DISTANCE and not inside[prompt] then
 						inside[prompt] = true
-						if not shop.frame.Visible then
+						if prompt:GetAttribute("Shop") == "grades" then
+							ForgeScene.enter()
+						elseif not shop.frame.Visible then
 							openAt = anchor.Position
 							Ui.toggle(shop.name)
 						end
