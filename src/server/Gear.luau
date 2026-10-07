@@ -24,10 +24,6 @@ function Gear.onBroken(player: Player)
 			PlayerData.edit(player, function(edited)
 				table.insert(edited.artifacts, index)
 				table.sort(edited.artifacts)
-				-- Si hay una ranura libre se equipa solo.
-				if #edited.gear < Config.GearSlots then
-					table.insert(edited.gear, index)
-				end
 			end)
 			Remotes.Notice:FireClient(
 				player,

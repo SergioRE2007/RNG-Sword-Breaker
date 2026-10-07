@@ -19,6 +19,7 @@ local ArmorPane = require(script.Parent.ArmorPane)
 local Potions = require(script.Parent.Potions)
 
 local Backpack = {}
+local SellMenu = require(script.Parent.SellMenu)
 
 local player = Players.LocalPlayer
 local CELL = 100
@@ -345,7 +346,7 @@ function Backpack.start()
 		return item
 	end
 	local bestButton = action("Best", "Equipar mejor", Ui.COLORS.green, 12, 176)
-	local sellButton = action("Sell", if Config.Gacha.SellValue > 0 then `Vender\n+{Config.Gacha.SellValue} gemas` else "Vender", Ui.COLORS.red, 198, 100)
+	local sellButton = action("Sell", "Vender armas", Ui.COLORS.red, 198, 100)
 	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 308, 104)
 	bestButton.TextSize = 23
 	equipButton.TextSize = 20
@@ -361,9 +362,7 @@ function Backpack.start()
 		end
 	end)
 	sellButton.Activated:Connect(function()
-		if selected then
-			Remotes.SellSword:FireServer(selected)
-		end
+		SellMenu.open(selected)
 	end)
 	bestButton.Activated:Connect(function()
 		local best, bestDamage = nil, -1
@@ -406,7 +405,6 @@ function Backpack.start()
 		local isEquipped = selected == equippedId
 		equipButton.Text = if isEquipped then "Equipada" else "Equipar"
 		equipButton.BackgroundColor3 = if isEquipped then Ui.COLORS.gray else Ui.COLORS.blue
-		sellButton.BackgroundColor3 = if isEquipped then Ui.COLORS.gray else Ui.COLORS.red
 	end
 
 	-- Deja las casillas como el inventario tocando solo las que han cambiado. Rehacerlas todas en cada

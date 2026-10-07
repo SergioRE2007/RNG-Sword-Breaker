@@ -4,10 +4,12 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Config = require(ReplicatedStorage.Shared.Config)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
+local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 
 local PlayerData = {}
 
@@ -61,6 +63,9 @@ local function publish(player: Player)
 	player:SetAttribute("SwordSize", equippedSize)
 	player:SetAttribute("AutoSell", data.autoSell)
 	player:SetAttribute("TraitPriority", data.traitPriority)
+	for _, kind in { "traits", "grades" } do
+		player:SetAttribute("Pity_" .. kind, HttpService:JSONEncode(data.pity[kind]))
+	end
 
 	-- Los objetos (con las pociones son unos cuantos) solo se escriben si han cambiado: esto corre con cada moneda.
 	local sent = session.itemsSent
@@ -206,6 +211,7 @@ local function load(player: Player)
 		equipped = 1,
 		autoSell = 0,
 		traitPriority = "luck,coins,damage", -- desempate de rasgos igual de raros (ver Modifiers.priority)
+		pity = Modifiers.newPity(nil),
 		upgrades = {},
 		items = {},
 		artifacts = {},
@@ -231,7 +237,8 @@ local function load(player: Player)
 			if type(saved) == "table" then
 				data.coins = tonumber(saved.coins) or data.coins
 				data.gems = tonumber(saved.gems) or 0
-				data.rebirths = math.max(0, math.floor(tonumber(saved.rebirths) or 0))
+				local rebirths = tonumber(saved.rebirths) or 0
+				data.rebirths = if rebirths == rebirths then math.clamp(math.floor(rebirths), 0, Config.Rebirth.max) else 0
 				data.playTime = math.max(0, tonumber(saved.playTime) or 0)
 				data.totalCoins = math.max(0, tonumber(saved.totalCoins) or 0)
 				data.robuxSpent = math.max(0, math.floor(tonumber(saved.robuxSpent) or 0))
@@ -239,6 +246,7 @@ local function load(player: Player)
 					data.missions = saved.missions
 				end
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
+				data.pity = Modifiers.newPity(saved.pity)
 				if type(saved.traitPriority) == "string" then
 					data.traitPriority = saved.traitPriority
 				end
@@ -461,7 +469,7 @@ end
 -- Suma un renacimiento (el cobro lo hace quien llama, con trySpend).
 function PlayerData.addRebirth(player: Player)
 	local session = sessions[player]
-	if session then
+	if session and session.data.rebirths < Config.Rebirth.max then
 		session.data.rebirths += 1
 		publish(player)
 	end

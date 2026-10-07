@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -617,7 +618,7 @@ local function buildShop(kind: string)
 		local row = Instance.new("Frame")
 		row.Name = "Result" .. index
 		row.LayoutOrder = position
-		row.Size = UDim2.new(1, -8, 0, 92)
+		row.Size = UDim2.new(1, -8, 0, 118)
 		row.BackgroundColor3 = WHITE
 		row.Parent = results
 		Ui.round(row, 10)
@@ -712,6 +713,16 @@ local function buildShop(kind: string)
 		local detailLimit = Instance.new("UITextSizeConstraint")
 		detailLimit.MaxTextSize = 20
 		detailLimit.Parent = detail
+		local pityLabel = Ui.label(row, 17)
+		pityLabel.Name = "Pity"
+		pityLabel.Position = UDim2.fromOffset(86, 86)
+		pityLabel.Size = UDim2.new(1, -98, 0, 24)
+		pityLabel.TextXAlignment = Enum.TextXAlignment.Left
+		pityLabel.TextScaled = true
+		local pityLimit = Instance.new("UITextSizeConstraint")
+		pityLimit.MaxTextSize = 17
+		pityLimit.Parent = pityLabel
+		pityLabel.TextColor3 = Color3.fromRGB(190, 195, 215)
 		-- Crece un poco al pasar el ratón.
 		local grow = Instance.new("UIScale")
 		grow.Parent = row
@@ -800,6 +811,13 @@ local function buildShop(kind: string)
 	end
 
 	local function refresh()
+		local ok, counters = pcall(HttpService.JSONDecode, HttpService, player:GetAttribute("Pity_" .. kind) or "[]")
+		for index, row in rows do
+			local limit = Modifiers.pityLimit(kind, index)
+			local progress = if ok and type(counters) == "table" then counters[index] or 0 else 0
+			row.Pity.Text = `Pity {Format.short(progress)} / {Format.short(limit)}{if progress >= limit then " · Garantía pendiente" else ""}`
+			row.Pity.TextColor3 = if progress >= limit then Ui.COLORS.orange else Color3.fromRGB(190, 195, 215)
+		end
 		local copy = selectedCopy()
 		if not copy then
 			state.selected = player:GetAttribute("Equipped")
@@ -1425,7 +1443,7 @@ local function buildShop(kind: string)
 			refresh()
 		end
 	end)
-	for _, attribute in { "Swords", "Equipped", "Item_gradeCrystal", "Item_traitCrystal" } do
+	for _, attribute in { "Swords", "Equipped", "Item_gradeCrystal", "Item_traitCrystal", "Pity_" .. kind } do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()

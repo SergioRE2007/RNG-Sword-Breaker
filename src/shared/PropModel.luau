@@ -74,6 +74,65 @@ function PropModel.has(name: string): boolean
 	return load()[name] ~= nil
 end
 
+-- Las mallas agrupan piezas separadas por color: su caja cerraría torii y puentes.
+-- Colisiones sencillas solo para los cuerpos sólidos; hojas, flores y animales siguen sin colisión.
+local function collisions(model: Model, name: string, origin: CFrame, scale: number)
+	local function box(size: Vector3, offset: CFrame)
+		local part = Instance.new("Part")
+		part.Name = "MapCollision"
+		part.Size = size * scale
+		part.CFrame = origin * CFrame.new(offset.Position * scale) * offset.Rotation
+		part.Anchored = true
+		part.Transparency = 1
+		part.CanCollide = true
+		part.CanTouch = false
+		part.CastShadow = false
+		part.Parent = model
+	end
+	if name == "Sakura" or name == "SakuraB" or name == "Maple" or name == "Pine" then
+		box(Vector3.new(2.6, 10, 2.6), CFrame.new(0, 5, 0))
+	elseif name == "Torii" then
+		for _, sign in { -1, 1 } do
+			box(Vector3.new(1.9, 14, 1.9), CFrame.new(sign * 6.4, 7, 0))
+		end
+		box(Vector3.new(15.4, 0.9, 0.9), CFrame.new(0, 9.6, 0))
+		box(Vector3.new(18, 2, 2.1), CFrame.new(0, 14.7, 0))
+	elseif name == "StoneLantern" then
+		box(Vector3.new(1.5, 6, 1.5), CFrame.new(0, 3, 0))
+	elseif name == "Shrine" then
+		box(Vector3.new(9, 1.5, 8), CFrame.new(0, 0.75, 0))
+		box(Vector3.new(6.1, 3.6, 5.1), CFrame.new(0, 3.3, 0))
+	elseif name == "Pagoda" then
+		box(Vector3.new(17, 2, 17), CFrame.new(0, 1, 0))
+		local y, width = 2, 11
+		for tier = 0, 4 do
+			local height = 4.6 - tier * 0.35
+			box(Vector3.new(width, height + 2.3, width), CFrame.new(0, y + (height + 2.3) / 2, 0))
+			y += height + 2.3
+			width -= 1.35
+		end
+	elseif name == "Fence" then
+		box(Vector3.new(8.6, 3.4, 0.6), CFrame.new(0, 1.7, 0))
+	elseif name == "Bridge" then
+		for i = 0, 8 do
+			local t = i / 8
+			local x, y = -9 + 18 * t, 3.2 * math.sin(math.pi * t) + 0.5
+			local slope = math.atan(3.2 * math.pi / 18 * math.cos(math.pi * t))
+			box(Vector3.new(2.2, 0.5, 6.2), CFrame.new(x, y, 0) * CFrame.Angles(0, 0, slope))
+			for _, side in { -1, 1 } do
+				box(Vector3.new(0.4, 1.9, 0.4), CFrame.new(x, y + 1.2, side * 3))
+			end
+		end
+	elseif name == "Rocks" or name == "Komainu" then
+		for _, mesh in model:GetChildren() do
+			if mesh:IsA("BasePart") and (mesh.Name == "Stone" or mesh.Name == "StoneDark") then
+				local offset = origin:ToObjectSpace(mesh.CFrame)
+				box(mesh.Size / scale, CFrame.new(offset.Position / scale) * offset.Rotation)
+			end
+		end
+	end
+end
+
 -- Pone la pieza `name` en `cframe` (con el suelo en su origen) a la escala dada y la mete en `parent`. `tint`
 -- cambia el color de los papeles indicados ({ Red = color }). Devuelve el Model, o nil si no hay esa pieza.
 function PropModel.place(parent: Instance, name: string, cframe: CFrame, scale: number?, tint: { [string]: Color3 }?): Model?
@@ -108,6 +167,7 @@ function PropModel.place(parent: Instance, name: string, cframe: CFrame, scale: 
 		mesh.CFrame = cframe * CFrame.new(piece.offset.Position * factor) * piece.offset.Rotation
 		mesh.Parent = model
 	end
+	collisions(model, name, cframe, factor)
 	model.WorldPivot = cframe -- el pivote es el suelo de la pieza: así PivotTo la mueve por los pies
 	model.Parent = parent
 	return model

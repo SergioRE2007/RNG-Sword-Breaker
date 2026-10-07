@@ -49,7 +49,7 @@ function Armor.roll(level: number, luck: number, forcedSlot: string?, forcedQual
 	return { slot = slot, quality = qualityIndex, level = level, stats = stats }
 end
 
--- Tira una pieza y se la da al jugador (se equipa sola si el hueco está libre). Con el inventario lleno
+-- Tira una pieza y la guarda sin equiparla. Con el inventario lleno
 -- se desmonta sola. Devuelve la pieza y si se la ha quedado.
 function Armor.give(player: Player, level: number, luck: number)
 	local data = PlayerData.read(player)
@@ -64,9 +64,6 @@ function Armor.give(player: Player, level: number, luck: number)
 			piece.id = edited.nextArmorId
 			edited.nextArmorId += 1
 			table.insert(edited.armor, piece)
-			if not edited.armorWorn[piece.slot] then
-				edited.armorWorn[piece.slot] = piece.id
-			end
 		end)
 		Remotes.Notice:FireClient(player, `¡{ArmorStats.name(piece)}!\n{quality.name}`, quality.color)
 	else

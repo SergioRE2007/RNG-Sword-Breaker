@@ -23,6 +23,10 @@ local function onRebirth(player: Player)
 	end
 	lastTry[player] = now
 
+	if Stats.rebirths(player) >= Config.Rebirth.max then
+		Remotes.Notice:FireClient(player, "Has alcanzado el máximo de renacimientos.", GOLD)
+		return
+	end
 	local cost = Stats.rebirthCost(player)
 	if not PlayerData.trySpend(player, cost) then
 		Remotes.Notice:FireClient(player, `Te faltan monedas: el renacimiento cuesta {Format.short(cost)}`, Color3.fromRGB(240, 65, 75))

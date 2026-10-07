@@ -126,15 +126,18 @@ function Rebirth.start()
 		local current = Stats.rebirths(player)
 		local price = Stats.rebirthCost(player)
 		local coins = player:GetAttribute("Coins") or 0
-		local affordable = coins >= price
-		count.Text = `Renacimientos: <font color="#{GOLD:ToHex()}">{current}</font>`
+		local capped = current >= Config.Rebirth.max
+		local affordable = not capped and coins >= price
+		count.Text = `Renacimientos: <font color="#{GOLD:ToHex()}">{current}/{Config.Rebirth.max}</font>`
 		for _, entry in STATS do
 			local key = entry[1]
 			local now = Config.Rebirth[key] ^ current
 			local after = now * Config.Rebirth[key]
-			rows[key].Text = `x{Format.multiplier(now)} <font color="{Ui.SOFT}">→</font> <font color="#7ee07a">x{Format.multiplier(after)}</font>`
+			rows[key].Text = if capped then `x{Format.multiplier(now)}` else `x{Format.multiplier(now)} <font color="{Ui.SOFT}">→</font> <font color="#7ee07a">x{Format.multiplier(after)}</font>`
 		end
-		cost.Text = `Precio: <font color="{if affordable then "#ffd24a" else "#ff6a6a"}">{Format.short(price)}</font> monedas`
+		cost.Text = if capped then "Máximo alcanzado" else `Precio: <font color="{if affordable then "#ffd24a" else "#ff6a6a"}">{Format.short(price)}</font> monedas`
+		button.Text = if capped then "Máximo alcanzado" else "Renacer"
+		button.Interactable = affordable
 		button.BackgroundColor3 = if affordable then Ui.COLORS.green else Ui.COLORS.gray
 	end
 

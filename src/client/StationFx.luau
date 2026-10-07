@@ -9,6 +9,7 @@ local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 
 local Performance = require(script.Parent.Performance)
+local DayCycle = require(script.Parent.DayCycle)
 
 local StationFx = {}
 
@@ -81,19 +82,22 @@ local function setupGlow(part: BasePart)
 	light.Color = part.Color
 	light.Range = part:GetAttribute("Range") or 10
 	local level = part:GetAttribute("Light") or 1
-	light.Brightness = level
+	light.Brightness = 0
+	light.Enabled = false
 	light.Shadows = false
 	light.Parent = part
 	local flicker = part:GetAttribute("Flicker") == true
 	local seed = random:NextNumber(0, 100)
 	register(part, function(now)
+		local night = DayCycle.night()
 		if flicker then
-			light.Brightness = level * (0.8 + 0.4 * math.noise(now * 5, seed))
+			light.Brightness = level * (0.8 + 0.4 * math.noise(now * 5, seed)) * night
 		else
-			light.Brightness = level * (0.85 + 0.15 * math.sin(now * 2 + seed))
+			light.Brightness = level * (0.85 + 0.15 * math.sin(now * 2 + seed)) * night
 		end
+		light.Enabled = night > 0
 	end, function(isNear)
-		light.Enabled = isNear
+		light.Enabled = isNear and DayCycle.night() > 0 and not Performance.get()
 	end)
 end
 
@@ -129,12 +133,14 @@ local function setupFire(part: BasePart)
 	local hot, cool = Color3.fromRGB(255, 190, 70), Color3.fromRGB(255, 100, 25)
 	register(part, function(now)
 		local wobble = math.noise(now * 6, 3) * 0.5 + 0.5
-		light.Brightness = 1.6 + wobble * 1.4
+		local night = DayCycle.night()
+		light.Brightness = (1.6 + wobble * 1.4) * night
+		light.Enabled = night > 0
 		part.Color = cool:Lerp(hot, wobble)
 	end, function(isNear)
 		flames.Enabled = isNear
 		embers.Enabled = isNear
-		light.Enabled = isNear
+		light.Enabled = isNear and DayCycle.night() > 0 and not Performance.get()
 	end)
 end
 
@@ -177,9 +183,11 @@ local function setupHotMetal(part: BasePart)
 		local flash = math.clamp(1 - (now - lastHit) / 0.35, 0, 1)
 		local beat = (math.sin(now * 3) + 1) / 2
 		part.Color = cool:Lerp(hot, math.max(flash, beat * 0.35))
-		light.Brightness = 0.8 + beat * 0.5 + flash * 2.5
+		local night = DayCycle.night()
+		light.Brightness = (0.8 + beat * 0.5 + flash * 2.5) * night
+		light.Enabled = night > 0
 	end, function(isNear)
-		light.Enabled = isNear
+		light.Enabled = isNear and DayCycle.night() > 0 and not Performance.get()
 	end)
 end
 

@@ -1,5 +1,6 @@
 -- Construye el hub y las parcelas, y asigna una parcela a cada jugador.
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -166,6 +167,27 @@ local function buildPlot(index: number, parent: Instance)
 	end
 
 	buildFence(model, cframe, index)
+
+	-- Luz repartida sobre el centro sin postes que estorben a los destructibles.
+	local lightCfg = Config.PlotLighting
+	for _, x in { -1, 1 } do
+		for _, z in { -1, 1 } do
+			local anchor = block(model, "PlotLight", Vector3.one, cframe * CFrame.new(x * cfg.Size * lightCfg.Offset, lightCfg.Height, z * cfg.Size * lightCfg.Offset), Color3.new(1, 1, 1))
+			anchor.Transparency = 1
+			anchor.CanCollide = false
+			anchor.CanQuery = false
+			anchor.CanTouch = false
+			anchor.CastShadow = false
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(255, 232, 202)
+			light.Brightness = 0
+			light.Enabled = false
+			light:SetAttribute("Base", lightCfg.Brightness)
+			light.Range = lightCfg.Range
+			light.Parent = anchor
+			CollectionService:AddTag(light, "NightLight")
+		end
+	end
 
 	-- Mira hacia dentro de la parcela.
 	local spawn = Instance.new("SpawnLocation")

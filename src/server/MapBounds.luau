@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Plots = require(script.Parent.Plots)
 
 local MapBounds = {}
@@ -62,6 +63,7 @@ local function sendHome(player: Player)
 	end
 	root.AssemblyLinearVelocity = Vector3.zero
 	character:PivotTo(plot.spawn.CFrame + Vector3.new(0, 4, 0))
+	Remotes.Teleported:FireClient(player, "home")
 end
 
 function MapBounds.start()

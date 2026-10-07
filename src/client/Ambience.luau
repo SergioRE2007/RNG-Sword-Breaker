@@ -5,6 +5,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local Performance = require(script.Parent.Performance)
 
 local Ambience = {}
@@ -134,7 +135,7 @@ function Ambience.start()
 
 	-- Mar: cada baldosa cambia de tono despacio, como reflejos que se mueven.
 	local sea = track("SeaTile", function(item)
-		return { color = (item :: BasePart).Color, phase = item:GetAttribute("Phase") or 0 }
+		return { color = (item :: BasePart).Color, cframe = (item :: BasePart).CFrame, phase = item:GetAttribute("Phase") or 0 }
 	end)
 	local seaClock = 0
 
@@ -393,9 +394,11 @@ function Ambience.start()
 		if seaClock >= 1 / 15 then
 			seaClock = 0
 			for tile, base in sea do
-				local glint = (math.sin(now * 0.9 + base.phase) + 1) / 2
+				local wave = math.sin(now * Config.Water.WaveSpeed + base.phase)
+				local glint = (wave + 1) / 2
 				local water = tile :: BasePart
 				water.Color = base.color:Lerp(Color3.fromRGB(150, 240, 245), glint * 0.4)
+				water.CFrame = base.cframe + Vector3.new(0, wave * Config.Water.WaveHeight, 0)
 			end
 		end
 

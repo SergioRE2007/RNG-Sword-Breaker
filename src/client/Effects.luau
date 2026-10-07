@@ -122,6 +122,13 @@ local function showHealth(part: BasePart)
 end
 
 local function shake(part: BasePart)
+	-- La caja sólida permanece inmóvil: sacudirla podía empujar al jugador hacia el suelo.
+	if part.CanCollide then
+		for _, child in part:GetDescendants() do
+			if child:IsA("BasePart") and not child.CanCollide then shake(child) end
+		end
+		return
+	end
 	local origin = part.CFrame
 	local nudge = Vector3.new(rng:NextNumber(-0.25, 0.25), 0, rng:NextNumber(-0.25, 0.25))
 	local tween = TweenService:Create(part, TweenInfo.new(0.05, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0, true), { CFrame = origin + nudge })

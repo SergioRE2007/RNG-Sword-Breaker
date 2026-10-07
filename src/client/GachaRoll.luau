@@ -842,7 +842,7 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 	end
 
 	summary.Text = EPIC_LINES[tier] or EPIC_LINES[#EPIC_LINES]
-	oddsLabel.Text = `1 ENTRE {Format.short(math.max(odds, 1))}`
+	oddsLabel.Text = Permanent.describeOdds(index, metal, size)
 	oddsLabel.TextColor3 = color:Lerp(WHITE, 0.3)
 	footer.Visible = true
 	oddsScale.Scale = 2.5
@@ -909,7 +909,7 @@ local function spin(index: number, kept: boolean, luck: number, metal: number?, 
 
 	-- Se para en la que ha tocado.
 	showSword(index, metal, size)
-	local text = `<font color="#{color:ToHex()}">{tierInfo.name}</font>  ·  1 entre {Format.short(math.max(odds, 1))}`
+	local text = `<font color="#{color:ToHex()}">{tierInfo.name}</font>  ·  {Permanent.describeOdds(index, metal, size)}`
 	if not kept then
 		text ..= `  ·  <font color="#{Ui.COLORS.orange:ToHex()}">vendida{if Config.Gacha.SellValue > 0 then ` +{Config.Gacha.SellValue}` else ""}</font>`
 	end
@@ -1190,6 +1190,12 @@ local function buildButtons(): (Frame, TextButton)
 		refreshAuto()
 	end)
 	refreshAuto()
+	Remotes.Teleported.OnClientEvent:Connect(function()
+		auto = false
+		skip = true
+		if overlay then overlay.Enabled = false end
+		refreshAuto()
+	end)
 	return bar, rollButton
 end
 

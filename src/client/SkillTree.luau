@@ -319,7 +319,10 @@ function SkillTree.start()
 	titleBack.Name = "TitleBack"
 	titleBack.AnchorPoint = Vector2.new(0.5, 0)
 	titleBack.Position = UDim2.new(0.5, 0, 0, 94)
-	titleBack.Size = UDim2.fromOffset(600, 68)
+	titleBack.Size = UDim2.new(0.9, 0, 0, 68)
+	local titleLimit = Instance.new("UISizeConstraint")
+	titleLimit.MaxSize = Vector2.new(600, 68)
+	titleLimit.Parent = titleBack
 	titleBack.BackgroundColor3 = WHITE
 	titleBack.BackgroundTransparency = 0.25
 	titleBack.ZIndex = Z_FRONT - 1
@@ -328,73 +331,56 @@ function SkillTree.start()
 	Ui.stroke(titleBack, Color3.new(0, 0, 0), 3)
 	Ui.panel(titleBack, Color3.fromRGB(34, 38, 70))
 	heading.AnchorPoint = Vector2.new(0.5, 0)
-	heading.Position = UDim2.new(0.5, 0, 0, 100)
-	heading.Size = UDim2.fromOffset(520, 34)
+	heading.Parent = titleBack
+	heading.Position = UDim2.new(0.5, 0, 0, 6)
+	heading.Size = UDim2.new(1, -24, 0, 34)
 	heading.Text = "Árbol de mejoras"
 	heading.ZIndex = Z_FRONT
 	Ui.gradient(heading, WHITE, Color3.fromRGB(170, 190, 255), 90)
-	local hint = Ui.label(overlay, 16)
+	local hint = Ui.label(titleBack, 16)
 	hint.AnchorPoint = Vector2.new(0.5, 0)
-	hint.Position = UDim2.new(0.5, 0, 0, 134)
-	hint.Size = UDim2.fromOffset(620, 22)
+	hint.Position = UDim2.new(0.5, 0, 0, 40)
+	hint.Size = UDim2.new(1, -16, 0, 22)
+	hint.TextScaled = true
+	local hintLimit = Instance.new("UITextSizeConstraint")
+	hintLimit.MaxTextSize = 16
+	hintLimit.Parent = hint
 	hint.Text = `<font color="{Ui.SOFT}">Arrastra para moverte · rueda o botones para acercar</font>`
 	hint.ZIndex = Z_FRONT
 
-	-- Botones de abajo.
-	local buyAll = Ui.button(overlay, "Mejorar todo", Ui.COLORS.green)
+	-- Una columna del HUD reserva espacio para resumen, zoom y acciones.
+	local actions = Instance.new("Frame")
+	actions.Name = "UpgradeActions"
+	actions.AnchorPoint = Vector2.new(1, 1)
+	actions.Position = UDim2.new(1, -14, 1, -14)
+	actions.Size = UDim2.fromOffset(300, 58)
+	actions.BackgroundTransparency = 1
+	actions.Visible = false
+	actions.Parent = Ui.hud()
+	local actionLayout = Instance.new("UIListLayout")
+	actionLayout.FillDirection = Enum.FillDirection.Horizontal
+	actionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	actionLayout.Padding = UDim.new(0.02, 0)
+	actionLayout.Parent = actions
+	local buyAll = Ui.button(actions, "Mejorar todo", Ui.COLORS.green)
 	buyAll.Name = "BuyAll"
-	buyAll.AnchorPoint = Vector2.new(1, 1)
-	buyAll.Position = UDim2.new(0.5, 70, 1, -28)
-	buyAll.Size = UDim2.fromOffset(300, 66)
-	buyAll.TextSize = 30
+	buyAll.LayoutOrder = 1
+	buyAll.Size = UDim2.fromScale(0.62, 1)
+	buyAll.TextSize = 22
 	buyAll.ZIndex = Z_FRONT
 	buyAll.Activated:Connect(function()
 		Remotes.BuyAllUpgrades:FireServer()
 	end)
 
-	local close = Ui.button(overlay, "Cerrar", Ui.COLORS.red)
+	local close = Ui.button(actions, "Cerrar", Ui.COLORS.red)
 	close.Name = "Close"
-	close.AnchorPoint = Vector2.new(0, 1)
-	close.Position = UDim2.new(0.5, 84, 1, -28)
-	close.Size = UDim2.fromOffset(170, 66)
-	close.TextSize = 28
+	close.LayoutOrder = 2
+	close.Size = UDim2.fromScale(0.36, 1)
+	close.TextSize = 22
 	close.ZIndex = Z_FRONT
 	close.Activated:Connect(function()
 		overlay.Visible = false
 	end)
-
-	-- Resumen de cada mejora, arriba a la derecha.
-	local summary = Instance.new("Frame")
-	summary.Name = "Summary"
-	summary.AnchorPoint = Vector2.new(1, 0)
-	summary.Position = UDim2.new(1, -16, 0, 100)
-	summary.Size = UDim2.fromOffset(290, 16 + #Config.UpgradeOrder * 40)
-	summary.BackgroundColor3 = WHITE
-	summary.BorderSizePixel = 0
-	summary.ZIndex = Z_FRONT - 1
-	summary.Parent = overlay
-	Ui.round(summary, 12)
-	Ui.stroke(summary, BLACK, 3)
-	Ui.panel(summary, Color3.fromRGB(46, 40, 92))
-	local summaryRows = {}
-	for row, name in Config.UpgradeOrder do
-		local upgrade = Config.Upgrades[name]
-		local dot = Instance.new("Frame")
-		dot.Position = UDim2.fromOffset(14, 8 + (row - 1) * 40 + 11)
-		dot.Size = UDim2.fromOffset(18, 18)
-		dot.Rotation = 45
-		dot.BackgroundColor3 = upgrade.color
-		dot.BorderSizePixel = 0
-		dot.ZIndex = Z_FRONT
-		dot.Parent = summary
-		Ui.stroke(dot, BLACK, 2)
-		local text = Ui.label(summary, 15)
-		text.Position = UDim2.fromOffset(44, 8 + (row - 1) * 40)
-		text.Size = UDim2.new(1, -52, 0, 40)
-		text.TextXAlignment = Enum.TextXAlignment.Left
-		text.ZIndex = Z_FRONT
-		summaryRows[name] = text
-	end
 
 	-- Mover y acercar -----------------------------------------------------------------------
 	local offset = Vector2.zero
@@ -414,11 +400,25 @@ function SkillTree.start()
 		place()
 	end
 
+	-- El HUD escala este contenedor igual que las estadísticas.
+	local zoomControls = Instance.new("Frame")
+	zoomControls.Name = "UpgradeControls"
+	zoomControls.AnchorPoint = Vector2.new(1, 1)
+	zoomControls.Position = UDim2.new(1, -14, 1, -86)
+	zoomControls.Size = UDim2.fromOffset(300, 58)
+	zoomControls.BackgroundTransparency = 1
+	zoomControls.Visible = false
+	zoomControls.Parent = Ui.hud()
+	local controlLayout = Instance.new("UIListLayout")
+	controlLayout.FillDirection = Enum.FillDirection.Horizontal
+	controlLayout.Padding = UDim.new(0.02, 0)
+	controlLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	controlLayout.Parent = zoomControls
+
 	local function zoomButton(text: string, order: number, action: () -> ())
-		local item = Ui.button(overlay, text, Ui.COLORS.blue)
-		item.AnchorPoint = Vector2.new(1, 1)
-		item.Position = UDim2.new(1, -16, 1, -28 - (order - 1) * 66)
-		item.Size = UDim2.fromOffset(if #text > 1 then 110 else 58, 58)
+		local item = Ui.button(zoomControls, text, Ui.COLORS.blue)
+		item.LayoutOrder = order
+		item.Size = UDim2.fromScale(0.235, 1)
 		item.TextSize = if #text > 1 then 20 else 34
 		item.ZIndex = Z_FRONT
 		item.Activated:Connect(action)
@@ -461,6 +461,12 @@ function SkillTree.start()
 			offset += Vector2.new(delta.X, delta.Y)
 			place()
 		elseif input.UserInputType == Enum.UserInputType.MouseWheel then
+			-- Desplazar el resumen no debe cambiar también el zoom del árbol.
+			local dock = Ui.hud():FindFirstChild("StatsDock")
+			if dock and dock.Visible then
+				local point, size = dock.AbsolutePosition, dock.AbsoluteSize
+				if input.Position.X >= point.X and input.Position.X <= point.X + size.X and input.Position.Y >= point.Y and input.Position.Y <= point.Y + size.Y then return end
+			end
 			local center = overlay.AbsolutePosition + overlay.AbsoluteSize / 2
 			setZoom(zoom * 1.15 ^ input.Position.Z, Vector2.new(input.Position.X, input.Position.Y) - center)
 		end
@@ -710,10 +716,6 @@ function SkillTree.start()
 				apply(name, index, state)
 			end
 
-			local price = if level >= upgrade.maxLevel
-				then `<font color="#6fe07a">al máximo</font>`
-				else `<font color="{if affordable then "#ffd24a" else Ui.SOFT}">sig. {Format.short(Upgrades.cost(name, level))}</font>`
-			summaryRows[name].Text = `{upgrade.short} <font color="{Ui.SOFT}">{level}/{upgrade.maxLevel}</font> · {Upgrades.display(name, level)}\n{price}`
 		end
 		buyAll.BackgroundColor3 = if canBuy then Ui.COLORS.green else Ui.COLORS.gray
 	end
@@ -785,6 +787,8 @@ function SkillTree.start()
 		if dock then
 			dock.Visible = overlay.Visible
 		end
+		zoomControls.Visible = overlay.Visible
+		actions.Visible = overlay.Visible
 		-- Las pociones activas ocupan ese mismo rincón: se esconden mientras las estadísticas están a la vista.
 		local potions = Ui.hud():FindFirstChild("Potions")
 		if potions then

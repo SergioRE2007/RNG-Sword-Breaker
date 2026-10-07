@@ -3,6 +3,7 @@
 -- deciden su vida, su premio y las tiradas de arma que da al romperse. Todo eso lo decide y lo guarda el servidor;
 -- los atributos de la pieza (Quality, Size, Scale, Luck, Rolls) son solo para que el cliente lo enseñe.
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Chance = require(ReplicatedStorage.Shared.Chance)
@@ -14,6 +15,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local PlayerData = require(script.Parent.PlayerData)
+local Hitbox = require(ReplicatedStorage.Shared.Hitbox)
 local Plots = require(script.Parent.Plots)
 
 local Destructibles = {}
@@ -41,8 +43,24 @@ local function rollDef(luck: number)
 end
 
 -- Posición libre en coordenadas de la parcela, o nil si no cabe.
-local function findPosition(plot, radius: number): Vector3?
+local function charactersClear(plot, position: Vector3, radius: number, height: number): boolean
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root then
+			local point = plot.cframe:PointToObjectSpace(root.Position)
+			local horizontal = Vector3.new(point.X, 0, point.Z) - position
+			if point.Y > -4 and point.Y < height + 4 and horizontal.Magnitude < radius + 4 then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+local function findPosition(plot, radius: number, height: number): Vector3?
 	local limit = Config.Plot.Size / 2 - 2 - radius
+	if limit <= 0 then return nil end
 	for _ = 1, 15 do
 		local position = Vector3.new(rng:NextNumber(-limit, limit), 0, rng:NextNumber(-limit, limit))
 		local free = (position - plot.spawnOffset).Magnitude > radius + 6
@@ -54,7 +72,7 @@ local function findPosition(plot, radius: number): Vector3?
 				end
 			end
 		end
-		if free then
+		if free and charactersClear(plot, position, radius, height) then
 			return position
 		end
 	end
@@ -84,35 +102,26 @@ end
 -- Sitio para ese objeto en la parcela: su tamaño, su radio y dónde va (nil si ahora no cabe).
 local function place(plot, spec): (Vector3, number, Vector3?)
 	local size = spec.def.size * spec.scale
-	local radius = math.max(size.X, size.Z) * 0.7
-	return size, radius, findPosition(plot, radius)
+	local radius = Vector2.new(size.X, size.Z).Magnitude / 2
+	return size, radius, findPosition(plot, radius, size.Y)
 end
 
 local function spawnIn(plot)
 	local owner = plot.owner
-	-- Un objeto grande puede no caber con la parcela llena. Lo que le había tocado no se vuelve a tirar (saldrían
-	-- menos de los grandes): se guarda y se intenta el primero cada vez. Mientras espera, siguen saliendo otros; si
-	-- uno de esos tampoco cabe, se queda guardado el mejor de los dos (el de más suerte).
+	-- Si no cabe o hay un personaje, espera con la misma tirada hasta tener sitio.
+	-- Volver a tirar aquí perdería los objetos raros o grandes cuando la parcela está ocupada.
 	local spec = pending[plot] or rollSpec(owner)
 	local size, radius, position = place(plot, spec)
 	if not position then
-		if not pending[plot] then
-			pending[plot] = spec
-			return
-		end
-		local fresh = rollSpec(owner)
-		local freshSize, freshRadius, freshPosition = place(plot, fresh)
-		if not freshPosition then
-			if fresh.luck > spec.luck then
-				pending[plot] = fresh
-			end
-			return
-		end
-		spec, size, radius, position = fresh, freshSize, freshRadius, freshPosition
-	else
-		pending[plot] = nil
+		pending[plot] = spec
+		return
 	end
+	pending[plot] = nil
 	local def = spec.def
+	if not charactersClear(plot, position, radius, size.Y) then
+		pending[plot] = spec
+		return
+	end
 
 	local part = Instance.new("Part")
 	part.Name = def.name
@@ -179,20 +188,7 @@ end
 -- Si un golpe dado desde `origin` llega a la pieza: a `range` de su punto más cercano y dentro del arco del
 -- arma (lo usan también los enemigos de las mazmorras).
 function Destructibles.reaches(part: BasePart, origin: CFrame, range: number, arc: number): boolean
-	local position = origin.Position
-	local half = part.Size / 2
-	local localPoint = part.CFrame:PointToObjectSpace(position)
-	local closest = part.CFrame * Vector3.new(
-		math.clamp(localPoint.X, -half.X, half.X),
-		math.clamp(localPoint.Y, -half.Y, half.Y),
-		math.clamp(localPoint.Z, -half.Z, half.Z)
-	)
-	local offset = closest - position
-	if offset.Magnitude > range then
-		return false
-	end
-	local flat = Vector3.new(offset.X, 0, offset.Z)
-	return arc <= -1 or flat.Magnitude < 2 or flat.Unit:Dot(origin.LookVector) >= arc
+	return Hitbox.reaches(part, origin, range, arc)
 end
 
 -- Objetos de la parcela del jugador que están a su alcance y delante de él.

@@ -54,7 +54,7 @@ local function broadcast(player: Player, entry)
 		Remotes.GachaAura:FireAllClients(player, entry.index, entry.odds)
 	end
 	if entry.odds >= Config.Gacha.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)} (1 entre {Format.short(entry.odds)})!`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
+		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)}! {Permanent.describeOdds(entry.index, entry.metal, entry.size)}`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
 	end
 end
 
@@ -89,7 +89,7 @@ local function warnFull(player: Player)
 end
 
 -- Saca una espada con la suerte `boost` del objeto que da la tirada (1 si no hay) por la suerte de armas propia
--- del jugador (Stats.gachaLuck) y la guarda como una copia más (se equipa si pega más que la actual). Ninguna otra
+-- del jugador (Stats.gachaLuck) y la guarda sin equiparla. Ninguna otra
 -- cosa multiplica esa suerte, y solo decide el arma: el metal y el tamaño se tiran con su probabilidad de siempre
 -- (por la suerte propia). Se vende sola si es menos rara que el límite de venta automática del jugador o el
 -- inventario está lleno de armas mejores que ella. Primero se guarda y después se le manda al jugador para que lo
@@ -130,8 +130,6 @@ local function draw(player: Player, boost: number, source: string, info)
 	end
 	local stored: number? = nil -- id de la copia guardada: solo lo pone quien de verdad la mete en sus datos
 	if rarity >= data.autoSell and (not full or spare ~= nil) then
-		local candidate = { sword = index, trait = 0, grade = 0, metal = metal, size = size }
-		local better = Stats.swordDamage(candidate) > Stats.swordDamage(Stats.equipped(player))
 		PlayerData.edit(player, function(edited)
 			if spare then
 				table.remove(edited.swords, spare)
@@ -140,9 +138,6 @@ local function draw(player: Player, boost: number, source: string, info)
 			local id = edited.nextSwordId
 			edited.nextSwordId += 1
 			table.insert(edited.swords, { id = id, sword = index, metal = if metal > 0 then metal else nil, size = if size > 0 then size else nil })
-			if better then
-				edited.equipped = id
-			end
 			stored = id
 		end)
 	end
@@ -153,6 +148,8 @@ local function draw(player: Player, boost: number, source: string, info)
 	local extra = if info then table.clone(info) else {}
 	extra.boost = boost
 	extra.odds = odds
+	extra.baseOdds = Config.Swords[index].rarity or 1
+	extra.modifierOdds = { metal = if metal > 0 then Config.Metals[metal].odds else 1, size = if size > 0 then Config.Sizes[size].odds else 1 }
 	extra.id = stored
 	Remotes.GachaRolled:FireClient(player, index, kept, luck, source, metal, size, extra)
 	Missions.add(player, "gacha")
@@ -234,18 +231,37 @@ local function onEquip(player: Player, id: unknown)
 	end
 end
 
-local function onSell(player: Player, id: unknown)
+local function onSellMany(player: Player, ids: unknown)
 	local data = PlayerData.read(player)
-	if not data or id == data.equipped then
+	if not data or type(ids) ~= "table" then
 		return
 	end
-	local _, position = PlayerData.findSword(data, id)
-	if position then
-		PlayerData.edit(player, function(edited)
-			table.remove(edited.swords, position)
-			edited.gems += Config.Gacha.SellValue
-		end)
+	local wanted, count = {}, 0
+	for _, id in ids do
+		count += 1
+		if count > Config.MaxSwords then return end
+		if type(id) ~= "number" or id ~= id or id <= 0 or id % 1 ~= 0 then return end
+		wanted[id] = true
 	end
+	local sold = 0
+	-- Sin esperas entre validar y retirar. El equipo se vuelve a comprobar en el estado real.
+	PlayerData.edit(player, function(edited)
+		for index = #edited.swords, 1, -1 do
+			local copy = edited.swords[index]
+			if wanted[copy.id] and copy.id ~= edited.equipped then
+				table.remove(edited.swords, index)
+				sold += 1
+			end
+		end
+		edited.gems += sold * Config.Gacha.SellValue
+	end)
+	if sold > 0 then
+		Remotes.Notice:FireClient(player, `Vendidas {sold} armas · +{Format.short(sold * Config.Gacha.SellValue)} gemas`, Config.RarityTiers[1].color)
+	end
+end
+
+local function onSell(player: Player, id: unknown)
+	onSellMany(player, { id })
 end
 
 local function onSetAutoSell(player: Player, rarity: unknown)
@@ -263,6 +279,7 @@ function Gacha.start()
 	Remotes.GachaRevealed.OnServerEvent:Connect(onRevealed)
 	Remotes.EquipSword.OnServerEvent:Connect(onEquip)
 	Remotes.SellSword.OnServerEvent:Connect(onSell)
+	Remotes.SellSwords.OnServerEvent:Connect(onSellMany)
 	Remotes.SetAutoSell.OnServerEvent:Connect(onSetAutoSell)
 	game:GetService("Players").PlayerRemoving:Connect(function(player)
 		lastRoll[player] = nil
