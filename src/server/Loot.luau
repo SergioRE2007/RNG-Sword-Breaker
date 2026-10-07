@@ -13,6 +13,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Armor = require(script.Parent.Armor)
 local PlayerData = require(script.Parent.PlayerData)
+local Potions = require(script.Parent.Potions)
 
 local Loot = {}
 
@@ -40,6 +41,15 @@ function handlers.armor(player: Player, drop, context, summary)
 	local piece, kept = Armor.give(player, context.level, (context.qualityLuck or 1) * (drop.luck or 1))
 	if piece and summary then
 		table.insert(summary.armor, { name = ArmorStats.name(piece), quality = piece.quality, kept = kept })
+	end
+end
+
+-- Poción (Config.Potions): cuál sale lo deciden los pesos del nivel de contenido de la mazmorra (Config.Potions.Pools).
+function handlers.potion(player: Player, _drop, context, summary)
+	local cfg = Config.Potions
+	local key = Potions.drop(player, "dungeon", cfg.DungeonLevel[context.level] or #cfg.Pools.dungeon)
+	if key and summary then
+		summary.items[key] = (summary.items[key] or 0) + 1
 	end
 end
 

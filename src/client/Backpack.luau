@@ -9,6 +9,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
+local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -16,6 +17,7 @@ local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 local ArmorPane = require(script.Parent.ArmorPane)
+local Potions = require(script.Parent.Potions)
 
 local Backpack = {}
 
@@ -531,7 +533,7 @@ function Backpack.start()
 	end
 
 	-- Objetos ---------------------------------------------------------------------------
-	local itemGrid = grid(panes.Items, UDim2.fromOffset(8, 8), UDim2.new(1, -16, 1, -16))
+	local itemGrid = grid(panes.Items, UDim2.fromOffset(8, 8), UDim2.new(1, -16, 1, -92))
 	local itemLabels = {}
 	for order, name in Config.ItemOrder do
 		local item = Config.Items[name]
@@ -543,6 +545,94 @@ function Backpack.start()
 		Ui.tip(cell, function()
 			return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>\n<font color="{Ui.SOFT}">Se usa en la pestaña Espadas.</font>`, item.color
 		end)
+	end
+
+	-- Pociones (Config.Potions): salen en la misma cuadrícula, solo las que se tienen, agrupadas por familia y de la mejor a
+	-- la peor. Se elige una y se usa con el botón de abajo; el servidor decide qué pasa (activa, mejora, suma tiempo...).
+	local potionCells = {} -- [clave del objeto] = casilla (se crea la primera vez que se tiene una)
+	local selectedPotion: string? = nil
+	local potionBar = Instance.new("Frame")
+	potionBar.Name = "PotionBar"
+	potionBar.AnchorPoint = Vector2.new(0, 1)
+	potionBar.Position = UDim2.new(0, 4, 1, -2)
+	potionBar.Size = UDim2.new(1, -8, 0, 74)
+	potionBar.BackgroundColor3 = Color3.new(1, 1, 1)
+	potionBar.BorderSizePixel = 0
+	potionBar.Parent = panes.Items
+	Ui.round(potionBar, 10)
+	Ui.stroke(potionBar, Color3.new(0, 0, 0), 2)
+	Ui.panel(potionBar, Color3.fromRGB(46, 42, 78))
+	local potionDetail = Ui.label(panes.Items, 18)
+	potionDetail.Name = "PotionDetail"
+	potionDetail.AnchorPoint = Vector2.new(0, 1)
+	potionDetail.Position = UDim2.new(0, 14, 1, -8)
+	potionDetail.Size = UDim2.new(1, -190, 0, 62)
+	potionDetail.TextXAlignment = Enum.TextXAlignment.Left
+	potionDetail.TextWrapped = true
+	local useButton = Ui.button(panes.Items, "Usar", Ui.COLORS.gray)
+	useButton.Name = "UsePotion"
+	useButton.AnchorPoint = Vector2.new(1, 1)
+	useButton.Position = UDim2.new(1, -12, 1, -8)
+	useButton.Size = UDim2.fromOffset(150, 62)
+	useButton.TextSize = 26
+	useButton.Activated:Connect(function()
+		local item = if selectedPotion then Config.Items[selectedPotion] else nil
+		if item and item.potion then
+			Remotes.UsePotion:FireServer(item.potion.family, item.potion.tier)
+		end
+	end)
+
+	local function refreshPotions()
+		local order = Config.Potions.Order
+		for _, key in Config.Potions.ItemKeys do
+			local count = player:GetAttribute("Item_" .. key) or 0
+			local cell = potionCells[key]
+			local item = Config.Items[key]
+			local family, tier = item.potion.family, item.potion.tier
+			if count > 0 and not cell then
+				cell = Ui.cell(itemGrid, item.color, tier)
+				cell.Name = "Potion_" .. key
+				cell.LayoutOrder = 100 + (table.find(order, family) :: number) * 10 + (9 - tier)
+				Potions.icon(cell, family)
+				Potions.addTag(cell, tier, true)
+				Ui.cellLabel(cell, "")
+				Ui.tip(cell, function()
+					return Potions.tip(family, tier, player:GetAttribute("Item_" .. key) or 0), item.color
+				end, true)
+				cell.Activated:Connect(function()
+					selectedPotion = key
+					refreshPotions()
+				end)
+				popIn(cell, 0)
+				potionCells[key] = cell
+			end
+			if cell then
+				cell.Visible = count > 0
+				cell.Select.Visible = key == selectedPotion and count > 0
+				local amount = cell:FindFirstChild("Label") :: TextLabel
+				amount.Text = "x" .. Format.short(count)
+				if count <= 0 and selectedPotion == key then
+					selectedPotion = nil
+				end
+			end
+		end
+		local chosen = if selectedPotion then Config.Items[selectedPotion] else nil
+		if chosen then
+			local family, tier = chosen.potion.family, chosen.potion.tier
+			local activeTier = Stats.potionTier(player, family)
+			local lines = {
+				`<font size="22" color="{hex(PotionInfo.color(tier))}">{chosen.name}</font>`,
+				`<font color="{Ui.SOFT}">{PotionInfo.effect(family, tier)} · {PotionInfo.minutes(PotionInfo.duration(tier))} · tienes x{Format.short(player:GetAttribute("Item_" .. selectedPotion) or 0)}</font>`,
+			}
+			if activeTier > 0 then
+				table.insert(lines, `<font color="{hex(PotionInfo.color(activeTier))}">Activa ahora: {PotionInfo.tierName(activeTier)}</font>`)
+			end
+			potionDetail.Text = table.concat(lines, "\n")
+			useButton.BackgroundColor3 = Ui.COLORS.green
+		else
+			potionDetail.Text = `<font color="{Ui.SOFT}">Las pociones dan un empujón temporal mientras juegas. Elige una para ver qué hace y usarla.</font>`
+			useButton.BackgroundColor3 = Ui.COLORS.gray
+		end
 	end
 
 	-- Equipo ----------------------------------------------------------------------------
@@ -658,6 +748,7 @@ function Backpack.start()
 		for name, text in itemLabels do
 			text.Text = "x" .. Format.short(player:GetAttribute("Item_" .. name) or 0)
 		end
+		refreshPotions()
 
 		local artifacts = Stats.list(player, "Artifacts")
 		local worn = Stats.list(player, "Gear")
