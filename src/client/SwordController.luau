@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
+local ForgeScene = require(script.Parent.ForgeScene)
 local SwingAnim = require(script.Parent.SwingAnim)
 
 local SwordController = {}
@@ -13,6 +14,10 @@ local hooked = setmetatable({}, { __mode = "k" })
 local lastSwing = 0
 
 local function swing(tool: Tool)
+	-- En la forja el clic es el martillazo: ni animación de ataque ni espadazo (el servidor tampoco se entera).
+	if ForgeScene.isActive() then
+		return
+	end
 	local now = os.clock()
 	local cooldown = Stats.cooldown(player)
 	if now - lastSwing < cooldown then

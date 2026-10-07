@@ -1109,6 +1109,11 @@ function ForgeScene.exit()
 	end
 end
 
+-- ¿Está la escena de la forja activa? Mientras lo está, el clic es el martillazo y SwordController no da espadazos.
+function ForgeScene.isActive(): boolean
+	return active
+end
+
 function ForgeScene.toggle()
 	if active then
 		ForgeScene.exit()

@@ -170,10 +170,10 @@ function Settings.start()
 	end)
 	paintSell()
 
-	-- Botón con engranaje, arriba a la izquierda (bajo los botones de Roblox, que ocupan la esquina).
+	-- Botón con engranaje, arriba a la izquierda, a la derecha del botón del chat y con más margen que antes (pedido por el usuario).
 	local button = Ui.button(gui, "", Ui.COLORS.gray)
 	button.Name = "SettingsButton"
-	button.Position = UDim2.fromOffset(168, 14) -- a la derecha del botón del chat
+	button.Position = UDim2.fromOffset(196, 14)
 	button.Size = UDim2.fromOffset(44, 44)
 	Ui.gearIcon(button)
 	Ui.shadow(button)
