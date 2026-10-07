@@ -82,7 +82,7 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 	-- Poción de suerte de rasgo (en la Mesa) o de grado (en la Forja): sube el peso de lo raro, no el de todo por igual.
 	local luck = Stats.potion(player, if kind == "traits" then "traitLuck" else "rankLuck")
 	for _ = 1, tries do
-		local rolled = Modifiers.roll(kind, random, luck)
+		local rolled = Modifiers.rollWithPity(kind, random, luck, data.pity[kind], order)
 		table.insert(rolls, rolled)
 		if not index or Modifiers.better(kind, rolled, index, order) then
 			index = rolled

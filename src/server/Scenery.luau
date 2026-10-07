@@ -179,6 +179,7 @@ local function buildSea(parent: Instance, islandRadius: number)
 		baseplate.CFrame = CFrame.new(0, -baseplate.Size.Y / 2, 0)
 		baseplate.Material = Enum.Material.SmoothPlastic
 		baseplate.Color = SEA[1]
+		baseplate.Transparency = 1 -- conserva el suelo invisible para no cambiar las f?sicas
 		for _, child in baseplate:GetChildren() do
 			if child:IsA("Texture") or child:IsA("Decal") then
 				child.Transparency = 1
@@ -197,12 +198,16 @@ local function buildSea(parent: Instance, islandRadius: number)
 		end
 	end
 
+	-- Fondo oscuro separado de la superficie transl?cida.
+	decor(part(parent, "Seabed", Vector3.new(1920, 0.5, 1920), CFrame.new(0, -Config.Water.Depth, 0), SEA[1]:Lerp(Color3.new(0, 0, 0), 0.65), Enum.Material.SmoothPlastic))
 	local cell = 80
 	for row = -12, 11 do
 		for column = -12, 11 do
 			local center = Vector3.new((column + 0.5) * cell, 0, (row + 0.5) * cell)
 			if center.Magnitude > islandRadius - cell * 0.4 then
-				local tile = decor(part(parent, "Sea", Vector3.new(cell, 0.1, cell), CFrame.new(center + Vector3.new(0, 0.03, 0)), SEA[(row + column) % 2 + 1], Enum.Material.SmoothPlastic))
+				local tile = decor(part(parent, "Sea", Vector3.new(cell, Config.Water.Depth, cell), CFrame.new(center + Vector3.new(0, 0.03 - Config.Water.Depth / 2, 0)), SEA[(row + column) % 2 + 1], Enum.Material.Glass))
+				tile.Transparency = Config.Water.Transparency
+				tile.Reflectance = 0.08
 				tile:SetAttribute("Phase", row * 0.7 + column * 1.1)
 				CollectionService:AddTag(tile, "SeaTile")
 			end
@@ -286,6 +291,14 @@ local function lamp(parent: Instance, position: Vector3, color: Color3)
 	part(parent, "Post", Vector3.new(0.8, 6, 0.8), CFrame.new(position + Vector3.new(0, 3, 0)), Color3.fromRGB(250, 250, 255), Enum.Material.SmoothPlastic)
 	local bulb = part(parent, "Bulb", Vector3.one * 2, CFrame.new(position + Vector3.new(0, 6.6, 0)), color, Enum.Material.SmoothPlastic)
 	bulb.Shape = Enum.PartType.Ball
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 22
+	light:SetAttribute("Base", 1.2)
+	light.Brightness = 0
+	light.Enabled = false
+	light.Parent = bulb
+	CollectionService:AddTag(light, "NightLight")
 end
 
 -- Estandarte: mástil con una bandera triangular que ondea (el cliente la mece con la etiqueta Sway).

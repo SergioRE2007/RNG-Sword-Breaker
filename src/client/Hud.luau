@@ -19,6 +19,7 @@ local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
+local ForgeScene = require(script.Parent.ForgeScene)
 
 local Hud = {}
 
@@ -204,6 +205,12 @@ function Hud.start()
 	flash.BorderSizePixel = 0
 	flash.ZIndex = 50
 	flash.Parent = gui
+	Remotes.Teleported.OnClientEvent:Connect(function()
+		ForgeScene.exit()
+		Ui.closeAll()
+		flash.BackgroundTransparency = 0.2
+		TweenService:Create(flash, TweenInfo.new(0.45), { BackgroundTransparency = 1 }):Play()
+	end)
 
 	local destinations = {
 		{ "hub", "Hub", Color3.fromRGB(255, 175, 40), function(parent)
@@ -234,8 +241,6 @@ function Hud.start()
 		Ui.sparkle(button, 5)
 		button.Activated:Connect(function()
 			Remotes.Teleport:FireServer(entry[1])
-			flash.BackgroundTransparency = 0.2
-			TweenService:Create(flash, TweenInfo.new(0.45), { BackgroundTransparency = 1 }):Play()
 		end)
 	end
 
@@ -244,16 +249,18 @@ function Hud.start()
 	local dock = Instance.new("Frame")
 	dock.Name = "StatsDock"
 	dock.AnchorPoint = Vector2.new(1, 1)
-	dock.Position = UDim2.new(1, -MARGIN, 1, -MARGIN)
-	dock.Size = UDim2.fromOffset(300, 0)
-	dock.AutomaticSize = Enum.AutomaticSize.Y
+	dock.Position = UDim2.new(1, -MARGIN, 1, -158)
+	dock.Size = UDim2.new(0, 300, 0.65, -158)
 	dock.BackgroundTransparency = 1
 	dock.Parent = gui
 
-	local statsBox = Instance.new("Frame")
+	local statsBox = Instance.new("ScrollingFrame")
 	statsBox.Name = "Stats"
-	statsBox.Size = UDim2.fromOffset(300, 0)
-	statsBox.AutomaticSize = Enum.AutomaticSize.Y
+	statsBox.Size = UDim2.fromScale(1, 1)
+	statsBox.CanvasSize = UDim2.new()
+	statsBox.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	statsBox.ScrollBarThickness = 6
+	statsBox.BorderSizePixel = 0
 	statsBox.BackgroundColor3 = WHITE
 	statsBox.Parent = dock
 
@@ -266,7 +273,7 @@ function Hud.start()
 	-- Las filas van en un marco de dentro: el relleno y la lista no deben mover el brillo ni el canto del panel.
 	local statsContent = Instance.new("Frame")
 	statsContent.Name = "Content"
-	statsContent.Size = UDim2.fromScale(1, 0)
+	statsContent.Size = UDim2.new(1, -8, 0, 0)
 	statsContent.AutomaticSize = Enum.AutomaticSize.Y
 	statsContent.BackgroundTransparency = 1
 	statsContent.Parent = statsBox

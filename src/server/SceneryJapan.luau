@@ -141,6 +141,7 @@ local function buildLake(parent: Instance, islandRadius: number)
 		baseplate.CFrame = CFrame.new(0, -baseplate.Size.Y / 2, 0)
 		baseplate.Material = Enum.Material.SmoothPlastic
 		baseplate.Color = LAKE[1]
+		baseplate.Transparency = 1 -- conserva el suelo invisible para no cambiar las f?sicas
 		for _, child in baseplate:GetChildren() do
 			if child:IsA("Texture") or child:IsA("Decal") then
 				child.Transparency = 1
@@ -157,12 +158,16 @@ local function buildLake(parent: Instance, islandRadius: number)
 			end
 		end
 	end
+	-- Fondo oscuro separado de la superficie transl?cida.
+	decor(part(parent, "Seabed", Vector3.new(1920, 0.5, 1920), CFrame.new(0, -Config.Water.Depth, 0), LAKE[1]:Lerp(Color3.new(0, 0, 0), 0.65), Enum.Material.SmoothPlastic))
 	local cell = 80
 	for row = -12, 11 do
 		for column = -12, 11 do
 			local center = Vector3.new((column + 0.5) * cell, 0, (row + 0.5) * cell)
 			if center.Magnitude > islandRadius - cell * 0.4 then
-				local tile = decor(part(parent, "Sea", Vector3.new(cell, 0.1, cell), CFrame.new(center + Vector3.new(0, 0.03, 0)), LAKE[(row + column) % 2 + 1], Enum.Material.SmoothPlastic))
+				local tile = decor(part(parent, "Sea", Vector3.new(cell, Config.Water.Depth, cell), CFrame.new(center + Vector3.new(0, 0.03 - Config.Water.Depth / 2, 0)), LAKE[(row + column) % 2 + 1], Enum.Material.Glass))
+				tile.Transparency = Config.Water.Transparency
+				tile.Reflectance = 0.08
 				tile:SetAttribute("Phase", row * 0.7 + column * 1.1)
 				CollectionService:AddTag(tile, "SeaTile")
 			end
@@ -229,10 +234,13 @@ local function lit(model: Model?, brightness: number, range: number)
 	if paper then
 		local light = Instance.new("PointLight")
 		light.Color = Color3.fromRGB(255, 190, 110)
-		light.Brightness = brightness
+		light:SetAttribute("Base", brightness)
+		light.Brightness = 0
+		light.Enabled = false
 		light.Range = range
 		light.Parent = paper
 		CollectionService:AddTag(paper, "LanternGlow") -- el cliente (JapanFx) la hace latir
+		CollectionService:AddTag(light, "NightLight")
 	end
 end
 
@@ -282,8 +290,12 @@ end
 local function pond(parent: Instance, center: Vector3, radius: number)
 	disc(parent, "PondEdge", center, radius + 2.2, 0.2, 0.55, Color3.fromRGB(196, 200, 218), Enum.Material.SmoothPlastic)
 	local water = disc(parent, "Pond", center, radius, 0.3, 0.7, Color3.fromRGB(86, 214, 238), Enum.Material.Glass)
-	water.Transparency = 0.25
+	water.Transparency = Config.Water.Transparency
 	water.CanCollide = false
+	water.CanQuery = false
+	water:SetAttribute("Phase", center.X * 0.07 + center.Z * 0.11)
+	CollectionService:AddTag(water, "SeaTile")
+	decor(disc(parent, "PondBed", center, radius, 0.31, 0.35, Color3.fromRGB(26, 82, 98), Enum.Material.SmoothPlastic))
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(radius * 0.25, 0.7, -radius * 0.2)) * turn(), 1.2)
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(-radius * 0.35, 0.7, radius * 0.3)) * turn(), 1.0)
 	local turnBridge = rng:NextNumber(0, math.pi)
@@ -323,18 +335,6 @@ local function tree(parent: Instance, position: Vector3)
 	local name = TREES[rng:NextInteger(1, #TREES)]
 	local scale = rng:NextNumber(3.0, 4.5)
 	PropModel.place(parent, name, CFrame.new(position) * turn(), scale)
-	-- Hitbox del tronco: cilindro invisible que bloquea el paso.
-	local trunk = Instance.new("Part")
-	trunk.Name = "TreeTrunk"
-	trunk.Shape = Enum.PartType.Cylinder
-	trunk.Size = Vector3.new(10 * scale, 2.6 * scale, 2.6 * scale)
-	trunk.CFrame = CFrame.new(position + Vector3.new(0, 5 * scale, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-	trunk.Anchored = true
-	trunk.CanCollide = true
-	trunk.CanQuery = false
-	trunk.CanTouch = false
-	trunk.Transparency = 1
-	trunk.Parent = parent
 	if name ~= "Pine" then
 		petals(parent, position, 14, 9)
 	end

@@ -93,6 +93,12 @@ local function platform(parent: Instance, name: string, y: number, text: string,
 	light.Range = 14
 	light.Brightness = 0.2
 	light.Parent = pad
+	if y == TOP then
+		light:SetAttribute("Base", light.Brightness)
+		light.Brightness = 0
+		light.Enabled = false
+		CollectionService:AddTag(light, "NightLight")
+	end
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = text
 	prompt.ObjectText = "Ascensor de luz"

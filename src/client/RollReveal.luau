@@ -331,13 +331,9 @@ local function buildLabel(folder: Instance, anchor: BasePart, roll, level: numbe
 	local nameColor = if roll.metal and roll.metal > 0 then Config.Metals[roll.metal].color else sword.color
 	table.insert(texts, textLine(root, 3, 21, 26, Permanent.name(roll.index, roll.metal, roll.size), nameColor:Lerp(WHITE, 0.4)))
 
-	-- Lo difícil que era (desde Buena) y si se ha vendido sola.
+	-- La etiqueta usa la probabilidad base; la dificultad efectiva solo decide el espectáculo.
 	local detail = {}
-	if level >= 4 then
-		table.insert(detail, `<font color="#{GOLD:ToHex()}">¡1 ENTRE {Format.short(odds)}!</font>`)
-	elseif level >= 2 then
-		table.insert(detail, `<font color="{Ui.SOFT}">1 entre {Format.short(odds)}</font>`)
-	end
+	table.insert(detail, `<font color="{Ui.SOFT}">{Permanent.describeOdds(roll.index, roll.metal, roll.size)}</font>`)
 	if not roll.kept then
 		table.insert(detail, `<font color="#{Ui.COLORS.orange:ToHex()}">vendida</font>`)
 	end
@@ -702,7 +698,7 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 			end
 			collect(roll, level, color)
 			if level >= 4 then
-				Ui.toast(`¡{Permanent.name(roll.index, roll.metal, roll.size)}!\n{tier.name} · 1 entre {Format.short(odds)}`, color)
+		Ui.toast(`¡{Permanent.name(roll.index, roll.metal, roll.size)}!\n{Permanent.describeOdds(roll.index, roll.metal, roll.size)}`, color)
 			end
 		end
 		alive = false
@@ -766,7 +762,7 @@ local function shortcut(roll)
 		collect(roll, level, tier.color)
 	end
 	if level >= 3 then
-		Ui.toast(`¡{Permanent.name(roll.index, roll.metal, roll.size)}!\n{tier.name} · 1 entre {Format.short(roll.odds)}`, tier.color)
+		Ui.toast(`¡{Permanent.name(roll.index, roll.metal, roll.size)}!\n{Permanent.describeOdds(roll.index, roll.metal, roll.size)}`, tier.color)
 	end
 end
 

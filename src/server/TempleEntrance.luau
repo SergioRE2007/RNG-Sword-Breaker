@@ -73,11 +73,13 @@ local function lampLight(model: Model?)
 	if paper then
 		local light = Instance.new("PointLight")
 		light.Color = VIOLET
-		light.Brightness = 0.08
+		light.Brightness = 0
+		light.Enabled = false
 		light.Range = 8
 		light:SetAttribute("Base", 0.1) -- brillo casi mínimo: el cliente (JapanFx) lo escala por la noche
 		light.Parent = paper
 		CollectionService:AddTag(paper, "LanternGlow")
+		CollectionService:AddTag(light, "NightLight")
 	end
 end
 

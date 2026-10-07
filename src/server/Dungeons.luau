@@ -287,6 +287,7 @@ local function detach(run, member, bringBack: boolean)
 				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 				if humanoid and humanoid.Health > 0 then
 					character:PivotTo(returnPoint(run, member))
+					Remotes.Teleported:FireClient(player, "dungeon")
 				end
 			end
 		end
@@ -374,6 +375,7 @@ local function restart(old, survivors: { Player }, ghosts: number)
 				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 				if humanoid and humanoid.Health > 0 then
 					character:PivotTo(returnPoint(old, { slot = number }))
+					Remotes.Teleported:FireClient(player, "dungeon")
 				end
 			end
 		end
@@ -658,6 +660,7 @@ function launch(players: { Player }, index: number, opts: { ghosts: number?, onE
 		local turn = (joined - 1) / math.max(#players, 1) * math.pi * 2
 		local spot = origin + Vector3.new(math.cos(turn) * 7, 4, math.sin(turn) * 7)
 		character:PivotTo(if #players == 1 then CFrame.new(origin + Vector3.new(0, 4, 0)) else CFrame.lookAt(spot, origin + Vector3.new(0, 4, 0)))
+		Remotes.Teleported:FireClient(player, "dungeon")
 		humanoid.Health = humanoid.MaxHealth
 	end
 	if run.ended then

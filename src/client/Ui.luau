@@ -844,6 +844,13 @@ function Ui.anyOpen(): boolean
 	return false
 end
 
+-- Pasa por Visible para ejecutar la limpieza propia de cada ventana (comercio, tiradas, etc.).
+function Ui.closeAll()
+	for _, frame in windows do
+		frame.Visible = false
+	end
+end
+
 -- Casillas ------------------------------------------------------------------------------
 
 -- Marcos animados de las casillas según el nivel de rareza (posición en Config.RarityTiers):

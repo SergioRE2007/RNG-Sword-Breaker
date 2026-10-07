@@ -126,6 +126,40 @@ function Modifiers.better(kind: string, a: number, b: number, priority: { string
 	return rankA < rankB
 end
 
+-- Pity por resultado: porcentajes base normalizados, sin pociones.
+function Modifiers.pityLimit(kind: string, index: number): number
+	return math.ceil(Modifiers.odds(kind, index))
+end
+
+function Modifiers.newPity(saved): { [string]: { number } }
+	local pity = {}
+	for _, kind in { "traits", "grades" } do
+		local counters = {}
+		local old = if type(saved) == "table" and type(saved[kind]) == "table" then saved[kind] else {}
+		for index in Modifiers.KINDS[kind].list do
+			local value = tonumber(old[index] or old[tostring(index)]) or 0
+			counters[index] = if value == value then math.clamp(math.floor(value), 0, Modifiers.pityLimit(kind, index)) else 0
+		end
+		pity[kind] = counters
+	end
+	return pity
+end
+
+-- Cada llamada es una tirada pagada, incluso dentro de un lote. Las garantías que coinciden quedan pendientes.
+function Modifiers.rollWithPity(kind: string, random: Random, luck: number, counters: { number }, priority: { string }): number
+	local guaranteed = nil
+	for index in Modifiers.KINDS[kind].list do
+		local limit = Modifiers.pityLimit(kind, index)
+		counters[index] = math.min((counters[index] or 0) + 1, limit)
+		if counters[index] >= limit and (not guaranteed or Modifiers.better(kind, index, guaranteed, priority)) then
+			guaranteed = index
+		end
+	end
+	local result = guaranteed or Modifiers.roll(kind, random, luck)
+	counters[result] = 0
+	return result
+end
+
 -- "x1.5 Monedas · x1.5 Daño" (solo lo que sube).
 function Modifiers.effect(entry): string
 	local parts = {}

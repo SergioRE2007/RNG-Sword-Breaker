@@ -395,6 +395,9 @@ local function buildFeedback()
 	card.Visible = false
 	card.ZIndex = Z_RESULT
 	card.Parent = gui
+	Remotes.Teleported.OnClientEvent:Connect(function()
+		card.Visible = false
+	end)
 	Ui.round(card, 16)
 	Ui.stroke(card, BLACK, 5)
 	Ui.panel(card, Color3.fromRGB(54, 50, 104))
