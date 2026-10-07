@@ -170,11 +170,10 @@ function Settings.start()
 	end)
 	paintSell()
 
-	-- Botón con engranaje, en la esquina de arriba a la derecha (pedido por el usuario).
+	-- Botón con engranaje, arriba a la izquierda, a la derecha del botón del chat y con más margen que antes (pedido por el usuario).
 	local button = Ui.button(gui, "", Ui.COLORS.gray)
 	button.Name = "SettingsButton"
-	button.AnchorPoint = Vector2.new(1, 0)
-	button.Position = UDim2.new(1, -14, 0, 14)
+	button.Position = UDim2.fromOffset(196, 14)
 	button.Size = UDim2.fromOffset(44, 44)
 	Ui.gearIcon(button)
 	Ui.shadow(button)
