@@ -21,6 +21,7 @@ local cfg = Config.Potions
 
 local TILE_W, TILE_H = 62, 74 -- casilla de la tira, en píxeles del HUD (que ya se escala solo en pantallas pequeñas)
 local GAP = 8
+local COLUMNS = 3
 local LOW_COLOR = Color3.fromRGB(255, 110, 100)
 
 local function hex(color: Color3): string
@@ -95,21 +96,19 @@ end
 function Potions.start()
 	local gui = Ui.hud()
 
-	-- A la derecha del bloque de monedas y gemas (se mide de su cuadro, no de un número): pegada al borde de abajo.
-	local coins = gui:FindFirstChild("Coins") :: GuiObject?
-	local left = if coins then coins.Position.X.Offset + coins.Size.X.Offset + 14 else 298
+	-- Abajo a la derecha (pedido por el usuario), en 3 columnas: con las seis activas salen 2 filas de 3. Pegada al
+	-- borde; con menos, las filas se llenan desde la derecha y crecen hacia arriba.
 	local strip = Instance.new("Frame")
 	strip.Name = "Potions"
-	strip.AnchorPoint = Vector2.new(0, 1)
-	strip.Position = UDim2.new(0, left, 1, -14)
-	-- Ancho: lo que queda hasta el borde derecho. Si no caben las seis (pantalla estrecha), las casillas pasan a una
-	-- segunda fila en vez de salirse de la pantalla.
-	strip.Size = UDim2.new(1, -(left + 14), 0, TILE_H + 6)
+	strip.AnchorPoint = Vector2.new(1, 1)
+	strip.Position = UDim2.new(1, -14, 1, -14)
+	strip.Size = UDim2.fromOffset(COLUMNS * TILE_W + (COLUMNS - 1) * GAP, 0)
 	strip.AutomaticSize = Enum.AutomaticSize.Y
 	strip.BackgroundTransparency = 1
 	strip.Parent = gui
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 	layout.Wraps = true
 	layout.Padding = UDim.new(0, GAP)

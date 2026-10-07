@@ -785,6 +785,11 @@ function SkillTree.start()
 		if dock then
 			dock.Visible = overlay.Visible
 		end
+		-- Las pociones activas ocupan ese mismo rincón: se esconden mientras las estadísticas están a la vista.
+		local potions = Ui.hud():FindFirstChild("Potions")
+		if potions then
+			potions.Visible = not overlay.Visible
+		end
 		if overlay.Visible then
 			refresh()
 			if not animation then
