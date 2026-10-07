@@ -185,7 +185,7 @@ function TempleEntrance.start()
 		end
 		local sign = entrance:FindFirstChild("Sign")
 		if sign and sign:IsA("BasePart") then
-			sign.CFrame = CFrame.new(0, top + 10, 0)
+			sign.CFrame = CFrame.new(0, top + 40, 0) -- el remate del templo llega a top + 43; el texto sale 13 más arriba
 		end
 	end
 

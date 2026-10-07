@@ -1479,7 +1479,12 @@ function ModifierShops.start()
 			billboard.StudsOffset = Vector3.new(0, (billboard:GetAttribute("SignHeight") or 13) + wave * 0.5, 0)
 			local label = billboard:FindFirstChildOfClass("TextLabel")
 			if label then
-				label.TextSize = 48 * (1 + wave * 0.06)
+				-- Fuente según la distancia: máxima de cerca (hasta 35 studs), se encoge al alejarse y no baja del mínimo.
+				local maxSize = billboard:GetAttribute("TextMax") or 40
+				local minSize = billboard:GetAttribute("TextMin") or 18
+				local anchor = billboard.Parent :: BasePart
+				local distance = (anchor.Position - workspace.CurrentCamera.CFrame.Position).Magnitude
+				label.TextSize = math.clamp(maxSize * 35 / math.max(distance, 1), minSize, maxSize) * (1 + wave * 0.06)
 				local gradient = label:FindFirstChildOfClass("UIGradient")
 				if gradient then
 					gradient.Rotation = (now * 90) % 360
