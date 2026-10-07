@@ -780,10 +780,10 @@ function SkillTree.start()
 	end
 
 	overlay:GetPropertyChangedSignal("Visible"):Connect(function()
-		-- El resumen de la pantalla ya enseña lo mismo que las estadísticas de abajo a la derecha: se esconden mientras está abierta.
+		-- Las estadísticas de abajo a la derecha solo se ven mientras esta pantalla está abierta.
 		local dock = Ui.hud():FindFirstChild("StatsDock")
 		if dock then
-			dock.Visible = not overlay.Visible
+			dock.Visible = overlay.Visible
 		end
 		if overlay.Visible then
 			refresh()

@@ -7,7 +7,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -103,11 +102,9 @@ function Potions.start()
 	strip.Name = "Potions"
 	strip.AnchorPoint = Vector2.new(0, 1)
 	strip.Position = UDim2.new(0, left, 1, -14)
-	-- Ancho: lo que queda entre las monedas y el cuadro de estadísticas (300 de ancho, pegado al borde derecho; en móvil
-	-- empieza plegado y solo asoma su pestaña). Si no caben las seis (pantalla estrecha), las casillas pasan a una
+	-- Ancho: lo que queda hasta el borde derecho. Si no caben las seis (pantalla estrecha), las casillas pasan a una
 	-- segunda fila en vez de salirse de la pantalla.
-	local touchOnly = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-	strip.Size = UDim2.new(1, -(left + (if touchOnly then 74 else 324)), 0, TILE_H + 6)
+	strip.Size = UDim2.new(1, -(left + 14), 0, TILE_H + 6)
 	strip.AutomaticSize = Enum.AutomaticSize.Y
 	strip.BackgroundTransparency = 1
 	strip.Parent = gui
