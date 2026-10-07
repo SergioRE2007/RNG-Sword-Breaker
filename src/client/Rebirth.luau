@@ -24,7 +24,7 @@ local GOLD = Color3.fromRGB(255, 205, 60)
 local STATS = {
 	{ "coins", "Monedas", Color3.fromRGB(255, 200, 60) },
 	{ "damage", "Daño", Color3.fromRGB(255, 130, 90) },
-	{ "luck", "Suerte", Color3.fromRGB(110, 225, 110) },
+	{ "luck", "Suerte de destructibles", Color3.fromRGB(110, 225, 110) },
 	{ "gachaLuck", "Suerte de armas", Color3.fromRGB(190, 130, 255) },
 }
 
@@ -93,14 +93,15 @@ function Rebirth.start()
 		Ui.panel(row, Color3.fromRGB(62, 68, 118), entry[3])
 		local name = Ui.label(row, 22)
 		name.Position = UDim2.fromOffset(18, 0)
-		name.Size = UDim2.new(0.42, 0, 1, 0)
+		name.Size = UDim2.new(0.54, -18, 1, 0)
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		name.TextColor3 = entry[3]
 		name.Text = entry[2]
+		-- (El nombre se lleva algo más de la mitad: "Suerte de destructibles" es el más largo y cabe sin encoger.)
 		local value = Ui.label(row, 22)
 		value.AnchorPoint = Vector2.new(1, 0)
 		value.Position = UDim2.new(1, -14, 0, 0)
-		value.Size = UDim2.new(0.58, 0, 1, 0)
+		value.Size = UDim2.new(0.46, -14, 1, 0)
 		value.TextXAlignment = Enum.TextXAlignment.Right
 		rows[entry[1]] = value
 	end

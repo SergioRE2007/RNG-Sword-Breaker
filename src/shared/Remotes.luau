@@ -14,7 +14,7 @@ local NAMES = {
 	"SwingFx", -- servidor -> los demás clientes: (player) ese jugador ha dado un espadazo
 	"Hit", -- servidor -> clientes: (player, part, position, damage)
 	"Broken", -- servidor -> clientes: (player, cframe, size, color, material, reward, gems, índice del objeto en Config.Destructibles; sin él, los enemigos, info = { quality, scale, luck, rolls } del objeto roto)
-	"GachaRolled", -- servidor -> cliente: (index, kept, luck, source, metal, size, extra) espada sacada; kept = false si se vendió sola; source = "object" (la dio un objeto de la parcela) o "gacha"; extra = { boost = suerte del objeto, odds = lo difícil que era para el jugador, roll, rolls, batch = tanda, name, quality, origin y box = dónde estaba el objeto y su tamaño }
+	"GachaRolled", -- servidor -> cliente: (index, kept, luck, source, metal, size, extra) espada sacada; kept = false si se vendió sola; source = "object" (la dio un objeto de la parcela) o "gacha"; extra = { boost = suerte del objeto, odds = lo difícil que era para el jugador, id = el de la copia guardada (nil si se vendió), roll, rolls, batch = tanda, name, quality, origin y box = dónde estaba el objeto y su tamaño }
 	"GachaRevealed", -- cliente -> servidor: ya he destapado mi siguiente tirada rara (para mandar su aura y aviso a todos)
 	"GachaAura", -- servidor -> clientes: (player, index, odds) aura en el personaje de quien sacó algo raro para su suerte (odds = rareza / suerte)
 	"RollTrait", -- cliente -> servidor: (id) gastar un Cristal de rasgo en esa copia de espada (tienda de Rasgos)

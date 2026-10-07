@@ -24,9 +24,18 @@ function ObjectSpec.size(index: number?)
 	return Config.ObjectSizes[index or 1] or Config.ObjectSizes[1]
 end
 
--- Suerte propia del tipo de objeto (def = entrada de Config.Destructibles): 1 salvo en los objetos especiales.
+-- Suerte propia del tipo de objeto (def = entrada de Config.Destructibles): cuanto más raro es de ver, más da
+-- (su "1 entre N" elevado a TypeLuckPower), por el "luck" de los objetos especiales.
 function ObjectSpec.typeLuck(def): number
-	return def.luck or 1
+	return (def.luck or 1) * def.rarity ^ Config.ObjectRolls.TypeLuckPower
+end
+
+-- Suerte de los objetos "de siempre" de un jugador con esa suerte de destructibles (Stats.luck): la que da un tipo
+-- tan raro como los que le salen, común y de tamaño normal. Solo sirve para medir lo difícil que era un arma para
+-- él (server/Gacha): lo que pasa de ahí es mérito del objeto que le ha tocado. No da suerte a ninguna tirada.
+function ObjectSpec.usualLuck(luck: number): number
+	local rarest = Config.Destructibles[#Config.Destructibles].rarity
+	return math.clamp(luck, 1, rarest) ^ Config.ObjectRolls.TypeLuckPower
 end
 
 -- Entre qué escalas puede salir ese tipo: los límites de Config.ObjectSizes, recortados para que no pase de
@@ -37,7 +46,8 @@ function ObjectSpec.scaleLimits(def): (number, number)
 	return math.min(def.minScale or LOWEST, 1), math.max(highest, 1)
 end
 
--- Suerte del objeto: por lo que multiplica la suerte de armas del jugador en las tiradas que da al romperse.
+-- Suerte del objeto, la de las tiradas de arma que da al romperse: lo raro que es su tipo, por su rareza, por su
+-- tamaño. Las tres cuentan.
 function ObjectSpec.luck(def, quality: number, scale: number): number
 	local cfg = Config.ObjectRolls
 	return math.min(ObjectSpec.typeLuck(def) * ObjectSpec.rarity(quality).luck * scale ^ cfg.SizeLuckPower, cfg.MaxLuck)

@@ -194,7 +194,17 @@ local function swordTip(copy): (string, Color3, boolean)
 		table.insert(lines, "")
 	end
 	table.insert(lines, `Daño {Format.multiplier(Stats.swordDamage(copy))}`)
-	table.insert(lines, `<font color="{Ui.SOFT}">{if sword.rarity then "1 entre " .. Format.short(rarity) else "Espada inicial"}</font>`)
+	if not sword.rarity then
+		table.insert(lines, `<font color="{Ui.SOFT}">Espada inicial</font>`)
+	elseif metal or size then
+		-- La rareza total multiplica la del arma por las de su metal y su tamaño: se enseñan las dos, para que se vea
+		-- de dónde sale un número tan grande (un arma de 1 entre 5Qa con Etherio y Universal es de 1 entre 5Dc).
+		local extras = if metal and size then "metal y tamaño" elseif metal then "metal" else "tamaño"
+		table.insert(lines, `<font color="{Ui.SOFT}">Arma: 1 entre {Format.short(sword.rarity)}</font>`)
+		table.insert(lines, `<font color="{Ui.SOFT}">Con {extras}: 1 entre {Format.short(rarity)}</font>`)
+	else
+		table.insert(lines, `<font color="{Ui.SOFT}">1 entre {Format.short(rarity)}</font>`)
+	end
 	return table.concat(lines, "\n"), border, trait ~= nil or grade ~= nil
 end
 
