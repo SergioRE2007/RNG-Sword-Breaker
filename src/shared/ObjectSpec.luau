@@ -31,8 +31,9 @@ function ObjectSpec.typeLuck(def): number
 end
 
 -- Suerte de los objetos "de siempre" de un jugador con esa suerte de destructibles (Stats.luck): la que da un tipo
--- tan raro como los que le salen, común y de tamaño normal. Contra ella se mide lo difícil que era un arma para él
--- (server/Gacha): lo que pasa de ahí es mérito del objeto que le ha tocado.
+-- tan raro como los que le salen, común y de tamaño normal. Con ella se tiran el metal y el tamaño de sus armas, y
+-- contra ella se mide lo difícil que era un arma para él (server/Gacha): lo que pasa de ahí es mérito del objeto
+-- que le ha tocado.
 function ObjectSpec.usualLuck(luck: number): number
 	local rarest = Config.Destructibles[#Config.Destructibles].rarity
 	return math.clamp(luck, 1, rarest) ^ Config.ObjectRolls.TypeLuckPower

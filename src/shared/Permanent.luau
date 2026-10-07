@@ -45,13 +45,14 @@ end
 -- Lo difícil que era sacar esa arma con esa suerte ("1 entre N"). El arma, el metal y el tamaño se tiran por
 -- separado con la misma suerte, así que cada uno cuenta lo que le faltaba a la suerte para llegar a él, y lo que la
 -- suerte ya garantiza cuenta 1. (No vale rareza total / suerte: con suerte 100, el metal de 1 entre 100 sale
--- siempre, y esa cuenta diría que todas las tiradas son de 1 entre 100.)
-function Permanent.odds(sword: number, metal: number?, size: number?, luck: number): number
-	local function missing(odds: number): number
-		return math.max(odds / luck, 1)
-	end
+-- siempre, y esa cuenta diría que todas las tiradas son de 1 entre 100.) `sideLuck` = suerte del metal y del
+-- tamaño, si no es la misma que la del arma (ver server/Gacha).
+function Permanent.odds(sword: number, metal: number?, size: number?, luck: number, sideLuck: number?): number
+	local side = sideLuck or luck
 	local metalEntry, sizeEntry = entry(Config.Metals, metal), entry(Config.Sizes, size)
-	return missing(Config.Swords[sword].rarity or 1) * (if metalEntry then missing(metalEntry.odds) else 1) * (if sizeEntry then missing(sizeEntry.odds) else 1)
+	return math.max((Config.Swords[sword].rarity or 1) / luck, 1)
+		* (if metalEntry then math.max(metalEntry.odds / side, 1) else 1)
+		* (if sizeEntry then math.max(sizeEntry.odds / side, 1) else 1)
 end
 
 -- Tira un modificador de la lista: se prueba del más raro al más común y la suerte multiplica cada

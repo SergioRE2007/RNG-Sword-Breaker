@@ -90,7 +90,8 @@ end
 
 -- Saca una espada con la suerte `boost` del objeto que da la tirada (1 si no hay) por la suerte de armas propia
 -- del jugador (Stats.gachaLuck) y la guarda como una copia más (se equipa si pega más que la actual). Ninguna otra
--- cosa multiplica esa suerte. Se vende sola si es menos rara que el límite de venta automática del jugador o el
+-- cosa multiplica esa suerte, y solo decide el arma: el metal y el tamaño se tiran con la suerte de los objetos de
+-- siempre del jugador. Se vende sola si es menos rara que el límite de venta automática del jugador o el
 -- inventario está lleno de armas mejores que ella. Primero se guarda y después se le manda al jugador para que lo
 -- enseñe: lo que ve es lo que ya tiene (`kept` solo es true si la copia ha quedado en sus datos). Si es raro para
 -- su suerte, queda pendiente el aura en su personaje (y el aviso en el chat si es muy raro), que se manda a todos
@@ -102,11 +103,15 @@ local function draw(player: Player, boost: number, source: string, info)
 		return
 	end
 	local base = Stats.gachaLuck(player)
+	-- Suerte de los objetos de siempre del jugador: sube con su suerte de destructibles, no con el objeto que le toca.
+	local usual = if source == "object" then base * ObjectSpec.usualLuck(Stats.luck(player)) else base
+	-- La suerte del objeto se aplica UNA vez, al arma. El metal y el tamaño (permanentes, Config.Metals y Sizes) se
+	-- tiran a la vez, pero con la suerte de siempre: con la del objeto en las tres tiradas, un objeto de x4 sacaba
+	-- armas con metal y tamaño 4 x 4 x 4 veces más y el "1 entre N" de pantalla no valía nada.
 	local luck = base * boost
 	local index = roll(luck)
-	-- Metal y tamaño se tiran a la vez que el arma y son permanentes (Config.Metals, Config.Sizes).
-	local metal = Permanent.roll(Config.Metals, luck)
-	local size = Permanent.roll(Config.Sizes, luck)
+	local metal = Permanent.roll(Config.Metals, usual)
+	local size = Permanent.roll(Config.Sizes, usual)
 	local rarity = Permanent.rarity(index, metal, size)
 	-- Lo difícil que era para el jugador ("1 entre N"): es lo que mide el espectáculo, el aura y el aviso. La menor
 	-- de dos cuentas, porque las dos se pasan de largo por un lado:
@@ -114,9 +119,8 @@ local function draw(player: Player, boost: number, source: string, info)
 	--    y con mucha suerte de destructibles un arma rara deja de ser noticia;
 	--  · lo raro que era el objeto por lo difícil que era el arma con la suerte de ese objeto: un objeto rarísimo da
 	--    armas buenas casi siempre, y eso es tan probable como que salga el objeto, no más.
-	local usual = if source == "object" then base * ObjectSpec.usualLuck(Stats.luck(player)) else base
 	local objectOdds = if info and type(info.objectOdds) == "number" then math.max(info.objectOdds, 1) else 1
-	local odds = math.min(Permanent.odds(index, metal, size, usual), Permanent.odds(index, metal, size, luck) * objectOdds)
+	local odds = math.min(Permanent.odds(index, metal, size, usual), Permanent.odds(index, metal, size, luck, usual) * objectOdds)
 	-- Con la mochila llena, un arma más rara que la peor copia que el jugador no ha tocado se queda con su sitio.
 	local full = #data.swords >= Config.MaxSwords
 	local spare = if full and rarity >= data.autoSell then worstSpare(data, rarity) else nil

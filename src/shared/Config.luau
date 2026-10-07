@@ -112,8 +112,9 @@ Config.RarityTiers = {
 }
 
 -- Modificadores permanentes: cada arma que sale del gacha puede llevar además UN metal y UN tamaño, tirados
--- a la vez que ella y que ya no cambian. "odds" = 1 entre N de que salgan (la suerte de gacha divide N, como
--- con las armas). Cada uno multiplica el daño con la misma regla que las armas (rareza x2 = +50 % de daño,
+-- a la vez que ella y que ya no cambian. "odds" = 1 entre N de que salgan; divide N la suerte de los objetos de
+-- siempre del jugador (ObjectSpec.usualLuck: sube con su suerte de destructibles), no la del objeto que da la
+-- tirada, que solo decide el arma. Cada uno multiplica el daño con la misma regla que las armas (rareza x2 = +50 % de daño,
 -- ver Permanent.damage) y suma su rareza a la del arma (los N se multiplican). El metal cambia el color y el
 -- material del arma; el tamaño la agranda (scale) y con ella su alcance. No cambies el orden: lo guardado usa
 -- la posición. Lo nuevo va al final.
@@ -289,7 +290,8 @@ Config.GemDrop = { min = 0.7, max = 1.3 }
 -- el "1 entre N" de cada arma es su probabilidad con ella. La suerte de armas del jugador ya no se compra: sale de
 -- los objetos que le tocan, y la mejora "Suerte de destructibles" es la que le trae tipos más raros. Lo único que
 -- multiplica además es Stats.gachaLuck (renacimientos y, cuando existan, pociones). La suerte solo multiplica
--- probabilidades, como toda la del juego: un objeto enorme no garantiza ningún arma.
+-- probabilidades, como toda la del juego: un objeto enorme no garantiza ningún arma. Y se aplica UNA vez, al arma:
+-- el metal y el tamaño del arma no dependen del objeto que la da (ver Config.Metals).
 -- Tiradas = "rolls" de la rareza + "rolls" del tamaño + "rolls" del tipo; la parte decimal es la probabilidad de
 -- una más (1.5 = una, y otra la mitad de las veces), con el tope MaxRolls.
 -- El tamaño multiplica también la vida (escala ^ SizeHpPower) y las monedas y gemas (escala ^ SizeRewardPower).
@@ -299,9 +301,8 @@ Config.GemDrop = { min = 0.7, max = 1.3 }
 -- un objeto nuevo sin tocar código. Las cuentas están en shared/ObjectSpec.
 Config.ObjectRolls = {
 	-- La suerte del tipo es la raíz cuadrada de lo raro que es: Barril (1 entre 4) x2, Roca (20) x4.5, Pilar (120) x11,
-	-- Cristal (800) x28, Monolito (5000) x71, Meteorito (1e6) x1000... Infinito (1e24) x1e12. Ojo al subirlo: la suerte
-	-- multiplica tres tiradas a la vez (arma, metal y tamaño), así que las armas con metal y tamaño salen suerte^3
-	-- veces más. Con 0.5 las armas más raras (1 entre 1e15 o más) piden además suerte de armas propia (Stats.gachaLuck).
+	-- Cristal (800) x28, Monolito (5000) x71, Meteorito (1e6) x1000... Infinito (1e24) x1e12. Con 0.5 las armas más
+	-- raras (1 entre 1e15 o más) piden además suerte de armas propia (Stats.gachaLuck).
 	TypeLuckPower = 0.5,
 	SizeLuckPower = 1.5, -- al 70 % x0.59, al 150 % x1.84, al 200 % x2.83, al 250 % x3.95
 	SizeHpPower = 2,
