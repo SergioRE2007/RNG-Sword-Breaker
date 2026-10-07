@@ -144,9 +144,11 @@ function Potions.start()
 		Potions.icon(iconBox, family)
 		Potions.addTag(cell, tier)
 		local text = Ui.cellLabel(cell, "")
+		-- El latido de poco tiempo va en el reloj: la casilla ya lleva el UIScale del ratón (Ui.pressable) y Roblox solo
+		-- aplica uno por objeto.
 		local pulse = Instance.new("UIScale")
 		pulse.Name = "PotionPulse"
-		pulse.Parent = cell
+		pulse.Parent = text
 		local tile = { cell = cell, tier = tier, endsAt = endsAt, text = text, pulse = pulse, shown = -1 }
 		Ui.tip(cell, function()
 			return Potions.tip(family, tile.tier, nil, remaining(tile)), PotionInfo.color(tile.tier), true
@@ -170,7 +172,7 @@ function Potions.start()
 		end
 		if left <= cfg.LowTime then
 			tile.text.TextColor3 = LOW_COLOR
-			tile.pulse.Scale = if Performance.get() then 1 else 1 + 0.05 * (0.5 + 0.5 * math.sin(now * 6))
+			tile.pulse.Scale = if Performance.get() then 1 else 1 + 0.12 * (0.5 + 0.5 * math.sin(now * 6))
 		else
 			tile.text.TextColor3 = Color3.new(1, 1, 1)
 			tile.pulse.Scale = 1

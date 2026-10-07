@@ -220,10 +220,14 @@ function Potions.start()
 		lastUse[player] = nil
 	end)
 
+	-- Con pcall: si un fallo raro rompiera una vuelta, el bucle sigue y las pociones siguen caducando.
 	task.spawn(function()
 		while true do
 			task.wait(1)
-			tick()
+			local ok, err = pcall(tick)
+			if not ok then
+				warn(`[Potions] {err}`)
+			end
 		end
 	end)
 end
