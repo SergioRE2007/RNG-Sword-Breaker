@@ -1,4 +1,4 @@
-# mi-juego
+# RNG: Sword Breaker
 
 Incremental de espadas para Roblox, estilo RNG. Cada jugador tiene una parcela donde aparecen objetos; los rompe a espadazos, gana monedas y mejora la parcela para que salgan objetos más raros. Las armas salen de los propios objetos al romperlos, con más suerte cuanto más raro y más grande es el objeto; los objetos raros sueltan además gemas.
 
@@ -73,3 +73,7 @@ En estos, cambios pequeños y subirlos pronto. Un cambio grande (reorganizar `Co
 `main` tiene que funcionar siempre: no se junta nada sin haberle dado a Jugar y mirado que no hay errores.
 
 `Config.Test.InfiniteMoney` (dinero infinito en Studio) es para pruebas; no subir cambios de valores bajados temporalmente para probar (rarezas, vidas).
+
+## Licencia
+
+Todos los derechos reservados (ver `LICENSE`): el código es público solo para verlo; no se puede copiar, publicar ni modificar sin permiso.
