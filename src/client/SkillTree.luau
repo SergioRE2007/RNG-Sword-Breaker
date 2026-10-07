@@ -64,6 +64,21 @@ local function roman(n: number): string
 	return text
 end
 
+-- Parte un texto en líneas de como mucho `width` letras, sin cortar palabras.
+local function wrap(text: string, width: number): string
+	local lines, line = {}, ""
+	for word in string.gmatch(text, "%S+") do
+		if line ~= "" and (utf8.len(line .. " " .. word) or 0) > width then
+			table.insert(lines, line)
+			line = word
+		else
+			line = if line == "" then word else line .. " " .. word
+		end
+	end
+	table.insert(lines, line)
+	return table.concat(lines, "\n")
+end
+
 -- Centro de cada nodo de un brazo.
 local function layout(branch: number, branches: number, count: number): { Vector2 }
 	local base = (branch - 1) / branches * math.pi * 2 - math.pi * 0.75
@@ -652,7 +667,10 @@ function SkillTree.start()
 					local state = if owned
 						then `<font color="#6fe07a">Comprada</font>`
 						else `Precio: {Format.short(Upgrades.cost(name, level - 1))} {currency}`
-					return `{upgrade.name} {roman(level)}\n<font color="{Ui.SOFT}">{Upgrades.display(name, level - 1)} → {Upgrades.display(name, level)}</font>\n{state}`,
+					-- "desc" (si la mejora lo trae) explica para qué sirve, partido en líneas cortas: el cartel mide lo que
+					-- su línea más larga y uno ancho se sale de la pantalla.
+					local about = if upgrade.desc then `\n<font color="{Ui.SOFT}">{wrap(upgrade.desc, 44)}</font>` else ""
+					return `{upgrade.name} {roman(level)}{about}\n<font color="{Ui.SOFT}">{Upgrades.display(name, level - 1)} → {Upgrades.display(name, level)}</font>\n{state}`,
 						upgrade.color
 				end)
 				node.button.Activated:Connect(function()

@@ -18,7 +18,7 @@ local Plots = require(script.Parent.Plots)
 
 local Destructibles = {}
 
--- [Part] = { def, hp, maxHp, plot, localPosition, radius, quality, size, scale, luck, rolls, reward }
+-- [Part] = { def, hp, maxHp, plot, localPosition, radius, quality, size, scale, luck, rolls, reward, odds }
 -- (quality, size, scale, luck, rolls y reward salen de ObjectSpec.roll al aparecer).
 local objects = {}
 local counts = {} -- [plot] = número de objetos vivos
@@ -147,6 +147,9 @@ local function spawnIn(plot)
 		luck = spec.luck,
 		rolls = spec.rolls,
 		reward = spec.reward,
+		-- "1 entre N" de que a su dueño le saliera un objeto así (tipo, rareza y tamaño): Gacha lo cuenta al medir
+		-- lo difícil que era el arma que da.
+		odds = math.max(spec.typeOdds, 1) * math.max(spec.odds, 1),
 	}
 	counts[plot] = (counts[plot] or 0) + 1
 	part.Parent = folder

@@ -130,12 +130,18 @@ local function luckBonus(player: Player): number
 	return (if trait then trait.luck or 1 else 1) * gear(player, "luck") * (1 + armor(player, "luck"))
 end
 
+-- Suerte de destructibles: multiplica la probabilidad de los tipos raros de objeto en su parcela (y la de los
+-- artefactos). Es la que sube la mejora "Suerte de destructibles", y con ella el rasgo, los artefactos y la armadura.
 function Stats.luck(player: Player): number
 	return upgrade(player, "luck") * luckBonus(player) * Stats.rebirthBonus(player, "luck")
 end
 
+-- Suerte de armas propia del jugador: multiplica la del objeto que da la tirada (ObjectSpec.luck), que es de donde
+-- sale casi toda. No hay mejora que la compre, y el rasgo, los artefactos y la armadura tampoco entran aquí: ya
+-- cuentan en Stats.luck, que trae objetos más raros (contarlos otra vez los aplicaría dos veces). Aquí van solo
+-- las fuentes directas: los renacimientos y, cuando existan, las pociones.
 function Stats.gachaLuck(player: Player): number
-	return upgrade(player, "gachaLuck") * luckBonus(player) * Stats.rebirthBonus(player, "gachaLuck")
+	return Stats.rebirthBonus(player, "gachaLuck")
 end
 
 -- Segundos por tirada gratis del gacha (solo con Config.Gacha.FreeRoll): la mejora "Velocidad de aparición"
@@ -151,7 +157,7 @@ function Stats.spawnTime(player: Player): number
 end
 
 -- Suerte de la rareza y del tamaño de los objetos de la parcela (multiplica sus probabilidades: Config.ObjectRarities
--- y ObjectSizes). No es la suerte de parcela, que decide el tipo de objeto. De base 1: aquí se sumarán las mejoras
+-- y ObjectSizes). No es la suerte de destructibles (Stats.luck), que decide el tipo de objeto. De base 1: aquí se sumarán las mejoras
 -- de parcela o los pases que la suban (ventaja "objectLuck").
 function Stats.objectLuck(player: Player): number
 	return Stats.perk(player, "objectLuck") or 1

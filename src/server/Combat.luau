@@ -59,8 +59,8 @@ local function onSwing(player: Player)
 			if gems > 0 then
 				PlayerData.addGems(player, gems)
 			end
-			-- Tiradas de arma del objeto: cuántas y con qué suerte se decidió al aparecer (rareza y tamaño).
-			Gacha.give(player, object.luck, "object", object.rolls, { name = broken.name, quality = object.quality, origin = origin, box = box })
+			-- Tiradas de arma del objeto: cuántas y con qué suerte se decidió al aparecer (tipo, rareza y tamaño).
+			Gacha.give(player, object.luck, "object", object.rolls, { name = broken.name, quality = object.quality, origin = origin, box = box, objectOdds = object.odds })
 			Traits.onBroken(player, broken)
 			Gear.onBroken(player)
 		end

@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Chance = require(ReplicatedStorage.Shared.Chance)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local ObjectSpec = require(ReplicatedStorage.Shared.ObjectSpec)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -45,7 +46,7 @@ end
 
 -- Aura en su personaje y, si es muy raro, aviso en el chat con la probabilidad real.
 local function broadcast(player: Player, entry)
-	if not player.Parent then
+	if not player.Parent or not entry.kept then
 		return
 	end
 	local sword = Config.Swords[entry.index]
@@ -73,40 +74,57 @@ local function worstSpare(data, rarity: number): number?
 	return worst
 end
 
--- Saca una espada con la suerte de armas del jugador multiplicada por `boost` (la suerte del objeto
--- que da la tirada; 1 si no hay) y la guarda como una copia más (se equipa si pega más que
--- la actual). Se vende sola si es menos rara que el límite de venta automática del jugador o
--- el inventario está lleno de armas mejores que ella. Se lo manda al jugador para que lo enseñe; si es raro para su
--- suerte, queda pendiente el aura en su personaje (y el aviso en el chat si es muy raro), que se
--- manda a todos cuando su cliente lo destapa. `info` (opcional) = de dónde viene, para enseñarlo:
+local FULL_NOTICE_EVERY = 600 -- segundos entre avisos de mochila llena a un mismo jugador
+local fullNotice = {} -- [player] = os.clock() de su último aviso
+
+-- Con la mochila llena las armas menos raras van saliendo solas para hacer sitio (un arma recién llegada puede irse
+-- al momento si la siguiente es mejor): se avisa de tarde en tarde, para que no parezca que desaparecen.
+local function warnFull(player: Player)
+	local now = os.clock()
+	if now - (fullNotice[player] or -math.huge) < FULL_NOTICE_EVERY then
+		return
+	end
+	fullNotice[player] = now
+	Remotes.Notice:FireClient(player, `Mochila llena ({Config.MaxSwords}/{Config.MaxSwords}): las armas nuevas ocupan el sitio de las menos raras.\nLas que no mejoran ninguna se venden solas.`, Color3.fromRGB(255, 170, 60))
+end
+
+-- Saca una espada con la suerte `boost` del objeto que da la tirada (1 si no hay) por la suerte de armas propia
+-- del jugador (Stats.gachaLuck) y la guarda como una copia más (se equipa si pega más que la actual). Ninguna otra
+-- cosa multiplica esa suerte. Se vende sola si es menos rara que el límite de venta automática del jugador o el
+-- inventario está lleno de armas mejores que ella. Primero se guarda y después se le manda al jugador para que lo
+-- enseñe: lo que ve es lo que ya tiene (`kept` solo es true si la copia ha quedado en sus datos). Si es raro para
+-- su suerte, queda pendiente el aura en su personaje (y el aviso en el chat si es muy raro), que se manda a todos
+-- cuando su cliente lo destapa. `info` (opcional) = de dónde viene, para enseñarlo:
 -- { name, quality (del objeto), roll, rolls (esta tirada de cuántas) }.
 local function draw(player: Player, boost: number, source: string, info)
 	local data = PlayerData.read(player)
 	if not data then
 		return
 	end
-	-- Suerte del jugador sin la ayuda del objeto. Empujón del principio: las primeras tiradas de cada jugador
-	-- llevan mucha suerte extra.
 	local base = Stats.gachaLuck(player)
-	if data.gachaRolls < Config.Gacha.BoostRolls then
-		base *= Config.Gacha.BoostLuck
-	end
-	data.gachaRolls += 1
 	local luck = base * boost
 	local index = roll(luck)
-	local sword = Config.Swords[index]
 	-- Metal y tamaño se tiran a la vez que el arma y son permanentes (Config.Metals, Config.Sizes).
 	local metal = Permanent.roll(Config.Metals, luck)
 	local size = Permanent.roll(Config.Sizes, luck)
 	local rarity = Permanent.rarity(index, metal, size)
-	-- Lo difícil que era para el jugador (con su suerte, sin la del objeto): es lo que mide el espectáculo, el aura
-	-- y el aviso. Un objeto bueno da armas que para él son difíciles, y se celebran como tales.
-	local odds = Permanent.odds(index, metal, size, base)
+	-- Lo difícil que era para el jugador ("1 entre N"): es lo que mide el espectáculo, el aura y el aviso. La menor
+	-- de dos cuentas, porque las dos se pasan de largo por un lado:
+	--  · contra la suerte de sus objetos de siempre: un objeto mejor de lo normal da armas que para él son difíciles,
+	--    y con mucha suerte de destructibles un arma rara deja de ser noticia;
+	--  · lo raro que era el objeto por lo difícil que era el arma con la suerte de ese objeto: un objeto rarísimo da
+	--    armas buenas casi siempre, y eso es tan probable como que salga el objeto, no más.
+	local usual = if source == "object" then base * ObjectSpec.usualLuck(Stats.luck(player)) else base
+	local objectOdds = if info and type(info.objectOdds) == "number" then math.max(info.objectOdds, 1) else 1
+	local odds = math.min(Permanent.odds(index, metal, size, usual), Permanent.odds(index, metal, size, luck) * objectOdds)
 	-- Con la mochila llena, un arma más rara que la peor copia que el jugador no ha tocado se queda con su sitio.
 	local full = #data.swords >= Config.MaxSwords
 	local spare = if full and rarity >= data.autoSell then worstSpare(data, rarity) else nil
-	local kept = rarity >= data.autoSell and (not full or spare ~= nil)
-	if kept then
+	if full and rarity >= data.autoSell then
+		warnFull(player)
+	end
+	local stored: number? = nil -- id de la copia guardada: solo lo pone quien de verdad la mete en sus datos
+	if rarity >= data.autoSell and (not full or spare ~= nil) then
 		local candidate = { sword = index, trait = 0, grade = 0, metal = metal, size = size }
 		local better = Stats.swordDamage(candidate) > Stats.swordDamage(Stats.equipped(player))
 		PlayerData.edit(player, function(edited)
@@ -120,21 +138,26 @@ local function draw(player: Player, boost: number, source: string, info)
 			if better then
 				edited.equipped = id
 			end
+			stored = id
 		end)
-	else
+	end
+	local kept = stored ~= nil
+	if not kept then
 		PlayerData.addGems(player, Config.Gacha.SellValue)
 	end
 	local extra = if info then table.clone(info) else {}
 	extra.boost = boost
 	extra.odds = odds
+	extra.id = stored
 	Remotes.GachaRolled:FireClient(player, index, kept, luck, source, metal, size, extra)
 	Missions.add(player, "gacha")
 	if rarity >= 1e6 then
 		Missions.add(player, "rareSword")
 	end
-	-- Cuenta la suerte: con mucha suerte de gacha, una espada rara ya no tiene aura ni aviso.
+	-- Solo se presume de lo que se tiene: un arma vendida sola no lleva aura ni aviso (entra en la cola igual, para
+	-- que no se descuadre con los avisos del cliente).
 	if odds >= revealOdds() then
-		local entry = { index = index, odds = odds, metal = metal, size = size }
+		local entry = { index = index, odds = odds, metal = metal, size = size, kept = kept }
 		local queue = pendingReveals[player] or {}
 		pendingReveals[player] = queue
 		table.insert(queue, entry)
@@ -239,6 +262,7 @@ function Gacha.start()
 	game:GetService("Players").PlayerRemoving:Connect(function(player)
 		lastRoll[player] = nil
 		pendingReveals[player] = nil
+		fullNotice[player] = nil
 	end)
 end
 
