@@ -158,14 +158,16 @@ local function buildEntrance(parent: Instance)
 	anchor.Transparency = 1
 	local gui = Instance.new("BillboardGui")
 	gui.Size = UDim2.fromOffset(420, 90)
-	gui.MaxDistance = 130
+	gui:SetAttribute("TextMax", 46) -- el cliente (ModifierShops) encoge la fuente con la distancia entre estos dos topes
+	gui:SetAttribute("TextMin", 18)
+	gui.MaxDistance = 170
 	gui.LightInfluence = 0
 	gui.Parent = anchor
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 54
+	label.TextSize = 46
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.Text = "MAZMORRAS"
 	label.Parent = gui

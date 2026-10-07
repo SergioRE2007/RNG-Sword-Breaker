@@ -135,15 +135,17 @@ local function addSignAndPrompt(counter: Part, kind: string, shopTitle: string, 
 	local gui = Instance.new("BillboardGui")
 	gui:SetAttribute("SignHeight", signHeight)
 	gui.Size = UDim2.fromOffset(340, 80)
+	gui:SetAttribute("TextMax", 40) -- el cliente (ModifierShops) encoge la fuente con la distancia entre estos dos topes
+	gui:SetAttribute("TextMin", 18)
 	gui.StudsOffset = Vector3.new(0, signHeight, 0)
-	gui.MaxDistance = 80
+	gui.MaxDistance = 110
 	gui.LightInfluence = 0
 	gui.Parent = counter
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 48
+	label.TextSize = 40
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.Text = string.upper(shopTitle)
 	label.Parent = gui
