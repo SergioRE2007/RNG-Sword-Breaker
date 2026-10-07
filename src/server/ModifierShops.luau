@@ -136,7 +136,7 @@ local function addSignAndPrompt(counter: Part, kind: string, shopTitle: string, 
 	gui:SetAttribute("SignHeight", signHeight)
 	gui.Size = UDim2.fromOffset(340, 80)
 	gui.StudsOffset = Vector3.new(0, signHeight, 0)
-	gui.MaxDistance = 220
+	gui.MaxDistance = 80
 	gui.LightInfluence = 0
 	gui.Parent = counter
 	local label = Instance.new("TextLabel")

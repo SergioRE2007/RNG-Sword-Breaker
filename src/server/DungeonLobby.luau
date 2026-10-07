@@ -158,7 +158,7 @@ local function buildEntrance(parent: Instance)
 	anchor.Transparency = 1
 	local gui = Instance.new("BillboardGui")
 	gui.Size = UDim2.fromOffset(420, 90)
-	gui.MaxDistance = 260
+	gui.MaxDistance = 130
 	gui.LightInfluence = 0
 	gui.Parent = anchor
 	local label = Instance.new("TextLabel")
