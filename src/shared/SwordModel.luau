@@ -5,7 +5,6 @@ local RunService = game:GetService("RunService")
 
 local Config = require(script.Parent.Config)
 local MeshWeapon = require(script.Parent.MeshWeapon)
-local Rarity = require(script.Parent.Rarity)
 
 local SwordModel = {}
 
@@ -22,9 +21,6 @@ local FANCY_FROM = 10 -- rareza desde la que el arma lleva adornos dorados y gem
 local SHARDS_FROM = 1e7 -- rareza desde la que flotan esquirlas junto a la hoja
 
 local BLADE_BASE = 0.84 -- altura a la que empieza la hoja de una espada sobre el centro de la empuñadura
-
-local AURA_TIER = "Secreta" -- única rareza con aura
-local AURA_STRENGTH = 4 -- el aura que lleva es la de este nivel de Config.RarityTiers (4 = Épica)
 
 type Add = (className: string, name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material, template: BasePart?) -> BasePart
 
@@ -344,14 +340,11 @@ end
 
 -- Luz y chispas en las armas que brillan, y la estela del tajo (el cliente la enciende mientras dura el golpe).
 local function effects(blade: BasePart, level: number, def, style, scale: number, anchored: boolean)
-	-- El aura la pone cada cliente (client/WeaponAura) en las hojas con la etiqueta "WeaponAura". Pedido por el
-	-- usuario: solo las armas Secretas, y suave (la de una Épica: chispas, llamas y una cinta de luz).
+	-- El aura la pone cada cliente (client/WeaponAura) en las hojas con la etiqueta "WeaponAura": allí se decide
+	-- qué armas la llevan (de Épica para arriba) y cómo es la de cada una (client/WeaponAuraDefs).
 	blade:SetAttribute("Level", level)
 	blade:SetAttribute("Scale", scale)
-	if Rarity.tier(Config.Swords[level].rarity).name == AURA_TIER then
-		blade:SetAttribute("AuraTier", AURA_STRENGTH)
-		blade:AddTag("WeaponAura")
-	end
+	blade:AddTag("WeaponAura")
 
 	if style.glowing then
 		local light = Instance.new("PointLight")
