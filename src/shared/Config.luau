@@ -112,9 +112,9 @@ Config.RarityTiers = {
 }
 
 -- Modificadores permanentes: cada arma que sale del gacha puede llevar además UN metal y UN tamaño, tirados
--- a la vez que ella y que ya no cambian. "odds" = 1 entre N de que salgan; divide N la suerte de los objetos de
--- siempre del jugador (ObjectSpec.usualLuck: sube con su suerte de destructibles), no la del objeto que da la
--- tirada, que solo decide el arma. Cada uno multiplica el daño con la misma regla que las armas (rareza x2 = +50 % de daño,
+-- a la vez que ella y que ya no cambian. "odds" = 1 entre N de que salgan, y es de verdad: solo la suerte de
+-- armas propia del jugador (Stats.gachaLuck: renacimientos, pociones) divide N. Ni el objeto que da la tirada
+-- (su suerte solo decide el arma) ni la mejora de suerte los abaratan. Cada uno multiplica el daño con la misma regla que las armas (rareza x2 = +50 % de daño,
 -- ver Permanent.damage) y suma su rareza a la del arma (los N se multiplican). El metal cambia el color y el
 -- material del arma; el tamaño la agranda (scale) y con ella su alcance. No cambies el orden: lo guardado usa
 -- la posición. Lo nuevo va al final.
@@ -286,12 +286,13 @@ Config.GemDrop = { min = 0.7, max = 1.3 }
 --   suerte del objeto = suerte del tipo * "luck" de su rareza * escala ^ SizeLuckPower      (como mucho MaxLuck)
 --   suerte del tipo = lo raro que es de ver ("rarity" de Config.Destructibles) ^ TypeLuckPower
 -- (por el "luck" propio de los objetos especiales: la Roca de armas da el triple de lo que le toca por su rareza,
--- x134; era x10 cuando los demás tipos daban x1). Una Caja común de tamaño normal da x1:
--- el "1 entre N" de cada arma es su probabilidad con ella. La suerte de armas del jugador ya no se compra: sale de
--- los objetos que le tocan, y la mejora "Suerte de destructibles" es la que le trae tipos más raros. Lo único que
--- multiplica además es Stats.gachaLuck (renacimientos y, cuando existan, pociones). La suerte solo multiplica
--- probabilidades, como toda la del juego: un objeto enorme no garantiza ningún arma. Y se aplica UNA vez, al arma:
--- el metal y el tamaño del arma no dependen del objeto que la da (ver Config.Metals).
+-- x476; era x10 cuando los demás tipos daban x1). Una Caja común de tamaño normal da x1:
+-- el "1 entre N" de cada arma es su probabilidad con ella. La suerte de armas no se compra: sale del objeto que se
+-- rompe, y la mejora "Suerte de destructibles" solo trae tipos más raros (decidido por el usuario: esa mejora es
+-- solo para los destructibles). Lo único que multiplica además es Stats.gachaLuck (renacimientos y, cuando existan,
+-- pociones). La suerte solo multiplica probabilidades, como toda la del juego: un objeto enorme no garantiza ningún
+-- arma. Y se aplica UNA vez, al arma: el metal y el tamaño no dependen del objeto que la da (ver Config.Metals),
+-- así que un objeto de xN da armas de alrededor de "1 entre N".
 -- Tiradas = "rolls" de la rareza + "rolls" del tamaño + "rolls" del tipo; la parte decimal es la probabilidad de
 -- una más (1.5 = una, y otra la mitad de las veces), con el tope MaxRolls.
 -- El tamaño multiplica también la vida (escala ^ SizeHpPower) y las monedas y gemas (escala ^ SizeRewardPower).
@@ -300,14 +301,15 @@ Config.GemDrop = { min = 0.7, max = 1.3 }
 -- sus rarezas y de sus tamaños grandes) y "minRarity" (rareza mínima, posición en ObjectRarities). Con eso se hace
 -- un objeto nuevo sin tocar código. Las cuentas están en shared/ObjectSpec.
 Config.ObjectRolls = {
-	-- La suerte del tipo es la raíz cuadrada de lo raro que es: Barril (1 entre 4) x2, Roca (20) x4.5, Pilar (120) x11,
-	-- Cristal (800) x28, Monolito (5000) x71, Meteorito (1e6) x1000... Infinito (1e24) x1e12. Con 0.5 las armas más
-	-- raras (1 entre 1e15 o más) piden además suerte de armas propia (Stats.gachaLuck).
-	TypeLuckPower = 0.5,
+	-- Suerte del tipo = lo raro que es ^ 2/3: Barril (1 entre 4) x2.5, Roca (20) x7.4, Pilar (120) x24, Cristal (800)
+	-- x86, Monolito (5000) x292, Meteorito (1e6) x10K... Infinito (1e24) x1e16. El arma es lo único que mejora con la
+	-- suerte, así que de esto depende que el daño siga el ritmo de la vida de los objetos: medido, con 0.5 un Infinito
+	-- pide miles de golpes y con 2/3 una docena; con 0.8 o más sobra, pero las armas raras salen antes al principio.
+	TypeLuckPower = 2 / 3,
 	SizeLuckPower = 1.5, -- al 70 % x0.59, al 150 % x1.84, al 200 % x2.83, al 250 % x3.95
 	SizeHpPower = 2,
 	SizeRewardPower = 2,
-	MaxLuck = 1e15, -- tope de la suerte de un objeto (un Infinito mítico y colosal llega a x7.9e13)
+	MaxLuck = 1e19, -- tope de la suerte de un objeto (un Infinito mítico y colosal llega a x7.9e17)
 	MaxRolls = 5, -- tope de tiradas de arma de un solo objeto
 	MaxWidth = 30, -- studs: ningún objeto se agranda más que esto de ancho...
 	MaxHeight = 56, -- ...ni de alto (los tipos más grandes llegan a menos escala que los pequeños)
