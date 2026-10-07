@@ -240,8 +240,7 @@ function Hud.start()
 	end
 
 	-- Estadísticas, abajo a la derecha: daño y suertes, y el nivel de cada mejora.
-	-- Va dentro de un "dock" que se desliza hacia la derecha de la pantalla; solo queda a la vista
-	-- la pestaña con la flecha, pegada al borde.
+	-- Va dentro de un "dock" pegado abajo a la derecha, escondido salvo en la pantalla de Mejoras.
 	local dock = Instance.new("Frame")
 	dock.Name = "StatsDock"
 	dock.AnchorPoint = Vector2.new(1, 1)
@@ -258,31 +257,12 @@ function Hud.start()
 	statsBox.BackgroundColor3 = WHITE
 	statsBox.Parent = dock
 
-	local statsOpen = true
-	local tab = Ui.button(dock, ">", Ui.COLORS.purple)
-	tab.Name = "StatsTab"
-	tab.AnchorPoint = Vector2.new(1, 1)
-	tab.Position = UDim2.new(0, -4, 1, 0)
-	tab.Size = UDim2.fromOffset(44, 74) -- 44 px: lo mínimo cómodo para el dedo
-	tab.TextSize = 30
-	tab.Activated:Connect(function()
-		statsOpen = not statsOpen
-		tab.Text = if statsOpen then ">" else "<"
-		TweenService:Create(dock, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Position = if statsOpen then UDim2.new(1, -MARGIN, 1, -MARGIN) else UDim2.new(1, 300, 1, -MARGIN),
-		}):Play()
-	end)
-	-- En móviles la pantalla es pequeña: las estadísticas empiezan plegadas.
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		statsOpen = false
-		tab.Text = "<"
-		dock.Position = UDim2.new(1, 300, 1, -MARGIN)
-	end
+	-- Solo se ve en la pantalla de Mejoras (la enseña y la esconde SkillTree), en este mismo sitio.
+	dock.Visible = false
 	Ui.round(statsBox, 12)
 	Ui.stroke(statsBox, BLACK, 3)
 	Ui.panel(statsBox, Color3.fromRGB(46, 40, 96))
 	Ui.shadow(statsBox)
-	Ui.shadow(tab)
 	-- Las filas van en un marco de dentro: el relleno y la lista no deben mover el brillo ni el canto del panel.
 	local statsContent = Instance.new("Frame")
 	statsContent.Name = "Content"
