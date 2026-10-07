@@ -7,7 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Chance = require(ReplicatedStorage.Shared.Chance)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
-local ObjectSpec = require(ReplicatedStorage.Shared.ObjectSpec)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -103,8 +102,8 @@ local function draw(player: Player, boost: number, source: string, info)
 		return
 	end
 	local base = Stats.gachaLuck(player)
-	-- Suerte de los objetos de siempre del jugador: sube con su suerte de destructibles, no con el objeto que le toca.
-	local usual = if source == "object" then base * ObjectSpec.usualLuck(Stats.luck(player)) else base
+	-- Suerte de armas de siempre del jugador: sube con su suerte de destructibles, no con el objeto que le toca.
+	local usual = if source == "object" then Stats.weaponLuck(player) else base
 	-- La suerte del objeto se aplica UNA vez, al arma. El metal y el tamaño (permanentes, Config.Metals y Sizes) se
 	-- tiran a la vez, pero con la suerte de siempre: con la del objeto en las tres tiradas, un objeto de x4 sacaba
 	-- armas con metal y tamaño 4 x 4 x 4 veces más y el "1 entre N" de pantalla no valía nada.

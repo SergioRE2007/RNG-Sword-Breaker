@@ -401,7 +401,7 @@ function Hud.start()
 		setGems(gemAmount)
 		damageText.Text = `Daño <font color="#ff9a6a">{Format.multiplier(Stats.damage(player))}</font>  ·  Vida <font color="#ff6e6e">{Format.short(Stats.maxHealth(player))}</font>`
 		luckText.Text = `Suerte de destructibles <font color="#7ee07a">x{Format.multiplier(Stats.luck(player))}</font>`
-		gachaText.Text = `Suerte de armas <font color="#c9a0ff">x{Format.multiplier(Stats.gachaLuck(player))}</font>`
+		gachaText.Text = `Suerte de armas <font color="#c9a0ff">x{Format.multiplier(Stats.weaponLuck(player))}</font>`
 		for name, text in upgradeRows do
 			local upgrade = Config.Upgrades[name]
 			local level = player:GetAttribute("Upgrade_" .. name) or 0

@@ -1,6 +1,7 @@
 -- Estadísticas finales del jugador: junta espada, rasgo, artefactos equipados y mejoras.
 -- Lee los atributos del Player, así que da lo mismo en el servidor y en el cliente.
 local Config = require(script.Parent.Config)
+local ObjectSpec = require(script.Parent.ObjectSpec)
 local Permanent = require(script.Parent.Permanent)
 local Upgrades = require(script.Parent.Upgrades)
 
@@ -142,6 +143,13 @@ end
 -- las fuentes directas: los renacimientos y, cuando existan, las pociones.
 function Stats.gachaLuck(player: Player): number
 	return Stats.rebirthBonus(player, "gachaLuck")
+end
+
+-- Suerte de armas del jugador, la que enseña el HUD: la que dan sus objetos de siempre (ObjectSpec.usualLuck, que
+-- sube con su suerte de destructibles) por la suya propia. Con ella se tiran el metal y el tamaño de sus armas y
+-- contra ella se mide lo difícil que era cada una; el objeto roto pone su propia suerte solo para decidir el arma.
+function Stats.weaponLuck(player: Player): number
+	return Stats.gachaLuck(player) * ObjectSpec.usualLuck(Stats.luck(player))
 end
 
 -- Segundos por tirada gratis del gacha (solo con Config.Gacha.FreeRoll): la mejora "Velocidad de aparición"
