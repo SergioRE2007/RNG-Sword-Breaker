@@ -72,7 +72,8 @@ end
 
 -- Lo que le toca a un objeto nuevo de esa parcela: tipo (suerte de parcela), rareza y tamaño (ObjectSpec).
 local function rollSpec(owner: Player)
-	local luck = Stats.luck(owner)
+	-- La poción de suerte de cajas (Stats.spawnLuck) multiplica la del tipo; la de rareza y tamaño ya la lleva objectLuck.
+	local luck = Stats.luck(owner) * Stats.spawnLuck(owner)
 	local def = rollDef(luck)
 	local spec = ObjectSpec.roll(def, Stats.objectLuck(owner))
 	spec.def = def

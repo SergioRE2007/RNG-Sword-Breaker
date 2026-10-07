@@ -9,6 +9,7 @@ local Dungeons = require(script.Parent.Dungeons)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Gacha = require(script.Parent.Gacha)
 local Gear = require(script.Parent.Gear)
+local Potions = require(script.Parent.Potions)
 local Traits = require(script.Parent.Traits)
 local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
@@ -63,6 +64,7 @@ local function onSwing(player: Player)
 			Gacha.give(player, object.luck, "object", object.rolls, { name = broken.name, quality = object.quality, origin = origin, box = box, objectOdds = object.odds })
 			Traits.onBroken(player, broken)
 			Gear.onBroken(player)
+			Potions.onBroken(player, broken, object)
 		end
 	end
 	-- Enemigos de la mazmorra, si está en una.

@@ -79,8 +79,10 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 	local info = Modifiers.KINDS[kind]
 	local rolls = {}
 	local index = nil
+	-- Poción de suerte de rasgo (en la Mesa) o de grado (en la Forja): sube el peso de lo raro, no el de todo por igual.
+	local luck = Stats.potion(player, if kind == "traits" then "traitLuck" else "rankLuck")
 	for _ = 1, tries do
-		local rolled = Modifiers.roll(kind, random)
+		local rolled = Modifiers.roll(kind, random, luck)
 		table.insert(rolls, rolled)
 		if not index or Modifiers.better(kind, rolled, index, order) then
 			index = rolled
@@ -97,10 +99,11 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 	Remotes.ModifierRolled:FireClient(player, kind, id, index, rolls, previous)
 
 	local entry = info.list[index]
-	local odds = Modifiers.odds(kind, index)
+	-- El aviso cuenta la probabilidad real, con la suerte de la poción.
+	local odds = Modifiers.odds(kind, index, luck)
 	if odds >= Config.AnnounceOdds then
 		local what = if kind == "traits" then "el rasgo" else "el grado"
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha sacado {what} {entry.name} ({Modifiers.formatPercent(Modifiers.percent(kind, index))}, 1 entre {Format.short(odds)})!`, entry.color)
+		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha sacado {what} {entry.name} ({Modifiers.formatPercent(Modifiers.percent(kind, index, luck))}, 1 entre {Format.short(odds)})!`, entry.color)
 	end
 end
 

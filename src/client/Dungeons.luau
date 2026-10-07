@@ -451,10 +451,12 @@ local function buildFeedback()
 			subtitle.Text = if level then `<font color="{Ui.SOFT}">Mazmorra</font> <font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>` else ""
 			local lines = {}
 			local summary = if type(data.loot) == "table" then data.loot else {}
-			for _, name in Config.ItemOrder do
-				local amount = summary.items and summary.items[name]
-				if amount then
-					table.insert(lines, `<font color="{hex(Config.Items[name].color)}">+{Format.short(amount)} {Config.Items[name].name}</font>`)
+			for _, list in { Config.ItemOrder, Config.Potions.ItemKeys } do
+				for _, name in list do
+					local amount = summary.items and summary.items[name]
+					if amount then
+						table.insert(lines, `<font color="{hex(Config.Items[name].color)}">+{Format.short(amount)} {Config.Items[name].name}</font>`)
+					end
 				end
 			end
 			for _, piece in summary.armor or {} do

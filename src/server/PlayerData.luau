@@ -7,11 +7,13 @@ local RunService = game:GetService("RunService")
 
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Config = require(ReplicatedStorage.Shared.Config)
+local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 
 local PlayerData = {}
 
 local sessions = {} -- [Player] = { data = {...}, canSave = boolean }
 local store = nil -- nil = sin comprobar, false = no disponible
+local loadHooks = {} -- funciones a las que se avisa cuando los datos de un jugador ya están cargados (PlayerData.onLoad)
 
 local function getStore()
 	if store == nil then
@@ -60,8 +62,13 @@ local function publish(player: Player)
 	player:SetAttribute("AutoSell", data.autoSell)
 	player:SetAttribute("TraitPriority", data.traitPriority)
 
+	-- Los objetos (con las pociones son unos cuantos) solo se escriben si han cambiado: esto corre con cada moneda.
+	local sent = session.itemsSent
 	for name, count in data.items do
-		player:SetAttribute("Item_" .. name, count)
+		if sent[name] ~= count then
+			sent[name] = count
+			player:SetAttribute("Item_" .. name, count)
+		end
 	end
 	player:SetAttribute("Artifacts", table.concat(data.artifacts, ","))
 	player:SetAttribute("Gear", table.concat(data.gear, ","))
@@ -183,8 +190,9 @@ local function load(player: Player)
 	-- swords = copias { id, sword = índice de Config.Swords, trait = índice de Config.Traits o nil,
 	-- grade = índice de Config.Grades o nil };
 	-- equipped = id de la copia equipada; autoSell = se venden solas las espadas de rareza menor (0 = no);
-	-- items = { [nombre] = cantidad }; artifacts = índices de Config.Artifacts que tiene; gear = los equipados.
+	-- items = { [nombre] = cantidad } (las pociones también son objetos); artifacts = índices de Config.Artifacts que tiene; gear = los equipados.
 	-- armor = piezas de armadura (ver shared/ArmorStats); armorWorn = { [hueco] = id de la pieza equipada }.
+	-- potions = pociones activas { [familia de Config.Potions.Families] = { tier, seconds = tiempo de juego que queda } }.
 	local data = {
 		coins = Config.StartCoins,
 		gems = 0,
@@ -205,6 +213,7 @@ local function load(player: Player)
 		armor = {},
 		nextArmorId = 1,
 		armorWorn = {},
+		potions = {},
 	}
 	for name in Config.Upgrades do
 		data.upgrades[name] = 0
@@ -254,6 +263,8 @@ local function load(player: Player)
 					end
 				end
 				loadArmor(data, saved)
+				-- Pociones activas: el tiempo es de juego, así que lo que quedó al salir es lo que queda al volver.
+				data.potions = PotionInfo.sanitize(saved.potions)
 				if type(saved.upgrades) == "table" then
 					for name, upgrade in Config.Upgrades do
 						data.upgrades[name] = math.clamp(tonumber(saved.upgrades[name]) or 0, 0, upgrade.maxLevel)
@@ -276,7 +287,18 @@ local function load(player: Player)
 		data.coins = math.huge
 		data.gems = math.huge
 		for name in data.items do
-			data.items[name] = math.huge
+			-- Las pociones no: se gastan, y así se puede probar que se acaban (las da Config.Test.AllPotions).
+			if not Config.Items[name].potion then
+				data.items[name] = math.huge
+			end
+		end
+		canSave = false
+	end
+
+	-- Modo de pruebas (solo en Studio): AllPotions copias de cada poción, también sin guardar.
+	if RunService:IsStudio() and (Config.Test.AllPotions or 0) > 0 then
+		for _, key in Config.Potions.ItemKeys do
+			data.items[key] = math.max(data.items[key], Config.Test.AllPotions)
 		end
 		canSave = false
 	end
@@ -315,8 +337,11 @@ local function load(player: Player)
 	coins.Parent = leaderstats
 	leaderstats.Parent = player
 
-	sessions[player] = { data = data, canSave = canSave, armorDirty = true }
+	sessions[player] = { data = data, canSave = canSave, armorDirty = true, itemsSent = {} }
 	publish(player)
+	for _, hook in loadHooks do
+		task.spawn(hook, player)
+	end
 end
 
 local function save(player: Player)
@@ -328,6 +353,14 @@ local function save(player: Player)
 	local ok, err = pcall(ds.SetAsync, ds, "p_" .. player.UserId, session.data)
 	if not ok then
 		warn(`[PlayerData] No se pudo guardar a {player.Name}: {err}`)
+	end
+end
+
+-- Avisa con callback(player) cuando los datos de un jugador ya están cargados (y ahora mismo, de los que ya lo estén).
+function PlayerData.onLoad(callback: (Player) -> ())
+	table.insert(loadHooks, callback)
+	for player in sessions do
+		task.spawn(callback, player)
 	end
 end
 
