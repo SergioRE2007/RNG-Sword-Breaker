@@ -2,6 +2,7 @@
 -- Lee los atributos del Player, así que da lo mismo en el servidor y en el cliente.
 local Config = require(script.Parent.Config)
 local Permanent = require(script.Parent.Permanent)
+local PotionInfo = require(script.Parent.PotionInfo)
 local Upgrades = require(script.Parent.Upgrades)
 
 local Stats = {}
@@ -67,9 +68,10 @@ local function armor(player: Player, stat: string): number
 	return player:GetAttribute("Armor_" .. stat) or 0
 end
 
--- Vida máxima del personaje: la base más la que da la armadura.
+-- Vida máxima del personaje: la base más la que da la armadura, por la poción de vida si hay una activa (redondeada: 100 x 1,15
+-- no puede quedarse en 114,99999999999999 y salir como 114).
 function Stats.maxHealth(player: Player): number
-	return Config.Armor.BaseHealth + armor(player, "health")
+	return math.round((Config.Armor.BaseHealth + armor(player, "health")) * Stats.potion(player, "health"))
 end
 
 -- Si el jugador tiene ese pase de juego (clave de Config.Gamepasses; el servidor lo publica en "Pass_<clave>").
@@ -87,6 +89,18 @@ function Stats.perk(player: Player, name: string): number?
 		end
 	end
 	return best
+end
+
+-- Tier de la poción activa de esa familia (clave de Config.Potions.Families), 0 si no hay. Lo publica el servidor
+-- (server/Potions) en "Potion_<familia>" y en cuanto caduca lo quita, así que esto vale en servidor y cliente.
+function Stats.potionTier(player: Player, family: string): number
+	return player:GetAttribute("Potion_" .. family) or 0
+end
+
+-- Por cuánto multiplica la poción activa de esa familia (1 si no hay ninguna).
+function Stats.potion(player: Player, family: string): number
+	local tier = Stats.potionTier(player, family)
+	return if tier > 0 then PotionInfo.multiplier(family, tier) else 1
 end
 
 local function upgrade(player: Player, name: string): number
@@ -121,7 +135,7 @@ function Stats.rebirthCost(player: Player): number
 end
 
 function Stats.damage(player: Player): number
-	return Stats.swordDamage(Stats.equipped(player)) * gear(player, "damage") * Stats.rebirthBonus(player, "damage") * (1 + armor(player, "damage"))
+	return Stats.swordDamage(Stats.equipped(player)) * gear(player, "damage") * Stats.rebirthBonus(player, "damage") * (1 + armor(player, "damage")) * Stats.potion(player, "damage")
 end
 
 -- Multiplicador de suerte que dan el rasgo de la espada equipada, los artefactos y la armadura.
@@ -139,9 +153,9 @@ end
 -- Suerte de armas propia del jugador: multiplica la del objeto que da la tirada (ObjectSpec.luck), que es de donde
 -- sale casi toda, y es la única que mejora el metal y el tamaño. No hay mejora que la compre (la de suerte es solo
 -- para los destructibles: decidido por el usuario), y el rasgo, los artefactos y la armadura tampoco entran aquí:
--- cuentan en Stats.luck. Aquí van solo las fuentes directas: los renacimientos y, cuando existan, las pociones.
+-- cuentan en Stats.luck. Aquí van solo las fuentes directas: los renacimientos y la poción de suerte de armas.
 function Stats.gachaLuck(player: Player): number
-	return Stats.rebirthBonus(player, "gachaLuck")
+	return Stats.rebirthBonus(player, "gachaLuck") * Stats.potion(player, "weaponLuck")
 end
 
 -- Segundos por tirada gratis del gacha (solo con Config.Gacha.FreeRoll): la mejora "Velocidad de aparición"
@@ -158,9 +172,17 @@ end
 
 -- Suerte de la rareza y del tamaño de los objetos de la parcela (multiplica sus probabilidades: Config.ObjectRarities
 -- y ObjectSizes). No es la suerte de destructibles (Stats.luck), que decide el tipo de objeto. De base 1: aquí se sumarán las mejoras
--- de parcela o los pases que la suban (ventaja "objectLuck").
+-- de parcela o los pases que la suban (ventaja "objectLuck"), y la poción de suerte de cajas.
 function Stats.objectLuck(player: Player): number
-	return Stats.perk(player, "objectLuck") or 1
+	return (Stats.perk(player, "objectLuck") or 1) * Stats.spawnLuck(player)
+end
+
+-- Poción de suerte de cajas: multiplica la probabilidad con la que aparecen los objetos de la parcela, tanto la de su tipo
+-- (server/Destructibles la suma a Stats.luck al elegirlo) como la de su rareza y su tamaño (en Stats.objectLuck). No toca
+-- la suerte de las armas (Stats.gachaLuck), los accesorios ni los rasgos y grados: las armas solo ganan de rebote, porque
+-- salen objetos mejores.
+function Stats.spawnLuck(player: Player): number
+	return Stats.potion(player, "boxLuck")
 end
 
 -- Monedas: artefactos, y el rasgo y el grado de la espada equipada.

@@ -23,14 +23,44 @@ for kind, info in Modifiers.KINDS do
 	totals[kind] = total
 end
 
--- Probabilidad en % de sacar la entrada `index`.
-function Modifiers.percent(kind: string, index: number): number
-	return Modifiers.KINDS[kind].list[index].chance / totals[kind] * 100
+-- SUERTE (pociones de suerte de rasgo y de grado). No multiplica todas las probabilidades por igual: sube el peso de lo
+-- raro más que el de lo común, así que lo rarísimo se acerca pero sigue siéndolo. La entrada de más peso (la más común)
+-- se queda como está, la de menos peso se multiplica por la suerte entera y las de en medio por la suerte elevada a lo
+-- cerca que están de la más rara, medido en escala logarítmica de su peso. Con suerte 1 (o sin ella) todo queda igual.
+local ranges = {} -- [kind] = { peak = mayor peso, span = log(mayor peso / menor peso) }
+for kind, info in Modifiers.KINDS do
+	local peak, low = 0, math.huge
+	for _, entry in info.list do
+		peak = math.max(peak, entry.chance)
+		low = math.min(low, entry.chance)
+	end
+	ranges[kind] = { peak = peak, span = math.log(peak / low) }
 end
 
--- "1 entre N" de sacar la entrada `index`.
-function Modifiers.odds(kind: string, index: number): number
-	return 100 / Modifiers.percent(kind, index)
+local function weight(kind: string, entry, luck: number?): number
+	local range = ranges[kind]
+	if not luck or luck <= 1 or range.span == 0 then
+		return entry.chance
+	end
+	return entry.chance * luck ^ (math.log(range.peak / entry.chance) / range.span)
+end
+
+-- Probabilidad en % de sacar la entrada `index` (con la `luck` de una poción, si se le pasa).
+function Modifiers.percent(kind: string, index: number, luck: number?): number
+	local list = Modifiers.KINDS[kind].list
+	if not luck or luck <= 1 then
+		return list[index].chance / totals[kind] * 100
+	end
+	local total = 0
+	for _, entry in list do
+		total += weight(kind, entry, luck)
+	end
+	return weight(kind, list[index], luck) / total * 100
+end
+
+-- "1 entre N" de sacar la entrada `index` (con la `luck` de una poción, si se le pasa).
+function Modifiers.odds(kind: string, index: number, luck: number?): number
+	return 100 / Modifiers.percent(kind, index, luck)
 end
 
 -- 24.76 -> "24.8%", 0.0019 -> "0.0019%".
@@ -43,12 +73,17 @@ function Modifiers.formatPercent(percent: number): string
 	return text .. "%"
 end
 
--- Entrada al azar según sus pesos.
-function Modifiers.roll(kind: string, random: Random): number
+-- Entrada al azar según sus pesos (con la `luck` de una poción, si se le pasa).
+function Modifiers.roll(kind: string, random: Random, luck: number?): number
 	local list = Modifiers.KINDS[kind].list
-	local pick = random:NextNumber() * totals[kind]
+	local weights, total = {}, 0
 	for index, entry in list do
-		pick -= entry.chance
+		weights[index] = weight(kind, entry, luck)
+		total += weights[index]
+	end
+	local pick = random:NextNumber() * total
+	for index, entryWeight in weights do
+		pick -= entryWeight
 		if pick < 0 then
 			return index
 		end

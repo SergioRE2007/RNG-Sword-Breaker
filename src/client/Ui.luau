@@ -1326,6 +1326,79 @@ function Ui.amuletIcon(parent: Instance, color: Color3)
 	shine(stone, UDim2.fromScale(0.3, 0.3), UDim2.fromScale(0.3, 0.3))
 end
 
+-- Símbolos de las pociones (dentro del líquido): cada uno se dibuja en un cuadrado de lado 1 con piezas sin borde grueso.
+local POTION_GLYPHS = {
+	sword = function(mark) -- espada en diagonal: hoja y guarda
+		mark(UDim2.fromScale(0.18, 0.86), UDim2.fromScale(0.5, 0.46), 3).Rotation = 45
+		mark(UDim2.fromScale(0.58, 0.16), UDim2.fromScale(0.5, 0.64), 3).Rotation = -45
+	end,
+	heart = function(mark) -- cruz de vida
+		mark(UDim2.fromScale(0.7, 0.24), UDim2.fromScale(0.5, 0.5), 4)
+		mark(UDim2.fromScale(0.24, 0.7), UDim2.fromScale(0.5, 0.5), 4)
+	end,
+	box = function(mark) -- cubo con tapa
+		mark(UDim2.fromScale(0.6, 0.6), UDim2.fromScale(0.5, 0.55), 4)
+		mark(UDim2.fromScale(0.72, 0.18), UDim2.fromScale(0.5, 0.26), 3)
+	end,
+	star = function(mark) -- estrella de ocho puntas: dos cuadrados, uno girado
+		mark(UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.5, 0.5), 3)
+		mark(UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.5, 0.5), 3).Rotation = 45
+	end,
+	chevron = function(mark) -- dos rombos apilados, como las insignias de rango
+		mark(UDim2.fromScale(0.4, 0.4), UDim2.fromScale(0.5, 0.3), 3).Rotation = 45
+		mark(UDim2.fromScale(0.4, 0.4), UDim2.fromScale(0.5, 0.68), 3).Rotation = 45
+	end,
+	spark = function(mark) -- destello arcano de cuatro puntas
+		mark(UDim2.fromScale(0.16, 0.9), UDim2.fromScale(0.5, 0.5), 4)
+		mark(UDim2.fromScale(0.9, 0.16), UDim2.fromScale(0.5, 0.5), 4)
+		mark(UDim2.fromScale(0.34, 0.34), UDim2.fromScale(0.5, 0.5), 3).Rotation = 45
+	end,
+}
+
+-- Poción: frasco de cristal con corcho, el líquido del color de la familia y un símbolo encima (`glyph`: sword = daño,
+-- heart = vida, box = suerte de cajas, star = suerte de armas, chevron = grado, spark = rasgo; sin él, solo el frasco).
+function Ui.potionIcon(parent: Instance, color: Color3, glyph: string?)
+	-- El frasco ocupa todo su hueco y siempre es cuadrado (si el hueco no lo es, se ajusta al lado menor).
+	local holder = iconHolder(parent, 0)
+	holder.Position = UDim2.fromScale(0.5, 0.5)
+	holder.Size = UDim2.fromScale(1, 1)
+	local square = Instance.new("UIAspectRatioConstraint")
+	square.Parent = holder
+	local glass = Color3.fromRGB(205, 226, 242)
+	piece(holder, UDim2.fromScale(0.3, 0.12), UDim2.fromScale(0.5, 0.06), Color3.fromRGB(160, 105, 60), 2)
+	local neck = piece(holder, UDim2.fromScale(0.26, 0.26), UDim2.fromScale(0.5, 0.19), glass, 2)
+	neck.BackgroundTransparency = 0.15
+	-- Cuerpo redondo de cristal y, dentro, el líquido (un círculo un poco menor) con su degradado.
+	local body = piece(holder, UDim2.fromScale(0.82, 0.82), UDim2.fromScale(0.5, 0.58), glass, 100)
+	body.BackgroundTransparency = 0.15
+	local liquid = piece(body, UDim2.new(1, -7, 1, -7), UDim2.fromScale(0.5, 0.5), color, 100)
+	Ui.gradient(liquid, color:Lerp(WHITE, 0.5), color:Lerp(BLACK, 0.3), 90)
+	local liquidLine = liquid:FindFirstChildOfClass("UIStroke")
+	if liquidLine then
+		liquidLine.Thickness = 1
+	end
+	shine(body, UDim2.fromScale(0.16, 0.1), UDim2.fromScale(0.26, 0.2)).Rotation = -40
+	local draw = if glyph then POTION_GLYPHS[glyph] else nil
+	if draw then
+		-- El símbolo va en un cuadrado centrado en el líquido, para que no se estire con su forma.
+		local box = Instance.new("Frame")
+		box.AnchorPoint = Vector2.new(0.5, 0.5)
+		box.Position = UDim2.fromScale(0.5, 0.52)
+		box.Size = UDim2.fromScale(0.64, 0.64)
+		box.BackgroundTransparency = 1
+		box.Parent = liquid
+		local light = color:Lerp(WHITE, 0.85)
+		draw(function(size: UDim2, position: UDim2, radius: number): Frame
+			local item = piece(box, size, position, light, radius)
+			local line = item:FindFirstChildOfClass("UIStroke")
+			if line then
+				line.Thickness = 1
+			end
+			return item
+		end)
+	end
+end
+
 -- Hexágono (punta arriba) de `width` de ancho, hecho con tres rectángulos girados.
 -- Devuelve el contenedor y sus tres piezas, para poder cambiarles el color.
 function Ui.hex(parent: Instance, width: number, color: Color3)
@@ -1650,7 +1723,10 @@ local TOAST_WIDTH = 520
 -- Icono según de qué habla el aviso (no hay imágenes: se dibuja con marcos). Los rojos llevan "!".
 local function toastIcon(parent: Frame, text: string, color: Color3)
 	local lower = string.lower(text)
-	if string.find(lower, "gema", 1, true) or string.find(lower, "cristal", 1, true) then
+	if string.find(lower, "poci", 1, true) then
+		-- Antes que "arma": la poción de suerte de armas también la lleva.
+		Ui.potionIcon(parent, color, "spark")
+	elseif string.find(lower, "gema", 1, true) or string.find(lower, "cristal", 1, true) then
 		Ui.gemIcon(parent, color)
 	elseif string.find(lower, "moneda", 1, true) then
 		Ui.coinIcon(parent, color)

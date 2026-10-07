@@ -415,7 +415,8 @@ local function applyOffer(session, side, other, category: unknown, key: unknown,
 		end
 		offer[category] = value
 	elseif category == "items" then
-		if type(key) ~= "string" or not Config.Items[key] then
+		-- Las pociones no se comercian de momento: la ventana no las enseña (no están en Config.ItemOrder).
+		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].potion then
 			return false
 		end
 		local value = validAmount(amount, if side.bot then math.huge else data.items[key] or 0)
@@ -549,7 +550,7 @@ local function onSuggest(player: Player, intent: unknown, category: unknown, key
 	lastSuggest[player] = now
 	local byAmount = category == "coins" or category == "gems" or category == "items"
 	if category == "items" then
-		if type(key) ~= "string" or not Config.Items[key] then
+		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].potion then
 			return
 		end
 	elseif byAmount then
