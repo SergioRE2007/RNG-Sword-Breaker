@@ -368,7 +368,7 @@ Config.Upgrades = {
 	capacity = { name = "Más objetos", short = "Objetos", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, cost = 25, growth = 2.6, display = "%d" },
 	-- Suerte de destructibles (misma clave de siempre, "luck": lo comprado se conserva): multiplica la probabilidad
 	-- de los tipos raros de Config.Destructibles, que son los que dan más monedas, gemas y suerte de armas.
-	luck = { name = "Suerte de destructibles", short = "Suerte", desc = "Aumenta la probabilidad de encontrar destructibles raros, que dan mejores armas.", icon = "orb", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 40, growth = 3.7, display = "x%s" },
+	luck = { name = "Suerte de destructibles", short = "Suerte", desc = "Aumenta la probabilidad de encontrar destructibles raros, que dan mejores armas.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 40, growth = 3.7, display = "x%s" },
 	speed = { name = "Velocidad de golpe", short = "Velocidad", icon = "sword", color = Color3.fromRGB(60, 170, 255), mode = "mul", base = 0.35, perLevel = 0.912, maxLevel = 10, cost = 200, growth = 3.3, display = "%.2fs" },
 	-- Segundos entre apariciones de objetos en la parcela (lo lee Stats.spawnTime): cada objeto trae tiradas de arma, así
 	-- que es la antigua "Velocidad de tirada" (misma clave, para no perder lo comprado). 1,5 s al principio, -12 % por

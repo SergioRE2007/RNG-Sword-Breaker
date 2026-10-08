@@ -164,11 +164,11 @@ local function traitBadge(parent: GuiObject, entry)
 	art.BackgroundTransparency = 1
 	art.Parent = disc
 	if entry.icon == "coins" then
-		Ui.orbIcon(art, COIN)
+		Ui.image(art, "monedas")
 	elseif entry.icon == "damage" then
-		Ui.swordIcon(art, WHITE)
+		Ui.image(art, "espada")
 	elseif entry.icon == "luck" then
-		Ui.cloverIcon(art, Color3.fromRGB(120, 235, 90))
+		Ui.image(art, "suerte")
 	else
 		local _, pieces = Ui.hex(disc, 22, tint)
 		for _, piece in pieces do
@@ -408,7 +408,7 @@ local function buildShop(kind: string)
 	countButton.Visible = traits
 	-- Engranaje: con qué resultados se para la tirada automática.
 	local settingsButton = control("Settings", "", Ui.COLORS.gray, 4, if traits then 0.13 else 0.12, 24)
-	Ui.gearIcon(settingsButton)
+	Ui.image(settingsButton, "ajustes")
 	-- Todo BottomControls en su capa; dentro, el orden del árbol pone relieve e iconos encima del botón.
 	for _, descendant in controls:GetDescendants() do
 		if descendant:IsA("GuiObject") then

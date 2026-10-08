@@ -1267,15 +1267,42 @@ local function iconHolder(parent: Instance, rotation: number): Frame
 	return holder
 end
 
--- Iconos hechos con marcos (no hay imágenes propias).
-function Ui.swordIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 45)
-	local blade = piece(holder, UDim2.fromScale(0.2, 0.66), UDim2.fromScale(0.5, 0.36), color, 4)
-	Ui.gradient(blade, WHITE, Color3.fromRGB(170, 170, 180), 0)
-	piece(holder, UDim2.fromScale(0.14, 0.22), UDim2.fromScale(0.5, 0.86), Color3.fromRGB(120, 75, 45), 3)
-	piece(holder, UDim2.fromScale(0.52, 0.1), UDim2.fromScale(0.5, 0.72), Color3.fromRGB(235, 190, 60), 3)
+-- Logos en imagen (PNG en assets/logos, subidos a Roblox a 512 px y recortados al dibujo). Uno nuevo: subirlo y
+-- añadir aquí su id.
+Ui.IMAGES = {
+	accesorios = "rbxassetid://100488682771428",
+	ajustes = "rbxassetid://81188398748574",
+	armadura = "rbxassetid://106264890410101",
+	casa = "rbxassetid://118337847160649",
+	espada = "rbxassetid://100527116629167",
+	gemas = "rbxassetid://86307416552518",
+	hub = "rbxassetid://74343969763454",
+	mazmorras = "rbxassetid://137297255530089",
+	mejora = "rbxassetid://112320049421954",
+	mochila = "rbxassetid://95507779119186",
+	monedas = "rbxassetid://134320261318517",
+	objetos = "rbxassetid://91743584320580",
+	rebirth = "rbxassetid://90522539620973",
+	suerte = "rbxassetid://114098318122458",
+	tienda_robux = "rbxassetid://93004325604664",
+	trade = "rbxassetid://118234202800810",
+}
+
+-- Pone el logo `name` de Ui.IMAGES en el mismo hueco que ocupan los iconos hechos con marcos.
+function Ui.image(parent: Instance, name: string): ImageLabel
+	local image = Instance.new("ImageLabel")
+	image.Name = "Icon"
+	image.AnchorPoint = Vector2.new(0.5, 0.5)
+	image.Position = UDim2.fromScale(0.5, 0.5)
+	image.Size = UDim2.fromScale(0.9, 0.9)
+	image.BackgroundTransparency = 1
+	image.ScaleType = Enum.ScaleType.Fit
+	image.Image = Ui.IMAGES[name]
+	image.Parent = parent
+	return image
 end
 
+-- Iconos hechos con marcos, para lo que cambia de color con cada casilla (gemas de objetos, accesorios, pociones...).
 function Ui.gemIcon(parent: Instance, color: Color3)
 	local holder = iconHolder(parent, 45)
 	local gem = piece(holder, UDim2.fromScale(0.62, 0.62), UDim2.fromScale(0.5, 0.5), color, 6)
@@ -1304,49 +1331,6 @@ function Ui.orbIcon(parent: Instance, color: Color3)
 	Ui.gradient(orb, WHITE, Color3.fromRGB(150, 150, 170), 60)
 end
 
--- Trébol de cuatro hojas (suerte): cuatro hojas redondas en cruz, centro claro y tallo.
-function Ui.cloverIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	piece(holder, UDim2.fromScale(0.1, 0.3), UDim2.fromScale(0.58, 0.82), color:Lerp(BLACK, 0.35), 3).Rotation = -28
-	for _, offset in { Vector2.new(0, -0.18), Vector2.new(0.18, 0), Vector2.new(0, 0.18), Vector2.new(-0.18, 0) } do
-		local leaf = piece(holder, UDim2.fromScale(0.44, 0.44), UDim2.fromScale(0.5 + offset.X, 0.46 + offset.Y), color, 100)
-		Ui.gradient(leaf, WHITE, Color3.fromRGB(160, 175, 160), 90)
-	end
-	local heart = piece(holder, UDim2.fromScale(0.16, 0.16), UDim2.fromScale(0.5, 0.46), color:Lerp(WHITE, 0.6), 100)
-	heart.ZIndex = holder.ZIndex
-end
-
-function Ui.boxIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	local box = piece(holder, UDim2.fromScale(0.62, 0.62), UDim2.fromScale(0.5, 0.5), color, 5)
-	Ui.gradient(box, WHITE, Color3.fromRGB(170, 160, 150), 90)
-	piece(box, UDim2.fromScale(1, 0.16), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(90, 60, 35), 0)
-end
-
--- Mochila: asa arriba, cuerpo con solapa, bolsillo, hebilla dorada y correas a los lados. `color` es el
--- del cuerpo.
-function Ui.backpackIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	holder.Size = UDim2.fromScale(0.92, 0.92)
-	local dark = color:Lerp(BLACK, 0.45)
-	local light = color:Lerp(WHITE, 0.35)
-	local handle = piece(holder, UDim2.fromScale(0.34, 0.3), UDim2.fromScale(0.5, 0.15), dark, 100)
-	handle.BackgroundTransparency = 1
-	Ui.stroke(handle, dark, 4)
-	for _, side in { 0.1, 0.9 } do
-		local strap = piece(holder, UDim2.fromScale(0.13, 0.36), UDim2.fromScale(side, 0.64), dark, 4)
-		Ui.gradient(strap, WHITE, Color3.fromRGB(150, 150, 160), 90)
-	end
-	local body = piece(holder, UDim2.fromScale(0.7, 0.7), UDim2.fromScale(0.5, 0.6), color, 12)
-	Ui.gradient(body, WHITE, Color3.fromRGB(160, 160, 175), 90)
-	local flap = piece(body, UDim2.fromScale(1, 0.4), UDim2.fromScale(0.5, 0.2), light, 12)
-	Ui.gradient(flap, WHITE, Color3.fromRGB(190, 190, 200), 90)
-	local pocket = piece(body, UDim2.fromScale(0.62, 0.3), UDim2.fromScale(0.5, 0.76), dark:Lerp(color, 0.5), 8)
-	Ui.gradient(pocket, WHITE, Color3.fromRGB(170, 170, 185), 90)
-	piece(body, UDim2.fromScale(0.22, 0.16), UDim2.fromScale(0.5, 0.42), Color3.fromRGB(245, 200, 60), 4)
-end
-
-
 -- Estrella dorada de ocho puntas (dos cuadrados, uno girado) con brillo: icono del renacimiento.
 function Ui.starIcon(parent: Instance, color: Color3)
 	local holder = iconHolder(parent, 0)
@@ -1358,26 +1342,6 @@ function Ui.starIcon(parent: Instance, color: Color3)
 	end
 	local core = piece(holder, UDim2.fromScale(0.34, 0.34), UDim2.fromScale(0.5, 0.5), color:Lerp(WHITE, 0.55), 100)
 	core.ZIndex = 3
-end
--- Mejoras: hexágono (como los nodos del árbol) con una flecha doble hacia arriba.
-function Ui.upgradeIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	holder.Size = UDim2.fromScale(0.92, 0.92)
-	local _, outer = Ui.hex(holder, 46, BLACK)
-	local _, middle = Ui.hex(holder, 40, color)
-	local _, inner = Ui.hex(holder, 32, color:Lerp(WHITE, 0.3))
-	for _, group in { outer, middle, inner } do
-		for _, frame in group do
-			frame.ZIndex = 1
-		end
-	end
-	for _, y in { 0.6, 0.38 } do
-		for _, side in { -1, 1 } do
-			local bar = piece(holder, UDim2.fromScale(0.34, 0.12), UDim2.fromScale(0.5 + side * 0.11, y), WHITE, 3)
-			bar.Rotation = side * 38
-			bar.ZIndex = 3
-		end
-	end
 end
 
 local GOLD = Color3.fromRGB(240, 192, 60)
@@ -1395,124 +1359,6 @@ local function shine(parent: Instance, size: UDim2, position: UDim2)
 		line:Destroy()
 	end
 	return spot
-end
-
--- Moneda: canto dorado, cara con una estrella grabada y un reflejo.
-function Ui.coinIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	local rim = disc(holder, 0.9, UDim2.fromScale(0.5, 0.5), GOLD:Lerp(color, 0.15))
-	Ui.gradient(rim, WHITE, Color3.fromRGB(170, 140, 90), 60)
-	local face = disc(rim, 0.74, UDim2.fromScale(0.5, 0.5), GOLD:Lerp(WHITE, 0.15))
-	Ui.gradient(face, WHITE, Color3.fromRGB(190, 160, 100), 120)
-	for _, turn in { 0, 45 } do
-		local arm = piece(face, UDim2.fromScale(0.34, 0.34), UDim2.fromScale(0.5, 0.5), GOLD:Lerp(Color3.fromRGB(150, 100, 20), 0.45), 3)
-		arm.Rotation = turn
-		local line = arm:FindFirstChildOfClass("UIStroke")
-		if line then
-			line.Thickness = 1
-		end
-	end
-	shine(rim, UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.3, 0.18)).Rotation = -35
-end
-
--- Brújula (el centro del mapa): aro, esfera y aguja roja y blanca.
-function Ui.compassIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	local ring = disc(holder, 0.92, UDim2.fromScale(0.5, 0.5), GOLD)
-	Ui.gradient(ring, WHITE, Color3.fromRGB(170, 140, 90), 60)
-	local face = disc(ring, 0.78, UDim2.fromScale(0.5, 0.5), color)
-	Ui.gradient(face, WHITE, Color3.fromRGB(150, 150, 170), 80)
-	for _, spot in { Vector2.new(0.5, 0.1), Vector2.new(0.9, 0.5), Vector2.new(0.5, 0.9), Vector2.new(0.1, 0.5) } do
-		local tick = piece(face, UDim2.fromScale(0.08, 0.08), UDim2.fromScale(spot.X, spot.Y), WHITE, 100)
-		local line = tick:FindFirstChildOfClass("UIStroke")
-		if line then
-			line.Thickness = 1
-		end
-	end
-	local needle = Instance.new("Frame")
-	needle.AnchorPoint = Vector2.new(0.5, 0.5)
-	needle.Position = UDim2.fromScale(0.5, 0.5)
-	needle.Size = UDim2.fromScale(0.2, 0.74)
-	needle.BackgroundTransparency = 1
-	needle.Rotation = 40
-	needle.Parent = face
-	local north = piece(needle, UDim2.fromScale(1, 0.5), UDim2.fromScale(0.5, 0.25), Color3.fromRGB(235, 70, 70), 3)
-	north.Rotation = 0
-	local south = piece(needle, UDim2.fromScale(1, 0.5), UDim2.fromScale(0.5, 0.75), WHITE, 3)
-	south.Rotation = 0
-	disc(face, 0.12, UDim2.fromScale(0.5, 0.5), GOLD)
-end
-
--- Intercambio: dos flechas opuestas (una blanca, otra del color).
-function Ui.tradeIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	holder.Size = UDim2.fromScale(0.92, 0.92)
-	for index, dir in { 1, -1 } do
-		local y = if index == 1 then 0.32 else 0.68
-		local tint = if index == 1 then WHITE else color
-		local bar = piece(holder, UDim2.fromScale(0.5, 0.15), UDim2.fromScale(0.5 - dir * 0.08, y), tint, 4)
-		Ui.gradient(bar, WHITE, Color3.fromRGB(170, 170, 180), 90)
-		local head = piece(holder, UDim2.fromScale(0.26, 0.26), UDim2.fromScale(0.5 + dir * 0.28, y), tint, 4)
-		head.Rotation = 45
-		Ui.gradient(head, WHITE, Color3.fromRGB(170, 170, 180), 45)
-	end
-end
-
--- Puerta de mazmorra: arco de piedra con un portal que brilla dentro y escalones.
-function Ui.gateIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	holder.Size = UDim2.fromScale(0.92, 0.92)
-	local stone = Color3.fromRGB(150, 150, 165)
-	local function arch(width: number, top: number, bottom: number, tint: Color3)
-		local cap = piece(holder, UDim2.fromScale(width, width), UDim2.fromScale(0.5, top), tint, 100)
-		local post = piece(holder, UDim2.fromScale(width, bottom - top), UDim2.fromScale(0.5, (top + bottom) / 2), tint, 0)
-		return cap, post
-	end
-	local cap, post = arch(0.7, 0.34, 0.8, stone)
-	Ui.gradient(cap, WHITE, Color3.fromRGB(150, 150, 170), 90)
-	Ui.gradient(post, WHITE, Color3.fromRGB(150, 150, 170), 90)
-	local innerCap, innerPost = arch(0.44, 0.38, 0.8, color:Lerp(BLACK, 0.65))
-	for _, part in { innerCap, innerPost } do
-		Ui.gradient(part, color, color:Lerp(BLACK, 0.7), 90)
-	end
-	disc(holder, 0.2, UDim2.fromScale(0.5, 0.6), color:Lerp(WHITE, 0.5)).BackgroundTransparency = 0.25
-	for index, width in { 0.84, 0.72 } do
-		local step = piece(holder, UDim2.fromScale(width, 0.08), UDim2.fromScale(0.5, 0.86 + (index - 1) * 0.08), stone:Lerp(BLACK, 0.2 * index), 2)
-		step.ZIndex = holder.ZIndex
-	end
-end
-
--- Puesto de tienda: toldo a rayas, mostrador de madera y una moneda encima.
-function Ui.shopIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	holder.Size = UDim2.fromScale(0.92, 0.92)
-	local counter = piece(holder, UDim2.fromScale(0.72, 0.4), UDim2.fromScale(0.5, 0.72), Color3.fromRGB(150, 100, 60), 4)
-	Ui.gradient(counter, WHITE, Color3.fromRGB(150, 140, 130), 90)
-	piece(counter, UDim2.fromScale(1, 0.18), UDim2.fromScale(0.5, 0.1), Color3.fromRGB(110, 70, 40), 0)
-	for index = 1, 5 do
-		local stripe = piece(holder, UDim2.fromScale(0.17, 0.26), UDim2.fromScale(0.5 + (index - 3) * 0.16, 0.3), if index % 2 == 1 then color else WHITE, 3)
-		Ui.gradient(stripe, WHITE, Color3.fromRGB(170, 170, 180), 90)
-	end
-	disc(holder, 0.22, UDim2.fromScale(0.5, 0.56), GOLD).ZIndex = holder.ZIndex + 1
-end
-
--- Renacer: flecha circular (ocho tramos con un hueco y la punta) y una chispa en el centro.
-function Ui.rebirthIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, 0)
-	holder.Size = UDim2.fromScale(0.92, 0.92)
-	local radius = 0.33
-	for step = 0, 6 do
-		local angle = math.rad(-70 + step * 42)
-		local seg = piece(holder, UDim2.fromScale(0.2, 0.13), UDim2.fromScale(0.5 + math.cos(angle) * radius, 0.5 + math.sin(angle) * radius), color, 4)
-		seg.Rotation = math.deg(angle) + 90
-		Ui.gradient(seg, WHITE, Color3.fromRGB(190, 170, 120), 90)
-	end
-	local tipAngle = math.rad(-70 + 7 * 42 - 8)
-	local tip = piece(holder, UDim2.fromScale(0.27, 0.27), UDim2.fromScale(0.5 + math.cos(tipAngle) * radius, 0.5 + math.sin(tipAngle) * radius), color, 4)
-	tip.Rotation = math.deg(tipAngle) + 135
-	Ui.gradient(tip, WHITE, Color3.fromRGB(190, 170, 120), 45)
-	local spark = piece(holder, UDim2.fromScale(0.2, 0.2), UDim2.fromScale(0.5, 0.5), color:Lerp(WHITE, 0.5), 3)
-	spark.Rotation = 45
 end
 
 -- Accesorio: colgante dorado con una gema tallada abajo.
@@ -1630,47 +1476,6 @@ function Ui.hex(parent: Instance, width: number, color: Color3)
 	end
 	return holder, pieces
 end
-
--- Engranaje hecho con marcos (la fuente no tiene el icono): dientes, aro y agujero.
-function Ui.gearIcon(parent: GuiObject)
-	local holder = Instance.new("Frame")
-	holder.Name = "Gear"
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.5)
-	holder.Size = UDim2.fromOffset(40, 40)
-	holder.BackgroundTransparency = 1
-	holder.Parent = parent
-	local metal = Color3.fromRGB(230, 233, 240)
-	for tooth = 0, 3 do
-		local bar = Instance.new("Frame")
-		bar.AnchorPoint = Vector2.new(0.5, 0.5)
-		bar.Position = UDim2.fromScale(0.5, 0.5)
-		bar.Size = UDim2.fromOffset(44, 9)
-		bar.Rotation = tooth * 45
-		bar.BackgroundColor3 = metal
-		bar.BorderSizePixel = 0
-		bar.Parent = holder
-		Ui.round(bar, 3)
-	end
-	local wheel = Instance.new("Frame")
-	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
-	wheel.Position = UDim2.fromScale(0.5, 0.5)
-	wheel.Size = UDim2.fromOffset(28, 28)
-	wheel.BackgroundColor3 = metal
-	wheel.Parent = holder
-	Ui.round(wheel, 14)
-	Ui.stroke(wheel, BLACK, 2)
-	local hole = Instance.new("Frame")
-	hole.AnchorPoint = Vector2.new(0.5, 0.5)
-	hole.Position = UDim2.fromScale(0.5, 0.5)
-	hole.Size = UDim2.fromOffset(12, 12)
-	hole.BackgroundColor3 = Color3.fromRGB(80, 84, 98)
-	hole.Parent = wheel
-	Ui.round(hole, 6)
-	Ui.stroke(hole, BLACK, 2)
-	return holder
-end
-
 
 -- Deslizador horizontal (0 a 1): barra con relleno en degradado y un botón redondo que se arrastra
 -- con el ratón o el dedo. `onChange` recibe el valor al moverlo. Devuelve el marco y una función
@@ -1927,25 +1732,27 @@ local function fadeAll(list, info: TweenInfo, shown: boolean): Tween?
 end
 local TOAST_WIDTH = 520
 
--- Icono según de qué habla el aviso (no hay imágenes: se dibuja con marcos). Los rojos llevan "!".
+-- Icono según de qué habla el aviso. Los rojos llevan "!".
 local function toastIcon(parent: Frame, text: string, color: Color3)
 	local lower = string.lower(text)
 	if string.find(lower, "poci", 1, true) then
 		-- Antes que "arma": la poción de suerte de armas también la lleva.
 		Ui.potionIcon(parent, color, "spark")
-	elseif string.find(lower, "gema", 1, true) or string.find(lower, "cristal", 1, true) then
+	elseif string.find(lower, "cristal", 1, true) then
 		Ui.gemIcon(parent, color)
+	elseif string.find(lower, "gema", 1, true) then
+		Ui.image(parent, "gemas")
 	elseif string.find(lower, "moneda", 1, true) then
-		Ui.coinIcon(parent, color)
+		Ui.image(parent, "monedas")
 	elseif string.find(lower, "espada", 1, true) or string.find(lower, "hacha", 1, true) or string.find(lower, "lanza", 1, true) or string.find(lower, "martillo", 1, true) or string.find(lower, "arma", 1, true) then
-		Ui.swordIcon(parent, color)
+		Ui.image(parent, "espada")
 	elseif color.R > 0.7 and color.G < 0.5 and color.B < 0.5 then
 		local mark = Ui.label(parent, 34)
 		mark.Size = UDim2.fromScale(1, 1)
 		mark.Text = "!"
 		mark.TextColor3 = color
 	else
-		Ui.boxIcon(parent, color)
+		Ui.image(parent, "objetos")
 	end
 end
 

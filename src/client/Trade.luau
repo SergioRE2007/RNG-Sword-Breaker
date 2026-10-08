@@ -113,9 +113,9 @@ end
 local function amountCell(parent: Instance, name: string, color: Color3, amount: number, kind: string): TextButton
 	local cell = Ui.cell(parent, color)
 	if kind == "coins" then
-		Ui.coinIcon(cell, color)
+		Ui.image(cell, "monedas")
 	elseif kind == "gems" then
-		Ui.gemIcon(cell, color)
+		Ui.image(cell, "gemas")
 	elseif kind == "missionToken" then
 		Ui.starIcon(cell, color)
 	else
@@ -196,7 +196,7 @@ end
 
 local function buildList()
 	local window, body = Ui.window("TradeList", "Comercio", Vector2.new(560, 470), function(parent)
-		Ui.orbIcon(parent, TEAL)
+		Ui.image(parent, "trade")
 	end)
 	local note = Ui.label(body, 17)
 	note.Position = UDim2.fromOffset(16, 6)
@@ -363,7 +363,7 @@ end
 
 local function buildTrade()
 	local window, body = Ui.window("Trade", "Trato", Vector2.new(1000, 620), function(parent)
-		Ui.orbIcon(parent, TEAL)
+		Ui.image(parent, "trade")
 	end)
 	local current = nil -- último estado que mandó el servidor, o nil si no hay trato
 

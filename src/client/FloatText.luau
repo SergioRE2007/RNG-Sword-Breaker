@@ -178,7 +178,7 @@ local function build(): Entry
 	}
 end
 
--- Icono hecho con los marcos de `Ui`, creado la primera vez que esta entrada lo necesita y luego solo se enseña.
+-- Logo de `Ui.image`, creado la primera vez que esta entrada lo necesita y luego solo se enseña.
 local function icon(entry: Entry, kind: string?)
 	for name, frame in entry.icons do
 		frame.Visible = name == kind
@@ -192,18 +192,8 @@ local function icon(entry: Entry, kind: string?)
 	frame.BackgroundTransparency = 1
 	frame.LayoutOrder = 1
 	frame.Parent = entry.holder
-	if kind == "coin" then
-		Ui.coinIcon(frame, Color3.fromRGB(255, 215, 70))
-	else
-		Ui.gemIcon(frame, Color3.fromRGB(190, 110, 255))
-	end
-	for _, item in frame:GetDescendants() do
-		if item:IsA("GuiObject") then
-			table.insert(entry.fades, { item, "BackgroundTransparency", item.BackgroundTransparency })
-		elseif item:IsA("UIStroke") then
-			table.insert(entry.fades, { item, "Transparency", item.Transparency })
-		end
-	end
+	local image = Ui.image(frame, if kind == "coin" then "monedas" else "gemas")
+	table.insert(entry.fades, { image, "ImageTransparency", 0 })
 	entry.icons[kind] = frame
 end
 

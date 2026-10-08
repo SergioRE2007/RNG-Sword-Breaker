@@ -35,45 +35,6 @@ local function hex(color: Color3): string
 	return "#" .. color:ToHex()
 end
 
--- Icono de la pestaña: un escudo hecho con marcos.
-function ArmorPane.icon(parent: Instance, color: Color3)
-	local holder = Instance.new("Frame")
-	holder.Name = "Icon"
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.5)
-	holder.Size = UDim2.fromScale(0.8, 0.8)
-	holder.BackgroundTransparency = 1
-	holder.Parent = parent
-	local point = Instance.new("Frame")
-	point.AnchorPoint = Vector2.new(0.5, 0.5)
-	point.Position = UDim2.fromScale(0.5, 0.6)
-	point.Size = UDim2.fromScale(0.56, 0.56)
-	point.Rotation = 45
-	point.BackgroundColor3 = color:Lerp(BLACK, 0.25)
-	point.BorderSizePixel = 0
-	point.Parent = holder
-	Ui.round(point, 4)
-	Ui.stroke(point, BLACK, 2)
-	local top = Instance.new("Frame")
-	top.AnchorPoint = Vector2.new(0.5, 0)
-	top.Position = UDim2.fromScale(0.5, 0.08)
-	top.Size = UDim2.fromScale(0.8, 0.52)
-	top.BackgroundColor3 = WHITE
-	top.BorderSizePixel = 0
-	top.Parent = holder
-	Ui.round(top, 5)
-	Ui.stroke(top, BLACK, 2)
-	Ui.gradient(top, color:Lerp(WHITE, 0.35), color, 90)
-	local boss = Instance.new("Frame")
-	boss.AnchorPoint = Vector2.new(0.5, 0.5)
-	boss.Position = UDim2.fromScale(0.5, 0.42)
-	boss.Size = UDim2.fromScale(0.22, 0.22)
-	boss.BackgroundColor3 = WHITE
-	boss.BorderSizePixel = 0
-	boss.Parent = holder
-	Ui.round(boss, 99)
-end
-
 -- Vista 3D de una pieza dentro de una casilla, con un foco del color de su calidad detrás.
 local function preview(cell: GuiObject, piece)
 	local color = ArmorStats.quality(piece).color

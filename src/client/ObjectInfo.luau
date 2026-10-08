@@ -359,7 +359,7 @@ local function buildCard()
 	sword.Size = UDim2.fromOffset(26, 26)
 	sword.BackgroundTransparency = 1
 	sword.Parent = refs.luck.Parent
-	Ui.swordIcon(sword, Color3.fromRGB(215, 220, 232))
+	Ui.image(sword, "espada")
 	Ui.layer(sword, Z.text)
 	refs.luck.Position = UDim2.fromOffset(24, 0)
 	refs.luck.Size = UDim2.new(1, -28, 1, 0)

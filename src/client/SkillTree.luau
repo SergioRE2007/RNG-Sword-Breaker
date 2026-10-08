@@ -50,7 +50,19 @@ local Z_LINE = -4
 local Z_NODE = -3
 local Z_FRONT = 10
 
-local ICONS = { box = Ui.boxIcon, orb = Ui.orbIcon, sword = Ui.swordIcon, gem = Ui.gemIcon }
+local ICONS = {
+	box = function(parent)
+		Ui.image(parent, "objetos")
+	end,
+	sword = function(parent)
+		Ui.image(parent, "espada")
+	end,
+	luck = function(parent)
+		Ui.image(parent, "suerte")
+	end,
+	orb = Ui.orbIcon,
+	gem = Ui.gemIcon,
+}
 
 local ROMAN = { { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" } }
 local function roman(n: number): string
