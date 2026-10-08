@@ -455,6 +455,19 @@ local function clearLoose()
 			item:Destroy()
 		end
 	end
+	-- Lo mismo con la luz: un lugar nuevo de Studio trae su propio cielo, atmósfera, bloom y rayos de sol en Lighting.
+	-- Si se quedan, se suman a los del juego (doble bloom) y el ciclo de día y noche mueve la atmósfera de fábrica en
+	-- vez de la nuestra.
+	for _, item in Lighting:GetChildren() do
+		if item:IsA("Sky") or item:IsA("Atmosphere") or item:IsA("PostEffect") then
+			item:Destroy()
+		end
+	end
+	-- Y con lo que el lugar nuevo trae a 1: el cielo deja de dar luz y reflejos a las piezas, que hacían brillar los
+	-- suelos lisos. La luz del juego es solo la que pone el tema.
+	Lighting.EnvironmentDiffuseScale = 0
+	Lighting.EnvironmentSpecularScale = 0
+	Lighting.ExposureCompensation = 0
 end
 
 function Scenery.start()
