@@ -39,7 +39,7 @@ Ui.COLORS = {
 
 -- Medidas comunes del relieve: borde negro, labio de abajo (parte del alto del botón), radios y lo que crece
 -- o se encoge un botón al pasar el ratón y al pulsarlo.
-Ui.STYLE = { border = 3, lip = 0.13, radius = 12, cellRadius = 10, hover = 1.07, press = 0.95 }
+Ui.STYLE = { border = 4, lip = 0.13, radius = 12, cellRadius = 10, hover = 1.07, press = 0.95 }
 
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
@@ -58,6 +58,7 @@ function Ui.stroke(instance: GuiObject, color: Color3, thickness: number): UIStr
 	stroke.Color = color
 	stroke.Thickness = thickness
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.LineJoinMode = Enum.LineJoinMode.Round
 	stroke.Parent = instance
 	return stroke
 end
@@ -87,8 +88,8 @@ function Ui.bevel(instance: GuiObject)
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, WHITE),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(232, 232, 236)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 168)),
+		ColorSequenceKeypoint.new(0.4, Color3.fromRGB(212, 212, 224)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(78, 78, 112)),
 	})
 	gradient.Parent = instance
 
@@ -140,6 +141,9 @@ function Ui.bevel(instance: GuiObject)
 	base.Position = UDim2.new(0.5, 0, 1, -2)
 	base.Size = UDim2.new(1, -6, Ui.STYLE.lip, 0)
 	base.BackgroundColor3 = BLACK
+	-- Invisible: el usuario mandó quitar la franja oscura de debajo de los botones. La pieza se queda porque
+	-- Ui.pressable la usa para saber qué es un botón con relieve.
+	base.BackgroundTransparency = 1
 	base.BorderSizePixel = 0
 	base.Parent = instance
 	Ui.round(base, math.max(radius - 5, 2))
@@ -147,10 +151,6 @@ function Ui.bevel(instance: GuiObject)
 	limit.MinSize = Vector2.new(0, 3)
 	limit.MaxSize = Vector2.new(math.huge, 7)
 	limit.Parent = base
-	local shade = Instance.new("UIGradient")
-	shade.Rotation = 90
-	shade.Transparency = NumberSequence.new(0.86, 0.6)
-	shade.Parent = base
 
 	-- La interfaz ordena el ZIndex globalmente: si a un botón se le sube la capa a mano, su relieve se quedaba
 	-- por debajo y se veía plano. Las piezas del relieve (y las de Ui.pressable) siguen la capa del botón.
@@ -258,35 +258,13 @@ function Ui.panel(frame: GuiObject, base: Color3, accent: Color3?)
 	end
 end
 
--- Sombra exterior: una copia oscura del marco, caída `drop` px, una capa por debajo (la interfaz ordena el ZIndex
--- globalmente, así que un hijo con menos ZIndex que su padre se pinta detrás). Separa del fondo lo que flota
--- sobre el juego (HUD). Sigue la capa del marco si se le cambia.
-function Ui.shadow(frame: GuiObject, drop: number?): Frame
-	local corner = frame:FindFirstChildOfClass("UICorner")
-	local shadow = Instance.new("Frame")
-	shadow.Name = "Shadow"
-	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-	shadow.Position = UDim2.new(0.5, 0, 0.5, drop or 5)
-	shadow.Size = UDim2.new(1, Ui.STYLE.border * 2, 1, Ui.STYLE.border * 2)
-	shadow.BackgroundColor3 = BLACK
-	shadow.BackgroundTransparency = 0.62
-	shadow.BorderSizePixel = 0
-	shadow.ZIndex = frame.ZIndex - 1
-	shadow.Parent = frame
-	Ui.round(shadow, (if corner then corner.CornerRadius.Offset else 10) + Ui.STYLE.border)
-	frame:GetPropertyChangedSignal("ZIndex"):Connect(function()
-		shadow.ZIndex = frame.ZIndex - 1
-	end)
-	return shadow
-end
-
--- Contador o chip con relieve: fondo del color, labio, borde negro y sombra exterior.
+-- Contador o chip con relieve: fondo del color, labio y borde negro. Sin sombra exterior: el usuario mandó
+-- quitar las sombras de toda la interfaz (ventanas y HUD).
 function Ui.pill(frame: GuiObject, color: Color3, radius: number?)
 	frame.BackgroundColor3 = color
 	Ui.round(frame, radius or 14)
 	Ui.bevel(frame)
 	Ui.stroke(frame, BLACK, Ui.STYLE.border)
-	Ui.shadow(frame)
 end
 
 -- Marca un botón (pestaña, opción) como elegido: borde blanco. El primer UIStroke directo del botón es su borde.
@@ -787,6 +765,26 @@ function Ui.stripes(parent: GuiObject, size: Vector2, spacing: number, transpare
 	return holder
 end
 
+-- Textura de fondo en mosaico (rombos de Ui.IMAGES.patron_rombos, o la imagen `name`): una sola imagen
+-- repetida, para que un fondo no se vea plano. Va antes que el contenido, como las rayas.
+function Ui.pattern(parent: GuiObject, transparency: number?, tile: number?, name: string?): ImageLabel
+	local pattern = Instance.new("ImageLabel")
+	pattern.Name = "Pattern"
+	pattern.Size = UDim2.fromScale(1, 1)
+	pattern.BackgroundTransparency = 1
+	pattern.Image = Ui.IMAGES[name or "patron_rombos"]
+	pattern.ImageTransparency = transparency or 0.94
+	pattern.ScaleType = Enum.ScaleType.Tile
+	pattern.TileSize = UDim2.fromOffset(tile or 44, tile or 44)
+	pattern.ZIndex = parent.ZIndex
+	pattern.Parent = parent
+	local corner = parent:FindFirstChildOfClass("UICorner")
+	if corner then
+		Ui.round(pattern, corner.CornerRadius.Offset)
+	end
+	return pattern
+end
+
 -- Cuadros claros alternos (como las cabeceras de la captura de referencia), sin salirse del marco.
 local function checker(parent: GuiObject, size: Vector2, cell: number, inset: number)
 	local holder = Instance.new("Frame")
@@ -828,23 +826,6 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	Ui.stroke(frame, BLACK, 5)
 	Ui.gradient(frame, Color3.fromRGB(60, 66, 112), Color3.fromRGB(22, 24, 46), 90)
 
-	-- Sombra detrás de la ventana: va aparte (los hijos se pintan encima) y la sigue.
-	local shadow = Instance.new("Frame")
-	shadow.Name = name .. "Shadow"
-	shadow.AnchorPoint = frame.AnchorPoint
-	shadow.Position = frame.Position + UDim2.fromOffset(8, 10)
-	shadow.Size = frame.Size
-	shadow.BackgroundColor3 = BLACK
-	shadow.BackgroundTransparency = 0.55
-	shadow.BorderSizePixel = 0
-	shadow.Visible = false
-	shadow.ZIndex = 0
-	shadow.Parent = Ui.screen()
-	Ui.round(shadow, 18)
-	frame:GetPropertyChangedSignal("Visible"):Connect(function()
-		shadow.Visible = frame.Visible
-	end)
-
 	-- Bisel: una línea clara por dentro del borde.
 	local rim = Instance.new("Frame")
 	rim.Name = "Rim"
@@ -858,8 +839,6 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 
 	local scale = Instance.new("UIScale")
 	scale.Parent = frame
-	local shadowScale = Instance.new("UIScale")
-	shadowScale.Parent = shadow
 	local camera = workspace.CurrentCamera
 	local fitted = 1
 	local function fit()
@@ -869,14 +848,13 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 		-- Hasta un 22 % más grande que su tamaño de diseño si la pantalla da para ello.
 		fitted = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, MAX_WINDOW_SCALE)
 		scale.Scale = fitted
-		shadowScale.Scale = fitted
 	end
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 	fit()
 	-- Al abrirse entra desde abajo y al cerrarse baja (Ui.open / Ui.close).
 	addMotion(frame, MOTION.window, scale, function()
 		return fitted
-	end, shadow, shadowScale)
+	end)
 
 	local header = Instance.new("Frame")
 	header.Name = "Header"
@@ -906,16 +884,6 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	fade.Rotation = 90
 	fade.Transparency = NumberSequence.new(0.68, 0.95)
 	fade.Parent = gloss
-	-- Franja oscura bajo la cabecera, para separarla del cuerpo.
-	local edge = Instance.new("Frame")
-	edge.Name = "Edge"
-	edge.AnchorPoint = Vector2.new(0, 1)
-	edge.Position = UDim2.fromScale(0, 1)
-	edge.Size = UDim2.new(1, 0, 0, 4)
-	edge.BackgroundColor3 = BLACK
-	edge.BackgroundTransparency = 0.5
-	edge.BorderSizePixel = 0
-	edge.Parent = header
 
 	-- Icono opcional a la izquierda del título (mochila, engranaje...), dibujado con marcos.
 	if icon then
@@ -965,22 +933,9 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	body.BorderSizePixel = 0
 	body.Parent = frame
 	Ui.round(body, 12)
-	Ui.stroke(body, Ui.COLORS.dark, 3)
+	Ui.stroke(body, BLACK, 4)
 	Ui.gradient(body, Color3.fromRGB(66, 74, 124), Color3.fromRGB(30, 33, 64), 90)
-	Ui.stripes(body, Vector2.new(size.X - 20, size.Y - 78), 26, 0.95)
-	-- Sombra de la cabecera sobre el cuerpo: da la sensación de capas (la cabecera "encima").
-	local shade = Instance.new("Frame")
-	shade.Name = "HeaderShade"
-	shade.Size = UDim2.new(1, 0, 0, 26)
-	shade.BackgroundColor3 = BLACK
-	shade.BorderSizePixel = 0
-	shade.Parent = body
-	Ui.round(shade, 12)
-	local shadeFade = Instance.new("UIGradient")
-	shadeFade.Rotation = 90
-	shadeFade.Transparency = NumberSequence.new(0.55, 1)
-	shadeFade.Parent = shade
-
+	Ui.pattern(body)
 	windows[name] = frame
 	return frame, body
 end
@@ -1257,6 +1212,7 @@ Ui.IMAGES = {
 	mochila = "rbxassetid://95507779119186",
 	monedas = "rbxassetid://134320261318517",
 	objetos = "rbxassetid://91743584320580",
+	patron_rombos = "rbxassetid://127373214598364", -- textura en mosaico de Ui.pattern
 	rebirth = "rbxassetid://90522539620973",
 	suerte = "rbxassetid://114098318122458",
 	tienda_robux = "rbxassetid://93004325604664",

@@ -183,7 +183,6 @@ local function buildTag(part: BasePart, quality: number, class): BillboardGui
 	Ui.round(chip, 11)
 	Ui.panel(chip, rarity.color:Lerp(Ui.COLORS.dark, 0.5))
 	Ui.stroke(chip, BLACK, 3)
-	Ui.shadow(chip, 3)
 	local scale = Instance.new("UIScale")
 	scale.Scale = factor
 	scale.Parent = chip
@@ -271,7 +270,6 @@ local function buildCard()
 	Ui.round(root, 14)
 	Ui.panel(root, Color3.fromRGB(46, 48, 70))
 	Ui.stroke(root, BLACK, 4)
-	Ui.shadow(root, 4)
 	cardScale = Instance.new("UIScale")
 	cardScale.Parent = root
 
