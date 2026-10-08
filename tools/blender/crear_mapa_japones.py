@@ -4,6 +4,8 @@
 # Deja mapa_japones.blend, mapa_japones.fbx y mapa_japones1-3.png en Documents\Roblox\modelos. En Studio: Archivo >
 # Importar 3D con mapa_japones.fbx y guardar el modelo importado (clic derecho > Guardar en archivo) como
 # src/shared/MapMeshes.rbxm (y borrar el modelo de Workspace: lo trae Rojo).
+# Para actualizar algunas piezas: -- --only Sakura SakuraB Maple Pine Pagoda Bridge Shrine Komainu
+# y guardar esa importación como src/shared/MapMeshesPatch.rbxmx. PropModel sustituye solo esas piezas.
 #
 # Cada pieza son varias mallas "<Pieza>_<Papel>", una por papel: el juego (shared/PropModel) les pone color y
 # material según el papel (Wood, Red, Pink, PinkLight, Orange, Leaf, LeafDark, Stone, StoneDark, Gold, Paper,
@@ -13,6 +15,7 @@
 import math
 import os
 import random
+import argparse
 
 import bmesh
 import bpy
@@ -150,6 +153,17 @@ class Piece:
 
 # ---------- Árboles ----------
 
+def trunk(p, points, radii, n=9):
+    """Tronco continuo: los tramos comparten sus anillos, sin tapas ni cortes intermedios."""
+    verts = [(x + r * math.cos(2 * math.pi * j / n), y, z + r * math.sin(2 * math.pi * j / n))
+             for (x, y, z), r in zip(points, radii) for j in range(n)]
+    faces = [tuple(reversed(range(n))), tuple((len(points) - 1) * n + j for j in range(n))]
+    for i in range(len(points) - 1):
+        for j in range(n):
+            k = (j + 1) % n
+            faces.append((i * n + j, i * n + k, (i + 1) * n + k, (i + 1) * n + j))
+    p.add("Wood", (verts, faces))
+
 def blossom_tree(p, seed, light="PinkLight", main="Pink", height=17.0):
     """Cerezo: tronco torcido, ramas largas y copas redondas de flor rosa y rosa claro."""
     rng = random.Random(seed)
@@ -159,8 +173,7 @@ def blossom_tree(p, seed, light="PinkLight", main="Pink", height=17.0):
         x += rng.uniform(-0.9, 0.9)
         z += rng.uniform(-0.9, 0.9)
         pts.append((x, height * 0.3 * i / 2.2 * 0.5 + (i * height * 0.12), z))
-    for i in range(4):
-        p.branch("Wood", pts[i], pts[i + 1], 1.45 - 0.28 * i, 1.45 - 0.28 * (i + 1))
+    trunk(p, pts, [1.45 - 0.28 * i for i in range(5)])
     p.add("Wood", cyl(1.9, 0.8, 8, 1.4))  # raíz ancha
     top = Vector(pts[-1])
     crowns = []
@@ -192,8 +205,7 @@ def maple(p):
 def pine(p):
     """Pino japonés: tronco inclinado y nubes planas de agujas en capas."""
     pts = [(0, 0, 0), (0.8, 4, 0.2), (1.6, 8, -0.3), (1.0, 12, 0.3), (0.2, 15.5, 0)]
-    for i in range(4):
-        p.branch("Wood", pts[i], pts[i + 1], 1.2 - 0.25 * i, 1.2 - 0.25 * (i + 1))
+    trunk(p, pts, [1.2 - 0.25 * i for i in range(5)])
     for i, (x, y, z, r) in enumerate(((3.8, 7.5, 0.5, 3.6), (-3.4, 9.5, -1.0, 3.2), (2.6, 12.5, 1.5, 3.0), (0.4, 16.0, 0.0, 3.4), (-2.2, 13.5, -1.8, 2.6))):
         p.branch("Wood", pts[min(i + 1, 4)], (x * 0.6 + pts[min(i + 1, 4)][0] * 0.4, y - 0.8, z * 0.6), 0.3, 0.15)
         p.add("Leaf" if i % 2 == 0 else "LeafDark", blob((r, r * 0.38, r * 0.9), 40 + i, 10, 4, 0.14), T(x + 0.6, y, z))
@@ -261,7 +273,7 @@ def chochin(p):
 
 
 def pagoda(p):
-    """Pagoda de cinco pisos: paredes blancas con vigas rojas, tejados oscuros curvados y aguja dorada."""
+    """Cinco pisos encajados en sus tejados, con aleros continuos y estructura de laca roja."""
     p.add("StoneDark", box(17, 1.2, 17), T(0, 0.6, 0))
     p.add("Stone", box(15, 0.8, 15), T(0, 1.6, 0))
     y = 2.0
@@ -271,18 +283,21 @@ def pagoda(p):
         p.add("White", box(width, h, width), T(0, y + h / 2, 0))
         for s in (-1, 1):
             for t in (-1, 1):
-                p.add("Red", box(0.7, h, 0.7), T(s * width / 2, y + h / 2, t * width / 2))
+                p.add("Red", box(0.7, h + 0.2, 0.7), T(s * (width / 2 - 0.15), y + h / 2, t * (width / 2 - 0.15)))
+        for level in (y + 0.12, y + h - 0.12):
+            p.add("Red", box(width + 0.2, 0.28, width + 0.2), T(0, level, 0))
         p.add("Red", box(width * 0.28, h * 0.65, 0.2), T(0, y + h * 0.4, -width / 2 - 0.1))  # puerta
         p.add("Gold", box(width * 0.5, 0.18, 0.2), T(0, y + h * 0.82, -width / 2 - 0.12))
         y += h
         eave = width + 5.2 - tier * 0.4
-        p.add("Roof", frustum(eave, eave, width * 0.5, width * 0.5, 2.3), T(0, y + 1.15, 0))
+        next_width = width - 1.35
+        # La coronación sostiene el piso siguiente; antes era más estrecha y dejaba paredes voladas.
+        top_width = max(1.5, next_width + 0.35) if tier < 4 else 1.5
+        p.add("Roof", frustum(eave, eave, top_width, top_width, 2.3), T(0, y + 1.05, 0))
         p.add("Red", box(eave, 0.35, eave), T(0, y + 0.1, 0))
-        for sx in (-1, 1):
-            for sz in (-1, 1):  # esquinas levantadas
-                p.add("Roof", spike(0.55, 1.9, 4), T(sx * eave / 2, y + 0.3, sz * eave / 2) @ R("X", -sz * 40) @ R("Z", sx * 40))
-                p.add("Gold", sphere(0.2, 6, 3), T(sx * eave / 2 + sx * 0.5, y + 1.1, sz * eave / 2 + sz * 0.5))
-        y += 2.3
+        # Remate continuo, sin las puntas separadas que parecían trozos cortados del tejado.
+        p.add("Roof", box(eave + 0.16, 0.22, eave + 0.16), T(0, y + 0.28, 0))
+        y += 2.1
         width -= 1.35
     p.add("Gold", cyl(0.35, 7.0, 8, 0.15), T(0, y - 0.4, 0))
     for k in range(5):
@@ -290,25 +305,36 @@ def pagoda(p):
 
 
 def bridge(p):
-    """Puente taiko rojo: arco de 18 de largo con barandillas y piedras en los extremos."""
-    n = 9
+    """Puente de cubierta continua: toda la estructura transversal queda debajo de la madera."""
+    n = 24
+    def point(t):
+        return Vector((-9 + 18 * t, 3.2 * math.sin(math.pi * t) + 0.5, 0))
+    # Una sola cubierta cerrada, sin caras internas duplicadas en los bordes de los tablones.
+    verts = [(v.x, v.y + dy, z) for v in (point(i / n) for i in range(n + 1))
+             for dy, z in ((-0.3, -3.1), (-0.3, 3.1), (0.2, 3.1), (0.2, -3.1))]
+    faces = [(3, 2, 1, 0), tuple(4 * n + j for j in range(4))]
     for i in range(n):
-        t = i / (n - 1)
-        x = -9 + 18 * t
-        y = 3.2 * math.sin(math.pi * t) + 0.5
-        slope = math.degrees(math.atan2(3.2 * math.pi / 18 * math.cos(math.pi * t), 1))
-        p.add("Wood", box(2.2, 0.5, 6.2), T(x, y, 0) @ R("Z", slope))
-        if i % 2 == 0:
-            p.add("Red", box(0.6, 0.6, 6.0), T(x, y - 0.85, 0) @ R("Z", slope))
+        for j in range(4):
+            k = (j + 1) % 4
+            faces.append((4 * i + j, 4 * i + k, 4 * (i + 1) + k, 4 * (i + 1) + j))
+    p.add("Wood", (verts, faces))
+    for i in range(9):
+        a = point(i / 8)
         for s in (-1, 1):
-            p.add("Red", box(0.4, 1.9, 0.4), T(x, y + 1.2, s * 3.0))
-            if i < n - 1:
-                x2 = -9 + 18 * (i + 1) / (n - 1)
-                y2 = 3.2 * math.sin(math.pi * (i + 1) / (n - 1)) + 0.5
-                p.add("Red", box(math.hypot(x2 - x, y2 - y) + 0.1, 0.35, 0.35), T((x + x2) / 2, (y + y2) / 2 + 2.0, s * 3.0) @ R("Z", math.degrees(math.atan2(y2 - y, x2 - x))))
+            p.add("Red", box(0.4, 2.25, 0.4), T(a.x, a.y + 1.3, s * 3.0))
+        if i % 2 == 0:
+            p.add("Red", box(0.5, 0.4, 5.9), T(a.x, a.y - 0.65, 0))
+        if i == 8:
+            continue
+        b = point((i + 1) / 8)
+        angle = math.degrees(math.atan2(b.y - a.y, b.x - a.x))
+        for s in (-1, 1):
+            for rise, thick in ((2.35, 0.38), (1.15, 0.2), (-0.55, 0.45)):
+                z = s * (3.0 if rise > 0 else 2.65)
+                p.add("Red", box((b - a).length + 0.12, thick, thick), T((a.x + b.x) / 2, (a.y + b.y) / 2 + rise, z) @ R("Z", angle))
     for s in (-1, 1):
-        p.add("Gold", sphere(0.5, 8, 4), T(s * 8.9, 1.6, 3.0))
-        p.add("Gold", sphere(0.5, 8, 4), T(s * 8.9, 1.6, -3.0))
+        p.add("Gold", sphere(0.36, 8, 4), T(s * 9, 3.05, 3.0))
+        p.add("Gold", sphere(0.36, 8, 4), T(s * 9, 3.05, -3.0))
         p.add("StoneDark", box(2.4, 1.0, 6.8), T(s * 10.2, 0.4, 0))
 
 
@@ -317,12 +343,14 @@ def shrine(p):
     p.add("StoneDark", box(9, 0.9, 8), T(0, 0.45, 0))
     p.add("Stone", box(8, 0.6, 7), T(0, 1.2, 0))
     p.add("White", box(5.6, 3.6, 4.6), T(0, 3.3, 0))
+    p.add("Red", box(6.0, 0.3, 5.0), T(0, 5.0, 0))
+    p.add("Red", box(6.0, 0.25, 5.0), T(0, 1.6, 0))
     for s in (-1, 1):
         for t in (-1, 1):
             p.add("Red", box(0.5, 3.6, 0.5), T(s * 2.8, 3.3, t * 2.3))
     p.add("Red", box(2.2, 2.8, 0.2), T(0, 3.0, -2.35))
     p.add("Gold", box(0.5, 0.5, 0.25), T(0, 3.0, -2.5))
-    p.add("Roof", frustum(8.8, 7.6, 3.2, 2.4, 2.6), T(0, 6.3, 0))
+    p.add("Roof", frustum(8.8, 7.6, 3.2, 2.4, 2.6), T(0, 6.25, 0))
     p.add("Red", box(8.8, 0.4, 7.6), T(0, 5.1, 0))
     p.add("Gold", box(0.3, 0.3, 3.0), T(0, 7.7, 0))
     for s in (-1, 1):
@@ -396,16 +424,6 @@ def fence(p):
         p.add("Leaf", cyl(0.14, 2.6, 5, 0.1), T(-3 + 2 * i, 0, 0))
 
 
-def lock(p, role, pos, direction, length, width, curl=None):
-    """Mechón de melena: elipsoide alargado que sale de `pos` hacia `direction` (con un rizo en la punta si `curl`)."""
-    d = Vector(direction).normalized()
-    m = T(*pos) @ d.to_track_quat("Z", "Y").to_matrix().to_4x4() @ T(0, 0, length * 0.5)
-    p.add(role, sphere(1, 7, 4), m @ S(width, width * 0.85, length * 0.5))
-    if curl:
-        tip = Vector(pos) + d * length
-        p.add(curl, sphere(width * 0.85, 6, 3), T(*tip) @ T(0, width * 0.7, 0))
-
-
 def paw(p, x, y, z, size, role="Stone"):
     p.add(role, sphere(1, 8, 4), T(x, y, z) @ S(size * 0.55, size * 0.34, size * 0.85))
     for k in (-1.5, -0.5, 0.5, 1.5):  # dedos y garras
@@ -414,85 +432,54 @@ def paw(p, x, y, z, size, role="Stone"):
 
 
 def komainu(p):
-    """Komainu de piedra, más realista: roca natural de base, cuerpo sentado con musculatura, patas con codo y garras,
-    cabeza con ceño, boca abierta con colmillos y lengua, melena en mechones que barren hacia atrás y cola en
-    abanico. Babero rojo con cascabel y musgo en la piedra. Mira hacia -Z."""
-    # Base de roca natural y losa superior.
-    p.add("StoneDark", blob((2.6, 0.9, 3.1), 301, 11, 6, 0.1), T(0, 0.6, 0.2))
-    p.add("Stone", box(3.5, 0.7, 4.2), T(0, 1.45, 0.15))
-    p.add("StoneDark", box(3.7, 0.18, 4.4), T(0, 1.82, 0.15))
-    p.add("Leaf", blob((1.1, 0.12, 0.9), 302, 7, 3), T(-1.1, 1.95, 1.7))
-    p.add("Leaf", blob((0.8, 0.1, 0.6), 303, 6, 3), T(1.2, 0.95, -2.2))
-    base = 1.9
-    # Cuarto trasero: grupa, muslos y patas traseras dobladas.
-    p.add("Stone", sphere(1, 14, 8), T(0, base + 1.25, 1.0) @ S(1.35, 1.2, 1.5))
-    for s in (-1, 1):
-        p.add("Stone", sphere(1, 11, 6), T(s * 1.0, base + 0.95, 0.55) @ S(0.62, 0.95, 1.1))
-        p.branch("Stone", (s * 1.0, base + 0.5, 0.2), (s * 0.95, base + 0.2, -0.45), 0.42, 0.3, 8)
-        paw(p, s * 0.95, base + 0.12, -0.75, 0.62)
-    # Torso erguido, omóplatos y pecho ancho.
-    p.add("Stone", sphere(1, 14, 8), T(0, base + 2.5, 0.2) @ S(1.1, 1.9, 1.15) @ R("X", -14))
-    for s in (-1, 1):
-        p.add("Stone", sphere(1, 9, 5), T(s * 0.88, base + 3.3, -0.35) @ S(0.5, 0.75, 0.6))  # omóplatos
-        p.add("StoneDark", box(0.06, 0.5, 0.5), T(s * 1.05, base + 1.9, 0.0) @ R("Z", s * 12))  # marca de costillas
-    p.add("Stone", sphere(1, 14, 8), T(0, base + 3.2, -0.65) @ S(1.25, 1.2, 1.1))  # pecho
-    # Patas delanteras: hombro, codo y muñeca; la izquierda sobre una bola de piedra.
-    for s in (-1, 1):
-        p.branch("Stone", (s * 0.8, base + 3.2, -0.55), (s * 0.82, base + 1.75, -0.95), 0.5, 0.4, 9)
-        p.branch("Stone", (s * 0.82, base + 1.75, -0.95), (s * 0.85, base + 0.45, -1.75), 0.4, 0.3, 9)
-        paw(p, s * 0.85, base + 0.18, -2.05, 0.75)
-    p.add("StoneDark", sphere(0.55, 11, 6), T(-0.85, base + 0.62, -2.6))  # bola bajo la zarpa
-    # Babero rojo con cascabel.
-    p.add("Red", frustum(2.6, 2.0, 1.8, 1.6, 0.75), T(0, base + 4.0, -0.7) @ R("X", 8))
-    p.add("Gold", sphere(0.23, 8, 5), T(0, base + 3.55, -1.55))
-    p.add("Gold", box(0.55, 0.06, 0.06), T(0, base + 3.78, -1.5))
-    # Cuello y cabeza.
-    p.branch("Stone", (0, base + 3.7, -0.7), (0, base + 4.8, -1.05), 1.0, 0.85, 10)
-    hy, hz = base + 5.15, -1.2
-    p.add("Stone", sphere(1.2, 14, 8), T(0, hy, hz) @ S(1.08, 0.95, 1.0))  # cráneo
-    p.add("Stone", sphere(1, 11, 6), T(0, hy - 0.2, hz - 0.95) @ S(0.82, 0.5, 0.8))  # hocico
-    p.add("StoneDark", sphere(0.32, 8, 5), T(0, hy + 0.02, hz - 1.62) @ S(1.5, 0.85, 0.8))  # nariz ancha
-    p.add("StoneDark", sphere(0.08, 5, 3), T(-0.2, hy - 0.02, hz - 1.88))
-    p.add("StoneDark", sphere(0.08, 5, 3), T(0.2, hy - 0.02, hz - 1.88))
-    p.add("Stone", sphere(1, 8, 5), T(0, hy + 0.5, hz - 0.85) @ S(0.95, 0.2, 0.4))  # arco del ceño
-    p.add("Stone", box(0.1, 0.5, 0.3), T(0, hy + 0.7, hz - 0.95) @ R("X", 15))  # surco entre las cejas
-    # Boca abierta: labios, mandíbula inferior, dientes y lengua.
-    for s in (-1, 1):
-        p.add("Stone", sphere(0.4, 8, 5), T(s * 0.5, hy - 0.38, hz - 1.0) @ S(1, 0.8, 1.1))  # carrillos
-        p.add("White", spike(0.1, 0.42, 5), T(s * 0.42, hy - 0.5, hz - 1.5) @ R("X", 180))  # colmillos de arriba
-        p.add("White", spike(0.09, 0.34, 5), T(s * 0.4, hy - 1.0, hz - 1.35))  # y de abajo
-        p.add("White", box(0.2, 0.14, 0.08), T(s * 0.14, hy - 0.48, hz - 1.72))  # incisivos
-        p.add("White", box(0.2, 0.14, 0.08), T(s * 0.14, hy - 0.88, hz - 1.62))
-        p.add("StoneDark", sphere(1, 8, 5), T(s * 0.52, hy + 0.3, hz - 0.95) @ S(0.3, 0.3, 0.25))  # cuencas
-        p.add("White", sphere(0.24, 8, 5), T(s * 0.53, hy + 0.3, hz - 1.0))
-        p.add("Black", sphere(0.12, 6, 4), T(s * 0.54, hy + 0.3, hz - 1.2))
-        p.add("StoneDark", sphere(1, 8, 4), T(s * 0.55, hy + 0.62, hz - 1.0) @ S(0.42, 0.13, 0.22) @ R("Z", s * -22))  # cejas
-        p.add("Stone", sphere(1, 8, 5), T(s * 1.2, hy + 0.8, hz + 0.2) @ S(0.28, 0.42, 0.2) @ R("Z", s * -28))  # orejas
-    p.add("Stone", box(1.1, 0.24, 0.9), T(0, hy - 0.95, hz - 0.85) @ R("X", 22))  # mandíbula inferior
-    p.add("Red", sphere(0.34, 7, 4), T(0, hy - 0.7, hz - 0.95) @ S(1.3, 0.25, 1.5))  # lengua
-    p.add("Red", box(1.0, 0.05, 0.7), T(0, hy - 0.62, hz - 0.9))  # paladar
-    # Melena: tres coronas de mechones alrededor de la cara que barren hacia atrás, y una hilera por la nuca y el lomo.
-    for ring_i, (radius, count, length, width) in enumerate(((1.15, 13, 1.1, 0.22), (1.45, 15, 1.6, 0.24), (1.75, 17, 2.1, 0.26))):
-        for i in range(count):
-            a = 2 * math.pi * i / count + ring_i * 0.18
-            ca, sa = math.cos(a), math.sin(a)
-            if ring_i == 0 and sa < -0.15 and abs(ca) < 0.75:
-                continue  # deja libre la cara
-            pos = (ca * radius * 1.05, hy + sa * radius * 0.9, hz + 0.35 + ring_i * 0.2)
-            lock(p, "Stone" if (i + ring_i) % 2 == 0 else "StoneDark", pos, (ca * 0.55, sa * 0.55 - 0.1, 1.0), length, width, "Stone" if i % 3 == 0 else None)
-    for i in range(7):  # lomo
-        t = i / 6
-        lock(p, "Stone" if i % 2 == 0 else "StoneDark", (0, base + 4.4 - t * 2.0, -0.2 + t * 0.9), (0, -0.4, 1.0), 1.2 - t * 0.3, 0.3, None)
-    # Cola en abanico sobre la grupa.
-    for i in range(9):
-        a = -70 + i * 17.5
-        lock(p, "Stone" if i % 2 == 0 else "StoneDark", (0, base + 1.5, 2.2), (math.sin(math.radians(a)) * 0.8, math.cos(math.radians(a)) * 0.9 + 0.2, 0.7), 2.4, 0.3, "Gold" if i == 4 else None)
-    # Grietas y musgo.
-    p.add("StoneDark", box(0.05, 0.9, 0.05), T(-0.6, base + 2.0, 1.3) @ R("Z", 14))
-    p.add("StoneDark", box(0.05, 0.6, 0.05), T(1.3, base + 1.1, 0.7) @ R("Z", -22))
-    p.add("Leaf", blob((0.5, 0.1, 0.4), 304, 6, 3), T(0.7, base + 2.4, 1.0))
-    p.add("Leaf", blob((0.4, 0.1, 0.35), 305, 6, 3), T(-0.9, base + 1.0, 1.3))
-
+    """Guardián shishi sentado, con melena de rizos tallados, ceño firme y babero rojo. Mira hacia -Z."""
+    p.add("StoneDark", box(4.5, 0.55, 5.7), T(0, 0.275, 0))
+    p.add("Stone", frustum(4.3, 5.5, 3.9, 5.1, 0.55), T(0, 0.825, 0))
+    p.add("StoneDark", box(4.05, 0.16, 5.25), T(0, 1.12, 0))
+    base = 1.2
+    # Silueta compacta, con pecho ancho y patas que descansan en la misma losa.
+    p.add("Stone", sphere(1, 14, 9), T(0, base + 1.2, 0.75) @ S(1.35, 1.2, 1.5))
+    p.add("Stone", sphere(1, 14, 9), T(0, base + 2.25, 0.15) @ S(1.15, 1.7, 1.1))
+    for side in (-1, 1):
+        p.add("Stone", sphere(1, 11, 7), T(side * 1.05, base + 0.85, 0.55) @ S(0.65, 0.85, 1.0))
+        paw(p, side * 1.1, base + 0.25, -0.3, 0.8)
+        p.branch("Stone", (side * 0.8, base + 2.8, -0.5), (side * 0.82, base + 0.45, -1.25), 0.48, 0.33, 10)
+        paw(p, side * 0.82, base + 0.24, -1.55, 0.85)
+    p.add("Red", torus(0.85, 0.16, 16, 6), T(0, base + 3.05, -0.15) @ S(1.2, 1, 1))
+    p.add("Red", sphere(1, 12, 7), T(0, base + 2.7, -0.95) @ S(0.85, 0.65, 0.18))
+    p.add("Gold", sphere(0.2, 10, 6), T(0, base + 2.25, -1.16))
+    # Melena maciza: cada rizo es un relieve corto, sin púas sueltas.
+    hy, hz = base + 4.1, -0.65
+    p.add("StoneDark", sphere(1, 16, 10), T(0, hy, hz + 0.3) @ S(1.6, 1.5, 1.05))
+    p.add("Stone", sphere(1, 16, 10), T(0, hy, hz - 0.1) @ S(1.25, 1.12, 0.95))
+    for i in range(14):
+        angle = 2 * math.pi * i / 14
+        cx, cy = 1.3 * math.cos(angle), hy + 1.25 * math.sin(angle)
+        cz = hz + 0.05
+        p.add("Stone", sphere(1, 9, 6), T(cx, cy, cz) @ S(0.42, 0.43, 0.4))
+        last = None
+        for j in range(17):
+            t = j / 16
+            a = -0.5 + 2.8 * math.pi * t
+            radius = 0.29 * (1 - 0.78 * t)
+            point = (cx + radius * math.cos(a), cy + radius * math.sin(a), cz - 0.34)
+            if last:
+                p.branch("StoneDark", last, point, 0.045, 0.045, 5)
+            last = point
+    for side in (-1, 1):
+        p.add("Stone", sphere(1, 10, 6), T(side * 1.08, hy + 0.95, hz - 0.1) @ S(0.34, 0.44, 0.25))
+        p.add("StoneDark", sphere(1, 9, 5), T(side * 1.08, hy + 0.98, hz - 0.31) @ S(0.16, 0.22, 0.06))
+        p.add("StoneDark", sphere(1, 9, 6), T(side * 0.52, hy + 0.2, hz - 0.94) @ S(0.24, 0.16, 0.09))
+        p.add("Stone", sphere(1, 8, 5), T(side * 0.52, hy + 0.39, hz - 0.9) @ R("Z", side * 18) @ S(0.42, 0.16, 0.2))
+        p.add("Stone", sphere(1, 11, 7), T(side * 0.37, hy - 0.22, hz - 1.0) @ S(0.48, 0.34, 0.42))
+        p.add("Stone", spike(0.12, 0.27, 7), T(side * 0.47, hy - 0.46, hz - 1.25) @ R("X", 180))
+    p.add("StoneDark", sphere(1, 11, 6), T(0, hy - 0.02, hz - 1.34) @ S(0.38, 0.23, 0.21))
+    p.add("StoneDark", sphere(1, 12, 6), T(0, hy - 0.52, hz - 1.04) @ S(0.57, 0.22, 0.25))
+    p.add("Stone", sphere(1, 12, 7), T(0, hy - 0.72, hz - 0.9) @ S(0.65, 0.21, 0.49))
+    # Cola enrollada, unida a la grupa.
+    p.branch("Stone", (0.6, base + 0.9, 1.55), (0.6, base + 1.6, 2.0), 0.32, 0.27, 10)
+    p.add("Stone", torus(0.55, 0.24, 14, 7), T(0.6, base + 2.0, 1.85) @ R("X", 90))
+    p.add("StoneDark", sphere(0.18, 9, 6), T(0.6, base + 2.0, 1.72))
 
 def temple_roof(p):
     """Tejado octogonal de templo (hakkaku-dō) de dos pisos, con aleros curvos, esquinas levantadas, vigas rojas por
@@ -854,6 +841,13 @@ def render_preview(path, names, scale):
 
 
 def main():
+    import sys
+    parser = argparse.ArgumentParser(description="Generar las piezas japonesas o solo las indicadas.")
+    parser.add_argument("--output-dir", default=OUT_DIR)
+    parser.add_argument("--only", nargs="+", choices=tuple(PIECES))
+    parser.add_argument("--skip-previews", action="store_true")
+    args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
+    output = args.output_dir
     for obj in list(bpy.data.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
     for mesh in list(bpy.data.meshes):
@@ -864,6 +858,8 @@ def main():
     marker("Axis_Front", (-40, 0, -2))
 
     for index, (name, build) in enumerate(PIECES.items()):
+        if args.only and name not in args.only:
+            continue
         p = Piece()
         build(p)
         if name == "Fuji":
@@ -876,24 +872,32 @@ def main():
         for role, (verts, faces) in p.parts.items():
             make_object("%s_%s" % (name, role), role, verts, faces, offset)
 
-    os.makedirs(OUT_DIR, exist_ok=True)
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT_DIR, "mapa_japones.blend"))
+    os.makedirs(output, exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(output, "mapa_japones.blend"))
     bpy.ops.export_scene.fbx(
-        filepath=os.path.join(OUT_DIR, "mapa_japones.fbx"),
+        filepath=os.path.join(output, "mapa_japones.fbx"),
         object_types={"MESH"},
         axis_forward="-Z",
         axis_up="Y",
         apply_scale_options="FBX_SCALE_UNITS",
         mesh_smooth_type="FACE",
     )
-    render_preview(os.path.join(OUT_DIR, "mapa_japones1.png"), (1, 6), 1.0)
-    render_preview(os.path.join(OUT_DIR, "mapa_japones2.png"), (7, 12), 0.9)
-    render_preview(os.path.join(OUT_DIR, "mapa_japones3.png"), (16, 18), 1.0)
-    render_row(os.path.join(OUT_DIR, "mapa_japones4.png"), 1200.0 + 3 * 14.0, 14.0 * 8)
-    render_row(os.path.join(OUT_DIR, "mapa_japones5.png"), 1200.0 + 3 * 14.0, 14.0 * 8, 38.0)
-    render_row(os.path.join(OUT_DIR, "mapa_japones6.png"), 40.0 * list(PIECES).index("Komainu"), 28.0, 25.0)
-    render_row(os.path.join(OUT_DIR, "mapa_japones7.png"), 40.0 * list(PIECES).index("TempleRoof"), 75.0, 25.0)
-    print("Exportadas", len(PIECES), "piezas")
+    print("Exportadas", len(args.only or PIECES), "piezas")
+    if args.skip_previews:
+        return
+    if args.only:
+        for name in args.only:
+            index = list(PIECES).index(name)
+            render_row(os.path.join(output, name + ".png"), 40.0 * index, 50.0, 25.0)
+        return
+    render_preview(os.path.join(output, "mapa_japones1.png"), (1, 6), 1.0)
+    render_preview(os.path.join(output, "mapa_japones2.png"), (7, 12), 0.9)
+    render_preview(os.path.join(output, "mapa_japones3.png"), (16, 18), 1.0)
+    render_row(os.path.join(output, "mapa_japones4.png"), 1200.0 + 3 * 14.0, 14.0 * 8)
+    render_row(os.path.join(output, "mapa_japones5.png"), 1200.0 + 3 * 14.0, 14.0 * 8, 38.0)
+    render_row(os.path.join(output, "mapa_japones6.png"), 40.0 * list(PIECES).index("Komainu"), 28.0, 25.0)
+    render_row(os.path.join(output, "mapa_japones7.png"), 40.0 * list(PIECES).index("TempleRoof"), 75.0, 25.0)
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -10,3 +10,6 @@ sourcemap.json
 
 # Salida de graphify
 graphify-out/
+
+# Exportaciones y vistas locales de las mejoras del mapa
+/artifacts/mapa-mejorado/

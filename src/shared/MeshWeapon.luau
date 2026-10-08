@@ -20,6 +20,7 @@ local MATERIALS = {
 }
 
 local templates = {} -- [nombre de la malla] = { [índice de pieza] = { part (se clona), mesh, center } }
+local pending = {} -- una sola carga por malla, compartida entre el arma y las vistas 3D
 
 function MeshWeapon.data(name: string)
 	return require(script.Parent.Meshes[name])
@@ -59,7 +60,7 @@ local function editable(piece, palette): (EditableMesh, Vector3)
 	return mesh, piece.center + middle
 end
 
-local function template(name: string)
+local function buildTemplate(name: string)
 	local cached = templates[name]
 	if cached then
 		return cached
@@ -85,6 +86,25 @@ local function template(name: string)
 	end
 	templates[name] = parts
 	return parts
+end
+
+-- CreateMeshPartAsync cede la ejecución: otra vista puede pedir la misma malla antes de que termine.
+-- Espera esa carga en vez de crear más EditableMesh y agotar el presupuesto del cliente.
+local function template(name: string)
+	if templates[name] then return templates[name] end
+	local waiting = pending[name]
+	if waiting then
+		local ok, result = waiting.Event:Wait()
+		if not ok then error(result) end
+		return result
+	end
+	local ready = Instance.new("BindableEvent")
+	pending[name] = ready
+	local ok, result = pcall(buildTemplate, name)
+	pending[name] = nil
+	ready:Fire(ok, result) -- sin Destroy: con señales diferidas cortaría a quien aún espera
+	if not ok then error(result) end
+	return result
 end
 
 -- Viste la empuñadura (lleva los atributos Mesh, MeshScale y MeshMetal que pone SwordModel) con las piezas

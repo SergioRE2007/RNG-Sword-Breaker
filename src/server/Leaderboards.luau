@@ -129,10 +129,13 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 	end
 
 	local width, height = 20, 26
-	local columnHeight = 36
 	local columnX = width / 2 + 2.2
 	local panelY = floor + 1.7 + 1.5 + height / 2
-	local columnTop = floor + 1.7 + columnHeight
+	local slope = math.rad(14)
+	local ridgeY = floor + 38.3
+	-- La columna completa cabe bajo la pendiente, incluido su borde exterior.
+	local columnTop = ridgeY - (columnX + 1.8) * math.tan(slope) - 0.55 / math.cos(slope) - 0.1
+	local columnHeight = columnTop - floor - 1.7
 
 	-- Dos peldaños de piedra.
 	block("Step", Vector3.new(width + 11, 1.2, 7), base * CFrame.new(0, floor + 0.6, 0.5), STONE, Enum.Material.Slate)
@@ -144,7 +147,7 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 		local at = base * CFrame.new(side * columnX, 0, 0.4)
 		block("Plinth", Vector3.new(1.4, 4.4, 4.4), at * CFrame.new(0, floor + 2.4, 0) * upright, Color3.fromRGB(30, 28, 32), nil, Enum.PartType.Cylinder)
 		block("Column", Vector3.new(columnHeight - 1.4, 3.6, 3.6), at * CFrame.new(0, floor + 1.7 + (columnHeight + 1.4) / 2, 0) * upright, LACQUER, Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
-		for _, ringY in { 4.2, columnHeight - 1.4 } do
+		for _, ringY in { 4.2, columnHeight - 0.9 } do
 			block("Ring", Vector3.new(0.7, 3.9, 3.9), at * CFrame.new(0, floor + 1.7 + ringY, 0) * upright, GOLD, Enum.Material.Metal, Enum.PartType.Cylinder)
 		end
 	end
@@ -153,6 +156,24 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 	local panel = block("Panel", Vector3.new(width, height, 1), base * CFrame.new(0, panelY, 0), WOOD)
 	block("Trim", Vector3.new(width + 0.6, height + 0.6, 1.1), base * CFrame.new(0, panelY, 0.1), GOLD, Enum.Material.Metal)
 	block("Frame", Vector3.new(width + 1.8, height + 1.8, 0.8), base * CFrame.new(0, panelY, 0.3), LACQUER)
+	-- Reverso acabado: tablillas oscuras, marco con relieve y emblema de espadas.
+	for index = 0, 7 do
+		local shade = WOOD:Lerp(Color3.fromRGB(103, 60, 43), index % 2 == 0 and 0.25 or 0.1)
+		block("BackPlank", Vector3.new(width / 8 - 0.035, height, 0.3), base * CFrame.new(-width / 2 + (index + 0.5) * width / 8, panelY, 0.9), shade, Enum.Material.Wood)
+	end
+	for _, side in { -1, 1 } do
+		block("BackRail", Vector3.new(0.85, height + 1.8, 0.55), base * CFrame.new(side * (width / 2 + 0.45), panelY, 1), LACQUER)
+		block("BackRail", Vector3.new(width + 1.8, 0.85, 0.55), base * CFrame.new(0, panelY + side * (height / 2 + 0.45), 1), LACQUER)
+		block("BackBrace", Vector3.new(width, 0.55, 0.35), base * CFrame.new(0, panelY + side * 8.5, 1.2), WOOD:Lerp(GOLD, 0.3))
+	end
+	block("BackCrest", Vector3.new(0.22, 7.6, 7.6), base * CFrame.new(0, panelY + 1, 1.2) * CFrame.Angles(0, math.rad(90), 0), GOLD, Enum.Material.Metal, Enum.PartType.Cylinder)
+	block("BackCrestInset", Vector3.new(0.25, 6.8, 6.8), base * CFrame.new(0, panelY + 1, 1.35) * CFrame.Angles(0, math.rad(90), 0), LACQUER, nil, Enum.PartType.Cylinder)
+	for _, side in { -1, 1 } do
+		local sword = base * CFrame.new(0, panelY + 1, 1.6) * CFrame.Angles(0, 0, side * math.rad(38))
+		block("BackSword", Vector3.new(0.32, 4.6, 0.16), sword * CFrame.new(0, 0.45, 0), GOLD, Enum.Material.Metal)
+		block("BackGuard", Vector3.new(1.5, 0.28, 0.2), sword * CFrame.new(0, -1.65, 0), GOLD, Enum.Material.Metal)
+		block("BackGrip", Vector3.new(0.38, 1.1, 0.2), sword * CFrame.new(0, -2.3, 0), WOOD:Lerp(GOLD, 0.45))
+	end
 
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front
@@ -224,9 +245,21 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 
 	-- Tejado a dos aguas de tejas oscuras con caballete y adornos dorados en las puntas.
 	local depth = 8.5
-	local slope = math.rad(14)
 	local half = width / 2 + 7.5
-	local ridgeY = columnTop + 0.6
+	block("Lintel", Vector3.new(columnX * 2 + 2.8, 0.7, 3.8), base * CFrame.new(0, columnTop - 0.25, 0.4), LACQUER)
+	-- Frontones cerrados para que el tejado tenga un acabado también por debajo y por detrás.
+	local gableHalf = columnX + 1.8
+	local gableHeight = gableHalf * math.tan(slope)
+	for _, side in { -1, 1 } do
+		local gable = Instance.new("WedgePart")
+		gable.Name = "Gable"
+		gable.Anchored = true
+		gable.Size = Vector3.new(6.8, gableHeight, gableHalf)
+		gable.CFrame = base * CFrame.new(side * gableHalf / 2, columnTop + gableHeight / 2, 0.5) * CFrame.Angles(0, -side * math.pi / 2, 0)
+		gable.Color = WOOD
+		gable.Material = Enum.Material.Wood
+		gable.Parent = model
+	end
 	for _, side in { -1, 1 } do
 		block(
 			"Roof",
@@ -253,6 +286,10 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 	local signY = panelY + height / 2 + 0.8 + signHeight / 2
 	block("SignFrame", Vector3.new(signWidth + 1, signHeight + 1, 0.5), base * CFrame.new(0, signY, 0.2), GOLD, Enum.Material.Metal)
 	local banner = block("Banner", Vector3.new(signWidth, signHeight, 0.8), base * CFrame.new(0, signY, 0), WOOD)
+	block("BackHeader", Vector3.new(signWidth, signHeight, 0.35), base * CFrame.new(0, signY, 0.7), WOOD, Enum.Material.Wood)
+	for _, side in { -1, 1 } do
+		block("BackHeaderTrim", Vector3.new(signWidth + 0.4, 0.3, 0.2), base * CFrame.new(0, signY + side * (signHeight / 2 + 0.12), 0.9), LACQUER)
+	end
 
 	local bannerGui = Instance.new("SurfaceGui")
 	bannerGui.Face = Enum.NormalId.Front
