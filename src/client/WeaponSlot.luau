@@ -16,8 +16,8 @@ local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local WeaponSlot = {}
 local player = Players.LocalPlayer
--- Capas absolutas, iguales a las casillas de la mochila y por debajo de las ventanas.
-local LAYER = { cell = 1, preview = 2, detail = 3 }
+-- Todo el acceso rápido va en la capa 0; las ventanas empiezan en 1. Dentro manda el orden del árbol.
+local LAYER = { cell = 0, preview = 0, detail = 0 }
 local SLOT_SIZE = 108 -- unidades del HUD: Ui.hud ya adapta su escala a la pantalla
 
 function WeaponSlot.start()
@@ -105,6 +105,8 @@ function WeaponSlot.start()
 		shortcut.AnchorPoint = Vector2.new(0.5, 0)
 		shortcut.Position = UDim2.new(0.5, 0, 1, 7)
 		shortcut.Size = UDim2.fromOffset(24, 21)
+		-- Los helpers de inventario crean adornos en 1-3: baja también sus fondos, brillos y etiquetas.
+		Ui.layer(cell, LAYER.cell)
 		Ui.tip(cell, function()
 			return Backpack.swordTip(copy)
 		end, true)
