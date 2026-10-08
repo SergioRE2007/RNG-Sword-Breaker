@@ -21,6 +21,8 @@ Config.Test = {
 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
+Config.SwingWindow = 1.15 -- cuánto sigue vivo el espadazo, en veces el tiempo entre golpes: mientras dura golpea a lo que entre en su alcance, cada cosa una sola vez (1.15 = lo que dura la animación; 0 = solo el instante del clic)
+Config.SwingLag = 0.15 -- segundos de más que el servidor mantiene vivo el espadazo, por el retraso con que ve moverse al jugador
 Config.StartCoins = 0
 Config.AutosaveInterval = 60
 Config.DataStoreName = "PlayerData_v1"

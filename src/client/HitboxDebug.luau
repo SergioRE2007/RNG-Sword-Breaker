@@ -1,7 +1,8 @@
 -- Modo de pruebas, solo en Studio: enseña en el mundo la hitbox del espadazo. Se enciende y se apaga con la tecla H.
 -- Hace la misma cuenta que el servidor (shared/Hitbox con el alcance y el arco de server/Combat), así que lo que
 -- sale en verde es lo que el servidor daría por alcanzado si se golpeara en ese instante (salvo el retraso de red).
---   · Sector amarillo en el suelo: hasta dónde llega el arma que llevas en la mano; se pone blanco al dar el golpe.
+--   · Sector amarillo en el suelo: hasta dónde llega el arma que llevas en la mano; se queda blanco mientras el
+--     espadazo sigue vivo (Config.SwingWindow) y puede golpear a lo que entre.
 --   · Cajas: la hitbox de cada objeto de tu parcela y de cada enemigo; verde si el golpe la alcanzaría.
 --   · Caja roja: golpe que el servidor ha contado de verdad (aviso Hit).
 local CollectionService = game:GetService("CollectionService")
@@ -24,7 +25,7 @@ local KEY = Enum.KeyCode.H
 local ATTRIBUTE = "HitboxDebug" -- atributo local del jugador: encendido o apagado (así también se enciende por código)
 local NEAR = 40 -- studs más allá del alcance hasta donde se dibujan las cajas
 local LIFT = 0.15 -- altura del sector sobre los pies, para que no parpadee con el suelo
-local SWING_FLASH = 0.15 -- segundos que brilla el sector al dar un espadazo
+local SWING_FLASH = 0.15 -- segundos que brilla el sector al dar un espadazo, como poco
 local HIT_FLASH = 0.35 -- segundos que se ve en rojo una caja golpeada
 
 local COLOR_AREA = Color3.fromRGB(255, 215, 60)
@@ -38,7 +39,7 @@ local folder: Folder? = nil
 local area: CylinderHandleAdornment? = nil
 local boxes: { [BasePart]: SelectionBox } = {}
 local connection: RBXScriptConnection? = nil
-local swungAt = 0
+local activeUntil = 0 -- hasta cuándo sigue vivo el último espadazo (reloj de os.clock)
 
 -- Alcance y arco del arma que lleva en la mano, con la cuenta de server/Combat. Sin arma en la mano no hay golpe.
 local function reach(character: Model): (number, number)
@@ -99,7 +100,7 @@ local function update()
 		local half = halfAngle(arc)
 		local first = CFrame.Angles(0, -half, 0):VectorToWorldSpace(look.Unit)
 		local feet = root.Position - Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2 - LIFT, 0)
-		local swinging = os.clock() - swungAt < SWING_FLASH
+		local swinging = os.clock() < activeUntil
 		area.CFrame = CFrame.fromMatrix(feet, first, Vector3.yAxis:Cross(first), Vector3.yAxis)
 		area.Radius = range
 		area.Angle = math.deg(half) * 2
@@ -190,7 +191,7 @@ function HitboxDebug.start()
 		return
 	end
 	SwordController.onSwing = function()
-		swungAt = os.clock()
+		activeUntil = os.clock() + math.max(Stats.cooldown(player) * Config.SwingWindow, SWING_FLASH)
 	end
 	Remotes.Hit.OnClientEvent:Connect(function(hitter: Player, part: BasePart?)
 		if folder and hitter == player and part then
