@@ -110,7 +110,12 @@ local function setLighting()
 	local sky = Instance.new("Sky")
 	sky.StarCount = 5000
 	sky.CelestialBodiesShown = true
+	sky.SunTextureId = "rbxasset://sky/sun.jpg"
+	sky.MoonTextureId = "rbxasset://sky/moon.jpg"
+	sky.SunAngularSize = 16
+	sky.MoonAngularSize = 13
 	sky.Parent = Lighting
+	Lighting.GeographicLatitude = 35 -- Japón: el sol y la luna cruzan el cielo en un arco realista
 
 	local atmosphere = Instance.new("Atmosphere")
 	atmosphere.Density = 0.36

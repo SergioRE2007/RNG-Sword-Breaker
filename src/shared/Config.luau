@@ -247,9 +247,9 @@ Config.StatNames = { damage = "daño", luck = "suerte", coins = "monedas", gems 
 -- Decorado del mapa: "japan" (bosque japonés de atardecer, server/SceneryJapan) o "tropical" (la isla de siempre, server/Scenery).
 Config.Theme = "japan"
 
--- Ciclo de día y noche de la superficie (client/DayCycle): `Length` = segundos reales de un día entero, `Start` = hora
--- del reloj a la que arranca. Es el mismo para todos (sigue la hora del servidor).
-Config.DayCycle = { Length = 480, Start = 17.4 }
+-- Ciclo de día y noche de la superficie (client/DayCycle): `Length` = segundos reales de un día entero, `DayShare` =
+-- parte de la vuelta que es de día (de 6 a 18 h). Es el mismo para todos (sigue la hora del servidor).
+Config.DayCycle = { Length = 720, DayShare = 2 / 3 }
 
 Config.PlotLighting = { Height = 18, Offset = 0.18, Brightness = 1.5, Range = 55 }
 Config.Water = { Depth = 6, Transparency = 0.35, WaveHeight = 0.12, WaveSpeed = 0.9 }
