@@ -15,16 +15,20 @@ local OTHER_DIM = 0.45
 local SCREEN_HEIGHT = 820 -- alto de pantalla al que el texto sale a su tamaño
 local GUI_SIZE = UDim2.fromOffset(480, 72)
 local WHITE = Color3.new(1, 1, 1)
+local BLACK = Color3.new(0, 0, 0)
+local FLASH_TIME = 0.12 -- lo que tarda el borde en pasar del destello al negro
 
--- Cada estilo: duración, tamaño, pop (de `from` a `peak` en `popIn` s y de vuelta a 1 en `popOut` s), subida (`rise`
--- studs, alcanzada en la fracción `riseEnd` de la vida, desde `start`), deriva lateral, arco, temblor y fade final.
+-- Cada estilo: duración, tamaño, color en degradado (`top` arriba, `bottom` abajo), destello del borde al salir
+-- (`flash`), brillo que cruza el texto (`shine` s, empezando en `shineAt`), pop (de `from` a `peak` en `popIn` s y de
+-- vuelta a 1 en `popOut` s), subida (`rise` studs, alcanzada en la fracción `riseEnd` de la vida, desde `start`),
+-- deriva lateral, arco, temblor y fade final.
 FloatText.STYLES = {
-	enemy = { life = 0.7, size = 28, stroke = 2.5, color = WHITE, from = 0.7, peak = 1.12, popIn = 0.06, popOut = 0.16, rise = 3.2, riseEnd = 1, drift = 0.9, rotation = 5, fade = 0.35, shrink = 0.85 },
-	final = { life = 0.9, size = 38, stroke = 3, color = WHITE, from = 0.6, peak = 1.3, popIn = 0.07, popOut = 0.2, rise = 3.8, riseEnd = 1, drift = 0.6, rotation = 4, wobble = 4, fade = 0.35, shrink = 0.85 },
-	box = { life = 0.5, size = 23, stroke = 2, color = WHITE, from = 0.8, peak = 1.06, popIn = 0.04, popOut = 0.1, rise = 1.8, riseEnd = 1, drift = 0.5, rotation = 3, fade = 0.4, shrink = 0.9 },
-	coin = { life = 1.1, size = 28, stroke = 2.5, color = Color3.fromRGB(255, 215, 70), icon = "coin", from = 0.85, peak = 1.08, popIn = 0.1, popOut = 0.25, start = -1, rise = 3.5, riseEnd = 0.6, arc = 0.6, side = 1, rotation = 3, fade = 0.25 },
-	gem = { life = 1.1, size = 26, stroke = 2.5, color = Color3.fromRGB(190, 110, 255), icon = "gem", from = 0.85, peak = 1.08, popIn = 0.1, popOut = 0.25, start = -1, rise = 3.5, riseEnd = 0.6, arc = 0.6, side = -1, rotation = 3, fade = 0.25 },
-	notice = { life = 1.2, size = 24, stroke = 2.5, color = WHITE, from = 0.85, peak = 1.1, popIn = 0.1, popOut = 0.25, rise = 2.5, riseEnd = 0.7, rotation = 2, fade = 0.3 },
+	enemy = { life = 0.7, size = 30, stroke = 2.5, top = Color3.fromRGB(255, 238, 150), bottom = Color3.fromRGB(255, 135, 35), flash = Color3.fromRGB(255, 120, 40), shine = 0.22, shineAt = 0.04, from = 0.7, peak = 1.12, popIn = 0.06, popOut = 0.16, rise = 3.2, riseEnd = 1, drift = 0.9, rotation = 5, fade = 0.35, shrink = 0.85 },
+	final = { life = 0.9, size = 40, stroke = 3, top = Color3.fromRGB(255, 240, 130), bottom = Color3.fromRGB(255, 70, 50), flash = Color3.fromRGB(255, 255, 255), shine = 0.3, shineAt = 0.05, from = 0.6, peak = 1.3, popIn = 0.07, popOut = 0.2, rise = 3.8, riseEnd = 1, drift = 0.6, rotation = 4, wobble = 4, fade = 0.35, shrink = 0.85 },
+	box = { life = 0.5, size = 25, stroke = 2, top = Color3.fromRGB(220, 245, 255), bottom = Color3.fromRGB(85, 170, 255), flash = Color3.fromRGB(90, 180, 255), from = 0.8, peak = 1.06, popIn = 0.04, popOut = 0.1, rise = 1.8, riseEnd = 1, drift = 0.5, rotation = 3, fade = 0.4, shrink = 0.9 },
+	coin = { life = 1.1, size = 30, stroke = 2.5, top = Color3.fromRGB(255, 242, 120), bottom = Color3.fromRGB(255, 150, 0), flash = Color3.fromRGB(255, 230, 90), shine = 0.4, shineAt = 0.2, icon = "coin", from = 0.85, peak = 1.08, popIn = 0.1, popOut = 0.25, start = -1, rise = 3.5, riseEnd = 0.6, arc = 0.6, side = 1, rotation = 3, fade = 0.25 },
+	gem = { life = 1.1, size = 28, stroke = 2.5, top = Color3.fromRGB(245, 210, 255), bottom = Color3.fromRGB(165, 80, 255), flash = Color3.fromRGB(220, 150, 255), shine = 0.4, shineAt = 0.25, icon = "gem", from = 0.85, peak = 1.08, popIn = 0.1, popOut = 0.25, start = -1, rise = 3.5, riseEnd = 0.6, arc = 0.6, side = -1, rotation = 3, fade = 0.25 },
+	notice = { life = 1.2, size = 24, stroke = 2.5, top = WHITE, bottom = WHITE, flash = WHITE, shine = 0.45, shineAt = 0.2, from = 0.85, peak = 1.1, popIn = 0.1, popOut = 0.25, rise = 2.5, riseEnd = 0.7, rotation = 2, fade = 0.3 },
 }
 
 local function lerp(a: number, b: number, t: number): number
@@ -74,6 +78,9 @@ type Entry = {
 	scaler: UIScale,
 	label: TextLabel,
 	stroke: UIStroke,
+	gradient: UIGradient,
+	shine: TextLabel,
+	shineGradient: UIGradient,
 	icons: { [string]: Frame },
 	fades: { { any } },
 	style: any,
@@ -132,14 +139,41 @@ local function build(): Entry
 	label.LayoutOrder = 2
 	label.Parent = holder
 
+	label.TextColor3 = WHITE
+
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.new(0, 0, 0)
+	stroke.Color = BLACK
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 	stroke.Parent = label
 
+	local gradient = Instance.new("UIGradient")
+	gradient.Rotation = 90
+	gradient.Parent = label
+
+	-- Brillo: el mismo texto en blanco encima, visible solo en una franja que lo cruza (se mueve con el Offset).
+	local shine = Instance.new("TextLabel")
+	shine.Size = UDim2.fromScale(1, 1)
+	shine.BackgroundTransparency = 1
+	shine.Font = Enum.Font.FredokaOne
+	shine.TextColor3 = WHITE
+	shine.ZIndex = label.ZIndex + 1
+	shine.Parent = label
+
+	local shineGradient = Instance.new("UIGradient")
+	shineGradient.Rotation = 20
+	shineGradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.4, 1),
+		NumberSequenceKeypoint.new(0.5, 0.15),
+		NumberSequenceKeypoint.new(0.6, 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	shineGradient.Parent = shine
+
 	return {
-		anchor = anchor, gui = gui, holder = holder, scaler = scaler, label = label, stroke = stroke, icons = {},
-		fades = { { label, "TextTransparency", 0 }, { stroke, "Transparency", 0 } },
+		anchor = anchor, gui = gui, holder = holder, scaler = scaler, label = label, stroke = stroke, gradient = gradient,
+		shine = shine, shineGradient = shineGradient, icons = {},
+		fades = { { label, "TextTransparency", 0 }, { stroke, "Transparency", 0 }, { shine, "TextTransparency", 0 } },
 		style = nil, vary = {}, start = 0, target = nil, offset = Vector3.zero, base = Vector3.zero, other = false, size = 0,
 	}
 end
@@ -205,6 +239,15 @@ local function step()
 		entry.gui.StudsOffset = Vector3.new(x, y, 0)
 		entry.holder.Rotation = rotation
 		entry.scaler.Scale = scale * screen * entry.size
+		-- Destello: el borde sale del color del tipo y más gordo, y en un instante vuelve al negro.
+		local style = entry.style
+		local settle = outQuad(math.min(t / FLASH_TIME, 1))
+		entry.stroke.Color = style.flash:Lerp(BLACK, settle)
+		entry.stroke.Thickness = style.stroke * (1.7 - 0.7 * settle)
+		if style.shine then
+			local sweep = math.clamp((t - style.shineAt) / style.shine, 0, 1)
+			entry.shineGradient.Offset = Vector2.new(lerp(-1, 1, sweep), 0)
+		end
 		local hidden = if entry.other then 1 - (1 - faded) * (1 - OTHER_DIM) else faded
 		for _, fade in entry.fades do
 			fade[1][fade[2]] = fade[3] + (1 - fade[3]) * hidden
@@ -258,7 +301,13 @@ function FloatText.spawn(kind: string, position: Vector3, text: string, opts: { 
 
 	entry.label.Text = text
 	entry.label.TextSize = style.size
-	entry.label.TextColor3 = options.color or style.color
+	entry.shine.Text = text
+	entry.shine.TextSize = style.size
+	entry.shine.Visible = style.shine ~= nil
+	entry.shineGradient.Offset = Vector2.new(-1, 0)
+	-- `color` (avisos de tiradas, color de la rareza) sustituye al degradado del estilo.
+	local color = options.color
+	entry.gradient.Color = ColorSequence.new(if color then color:Lerp(WHITE, 0.55) else style.top, color or style.bottom)
 	entry.stroke.Thickness = style.stroke
 	icon(entry, style.icon)
 	entry.anchor.WorldPosition = entry.base
