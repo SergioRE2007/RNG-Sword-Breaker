@@ -88,8 +88,8 @@ function Ui.bevel(instance: GuiObject)
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, WHITE),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(232, 232, 236)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 168)),
+		ColorSequenceKeypoint.new(0.45, Color3.fromRGB(222, 222, 230)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(108, 108, 136)),
 	})
 	gradient.Parent = instance
 
