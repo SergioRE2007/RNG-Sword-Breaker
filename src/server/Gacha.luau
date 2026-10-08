@@ -13,6 +13,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
+local BestRoll = require(script.Parent.BestRoll)
 
 local Gacha = {}
 
@@ -142,7 +143,9 @@ local function draw(player: Player, boost: number, source: string, info)
 		end)
 	end
 	local kept = stored ~= nil
-	if not kept then
+	if kept then
+		BestRoll.submit(player, index, metal, size)
+	else
 		PlayerData.addGems(player, Config.Gacha.SellValue)
 	end
 	local extra = if info then table.clone(info) else {}
