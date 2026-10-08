@@ -63,7 +63,7 @@ end
 
 function Settings.start()
 	local gui = Ui.hud()
-	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 544), Ui.gearIcon)
+	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 658), Ui.gearIcon)
 
 	local list = Instance.new("Frame")
 	list.Size = UDim2.fromScale(1, 1)
@@ -169,6 +169,26 @@ function Settings.start()
 		paintSell()
 	end)
 	paintSell()
+
+	-- Ver hitbox -------------------------------------------------------------------------
+	-- Solo cambia el atributo local "HitboxDebug" del jugador: quien dibuja es client/HitboxDebug.
+	local hitboxRow = row(list, 5, "Ver hitbox", "Dibuja en el suelo hasta dónde llega tu arma (en blanco mientras dura el golpe) y marca en verde lo que alcanzarías.", false, Ui.COLORS.red)
+	local hitboxButton = Ui.button(hitboxRow, "", Ui.COLORS.gray)
+	hitboxButton.Name = "Hitbox"
+	hitboxButton.AnchorPoint = Vector2.new(1, 0.5)
+	hitboxButton.Position = UDim2.new(1, -14, 0.5, 0)
+	hitboxButton.Size = UDim2.fromOffset(130, 60)
+	hitboxButton.TextSize = 26
+	local function paintHitbox()
+		local on = player:GetAttribute("HitboxDebug") == true
+		hitboxButton.Text = if on then "SÍ" else "NO"
+		hitboxButton.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
+	end
+	hitboxButton.Activated:Connect(function()
+		player:SetAttribute("HitboxDebug", player:GetAttribute("HitboxDebug") ~= true)
+	end)
+	player:GetAttributeChangedSignal("HitboxDebug"):Connect(paintHitbox)
+	paintHitbox()
 
 	-- Botón con engranaje, arriba a la izquierda, a la derecha del botón del chat y con más margen que antes (pedido por el usuario).
 	local button = Ui.button(gui, "", Ui.COLORS.gray)

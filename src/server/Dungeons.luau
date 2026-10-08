@@ -435,19 +435,23 @@ local function kill(run, body: BasePart, killer: Player)
 	publish(run)
 end
 
--- Espadazo del jugador (lo llama Combat con el daño y el alcance ya calculados en el servidor).
-function Dungeons.strike(player: Player, origin: CFrame, range: number, arc: number, damage: number)
+-- Espadazo del jugador (lo llama Combat con el daño y el alcance ya calculados en el servidor). `already` son los
+-- enemigos que ese mismo espadazo ya ha golpeado: no repiten, y aquí se apuntan los nuevos.
+function Dungeons.strike(player: Player, origin: CFrame, range: number, arc: number, damage: number, already: { [BasePart]: boolean }?)
 	local run = runOf[player]
 	if not run or run.state ~= "fighting" then
 		return
 	end
 	local hit = {}
 	for body in run.enemies do
-		if Destructibles.reaches(body, origin, range, arc) then
+		if not (already and already[body]) and Destructibles.reaches(body, origin, range, arc) then
 			table.insert(hit, body)
 		end
 	end
 	for _, body in hit do
+		if already then
+			already[body] = true
+		end
 		local enemy = run.enemies[body]
 		if not enemy then
 			continue
