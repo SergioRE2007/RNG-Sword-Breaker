@@ -18,8 +18,8 @@ local BestRoll = {}
 local ANGLE = 22.5 -- grados alrededor del hub: un hueco libre entre dos caminos
 local REFRESH = 60 -- segundos entre lecturas del récord global
 local KEY = "best"
-local WEAPON_HEIGHT = 8 -- studs que mide el arma expuesta, sea cual sea
 local TOP = 3.1 -- altura de la tarima sobre el suelo del hub
+local SIGN_HEIGHT = 12 -- altura del cartel sobre la tarima con un arma corriente
 
 local LACQUER = Color3.fromRGB(176, 38, 34)
 local GOLD = Color3.fromRGB(226, 182, 80)
@@ -30,6 +30,7 @@ local WHITE = Color3.new(1, 1, 1)
 local best = nil -- { userId, name, sword, metal, size, rarity } o nil si aún no hay ninguna
 local base: CFrame = CFrame.identity -- centro del pedestal a ras de suelo, mirando al centro del hub
 local show: Folder? = nil -- lo que cambia con el récord: arma y avatar
+local sign: Part? = nil -- pieza invisible que lleva el cartel
 local lines = {} -- textos del cartel: odds, weapon, player
 local token = 0 -- cada vez que se repinta: descarta los avatares que llegan tarde
 
@@ -128,17 +129,18 @@ local function build(map: Instance)
 	disc(model, "TopInlay", 7, 0.32, TOP - 0.15, GOLD:Lerp(DARK, 0.35), Enum.Material.Metal)
 
 	-- Cartel encima: se ve desde todo el hub y gira hacia quien mira.
-	local sign = part(model, "Sign", Vector3.one, base * CFrame.new(0, TOP + 14.5, 0), WHITE)
-	sign.Transparency = 1
-	sign.CanCollide = false
-	sign.CanQuery = false
-	sign.CanTouch = false
+	local board = part(model, "Sign", Vector3.one, base * CFrame.new(0, TOP + SIGN_HEIGHT, 0), WHITE)
+	board.Transparency = 1
+	board.CanCollide = false
+	board.CanQuery = false
+	board.CanTouch = false
+	sign = board
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Info"
 	gui.Size = UDim2.fromScale(30, 9)
 	gui.LightInfluence = 0
 	gui.MaxDistance = 320
-	gui.Parent = sign
+	gui.Parent = board
 	local title = line(gui, 0, 0.36, WHITE)
 	title.Text = "MEJOR TIRADA"
 	local shine = Instance.new("UIGradient")
@@ -157,11 +159,13 @@ local function build(map: Instance)
 	model.Parent = map
 end
 
--- El arma de verdad (la misma de la mano), de pie con la punta hacia arriba y a un lado del avatar.
-local function placeWeapon(parent: Instance, record)
+-- El arma de verdad, a su tamaño de la mano (con lo que le agranda su tamaño), de pie con la punta hacia arriba y
+-- a un lado del avatar. No se escala el modelo: client/WeaponAura no pone aura a las armas escaladas.
+local function placeWeapon(parent: Instance, record): number
 	local model = Instance.new("Model")
 	model.Name = "Weapon"
-	local handle, blade = SwordModel.build(record.sword, model, CFrame.identity, 1, true, if record.metal > 0 then record.metal else nil)
+	local scale = if record.size > 0 then Config.Sizes[record.size].scale else 1
+	local handle, blade = SwordModel.build(record.sword, model, CFrame.identity, scale, true, if record.metal > 0 then record.metal else nil)
 	for _, item in model:GetDescendants() do
 		if item:IsA("BasePart") then
 			item.CanCollide = false
@@ -173,7 +177,7 @@ local function placeWeapon(parent: Instance, record)
 	local toTip = blade.Position - handle.Position
 	local box, size = model:GetBoundingBox()
 	model.WorldPivot = CFrame.new(box.Position)
-	model:ScaleTo(WEAPON_HEIGHT / math.max(size.X, size.Y, size.Z, 0.1))
+	local long = math.max(size.X, size.Y, size.Z)
 	-- Giro que pone la dirección empuñadura → hoja mirando arriba.
 	local upright = CFrame.identity
 	if toTip.Magnitude > 0.05 then
@@ -184,8 +188,9 @@ local function placeWeapon(parent: Instance, record)
 			upright = CFrame.Angles(math.rad(90), 0, 0) * CFrame.lookAt(Vector3.zero, direction):Inverse()
 		end
 	end
-	model:PivotTo(base * CFrame.new(2.9, TOP + 1.2 + WEAPON_HEIGHT / 2, 0) * CFrame.Angles(0, 0, math.rad(-10)) * upright)
+	model:PivotTo(base * CFrame.new(2.9, TOP + 1 + long / 2, 0) * CFrame.Angles(0, 0, math.rad(-10)) * upright)
 	model.Parent = parent
+	return long
 end
 
 -- El avatar de quien la sacó, quieto sobre la tarima. Tarda en llegar (y puede fallar): va aparte.
@@ -199,9 +204,11 @@ local function placeAvatar(parent: Instance, record, mine: number)
 		return
 	end
 	rig.Name = "Roller"
+	-- Solo se ancla la raíz: el resto del cuerpo lo sujetan sus articulaciones (anclando cada pieza donde venía,
+	-- el pecho se quedaba descolocado).
 	for _, item in rig:GetDescendants() do
 		if item:IsA("BasePart") then
-			item.Anchored = true
+			item.Anchored = item.Name == "HumanoidRootPart"
 			item.CanTouch = false
 			item.CanQuery = false
 		elseif item:IsA("LuaSourceContainer") then
@@ -240,7 +247,11 @@ local function render()
 	lines.weapon.Text = Permanent.name(record.sword, record.metal, record.size)
 	lines.weapon.TextColor3 = if record.metal > 0 then Config.Metals[record.metal].color else sword.color
 	lines.player.Text = "@" .. record.name
-	placeWeapon(folder, record)
+	-- El cartel sube con las armas muy largas (una Titánica mide más del doble) para no taparlas.
+	local long = placeWeapon(folder, record)
+	if sign then
+		sign.CFrame = base * CFrame.new(0, TOP + math.max(SIGN_HEIGHT, long + 6.5), 0)
+	end
 	task.spawn(placeAvatar, folder, record, mine)
 end
 
