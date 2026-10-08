@@ -301,12 +301,12 @@ function Hud.start()
 	menu.Name = "Menu"
 	menu.AnchorPoint = Vector2.new(0, 0.5)
 	menu.Position = UDim2.new(0, 14, 0.5, 0)
-	menu.Size = UDim2.fromOffset(256, 0) -- dos botones por fila: 2 x 124 + 8 de hueco
+	menu.Size = UDim2.fromOffset(216, 0) -- dos botones por fila: 2 x 104 + 8 de hueco
 	menu.AutomaticSize = Enum.AutomaticSize.Y
 	menu.BackgroundTransparency = 1
 	menu.Parent = gui
 	local menuLayout = Instance.new("UIGridLayout")
-	menuLayout.CellSize = UDim2.fromOffset(124, 92)
+	menuLayout.CellSize = UDim2.fromOffset(104, 78)
 	menuLayout.CellPadding = UDim2.fromOffset(8, 8)
 	menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	menuLayout.Parent = menu
@@ -338,15 +338,15 @@ function Hud.start()
 		iconBox.Name = "Icon"
 		iconBox.AnchorPoint = Vector2.new(0.5, 0)
 		iconBox.Position = UDim2.new(0.5, 0, 0, -2)
-		iconBox.Size = UDim2.fromOffset(76, 76)
+		iconBox.Size = UDim2.fromOffset(64, 64)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = item
 		entry[4](iconBox)
 		Ui.shadow(item)
-		local label = Ui.label(item, 18)
+		local label = Ui.label(item, 16)
 		label.AnchorPoint = Vector2.new(0.5, 1)
-		label.Position = UDim2.new(0.5, 0, 1, -5)
-		label.Size = UDim2.new(1, -8, 0, 20)
+		label.Position = UDim2.new(0.5, 0, 1, -4)
+		label.Size = UDim2.new(1, -8, 0, 18)
 		label.Text = entry[2]
 		Ui.sparkle(item, 6)
 		item.Activated:Connect(function()
