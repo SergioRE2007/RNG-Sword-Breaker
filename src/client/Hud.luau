@@ -249,8 +249,8 @@ function Hud.start()
 	local dock = Instance.new("Frame")
 	dock.Name = "StatsDock"
 	dock.AnchorPoint = Vector2.new(1, 1)
-	dock.Position = UDim2.new(1, -MARGIN, 1, -158)
-	dock.Size = UDim2.new(0, 300, 0.65, -158)
+	dock.Position = UDim2.new(1, -MARGIN, 1, -86)
+	dock.Size = UDim2.new(0, 300, 0.65, -86)
 	dock.BackgroundTransparency = 1
 	dock.Parent = gui
 
