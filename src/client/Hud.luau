@@ -133,7 +133,7 @@ end
 function Hud.start()
 	local gui = Ui.hud()
 
-	-- La espada siempre va equipada: se quita la barra de objetos de Roblox (y sus teclas 1, 2...).
+	-- La casilla de WeaponSlot sustituye la barra de objetos de Roblox y maneja su tecla 1.
 	-- SetCoreGuiEnabled puede fallar si el sistema aún no está listo, así que se reintenta.
 	task.spawn(function()
 		for _ = 1, 10 do

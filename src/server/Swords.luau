@@ -40,9 +40,11 @@ local function give(player: Player)
 		return
 	end
 
+	local drawn = true
 	for _, container in { character, player:FindFirstChildOfClass("Backpack") } do
 		for _, child in container:GetChildren() do
 			if child:IsA("Tool") and child:GetAttribute("Sword") then
+				drawn = container == character
 				child:Destroy()
 			end
 		end
@@ -50,15 +52,10 @@ local function give(player: Player)
 
 	local tool = build(player:GetAttribute("SwordLevel") or 1, player:GetAttribute("SwordMetal") or 0, player:GetAttribute("SwordSize") or 0)
 	tool.Parent = player:FindFirstChildOfClass("Backpack")
-	humanoid:EquipTool(tool)
-	-- La espada va siempre en la mano: si se guarda en la mochila (por ejemplo con la tecla 1), se vuelve a equipar.
-	tool.Unequipped:Connect(function()
-		task.defer(function()
-			if humanoid.Health > 0 and tool.Parent == player:FindFirstChildOfClass("Backpack") then
-				humanoid:EquipTool(tool)
-			end
-		end)
-	end)
+	-- Cambiar el modelo conserva si el jugador la llevaba en la mano o la había guardado.
+	if drawn then
+		humanoid:EquipTool(tool)
+	end
 
 	-- Espadas dobles: la segunda va soldada a la mano izquierda (la herramienta solo agarra la derecha).
 	local offHand = tool:FindFirstChild("OffHand")
