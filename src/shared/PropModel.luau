@@ -114,13 +114,24 @@ local function collisions(model: Model, name: string, origin: CFrame, scale: num
 	elseif name == "Fence" then
 		box(Vector3.new(8.6, 3.4, 0.6), CFrame.new(0, 1.7, 0))
 	elseif name == "Bridge" then
-		for i = 0, 8 do
+		local function point(i: number): Vector3
 			local t = i / 8
-			local x, y = -9 + 18 * t, 3.2 * math.sin(math.pi * t) + 0.5
-			local slope = math.atan(3.2 * math.pi / 18 * math.cos(math.pi * t))
-			box(Vector3.new(2.2, 0.5, 6.2), CFrame.new(x, y, 0) * CFrame.Angles(0, 0, slope))
+			return Vector3.new(-9 + 18 * t, 3.2 * math.sin(math.pi * t) + 0.5, 0)
+		end
+		for i = 0, 8 do
+			local slope = math.atan(3.2 * math.pi / 18 * math.cos(math.pi * i / 8))
+			box(Vector3.new(2.2, 0.5, 6.2), CFrame.new(point(i)) * CFrame.Angles(0, 0, slope))
+		end
+		-- Barandilla continua a cada lado: un tramo entre cada par de postes, de la cubierta al pasamanos.
+		for i = 0, 7 do
+			local a, b = point(i), point(i + 1)
+			local mid = (a + b) / 2
+			local angle = math.atan2(b.Y - a.Y, b.X - a.X)
 			for _, side in { -1, 1 } do
-				box(Vector3.new(0.4, 1.9, 0.4), CFrame.new(x, y + 1.2, side * 3))
+				box(
+					Vector3.new((b - a).Magnitude + 0.5, 3, 0.5),
+					CFrame.new(mid.X, mid.Y + 1.5, side * 3) * CFrame.Angles(0, 0, angle)
+				)
 			end
 		end
 	elseif name == "Rocks" or name == "Komainu" then

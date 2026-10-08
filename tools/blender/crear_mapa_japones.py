@@ -299,7 +299,7 @@ def bridge(p):
         slope = math.degrees(math.atan2(3.2 * math.pi / 18 * math.cos(math.pi * t), 1))
         p.add("Wood", box(2.2, 0.5, 6.2), T(x, y, 0) @ R("Z", slope))
         if i % 2 == 0:
-            p.add("Red", box(0.5, 0.5, 6.4), T(x, y + 0.35, 0) @ R("Z", slope))
+            p.add("Red", box(0.6, 0.6, 6.0), T(x, y - 0.85, 0) @ R("Z", slope))
         for s in (-1, 1):
             p.add("Red", box(0.4, 1.9, 0.4), T(x, y + 1.2, s * 3.0))
             if i < n - 1:
