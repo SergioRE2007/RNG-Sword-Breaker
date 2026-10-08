@@ -32,4 +32,4 @@ require(script.ArmorAura).start()
 require(script.PotionFx).start()
 require(script.JapanFx).start()
 require(script.StationFx).start()
-require(script.HitboxDebug).start() -- solo en Studio: tecla H
+require(script.HitboxDebug).start() -- opción "Ver hitbox" de Ajustes

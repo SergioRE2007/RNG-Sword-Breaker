@@ -1,4 +1,5 @@
--- Modo de pruebas, solo en Studio: enseña en el mundo la hitbox del espadazo. Se enciende y se apaga con la tecla H.
+-- Enseña en el mundo la hitbox del espadazo. Se enciende y se apaga con la opción "Ver hitbox" de Ajustes (que
+-- cambia el atributo local HitboxDebug del jugador) y, en Studio, también con la tecla H.
 -- Hace la misma cuenta que el servidor (shared/Hitbox con el alcance y el arco de server/Combat), así que lo que
 -- sale en verde es lo que el servidor daría por alcanzado si se golpeara en ese instante (salvo el retraso de red).
 --   · Sector amarillo en el suelo: hasta dónde llega el arma que llevas en la mano; se queda blanco mientras el
@@ -21,7 +22,7 @@ local Ui = require(script.Parent.Ui)
 
 local HitboxDebug = {}
 
-local KEY = Enum.KeyCode.H
+local KEY = Enum.KeyCode.H -- solo en Studio
 local ATTRIBUTE = "HitboxDebug" -- atributo local del jugador: encendido o apagado (así también se enciende por código)
 local NEAR = 40 -- studs más allá del alcance hasta donde se dibujan las cajas
 local LIFT = 0.15 -- altura del sector sobre los pies, para que no parpadee con el suelo
@@ -183,13 +184,10 @@ local function setEnabled(on: boolean)
 	local detail = if range > 0
 		then string.format("Alcance %.1f · arco %d°", range, math.round(math.deg(halfAngle(arc)) * 2))
 		else "Saca un arma para ver su alcance"
-	Ui.toast(`Hitbox a la vista (H la quita)\n{detail}`, COLOR_AREA)
+	Ui.toast(`Hitbox a la vista\n{detail}`, COLOR_AREA)
 end
 
 function HitboxDebug.start()
-	if not RunService:IsStudio() then
-		return
-	end
 	SwordController.onSwing = function()
 		activeUntil = os.clock() + math.max(Stats.cooldown(player) * Config.SwingWindow, SWING_FLASH)
 	end
@@ -198,11 +196,13 @@ function HitboxDebug.start()
 			showHit(part)
 		end
 	end)
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == KEY then
-			player:SetAttribute(ATTRIBUTE, not player:GetAttribute(ATTRIBUTE))
-		end
-	end)
+	if RunService:IsStudio() then
+		UserInputService.InputBegan:Connect(function(input, processed)
+			if not processed and input.KeyCode == KEY then
+				player:SetAttribute(ATTRIBUTE, not player:GetAttribute(ATTRIBUTE))
+			end
+		end)
+	end
 	player:GetAttributeChangedSignal(ATTRIBUTE):Connect(function()
 		setEnabled(player:GetAttribute(ATTRIBUTE) == true)
 	end)
