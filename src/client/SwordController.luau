@@ -9,6 +9,9 @@ local SwingAnim = require(script.Parent.SwingAnim)
 
 local SwordController = {}
 
+-- Si se le pone una función, se llama en cada espadazo que sale (la usa HitboxDebug, el modo de pruebas).
+SwordController.onSwing = nil :: (() -> ())?
+
 local player = Players.LocalPlayer
 local hooked = setmetatable({}, { __mode = "k" })
 local lastSwing = 0
@@ -40,6 +43,9 @@ local function swing(tool: Tool)
 	end
 
 	Remotes.Swing:FireServer()
+	if SwordController.onSwing then
+		SwordController.onSwing()
+	end
 end
 
 local function hook(instance: Instance)
