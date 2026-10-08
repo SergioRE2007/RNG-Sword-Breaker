@@ -70,6 +70,7 @@ local function fixture(saved)
 		ReplicatedStorage = { Shared = node("src/shared") },
 		Players = { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return players end },
 		RunService = { IsStudio = function() return false end, Heartbeat = signal() },
+		TextService = {},
 		HttpService = http,
 		DataStoreService = { GetDataStore = function() return store end },
 		CollectionService = {
