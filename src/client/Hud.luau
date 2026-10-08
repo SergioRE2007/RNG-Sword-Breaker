@@ -157,7 +157,7 @@ function Hud.start()
 	travel.Name = "Travel"
 	travel.AnchorPoint = Vector2.new(0.5, 0)
 	travel.Position = UDim2.new(0.5, 0, 0, 10)
-	travel.Size = UDim2.fromOffset(0, 74)
+	travel.Size = UDim2.fromOffset(0, 76)
 	travel.AutomaticSize = Enum.AutomaticSize.X
 	travel.BackgroundTransparency = 1
 	travel.Parent = gui
@@ -198,20 +198,21 @@ function Hud.start()
 		local button = Ui.button(travel, "", entry[3])
 		button.Name = "Travel_" .. entry[1]
 		button.LayoutOrder = order
-		button.Size = UDim2.fromOffset(220, 74) -- los tres igual de anchos: cabe "Mazmorras"
-		-- El logo, grande y dentro del botón; el nombre queda en segundo plano. La barra mide 74 de alto: lo que
-		-- va debajo (paneles de mazmorra, forja, gacha) empieza en Y = 84.
+		button.Size = UDim2.fromOffset(220, 76) -- los tres igual de anchos: cabe "Mazmorras"
+		-- El logo, grande y dentro del botón; el nombre queda en segundo plano. Va centrado en la cara del botón,
+		-- 4 px más arriba que el centro para no pisar el labio de abajo. La barra mide 76 de alto: lo que va debajo
+		-- (paneles de mazmorra, forja, gacha) empieza en Y = 90.
 		local iconBox = Instance.new("Frame")
 		iconBox.AnchorPoint = Vector2.new(0, 0.5)
-		iconBox.Position = UDim2.new(0, 4, 0.5, 0)
-		iconBox.Size = UDim2.fromOffset(70, 70)
+		iconBox.Position = UDim2.new(0, 4, 0.5, -4)
+		iconBox.Size = UDim2.fromOffset(68, 68)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = button
 		entry[4](iconBox, entry[3])
 		Ui.shadow(button)
 		local label = Ui.label(button, 26)
 		label.Position = UDim2.fromOffset(74, 0)
-		label.Size = UDim2.new(1, -80, 1, 0)
+		label.Size = UDim2.new(1, -80, 1, -8) -- centrado en la cara, sin el labio
 		label.Text = entry[2]
 		Ui.sparkle(button, 5)
 		button.Activated:Connect(function()

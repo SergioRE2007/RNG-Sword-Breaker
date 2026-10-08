@@ -81,7 +81,7 @@ local function buildUi()
 	local hint = Ui.label(root, 30)
 	hint.Name = "Hint"
 	hint.AnchorPoint = Vector2.new(0.5, 0)
-	hint.Position = UDim2.new(0.5, 0, 0, 84)
+	hint.Position = UDim2.new(0.5, 0, 0, 90)
 	hint.Size = UDim2.fromOffset(700, 44)
 	hint.TextWrapped = true
 	local cost = Ui.label(root, 22)
