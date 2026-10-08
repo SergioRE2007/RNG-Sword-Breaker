@@ -280,34 +280,6 @@ function Ui.shadow(frame: GuiObject, drop: number?): Frame
 	return shadow
 end
 
--- Zócalo de un icono: hueco oscuro y redondo, hundido en el botón, para que el icono no flote suelto. Va antes
--- que el icono.
-function Ui.socket(iconBox: GuiObject): Frame
-	local socket = Instance.new("Frame")
-	socket.Name = "Socket"
-	socket.AnchorPoint = Vector2.new(0.5, 0.5)
-	socket.Position = UDim2.fromScale(0.5, 0.5)
-	socket.Size = UDim2.fromScale(0.98, 0.98)
-	socket.BackgroundColor3 = BLACK
-	socket.BackgroundTransparency = 0.72
-	socket.BorderSizePixel = 0
-	socket.ZIndex = iconBox.ZIndex
-	socket.Parent = iconBox
-	Ui.round(socket, 100)
-	-- Más oscuro arriba (sombra del borde) y un filo claro abajo, como un hueco iluminado desde arriba.
-	local depth = Instance.new("UIGradient")
-	depth.Rotation = 90
-	depth.Transparency = NumberSequence.new(0, 0.55)
-	depth.Parent = socket
-	local edge = Ui.stroke(socket, WHITE, 1.5)
-	edge.Transparency = 0.7
-	local light = Instance.new("UIGradient")
-	light.Rotation = 90
-	light.Transparency = NumberSequence.new(1, 0)
-	light.Parent = edge
-	return socket
-end
-
 -- Contador o chip con relieve: fondo del color, labio, borde negro y sombra exterior.
 function Ui.pill(frame: GuiObject, color: Color3, radius: number?)
 	frame.BackgroundColor3 = color
