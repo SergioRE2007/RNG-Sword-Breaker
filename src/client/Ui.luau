@@ -986,9 +986,12 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 end
 
 -- Para pantallas que no usan Ui.window pero deben abrirse y cerrarse como las demás.
-function Ui.register(name: string, frame: GuiObject)
+-- `still`: se abre y se cierra de golpe, sin la transición (la pantalla de Mejoras, pedido por el usuario).
+function Ui.register(name: string, frame: GuiObject, still: boolean?)
 	windows[name] = frame
-	addMotion(frame, MOTION.window)
+	if not still then
+		addMotion(frame, MOTION.window)
+	end
 end
 
 -- Abre la ventana (cerrando las demás) o la cierra si ya estaba abierta.

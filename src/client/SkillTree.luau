@@ -290,7 +290,7 @@ function SkillTree.start()
 	screen.DisplayOrder = -1
 	screen.Parent = player:WaitForChild("PlayerGui")
 	overlay.Parent = screen
-	Ui.register("Upgrades", overlay)
+	Ui.register("Upgrades", overlay, true)
 
 	local space = Instance.new("UIGradient")
 	space.Rotation = 55
