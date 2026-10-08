@@ -15,40 +15,40 @@ local DayCycle = {}
 local rgb = Color3.fromRGB
 
 -- Horas clave, en orden; la última repite la primera para cerrar el día. `sun` es el color de la luz del sol (o de la
--- luna de noche, Lighting.ColorShift_Top). Poca bruma (`haze`) de día y de noche deja ver el sol, la luna y las estrellas.
+-- luna de noche, Lighting.ColorShift_Top). Bruma suave en el horizonte y color cercano vivo, sin quemar los suelos.
 local NIGHT = {
-	ambient = rgb(52, 62, 98), outdoor = rgb(66, 80, 130), brightness = 1.2, sun = rgb(150, 170, 230),
-	air = rgb(24, 36, 72), decay = rgb(14, 20, 46), density = 0.3, haze = 0.3, tint = rgb(210, 222, 255), saturation = -0.05,
+	ambient = rgb(55, 66, 106), outdoor = rgb(74, 88, 138), brightness = 1.2, sun = rgb(150, 170, 230),
+	air = rgb(50, 58, 96), decay = rgb(24, 30, 62), density = 0.34, haze = 1, tint = rgb(224, 232, 255), saturation = 0.05,
 }
 local KEYS = {
 	{ hour = 0, look = NIGHT },
 	{ hour = 5, look = { -- antes del alba
 		ambient = rgb(70, 70, 110), outdoor = rgb(90, 90, 140), brightness = 1.2, sun = rgb(170, 160, 220),
-		air = rgb(60, 62, 110), decay = rgb(90, 70, 120), density = 0.32, haze = 0.8, tint = rgb(225, 225, 255), saturation = 0,
+		air = rgb(60, 62, 110), decay = rgb(90, 70, 120), density = 0.36, haze = 1.5, tint = rgb(225, 225, 255), saturation = 0.1,
 	} },
 	{ hour = 6.5, look = { -- amanecer
 		ambient = rgb(130, 100, 120), outdoor = rgb(190, 140, 150), brightness = 1.8, sun = rgb(255, 170, 120),
-		air = rgb(255, 190, 170), decay = rgb(255, 140, 120), density = 0.34, haze = 1.6, tint = rgb(255, 236, 232), saturation = 0.15,
+		air = rgb(255, 190, 170), decay = rgb(255, 140, 120), density = 0.39, haze = 2.2, tint = rgb(255, 236, 232), saturation = 0.22,
 	} },
 	{ hour = 9, look = { -- mañana
-		ambient = rgb(130, 130, 140), outdoor = rgb(170, 175, 190), brightness = 2.4, sun = rgb(255, 232, 200),
-		air = rgb(199, 215, 240), decay = rgb(150, 180, 220), density = 0.3, haze = 0.6, tint = rgb(250, 248, 250), saturation = 0.18,
+		ambient = rgb(130, 130, 140), outdoor = rgb(170, 175, 190), brightness = 2.25, sun = rgb(255, 232, 200),
+		air = rgb(199, 215, 240), decay = rgb(150, 180, 220), density = 0.37, haze = 1.4, tint = rgb(250, 248, 250), saturation = 0.26,
 	} },
 	{ hour = 12, look = { -- mediodía
-		ambient = rgb(138, 138, 145), outdoor = rgb(180, 185, 195), brightness = 2.8, sun = rgb(255, 248, 235),
-		air = rgb(190, 215, 245), decay = rgb(120, 165, 225), density = 0.28, haze = 0.3, tint = rgb(255, 255, 255), saturation = 0.2,
+		ambient = rgb(138, 138, 145), outdoor = rgb(180, 185, 195), brightness = 2.4, sun = rgb(255, 248, 235),
+		air = rgb(190, 215, 245), decay = rgb(120, 165, 225), density = 0.36, haze = 1.15, tint = rgb(255, 255, 255), saturation = 0.28,
 	} },
 	{ hour = 16, look = { -- tarde
-		ambient = rgb(136, 128, 130), outdoor = rgb(185, 175, 175), brightness = 2.5, sun = rgb(255, 225, 185),
-		air = rgb(220, 215, 230), decay = rgb(200, 175, 190), density = 0.3, haze = 0.8, tint = rgb(255, 246, 240), saturation = 0.2,
+		ambient = rgb(136, 128, 130), outdoor = rgb(185, 175, 175), brightness = 2.25, sun = rgb(255, 225, 185),
+		air = rgb(220, 215, 230), decay = rgb(200, 175, 190), density = 0.37, haze = 1.55, tint = rgb(255, 246, 240), saturation = 0.28,
 	} },
 	{ hour = 18, look = { -- atardecer dorado (la luz de siempre de la isla)
 		ambient = rgb(128, 100, 136), outdoor = rgb(178, 136, 160), brightness = 2.1, sun = rgb(255, 176, 130),
-		air = rgb(255, 196, 218), decay = rgb(255, 150, 140), density = 0.36, haze = 1.9, tint = rgb(255, 236, 238), saturation = 0.22,
+		air = rgb(255, 196, 218), decay = rgb(255, 150, 140), density = 0.39, haze = 2.15, tint = rgb(255, 236, 238), saturation = 0.28,
 	} },
 	{ hour = 19.5, look = { -- anochecer
 		ambient = rgb(80, 64, 110), outdoor = rgb(110, 86, 145), brightness = 1.4, sun = rgb(190, 150, 220),
-		air = rgb(90, 60, 120), decay = rgb(120, 70, 120), density = 0.34, haze = 1, tint = rgb(225, 215, 255), saturation = 0.05,
+		air = rgb(90, 60, 120), decay = rgb(120, 70, 120), density = 0.36, haze = 1.35, tint = rgb(225, 215, 255), saturation = 0.14,
 	} },
 	{ hour = 24, look = NIGHT },
 }

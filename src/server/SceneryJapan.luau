@@ -96,7 +96,7 @@ local function setLighting()
 
 	local color = Instance.new("ColorCorrectionEffect")
 	color.Saturation = 0.22
-	color.Contrast = 0.1
+	color.Contrast = 0.12
 	color.TintColor = Color3.fromRGB(255, 236, 238)
 	color.Parent = Lighting
 
