@@ -256,7 +256,7 @@ local function buildList()
 		invite.TextSize = 22
 		invite.Activated:Connect(function()
 			Remotes.TradeRequest:FireServer(userId)
-			window.Visible = false
+			Ui.close(window)
 		end)
 	end
 
@@ -309,6 +309,7 @@ local function buildInvite()
 	Ui.panel(card, Color3.fromRGB(50, 66, 110))
 	local scale = Instance.new("UIScale")
 	scale.Parent = card
+	Ui.popup(card, scale)
 	local text = Ui.label(card, 22)
 	text.Position = UDim2.fromOffset(12, 8)
 	text.Size = UDim2.new(1, -24, 0, 44)
@@ -334,7 +335,7 @@ local function buildInvite()
 			Remotes.TradeRespond:FireServer(from, yes)
 		end
 		from = nil
-		card.Visible = false
+		Ui.close(card)
 	end
 	accept.Activated:Connect(function()
 		answer(true)
@@ -345,17 +346,13 @@ local function buildInvite()
 	Remotes.TradeInvite.OnClientEvent:Connect(function(userId: number, name: string)
 		from = userId
 		text.Text = `<font color="{hex(GOLD)}">{name}</font> quiere comerciar contigo`
-		card.Visible = true
+		Ui.open(card)
 		Sfx.play("toast")
-		if not Performance.get() then
-			scale.Scale = 0.6
-			TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-		end
 		token += 1
 		local current = token
 		task.delay(Config.Trade.InviteTime, function()
-			if current == token and card.Visible then
-				card.Visible = false
+			if current == token and Ui.isOpen(card) then
+				Ui.close(card)
 				from = nil
 			end
 		end)
@@ -1037,14 +1034,14 @@ local function buildTrade()
 			setSuggesting(false)
 			card.Visible, chip.Visible, shownSuggest = false, false, nil
 			countdown.Visible = false
-			window.Visible = false
+			Ui.close(window)
 			return
 		end
 		local opening = current == nil
 		current = state
 		if opening then
 			mine.shown, theirs.shown, stockKey = nil, nil, nil
-			if not window.Visible then
+			if not Ui.isOpen(window) then
 				Ui.toggle("Trade")
 			end
 			Sfx.play("open")

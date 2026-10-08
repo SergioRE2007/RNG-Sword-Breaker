@@ -134,6 +134,10 @@ local function buildUi()
 	Ui.stroke(decision, BLACK, 4)
 	Ui.panel(decision, Color3.fromRGB(44, 40, 90))
 	Ui.shadow(decision)
+	-- Entra como las ventanas pequeñas; se cierra al instante (su Visible decide si se puede martillar).
+	local decisionScale = Instance.new("UIScale")
+	decisionScale.Parent = decision
+	Ui.popup(decision, decisionScale)
 	local decisionBody = Instance.new("Frame")
 	decisionBody.Name = "Content"
 	decisionBody.Size = UDim2.fromScale(1, 1)
@@ -747,7 +751,7 @@ local function connectInput()
 		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
 			return
 		end
-		if api.window.Visible or ui.decision.Visible or os.clock() - scene.enteredAt < 0.9 then
+		if Ui.isOpen(api.window) or ui.decision.Visible or os.clock() - scene.enteredAt < 0.9 then
 			return
 		end
 		if not scene.placedId then
@@ -1038,7 +1042,7 @@ function ForgeScene.enter()
 
 		-- Martillo: solo existe mientras el ratón está sobre el yunque (AREA); fuera de ahí se esconde y
 		-- vuelve el cursor normal, para poder pulsar Salir, Ajustes, etc.
-		local point = if api.window.Visible or s.deciding then nil else mousePoint(s.planeY)
+		local point = if Ui.isOpen(api.window) or s.deciding then nil else mousePoint(s.planeY)
 		local localPoint = if point then s.anvil.CFrame:PointToObjectSpace(point) else nil
 		local inside = localPoint ~= nil and localPoint.X >= AREA.minX and localPoint.X <= AREA.maxX and localPoint.Z >= AREA.minZ and localPoint.Z <= AREA.maxZ
 		s.inArea = inside

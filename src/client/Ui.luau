@@ -540,6 +540,205 @@ end
 local windows = {} -- [nombre] = Frame
 local MAX_WINDOW_SCALE = 1.22 -- las ventanas crecen hasta aquí en pantallas grandes
 
+-- Transiciones: las ventanas entran desde abajo y salen hacia abajo. `Visible` sigue siendo el estado lógico (los
+-- menús lo escuchan para limpiar al cerrarse), así que al cerrar se pone a false cuando la ventana ya ha bajado.
+-- Las ventanas pequeñas (`popup`) hacen lo mismo con un recorrido corto. Abrir y cerrar con Ui.open / Ui.close.
+local MOTION = {
+	window = { open = 0.34, close = 0.22 }, -- sin `travel`: baja hasta salir entera de la pantalla
+	popup = { open = 0.22, close = 0.16, travel = 0.06 }, -- `travel` en fracción del alto de la pantalla
+}
+local OPEN_SCALE = 0.97 -- escala desde la que entra (y a la que sale)
+
+type Motion = {
+	frame: GuiObject,
+	kind: { open: number, close: number, travel: number? },
+	state: string, -- "closed", "opening", "open" o "closing"
+	home: UDim2,
+	travel: number,
+	scale: UIScale?,
+	size: () -> number,
+	shadow: GuiObject?,
+	shadowScale: UIScale?,
+	gap: UDim2,
+	tweens: { Tween },
+}
+local motions: { [GuiObject]: Motion } = {}
+
+local function stopMotion(m: Motion)
+	for _, tween in m.tweens do
+		tween:Cancel()
+	end
+	table.clear(m.tweens)
+end
+
+-- Deja el marco en su sitio y a su escala.
+local function settle(m: Motion)
+	m.frame.Position = m.home
+	if m.shadow then
+		m.shadow.Position = m.home + m.gap
+	end
+	if m.scale then
+		m.scale.Scale = m.size()
+	end
+	if m.shadowScale then
+		m.shadowScale.Scale = m.size()
+	end
+end
+
+-- Cuánto hay que bajar el marco (en fracción del alto de su pantalla) para que quede entero por debajo del borde.
+-- Sale de su posición y tamaño de casa, no de los Absolute (que en un marco invisible pueden no estar al día).
+local function travelOf(m: Motion): number
+	if m.kind.travel then
+		return m.kind.travel
+	end
+	local parent = m.frame.Parent
+	local height = if parent and parent:IsA("GuiBase2d") then parent.AbsoluteSize.Y else workspace.CurrentCamera.ViewportSize.Y
+	height = math.max(height, 1)
+	local size = m.frame.Size
+	local tall = (size.Y.Scale * height + size.Y.Offset) * (if m.scale then m.size() else 1)
+	local top = m.home.Y.Scale * height + m.home.Y.Offset - m.frame.AnchorPoint.Y * tall
+	return math.max(height - top, 0) / height + 0.02
+end
+
+local function animate(m: Motion, opening: boolean)
+	stopMotion(m)
+	local time = if opening then m.kind.open else m.kind.close
+	local move = if opening
+		then TweenInfo.new(time, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+		else TweenInfo.new(time, Enum.EasingStyle.Cubic, Enum.EasingDirection.In)
+	-- El pop: la escala llega con un poco de rebote al abrir.
+	local pop = if opening then TweenInfo.new(time, Enum.EasingStyle.Back, Enum.EasingDirection.Out) else move
+	local target = if opening then m.home else m.home + UDim2.fromScale(0, m.travel)
+	local size = m.size() * (if opening then 1 else OPEN_SCALE)
+
+	local main = TweenService:Create(m.frame, move, { Position = target })
+	table.insert(m.tweens, main)
+	if m.shadow then
+		table.insert(m.tweens, TweenService:Create(m.shadow, move, { Position = target + m.gap }))
+	end
+	if m.scale then
+		table.insert(m.tweens, TweenService:Create(m.scale, pop, { Scale = size }))
+	end
+	if m.shadowScale then
+		table.insert(m.tweens, TweenService:Create(m.shadowScale, pop, { Scale = size }))
+	end
+	main.Completed:Connect(function(status)
+		if status ~= Enum.PlaybackState.Completed then
+			return -- cancelada: ya manda la transición nueva
+		end
+		if not table.find(m.tweens, main) then
+			return -- llegó tarde (señales diferidas) y ya hay otra transición en marcha
+		end
+		-- Las demás (escala, sombra) acaban en el mismo frame: se cortan ya para que no pisen el ajuste final.
+		stopMotion(m)
+		settle(m)
+		if opening then
+			m.state = "open"
+		else
+			m.state = "closed"
+			m.frame.Visible = false
+		end
+	end)
+	for _, tween in m.tweens do
+		tween:Play()
+	end
+end
+
+-- Abre con su transición. Si ya está abierta o abriéndose no hace nada; si se estaba cerrando, vuelve a subir desde ahí.
+function Ui.open(frame: GuiObject)
+	local m = motions[frame]
+	if not m then
+		frame.Visible = true
+		return
+	end
+	if m.state == "open" or m.state == "opening" then
+		return
+	end
+	if m.state == "closed" then
+		m.home = frame.Position
+		m.travel = travelOf(m)
+	end
+	if Performance.get() then
+		stopMotion(m)
+		m.state = "open"
+		settle(m)
+		frame.Visible = true
+		return
+	end
+	if m.state == "closed" then
+		m.frame.Position = m.home + UDim2.fromScale(0, m.travel)
+		if m.shadow then
+			m.shadow.Position = m.frame.Position + m.gap
+		end
+		if m.scale then
+			m.scale.Scale = m.size() * OPEN_SCALE
+		end
+		if m.shadowScale then
+			m.shadowScale.Scale = m.size() * OPEN_SCALE
+		end
+	end
+	m.state = "opening"
+	frame.Visible = true
+	animate(m, true)
+end
+
+-- Cierra con su transición y pone Visible = false al acabar. Si ya está cerrada o cerrándose no hace nada.
+function Ui.close(frame: GuiObject)
+	local m = motions[frame]
+	if not m then
+		frame.Visible = false
+		return
+	end
+	if m.state == "closed" or m.state == "closing" then
+		return
+	end
+	if Performance.get() or not frame.Visible then
+		stopMotion(m)
+		m.state = "closed"
+		settle(m)
+		frame.Visible = false
+		return
+	end
+	m.state = "closing"
+	animate(m, false)
+end
+
+-- Abierta o abriéndose (la que se está cerrando ya cuenta como cerrada).
+function Ui.isOpen(frame: GuiObject): boolean
+	local m = motions[frame]
+	if m then
+		return m.state == "open" or m.state == "opening"
+	end
+	return frame.Visible
+end
+
+local function addMotion(frame: GuiObject, kind, scale: UIScale?, size: (() -> number)?, shadow: GuiObject?, shadowScale: UIScale?)
+	local m: Motion = {
+		frame = frame, kind = kind, state = if frame.Visible then "open" else "closed", home = frame.Position, travel = 0,
+		scale = scale, size = size or function() return 1 end, shadow = shadow, shadowScale = shadowScale,
+		gap = if shadow then shadow.Position - frame.Position else UDim2.new(), tweens = {},
+	}
+	motions[frame] = m
+	-- Quien toque Visible a pelo también queda bien: al mostrarse entra animada; al esconderse a media
+	-- transición, se corta y vuelve a su sitio.
+	frame:GetPropertyChangedSignal("Visible"):Connect(function()
+		if frame.Visible then
+			if m.state == "closed" then
+				Ui.open(frame)
+			end
+		elseif m.state ~= "closed" then
+			stopMotion(m)
+			m.state = "closed"
+			settle(m)
+		end
+	end)
+end
+
+-- Ventana pequeña (invitaciones, avisos con botones): entra y sale con un recorrido corto. `scale` es su UIScale, si tiene.
+function Ui.popup(frame: GuiObject, scale: UIScale?)
+	addMotion(frame, MOTION.popup, scale)
+end
+
 -- Brillos que cruzan los títulos de las ventanas (los mueve un solo bucle).
 local shines = {}
 local glintsHidden = false
@@ -702,16 +901,10 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	end
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 	fit()
-	-- Al abrirse, la ventana sale con un rebote desde un poco más pequeña.
-	frame:GetPropertyChangedSignal("Visible"):Connect(function()
-		if frame.Visible and not Performance.get() then
-			scale.Scale = fitted * 0.8
-			shadowScale.Scale = fitted * 0.8
-			local info = TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-			TweenService:Create(scale, info, { Scale = fitted }):Play()
-			TweenService:Create(shadowScale, info, { Scale = fitted }):Play()
-		end
-	end)
+	-- Al abrirse entra desde abajo y al cerrarse baja (Ui.open / Ui.close).
+	addMotion(frame, MOTION.window, scale, function()
+		return fitted
+	end, shadow, shadowScale)
 
 	local header = Instance.new("Frame")
 	header.Name = "Header"
@@ -789,7 +982,7 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	close.TextSize = 30
 	close.ZIndex = 3
 	close.Activated:Connect(function()
-		frame.Visible = false
+		Ui.close(frame)
 	end)
 
 	local body = Instance.new("Frame")
@@ -823,31 +1016,38 @@ end
 -- Para pantallas que no usan Ui.window pero deben abrirse y cerrarse como las demás.
 function Ui.register(name: string, frame: GuiObject)
 	windows[name] = frame
+	addMotion(frame, MOTION.window)
 end
 
 -- Abre la ventana (cerrando las demás) o la cierra si ya estaba abierta.
 function Ui.toggle(name: string)
 	local frame = windows[name]
-	local open = not frame.Visible
+	local open = not Ui.isOpen(frame)
 	for _, other in windows do
-		other.Visible = false
+		if other ~= frame then
+			Ui.close(other)
+		end
 	end
-	frame.Visible = open
+	if open then
+		Ui.open(frame)
+	else
+		Ui.close(frame)
+	end
 end
 
 function Ui.anyOpen(): boolean
 	for _, frame in windows do
-		if frame.Visible then
+		if Ui.isOpen(frame) then
 			return true
 		end
 	end
 	return false
 end
 
--- Pasa por Visible para ejecutar la limpieza propia de cada ventana (comercio, tiradas, etc.).
+-- Acaba en Visible = false, que ejecuta la limpieza propia de cada ventana (comercio, tiradas, etc.).
 function Ui.closeAll()
 	for _, frame in windows do
-		frame.Visible = false
+		Ui.close(frame)
 	end
 end
 

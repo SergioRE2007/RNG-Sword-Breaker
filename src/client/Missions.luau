@@ -221,7 +221,7 @@ function Missions.start()
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 			if openAt and root and window.Visible and (root.Position - openAt).Magnitude > CLOSE_DISTANCE then
-				window.Visible = false
+				Ui.close(window)
 				openAt = nil
 			end
 		end

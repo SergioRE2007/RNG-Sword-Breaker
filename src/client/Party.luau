@@ -492,9 +492,7 @@ local function buildWindow()
 	local function render()
 		local zone = zoneOf()
 		if not zone then
-			if window.Visible then
-				window.Visible = false
-			end
+			Ui.close(window)
 			return
 		end
 		paintCard(zone)
@@ -520,8 +518,8 @@ local function buildWindow()
 			lastCount = -1
 		end
 		-- Si ya ha empezado la partida, la ventana sobra.
-		if mine and mine.state == "running" and window.Visible then
-			window.Visible = false
+		if mine and mine.state == "running" then
+			Ui.close(window)
 		end
 	end
 	-- La cuenta atrás se repinta sola cada poco.
@@ -561,7 +559,7 @@ local function buildWindow()
 	end)
 	leave.Activated:Connect(function()
 		request("leave")
-		window.Visible = false
+		Ui.close(window)
 	end)
 	main.Activated:Connect(function()
 		local mine = state and state.mine
@@ -668,7 +666,7 @@ local function buildWindow()
 		pendingZone = nil -- el servidor ya ha contestado: si no hay sala ni grupo, la ventana se cierra sola
 		local mine = payload and payload.mine
 		-- Te han metido en un grupo (invitación aceptada): se abre la ventana.
-		if mine and not hadParty and mine.state == "lobby" and not window.Visible then
+		if mine and not hadParty and mine.state == "lobby" and not Ui.isOpen(window) then
 			Ui.toggle("Party")
 		end
 		picker.Visible = picker.Visible and mine ~= nil and mine.leader == player.UserId
@@ -693,7 +691,7 @@ local function buildWindow()
 				-- Se abre ya (con la zona pedida) y el servidor contesta con el estado de la sala o de tu grupo.
 				pendingZone = zone
 				request("open", zone)
-				if not window.Visible then
+				if not Ui.isOpen(window) then
 					Ui.toggle("Party")
 				end
 			end
@@ -712,7 +710,7 @@ local function buildWindow()
 						-- El cartel está sobre el arco de la sala: si te alejas mucho de él, la ventana se cierra.
 						local distance = (root.Position - Vector3.new(board.Position.X, root.Position.Y, board.Position.Z)).Magnitude
 						if distance > cfg.RoomDistance + 60 then
-							window.Visible = false
+							Ui.close(window)
 						end
 					end
 				end
@@ -739,6 +737,7 @@ local function buildInvite()
 	Ui.panel(card, Color3.fromRGB(56, 50, 108))
 	local scale = Instance.new("UIScale")
 	scale.Parent = card
+	Ui.popup(card, scale)
 	local text = Ui.label(card, 22)
 	text.Position = UDim2.fromOffset(12, 8)
 	text.Size = UDim2.new(1, -24, 0, 56)
@@ -762,7 +761,7 @@ local function buildInvite()
 			request("respond", from, yes)
 		end
 		from = nil
-		card.Visible = false
+		Ui.close(card)
 	end
 	accept.Activated:Connect(function()
 		answer(true)
@@ -774,17 +773,13 @@ local function buildInvite()
 		local level = Config.Dungeons[zone]
 		from = userId
 		text.Text = `<font color="{hex(GOLD)}">{name}</font> te invita a su grupo\n<font color="{hex(if level then level.color:Lerp(WHITE, 0.25) else WHITE)}">{if level then level.name else "una mazmorra"}</font>`
-		card.Visible = true
+		Ui.open(card)
 		Sfx.play("toast")
-		if not Performance.get() then
-			scale.Scale = 0.6
-			TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-		end
 		token += 1
 		local current = token
 		task.delay(cfg.InviteTime, function()
-			if current == token and card.Visible then
-				card.Visible = false
+			if current == token and Ui.isOpen(card) then
+				Ui.close(card)
 				from = nil
 			end
 		end)
