@@ -459,6 +459,13 @@ end
 
 function Scenery.start()
 	clearLoose()
+	-- El ambiente se genera aquí: los efectos guardados en Studio se sumarían a los del tema.
+	-- Un Bloom de fábrica duplicado quemaba los caminos claros al darles el sol.
+	for _, effect in Lighting:GetChildren() do
+		if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then
+			effect:Destroy()
+		end
+	end
 	if Config.Theme == "japan" then
 		require(script.Parent.SceneryJapan).start()
 		return

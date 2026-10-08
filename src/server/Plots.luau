@@ -135,7 +135,7 @@ local function buildHub(parent: Instance)
 	hub.Anchored = true
 	hub.Size = Vector3.new(cfg.FloorHeight, cfg.HubRadius * 2, cfg.HubRadius * 2)
 	hub.CFrame = CFrame.new(0, cfg.FloorHeight / 2, 0) * CFrame.Angles(0, 0, math.rad(90))
-	hub.Color = Color3.fromRGB(235, 195, 120)
+	hub.Color = if JAPAN then Color3.fromRGB(182, 150, 100) else Color3.fromRGB(235, 195, 120)
 	hub.Material = Enum.Material.Pavement
 	hub.Parent = parent
 end

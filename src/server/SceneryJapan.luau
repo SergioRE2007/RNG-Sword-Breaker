@@ -19,7 +19,7 @@ local SHALLOWS = Color3.fromRGB(150, 238, 240)
 local GRAVEL = Color3.fromRGB(255, 236, 226)
 local GRAVEL_DARK = Color3.fromRGB(246, 218, 208)
 local GRASS = { Color3.fromRGB(122, 226, 132), Color3.fromRGB(104, 208, 120) }
-local STONE = { Color3.fromRGB(238, 232, 244), Color3.fromRGB(216, 208, 230) }
+local STONE = { Color3.fromRGB(168, 164, 184), Color3.fromRGB(150, 145, 170) } -- piedra mate: conserva el dibujo bajo el sol
 local PETALS = { Color3.fromRGB(255, 150, 200), Color3.fromRGB(255, 190, 220), Color3.fromRGB(255, 225, 238), Color3.fromRGB(255, 120, 170) }
 local MIST_MOUNTAINS = { Color3.fromRGB(176, 140, 205), Color3.fromRGB(196, 150, 200), Color3.fromRGB(150, 130, 200) }
 local TREES = { "Sakura", "Sakura", "SakuraB", "SakuraB", "Maple", "Pine" }
@@ -101,9 +101,9 @@ local function setLighting()
 	color.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.32
+	bloom.Intensity = 0.14
 	bloom.Size = 22
-	bloom.Threshold = 1.25
+	bloom.Threshold = 1.8
 	bloom.Parent = Lighting
 
 	-- Cielo con muchas estrellas para la noche (el ciclo de client/DayCycle las deja ver al oscurecer).
@@ -216,7 +216,7 @@ local function plaza(parent: Instance, radius: number)
 			local angle = index / count * math.pi * 2
 			local position = Vector3.new(math.cos(angle) * middle, 0.45, math.sin(angle) * middle)
 			local arc = 2 * math.pi * middle / count + 0.3
-			decor(part(parent, "PlazaTile", Vector3.new(band.outer - band.inner, 0.12, arc), CFrame.new(position) * CFrame.Angles(0, -angle, 0), STONE[index % 2 + 1], Enum.Material.SmoothPlastic))
+			decor(part(parent, "PlazaTile", Vector3.new(band.outer - band.inner, 0.12, arc), CFrame.new(position) * CFrame.Angles(0, -angle, 0), STONE[index % 2 + 1], Enum.Material.Concrete))
 		end
 	end
 	local count = 72
@@ -259,7 +259,7 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 	for step = 0, count - 1 do
 		for lane = 0, 1 do
 			local center = direction * (from + (step + 0.5) * tile) + side * ((lane - 0.5) * tile) + Vector3.new(0, 0.42, 0)
-			decor(part(parent, "Path", Vector3.new(tile - 0.5, 0.12, tile - 0.5), facing + center, STONE[(step + lane) % 2 + 1], Enum.Material.SmoothPlastic))
+			decor(part(parent, "Path", Vector3.new(tile - 0.5, 0.12, tile - 0.5), facing + center, STONE[(step + lane) % 2 + 1], Enum.Material.Concrete))
 		end
 	end
 	local length = count * tile
