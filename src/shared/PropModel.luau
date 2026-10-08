@@ -62,8 +62,8 @@ local LOOKS = {
 	Orange = { Color3.fromRGB(255, 145, 40), Enum.Material.SmoothPlastic, 0 },
 	Leaf = { Color3.fromRGB(86, 218, 112), Enum.Material.SmoothPlastic, 0 },
 	LeafDark = { Color3.fromRGB(46, 168, 104), Enum.Material.SmoothPlastic, 0 },
-	Stone = { Color3.fromRGB(196, 200, 218), Enum.Material.SmoothPlastic, 0 },
-	StoneDark = { Color3.fromRGB(124, 128, 150), Enum.Material.SmoothPlastic, 0 },
+	Stone = { Color3.fromRGB(196, 200, 218), Enum.Material.Concrete, 0 },
+	StoneDark = { Color3.fromRGB(124, 128, 150), Enum.Material.Concrete, 0 },
 	Gold = { Color3.fromRGB(255, 208, 64), Enum.Material.Metal, 0 },
 	Paper = { Color3.fromRGB(255, 226, 150), Enum.Material.Neon, 0.1 },
 	Roof = { Color3.fromRGB(58, 84, 148), Enum.Material.SmoothPlastic, 0 },
@@ -181,6 +181,9 @@ function PropModel.place(parent: Instance, name: string, cframe: CFrame, scale: 
 		mesh.CanTouch = false
 		mesh.Color = if tint and tint[piece.role] then tint[piece.role] else look[1]
 		mesh.Material = look[2]
+		if piece.role == "Stone" or piece.role == "StoneDark" then
+			mesh.Reflectance = 0 -- acabado mate también si la malla importada traía reflejos
+		end
 		mesh.Transparency = look[3]
 		mesh.CastShadow = piece.role ~= "Paper"
 		mesh.Size = piece.size * factor

@@ -216,7 +216,7 @@ local function plaza(parent: Instance, radius: number)
 			local angle = index / count * math.pi * 2
 			local position = Vector3.new(math.cos(angle) * middle, 0.45, math.sin(angle) * middle)
 			local arc = 2 * math.pi * middle / count + 0.3
-			decor(part(parent, "PlazaTile", Vector3.new(band.outer - band.inner, 0.12, arc), CFrame.new(position) * CFrame.Angles(0, -angle, 0), STONE[index % 2 + 1], Enum.Material.SmoothPlastic))
+			decor(part(parent, "PlazaTile", Vector3.new(band.outer - band.inner, 0.12, arc), CFrame.new(position) * CFrame.Angles(0, -angle, 0), STONE[index % 2 + 1], Enum.Material.Concrete))
 		end
 	end
 	local count = 72
@@ -259,7 +259,7 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 	for step = 0, count - 1 do
 		for lane = 0, 1 do
 			local center = direction * (from + (step + 0.5) * tile) + side * ((lane - 0.5) * tile) + Vector3.new(0, 0.42, 0)
-			decor(part(parent, "Path", Vector3.new(tile - 0.5, 0.12, tile - 0.5), facing + center, STONE[(step + lane) % 2 + 1], Enum.Material.SmoothPlastic))
+			decor(part(parent, "Path", Vector3.new(tile - 0.5, 0.12, tile - 0.5), facing + center, STONE[(step + lane) % 2 + 1], Enum.Material.Concrete))
 		end
 	end
 	local length = count * tile
@@ -293,7 +293,7 @@ end
 
 -- Estanque con nenúfares y un puente rojo por encima.
 local function pond(parent: Instance, center: Vector3, radius: number)
-	disc(parent, "PondEdge", center, radius + 2.2, 0.2, 0.55, Color3.fromRGB(196, 200, 218), Enum.Material.SmoothPlastic)
+	disc(parent, "PondEdge", center, radius + 2.2, 0.2, 0.55, Color3.fromRGB(196, 200, 218), Enum.Material.Concrete)
 	local water = disc(parent, "Pond", center, radius, 0.3, 0.7, Color3.fromRGB(86, 214, 238), Enum.Material.Glass)
 	water.Transparency = Config.Water.Transparency
 	water.CanCollide = false
