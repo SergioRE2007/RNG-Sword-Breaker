@@ -39,7 +39,7 @@ Ui.COLORS = {
 
 -- Medidas comunes del relieve: borde negro, labio de abajo (parte del alto del botón), radios y lo que crece
 -- o se encoge un botón al pasar el ratón y al pulsarlo.
-Ui.STYLE = { border = 3, lip = 0.13, radius = 12, cellRadius = 10, hover = 1.07, press = 0.95 }
+Ui.STYLE = { border = 4, lip = 0.13, radius = 12, cellRadius = 10, hover = 1.07, press = 0.95 }
 
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
@@ -58,6 +58,7 @@ function Ui.stroke(instance: GuiObject, color: Color3, thickness: number): UIStr
 	stroke.Color = color
 	stroke.Thickness = thickness
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.LineJoinMode = Enum.LineJoinMode.Round
 	stroke.Parent = instance
 	return stroke
 end
@@ -149,7 +150,7 @@ function Ui.bevel(instance: GuiObject)
 	limit.Parent = base
 	local shade = Instance.new("UIGradient")
 	shade.Rotation = 90
-	shade.Transparency = NumberSequence.new(0.86, 0.6)
+	shade.Transparency = NumberSequence.new(0.62, 0.35)
 	shade.Parent = base
 
 	-- La interfaz ordena el ZIndex globalmente: si a un botón se le sube la capa a mano, su relieve se quedaba
@@ -787,6 +788,26 @@ function Ui.stripes(parent: GuiObject, size: Vector2, spacing: number, transpare
 	return holder
 end
 
+-- Textura de fondo en mosaico (rombos de Ui.IMAGES.patron_rombos, o la imagen `name`): una sola imagen
+-- repetida, para que un fondo no se vea plano. Va antes que el contenido, como las rayas.
+function Ui.pattern(parent: GuiObject, transparency: number?, tile: number?, name: string?): ImageLabel
+	local pattern = Instance.new("ImageLabel")
+	pattern.Name = "Pattern"
+	pattern.Size = UDim2.fromScale(1, 1)
+	pattern.BackgroundTransparency = 1
+	pattern.Image = Ui.IMAGES[name or "patron_rombos"]
+	pattern.ImageTransparency = transparency or 0.94
+	pattern.ScaleType = Enum.ScaleType.Tile
+	pattern.TileSize = UDim2.fromOffset(tile or 44, tile or 44)
+	pattern.ZIndex = parent.ZIndex
+	pattern.Parent = parent
+	local corner = parent:FindFirstChildOfClass("UICorner")
+	if corner then
+		Ui.round(pattern, corner.CornerRadius.Offset)
+	end
+	return pattern
+end
+
 -- Cuadros claros alternos (como las cabeceras de la captura de referencia), sin salirse del marco.
 local function checker(parent: GuiObject, size: Vector2, cell: number, inset: number)
 	local holder = Instance.new("Frame")
@@ -832,10 +853,10 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	local shadow = Instance.new("Frame")
 	shadow.Name = name .. "Shadow"
 	shadow.AnchorPoint = frame.AnchorPoint
-	shadow.Position = frame.Position + UDim2.fromOffset(8, 10)
+	shadow.Position = frame.Position + UDim2.fromOffset(6, 9)
 	shadow.Size = frame.Size
 	shadow.BackgroundColor3 = BLACK
-	shadow.BackgroundTransparency = 0.55
+	shadow.BackgroundTransparency = 0.4
 	shadow.BorderSizePixel = 0
 	shadow.Visible = false
 	shadow.ZIndex = 0
@@ -965,9 +986,9 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	body.BorderSizePixel = 0
 	body.Parent = frame
 	Ui.round(body, 12)
-	Ui.stroke(body, Ui.COLORS.dark, 3)
+	Ui.stroke(body, BLACK, 4)
 	Ui.gradient(body, Color3.fromRGB(66, 74, 124), Color3.fromRGB(30, 33, 64), 90)
-	Ui.stripes(body, Vector2.new(size.X - 20, size.Y - 78), 26, 0.95)
+	Ui.pattern(body)
 	-- Sombra de la cabecera sobre el cuerpo: da la sensación de capas (la cabecera "encima").
 	local shade = Instance.new("Frame")
 	shade.Name = "HeaderShade"
@@ -1257,6 +1278,7 @@ Ui.IMAGES = {
 	mochila = "rbxassetid://95507779119186",
 	monedas = "rbxassetid://134320261318517",
 	objetos = "rbxassetid://91743584320580",
+	patron_rombos = "rbxassetid://127373214598364", -- textura en mosaico de Ui.pattern
 	rebirth = "rbxassetid://90522539620973",
 	suerte = "rbxassetid://114098318122458",
 	tienda_robux = "rbxassetid://93004325604664",
