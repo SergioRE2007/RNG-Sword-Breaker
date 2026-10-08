@@ -1,7 +1,8 @@
--- Ciclo de día y noche de la superficie. La luz que puso el servidor al arrancar (DungeonFx la guarda como "base" de
--- la isla) es la del día; de noche se mezcla con un azul oscuro y el reloj de Lighting avanza solo, sincronizado con la
--- hora del servidor para que todos vean lo mismo. Solo actúa en la superficie: DungeonFx lo apaga dentro del lobby y de
--- las mazmorras (que llevan su propia luz) y lo reactiva al volver. Librería con start().
+-- Ciclo de día y noche de la superficie. La luz sale de unas horas clave (KEYS: noche, alba, mañana, mediodía, tarde,
+-- atardecer, anochecer) mezcladas entre la anterior y la siguiente; el reloj de Lighting avanza solo, sincronizado con
+-- la hora del servidor para que todos vean lo mismo, y va más lento de día (Config.DayCycle.DayShare). El sol y la luna
+-- son los del Sky de SceneryJapan. Solo actúa en la superficie: DungeonFx lo apaga dentro del lobby y de las mazmorras
+-- (que llevan su propia luz) y lo reactiva al volver. Librería con start().
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -11,26 +12,75 @@ local Performance = require(script.Parent.Performance)
 
 local DayCycle = {}
 
+local rgb = Color3.fromRGB
+
+-- Horas clave, en orden; la última repite la primera para cerrar el día. `sun` es el color de la luz del sol (o de la
+-- luna de noche, Lighting.ColorShift_Top). Poca bruma (`haze`) de día y de noche deja ver el sol, la luna y las estrellas.
 local NIGHT = {
-	ambient = Color3.fromRGB(36, 26, 64),
-	outdoor = Color3.fromRGB(46, 34, 84),
-	brightness = 0.35, -- fracción del brillo de día
-	atmosphere = Color3.fromRGB(30, 18, 52), -- cielo de noche: morado oscuro casi negro
-	decay = Color3.fromRGB(22, 12, 40),
-	tint = Color3.fromRGB(196, 176, 255),
-	saturation = -0.1,
-	fogDensity = 0.3, -- niebla de noche: densidad y bruma que se suman a las del día
-	fogHaze = 0.6, -- poca bruma: la mucha taparía las estrellas
-	sunBoost = 0.3, -- de día, más claro al mediodía (solo la luz del sol y el ambiente, no las luces del mapa)
+	ambient = rgb(52, 62, 98), outdoor = rgb(66, 80, 130), brightness = 1.2, sun = rgb(150, 170, 230),
+	air = rgb(24, 36, 72), decay = rgb(14, 20, 46), density = 0.3, haze = 0.3, tint = rgb(210, 222, 255), saturation = -0.05,
+}
+local KEYS = {
+	{ hour = 0, look = NIGHT },
+	{ hour = 5, look = { -- antes del alba
+		ambient = rgb(70, 70, 110), outdoor = rgb(90, 90, 140), brightness = 1.2, sun = rgb(170, 160, 220),
+		air = rgb(60, 62, 110), decay = rgb(90, 70, 120), density = 0.32, haze = 0.8, tint = rgb(225, 225, 255), saturation = 0,
+	} },
+	{ hour = 6.5, look = { -- amanecer
+		ambient = rgb(130, 100, 120), outdoor = rgb(190, 140, 150), brightness = 1.8, sun = rgb(255, 170, 120),
+		air = rgb(255, 190, 170), decay = rgb(255, 140, 120), density = 0.34, haze = 1.6, tint = rgb(255, 236, 232), saturation = 0.15,
+	} },
+	{ hour = 9, look = { -- mañana
+		ambient = rgb(130, 130, 140), outdoor = rgb(170, 175, 190), brightness = 2.4, sun = rgb(255, 232, 200),
+		air = rgb(199, 215, 240), decay = rgb(150, 180, 220), density = 0.3, haze = 0.6, tint = rgb(250, 248, 250), saturation = 0.18,
+	} },
+	{ hour = 12, look = { -- mediodía
+		ambient = rgb(138, 138, 145), outdoor = rgb(180, 185, 195), brightness = 2.8, sun = rgb(255, 248, 235),
+		air = rgb(190, 215, 245), decay = rgb(120, 165, 225), density = 0.28, haze = 0.3, tint = rgb(255, 255, 255), saturation = 0.2,
+	} },
+	{ hour = 16, look = { -- tarde
+		ambient = rgb(136, 128, 130), outdoor = rgb(185, 175, 175), brightness = 2.5, sun = rgb(255, 225, 185),
+		air = rgb(220, 215, 230), decay = rgb(200, 175, 190), density = 0.3, haze = 0.8, tint = rgb(255, 246, 240), saturation = 0.2,
+	} },
+	{ hour = 18, look = { -- atardecer dorado (la luz de siempre de la isla)
+		ambient = rgb(128, 100, 136), outdoor = rgb(178, 136, 160), brightness = 2.1, sun = rgb(255, 176, 130),
+		air = rgb(255, 196, 218), decay = rgb(255, 150, 140), density = 0.36, haze = 1.9, tint = rgb(255, 236, 238), saturation = 0.22,
+	} },
+	{ hour = 19.5, look = { -- anochecer
+		ambient = rgb(80, 64, 110), outdoor = rgb(110, 86, 145), brightness = 1.4, sun = rgb(190, 150, 220),
+		air = rgb(90, 60, 120), decay = rgb(120, 70, 120), density = 0.34, haze = 1, tint = rgb(225, 215, 255), saturation = 0.05,
+	} },
+	{ hour = 24, look = NIGHT },
 }
 
 local base: { [string]: any }? = nil
 local active = false
 
--- Hora del reloj (0-24) según la hora del servidor.
+-- Hora del reloj (0-24) según la hora del servidor: la parte de día (6 a 18) dura DayShare de la vuelta y la noche el resto.
 local function clockNow(): number
 	local cfg = Config.DayCycle
-	return (cfg.Start + 24 * (workspace:GetServerTimeNow() % cfg.Length) / cfg.Length) % 24
+	local f = (workspace:GetServerTimeNow() / cfg.Length) % 1
+	if f < cfg.DayShare then
+		return 6 + 12 * f / cfg.DayShare
+	end
+	return (18 + 12 * (f - cfg.DayShare) / (1 - cfg.DayShare)) % 24
+end
+
+-- Mezcla de las dos horas clave que rodean a `clock`.
+local function lookAt(clock: number)
+	for i = 2, #KEYS do
+		local b = KEYS[i]
+		if clock <= b.hour then
+			local a = KEYS[i - 1]
+			local t = (clock - a.hour) / (b.hour - a.hour)
+			local mixed = {}
+			for key, value in a.look do
+				mixed[key] = if typeof(value) == "Color3" then value:Lerp(b.look[key], t) else value + (b.look[key] - value) * t
+			end
+			return mixed
+		end
+	end
+	return NIGHT
 end
 
 -- 1 = pleno día, 0 = noche cerrada; amanece y atardece sin saltos.
@@ -44,23 +94,28 @@ function DayCycle.night(): number
 	return 1 - daylight(clockNow())
 end
 
--- La luz de ahora, con los mismos campos que Config.DungeonThemes[id].light (nil si aún no hay base).
-function DayCycle.profile(): { [string]: any }?
+-- La luz de una hora, con los mismos campos que Config.DungeonThemes[id].light más `sun` (nil si aún no hay base).
+function DayCycle.profileAt(clock: number): { [string]: any }?
 	if not base then
 		return nil
 	end
-	local clock = clockNow()
-	local night = 1 - daylight(clock)
+	local look = lookAt(clock)
 	local air = base.atmosphere
 	return {
 		clock = clock,
-		ambient = base.ambient:Lerp(NIGHT.ambient, night),
-		outdoor = base.outdoor:Lerp(NIGHT.outdoor, night),
-		brightness = base.brightness * (1 - night * (1 - NIGHT.brightness)) * (1 + NIGHT.sunBoost * math.max(0, math.sin(math.pi * (clock - 6) / 12))),
-		atmosphere = if air then { color = air.color:Lerp(NIGHT.atmosphere, night), decay = air.decay:Lerp(NIGHT.decay, night), density = air.density + NIGHT.fogDensity * night, haze = air.haze + NIGHT.fogHaze * night, glare = air.glare } else nil,
-		tint = if base.tint then base.tint:Lerp(NIGHT.tint, night) else nil,
-		saturation = if base.saturation then base.saturation + (NIGHT.saturation - base.saturation) * night else nil,
+		ambient = look.ambient,
+		outdoor = look.outdoor,
+		brightness = look.brightness,
+		sun = look.sun,
+		atmosphere = if air then { color = look.air, decay = look.decay, density = look.density, haze = look.haze, glare = air.glare } else nil,
+		tint = if base.tint then look.tint else nil,
+		saturation = if base.tint then look.saturation else nil,
 	}
+end
+
+-- La luz de ahora.
+function DayCycle.profile(): { [string]: any }?
+	return DayCycle.profileAt(clockNow())
 end
 
 function DayCycle.setBase(snapshot: { [string]: any })
@@ -84,6 +139,7 @@ function DayCycle.start()
 		Lighting.Ambient = profile.ambient
 		Lighting.OutdoorAmbient = profile.outdoor
 		Lighting.Brightness = profile.brightness
+		Lighting.ColorShift_Top = profile.sun
 		-- La atmósfera y los efectos de pantalla los apaga el modo rendimiento (Ambience): no se tocan.
 		if Performance.get() then
 			return
