@@ -271,20 +271,20 @@ function Backpack.start()
 		local iconBox = Instance.new("Frame")
 		iconBox.Name = "Icon"
 		iconBox.AnchorPoint = Vector2.new(0.5, 0)
-		iconBox.Position = UDim2.new(0.5, 0, 0, 3)
-		iconBox.Size = UDim2.fromOffset(36, 36)
+		iconBox.Position = UDim2.new(0.5, 0, 0, -1)
+		iconBox.Size = UDim2.fromOffset(50, 50)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = tab
 		tabIcons[name](iconBox)
-		local label = Ui.label(tab, 17)
+		local label = Ui.label(tab, 15)
 		label.AnchorPoint = Vector2.new(0.5, 1)
-		label.Position = UDim2.new(0.5, 0, 1, -4)
-		label.Size = UDim2.new(1, -6, 0, 20)
+		label.Position = UDim2.new(0.5, 0, 1, -3)
+		label.Size = UDim2.new(1, -6, 0, 17)
 		label.Text = entry[2]
 		-- Los nombres largos ("Accesorios") se encogen para caber en la pestaña.
 		label.TextScaled = true
 		local labelLimit = Instance.new("UITextSizeConstraint")
-		labelLimit.MaxTextSize = 17
+		labelLimit.MaxTextSize = 15
 		labelLimit.MinTextSize = 11
 		labelLimit.Parent = label
 		tabs[name] = { button = tab, stroke = tab:FindFirstChildOfClass("UIStroke"), y = 66 + (order - 1) * 78 }

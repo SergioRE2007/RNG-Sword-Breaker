@@ -106,7 +106,7 @@ local function buildRunPanel()
 	local panel = Instance.new("Frame")
 	panel.Name = "DungeonRun"
 	panel.AnchorPoint = Vector2.new(0.5, 0)
-	panel.Position = UDim2.new(0.5, 0, 0, 84)
+	panel.Position = UDim2.new(0.5, 0, 0, 90)
 	panel.Size = UDim2.fromOffset(PANEL_WIDTH, 104)
 	panel.BackgroundColor3 = WHITE
 	panel.BorderSizePixel = 0

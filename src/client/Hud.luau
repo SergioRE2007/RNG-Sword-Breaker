@@ -37,21 +37,20 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 	box.Size = UDim2.fromOffset(270, 56)
 	box.Parent = gui
 	Ui.pill(box, color)
+	-- El logo, tan alto como la barra y dentro de ella (un poco más arriba que el centro, por el labio de abajo).
 	local iconBox = Instance.new("Frame")
-	iconBox.Position = UDim2.fromOffset(6, 4)
-	iconBox.Size = UDim2.fromOffset(48, 48)
+	iconBox.AnchorPoint = Vector2.new(0, 0.5)
+	iconBox.Position = UDim2.new(0, 2, 0.5, -2)
+	iconBox.Size = UDim2.fromOffset(58, 58)
 	iconBox.BackgroundTransparency = 1
 	iconBox.Parent = box
-	Ui.socket(iconBox)
 	icon(iconBox, color)
 	local text = Ui.label(box, 28)
 	text.Name = "Amount"
-	text.Position = UDim2.fromOffset(58, 0)
-	text.Size = UDim2.new(1, -66, 1, 0)
+	text.Position = UDim2.fromOffset(60, 0)
+	text.Size = UDim2.new(1, -68, 1, 0)
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	Ui.sparkle(box, 5)
-	-- El icono flota despacio.
-	TweenService:Create(iconBox, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromOffset(6, 1) }):Play()
 
 	-- Al cambiar la cantidad el cuadro late, el número sube (o baja) rodando hasta el valor nuevo y
 	-- sale un "+N" (o "-N") flotando. Las ganancias seguidas se juntan en un solo número cada 0,4 s.
@@ -158,7 +157,7 @@ function Hud.start()
 	travel.Name = "Travel"
 	travel.AnchorPoint = Vector2.new(0.5, 0)
 	travel.Position = UDim2.new(0.5, 0, 0, 10)
-	travel.Size = UDim2.fromOffset(0, 62)
+	travel.Size = UDim2.fromOffset(0, 76)
 	travel.AutomaticSize = Enum.AutomaticSize.X
 	travel.BackgroundTransparency = 1
 	travel.Parent = gui
@@ -193,24 +192,27 @@ function Hud.start()
 		end },
 		{ "dungeon", "Mazmorras", Ui.COLORS.purple, function(parent)
 			Ui.image(parent, "mazmorras")
-		end, 236 },
+		end },
 	}
 	for order, entry in destinations do
 		local button = Ui.button(travel, "", entry[3])
 		button.Name = "Travel_" .. entry[1]
 		button.LayoutOrder = order
-		button.Size = UDim2.fromOffset(entry[5] or if order == 2 then 200 else 186, 62)
+		button.Size = UDim2.fromOffset(220, 76) -- los tres igual de anchos: cabe "Mazmorras"
+		-- El logo, grande y dentro del botón; el nombre queda en segundo plano. Va centrado en la cara del botón,
+		-- 4 px más arriba que el centro para no pisar el labio de abajo. La barra mide 76 de alto: lo que va debajo
+		-- (paneles de mazmorra, forja, gacha) empieza en Y = 90.
 		local iconBox = Instance.new("Frame")
-		iconBox.Position = UDim2.fromOffset(10, 7)
-		iconBox.Size = UDim2.fromOffset(48, 48)
+		iconBox.AnchorPoint = Vector2.new(0, 0.5)
+		iconBox.Position = UDim2.new(0, 4, 0.5, -4)
+		iconBox.Size = UDim2.fromOffset(68, 68)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = button
-		Ui.socket(iconBox)
 		entry[4](iconBox, entry[3])
 		Ui.shadow(button)
-		local label = Ui.label(button, 30)
-		label.Position = UDim2.fromOffset(62, 0)
-		label.Size = UDim2.new(1, -70, 1, 0)
+		local label = Ui.label(button, 26)
+		label.Position = UDim2.fromOffset(74, 0)
+		label.Size = UDim2.new(1, -80, 1, -8) -- centrado en la cara, sin el labio
 		label.Text = entry[2]
 		Ui.sparkle(button, 5)
 		button.Activated:Connect(function()
@@ -310,7 +312,7 @@ function Hud.start()
 	menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	menuLayout.Parent = menu
 
-	-- Botones grandes con el icono arriba y el nombre debajo (los iconos se dibujan con marcos).
+	-- Botones grandes con el logo arriba, grande, y el nombre pequeño debajo.
 	local menuItems = {
 		{ "Backpack", "Mochila", Ui.COLORS.blue, function(parent)
 			Ui.image(parent, "mochila")
@@ -336,17 +338,16 @@ function Hud.start()
 		local iconBox = Instance.new("Frame")
 		iconBox.Name = "Icon"
 		iconBox.AnchorPoint = Vector2.new(0.5, 0)
-		iconBox.Position = UDim2.new(0.5, 0, 0, 7)
-		iconBox.Size = UDim2.fromOffset(52, 52)
+		iconBox.Position = UDim2.new(0.5, 0, 0, 2)
+		iconBox.Size = UDim2.fromOffset(68, 68) -- el logo acaba justo encima del nombre
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = item
-		Ui.socket(iconBox)
 		entry[4](iconBox)
 		Ui.shadow(item)
-		local label = Ui.label(item, 22)
+		local label = Ui.label(item, 18)
 		label.AnchorPoint = Vector2.new(0.5, 1)
-		label.Position = UDim2.new(0.5, 0, 1, -7)
-		label.Size = UDim2.new(1, -8, 0, 26)
+		label.Position = UDim2.new(0.5, 0, 1, -5)
+		label.Size = UDim2.new(1, -8, 0, 20)
 		label.Text = entry[2]
 		Ui.sparkle(item, 6)
 		item.Activated:Connect(function()
