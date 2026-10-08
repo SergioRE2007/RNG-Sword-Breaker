@@ -192,13 +192,13 @@ function Hud.start()
 		end },
 		{ "dungeon", "Mazmorras", Ui.COLORS.purple, function(parent)
 			Ui.image(parent, "mazmorras")
-		end, 236 },
+		end },
 	}
 	for order, entry in destinations do
 		local button = Ui.button(travel, "", entry[3])
 		button.Name = "Travel_" .. entry[1]
 		button.LayoutOrder = order
-		button.Size = UDim2.fromOffset(entry[5] or if order == 2 then 200 else 186, 70)
+		button.Size = UDim2.fromOffset(220, 70) -- los tres igual de anchos: cabe "Mazmorras"
 		-- El logo, grande y dentro del botón; el nombre queda en segundo plano. La barra mide 70 de alto: lo que
 		-- va debajo (paneles de mazmorra, forja, gacha) empieza en Y = 84.
 		local iconBox = Instance.new("Frame")
