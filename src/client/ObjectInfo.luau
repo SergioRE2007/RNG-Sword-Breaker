@@ -47,6 +47,16 @@ local MIN_FACTOR = 0.6
 -- Capas del cartel (la interfaz ordena el ZIndex globalmente).
 local Z = { shadow = 1, card = 2, row = 3, text = 4, bar = 5, barText = 6 }
 
+-- string.upper no toca las letras con tilde ("Común" salía "COMúN").
+local ACCENTS = { ["á"] = "Á", ["é"] = "É", ["í"] = "Í", ["ó"] = "Ó", ["ú"] = "Ú", ["ñ"] = "Ñ" }
+local function upper(text: string): string
+	text = string.upper(text)
+	for lower, capital in ACCENTS do
+		text = string.gsub(text, lower, capital)
+	end
+	return text
+end
+
 -- Aura por rareza (posición en Config.ObjectRarities; la 1, Común, no lleva): `pad` = transparencia de la base de
 -- luz, `sparks` = chispas por segundo, `light` = brillo de la luz, `outline` = contorno, `beam` = grosor del rayo.
 local QUALITY_FX = {
@@ -182,7 +192,7 @@ local function buildTag(part: BasePart, quality: number, class): BillboardGui
 	local text = Ui.label(chip, 17)
 	text.Size = UDim2.fromScale(1, 1)
 	text.ZIndex = Z.text
-	text.Text = `<font color="#{rarity.color:Lerp(WHITE, 0.35):ToHex()}">{string.upper(name)}</font>  x{Format.multiplier(part:GetAttribute("Luck") or 1)}`
+	text.Text = `<font color="#{rarity.color:Lerp(WHITE, 0.35):ToHex()}">{upper(name)}</font>  x{Format.multiplier(part:GetAttribute("Luck") or 1)}`
 	return gui
 end
 
@@ -390,7 +400,7 @@ end
 local function hpGoal(part: BasePart): (UDim2, string)
 	local hp = part:GetAttribute("HP") or 0
 	local maxHp = part:GetAttribute("MaxHP") or 1
-	return UDim2.fromScale(math.clamp(hp / maxHp, 0, 1), 1), `{Format.short(math.ceil(hp))} / {Format.short(math.ceil(maxHp))}`
+	return UDim2.fromScale(math.clamp(hp / maxHp, 0, 1), 1), `{Format.multiplier(hp)} / {Format.multiplier(maxHp)}` -- con decimales: la vida de los objetos no es entera y redondear no cuadraba con la barra
 end
 
 local function fill(part: BasePart)
@@ -399,10 +409,10 @@ local function fill(part: BasePart)
 	local class = ObjectSpec.size(part:GetAttribute("Size"))
 	local rolls = part:GetAttribute("Rolls") or 1
 	local color = rarity.color
-	refs.name.Text = string.upper(part.Name)
+	refs.name.Text = upper(part.Name)
 	refs.headerGradient.Color = ColorSequence.new(color:Lerp(WHITE, 0.2), color:Lerp(BLACK, 0.5))
-	refs.sizeName.Text = string.upper(class.name)
-	refs.rarity.Text = string.upper(rarity.name)
+	refs.sizeName.Text = upper(class.name)
+	refs.rarity.Text = upper(rarity.name)
 	refs.rarity.TextColor3 = color:Lerp(WHITE, 0.25)
 	refs.scale.Text = `<font color="{Ui.SOFT}">Tamaño</font> {math.round((part:GetAttribute("Scale") or 1) * 100)} %`
 	refs.luck.Text = `<font color="{Ui.SOFT}">Suerte</font> x{Format.multiplier(part:GetAttribute("Luck") or 1)}`

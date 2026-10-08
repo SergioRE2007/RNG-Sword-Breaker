@@ -67,7 +67,7 @@ local function showHealth(part: BasePart)
 		local hp = part:GetAttribute("HP") or 0
 		local maxHp = part:GetAttribute("MaxHP") or 1
 		healthFill.Size = UDim2.fromScale(math.clamp(hp / maxHp, 0, 1), 1)
-		healthLabel.Text = `{part.Name}  {Format.short(math.ceil(hp))}/{Format.short(maxHp)}`
+		healthLabel.Text = `{part.Name}  {Format.multiplier(hp)}/{Format.multiplier(maxHp)}`
 	end
 
 	if healthBar.Adornee ~= part then
