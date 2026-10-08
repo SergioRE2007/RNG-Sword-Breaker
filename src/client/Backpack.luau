@@ -219,7 +219,7 @@ end
 
 function Backpack.start()
 	local window, body = Ui.window("Backpack", "Mochila", Vector2.new(740, 560), function(parent)
-		Ui.backpackIcon(parent, Color3.fromRGB(240, 150, 60))
+		Ui.image(parent, "mochila")
 	end)
 
 	-- Pestañas, pegadas al lado izquierdo de la ventana.
@@ -246,19 +246,19 @@ function Backpack.start()
 			onShow[name]()
 		end
 	end
-	-- Cada pestaña lleva su icono (dibujado con marcos) encima del nombre.
+	-- Cada pestaña lleva su logo encima del nombre.
 	local tabIcons = {
 		Swords = function(parent)
-			Ui.swordIcon(parent, Color3.fromRGB(235, 240, 250))
+			Ui.image(parent, "espada")
 		end,
 		Items = function(parent)
-			Ui.boxIcon(parent, Color3.fromRGB(255, 210, 90))
+			Ui.image(parent, "objetos")
 		end,
 		Gear = function(parent)
-			Ui.amuletIcon(parent, Color3.fromRGB(230, 170, 255))
+			Ui.image(parent, "accesorios")
 		end,
 		Armor = function(parent)
-			ArmorPane.icon(parent, Color3.fromRGB(200, 210, 230))
+			Ui.image(parent, "armadura")
 		end,
 	}
 	for order, entry in { { "Swords", "Espadas", Ui.COLORS.red }, { "Items", "Objetos", Ui.COLORS.blue }, { "Gear", "Accesorios", Ui.COLORS.purple }, { "Armor", "Armadura", Ui.COLORS.orange } } do

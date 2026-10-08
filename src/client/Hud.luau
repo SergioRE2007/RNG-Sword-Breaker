@@ -131,34 +131,6 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 	return text, setAmount
 end
 
--- Casita hecha con marcos para el botón de Casa: tejado (cuadrado girado) y paredes con puerta.
-local function houseIcon(parent: Instance, color: Color3)
-	local roof = Instance.new("Frame")
-	roof.AnchorPoint = Vector2.new(0.5, 0.5)
-	roof.Position = UDim2.fromScale(0.5, 0.42)
-	roof.Size = UDim2.fromScale(0.52, 0.52)
-	roof.Rotation = 45
-	roof.BackgroundColor3 = Color3.fromRGB(240, 80, 80)
-	roof.Parent = parent
-	Ui.round(roof, 4)
-	Ui.stroke(roof, BLACK, 2)
-	local wall = Instance.new("Frame")
-	wall.AnchorPoint = Vector2.new(0.5, 1)
-	wall.Position = UDim2.fromScale(0.5, 0.92)
-	wall.Size = UDim2.fromScale(0.6, 0.42)
-	wall.BackgroundColor3 = WHITE
-	wall.Parent = parent
-	Ui.round(wall, 3)
-	Ui.stroke(wall, BLACK, 2)
-	local door = Instance.new("Frame")
-	door.AnchorPoint = Vector2.new(0.5, 1)
-	door.Position = UDim2.fromScale(0.5, 1)
-	door.Size = UDim2.fromScale(0.3, 0.6)
-	door.BackgroundColor3 = color
-	door.BorderSizePixel = 0
-	door.Parent = wall
-end
-
 function Hud.start()
 	local gui = Ui.hud()
 
@@ -175,10 +147,10 @@ function Hud.start()
 
 	-- Monedas y gemas, abajo a la izquierda.
 	local _, setCoins = counter(gui, "Coins", 1, Ui.COLORS.coins, function(parent)
-		Ui.coinIcon(parent, Color3.fromRGB(255, 220, 90))
+		Ui.image(parent, "monedas")
 	end)
 	local _, setGems = counter(gui, "Gems", 2, Ui.COLORS.purple, function(parent)
-		Ui.gemIcon(parent, Color3.fromRGB(220, 160, 255))
+		Ui.image(parent, "gemas")
 	end)
 
 	-- Transporte, arriba en el centro.
@@ -214,11 +186,13 @@ function Hud.start()
 
 	local destinations = {
 		{ "hub", "Hub", Color3.fromRGB(255, 175, 40), function(parent)
-			Ui.compassIcon(parent, Color3.fromRGB(60, 150, 230))
+			Ui.image(parent, "hub")
 		end },
-		{ "home", "Casa", Color3.fromRGB(50, 190, 240), houseIcon },
+		{ "home", "Casa", Color3.fromRGB(50, 190, 240), function(parent)
+			Ui.image(parent, "casa")
+		end },
 		{ "dungeon", "Mazmorras", Ui.COLORS.purple, function(parent)
-			Ui.gateIcon(parent, Color3.fromRGB(190, 110, 255))
+			Ui.image(parent, "mazmorras")
 		end, 236 },
 	}
 	for order, entry in destinations do
@@ -339,20 +313,20 @@ function Hud.start()
 	-- Botones grandes con el icono arriba y el nombre debajo (los iconos se dibujan con marcos).
 	local menuItems = {
 		{ "Backpack", "Mochila", Ui.COLORS.blue, function(parent)
-			Ui.backpackIcon(parent, Color3.fromRGB(240, 150, 60))
+			Ui.image(parent, "mochila")
 		end },
 		{ "Rebirth", "Renacer", Ui.COLORS.orange, function(parent)
-			Ui.rebirthIcon(parent, Color3.fromRGB(255, 225, 120))
+			Ui.image(parent, "rebirth")
 		end },
 		{ "Upgrades", "Mejoras", Ui.COLORS.green, function(parent)
-			Ui.upgradeIcon(parent, Color3.fromRGB(255, 205, 60))
+			Ui.image(parent, "mejora")
 		end },
 		{ "PassShop", "Tienda", Color3.fromRGB(40, 185, 110), function(parent)
-			Ui.shopIcon(parent, Color3.fromRGB(235, 70, 70))
+			Ui.image(parent, "tienda_robux")
 		end },
 		-- Abre la lista de Comercio (antes iba arriba, con los botones de transporte: pedido por el usuario).
 		{ "TradeList", "Trades", Color3.fromRGB(40, 170, 200), function(parent)
-			Ui.tradeIcon(parent, Color3.fromRGB(120, 230, 255))
+			Ui.image(parent, "trade")
 		end },
 	}
 	for order, entry in menuItems do

@@ -30,7 +30,7 @@ local STATS = {
 
 function Rebirth.start()
 	local window, body = Ui.window("Rebirth", "Renacimiento", Vector2.new(520, 592), function(parent)
-		Ui.starIcon(parent, GOLD)
+		Ui.image(parent, "rebirth")
 	end)
 
 	-- Contenido apilado de arriba abajo por un UIListLayout (alturas en Scale del cuerpo). Va en su

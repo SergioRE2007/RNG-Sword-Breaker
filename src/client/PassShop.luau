@@ -22,7 +22,7 @@ local CARD_HEIGHT = 168
 
 function PassShop.start()
 	local window, body = Ui.window("PassShop", "Tienda", Vector2.new(720, 470), function(parent)
-		Ui.shopIcon(parent, Color3.fromRGB(235, 70, 70))
+		Ui.image(parent, "tienda_robux")
 	end)
 
 	local note = Ui.label(body, 17)

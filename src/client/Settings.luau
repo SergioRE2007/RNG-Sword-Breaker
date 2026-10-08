@@ -63,7 +63,9 @@ end
 
 function Settings.start()
 	local gui = Ui.hud()
-	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 658), Ui.gearIcon)
+	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 658), function(parent)
+		Ui.image(parent, "ajustes")
+	end)
 
 	local list = Instance.new("Frame")
 	list.Size = UDim2.fromScale(1, 1)
@@ -195,7 +197,7 @@ function Settings.start()
 	button.Name = "SettingsButton"
 	button.Position = UDim2.fromOffset(196, 14)
 	button.Size = UDim2.fromOffset(44, 44)
-	Ui.gearIcon(button)
+	Ui.image(button, "ajustes")
 	Ui.shadow(button)
 	button.Activated:Connect(function()
 		Ui.toggle("Settings")
