@@ -1373,7 +1373,7 @@ local function buildShop(kind: string)
 		picker.Visible = true
 	end
 	backHandlers.Picker = function()
-		window.Visible = false
+		Ui.close(window)
 	end
 
 	slot.Activated:Connect(function()
@@ -1457,7 +1457,7 @@ local function buildShop(kind: string)
 		refresh = refresh,
 		speed = speed,
 		openPicker = function()
-			if not window.Visible then
+			if not Ui.isOpen(window) then
 				Ui.toggle(windowName)
 			end
 			rebuildPicker()
@@ -1465,14 +1465,14 @@ local function buildShop(kind: string)
 			picker.Visible = true
 		end,
 		openSettings = function()
-			if not window.Visible then
+			if not Ui.isOpen(window) then
 				Ui.toggle(windowName)
 			end
 			picker.Visible = false
 			stopper.Visible = true
 		end,
 		closeWindow = function()
-			window.Visible = false
+			Ui.close(window)
 		end,
 	}
 	return windowName, window, api
@@ -1605,7 +1605,7 @@ function ModifierShops.start()
 						inside[prompt] = true
 						if prompt:GetAttribute("Shop") == "grades" then
 							ForgeScene.enter()
-						elseif not shop.frame.Visible then
+						elseif not Ui.isOpen(shop.frame) then
 							openAt = anchor.Position
 							Ui.toggle(shop.name)
 						end
@@ -1616,7 +1616,7 @@ function ModifierShops.start()
 			end
 			if openAt and root and (root.Position - openAt).Magnitude > CLOSE_DISTANCE then
 				for _, shop in windows do
-					shop.frame.Visible = false
+					Ui.close(shop.frame)
 				end
 				openAt = nil
 			end

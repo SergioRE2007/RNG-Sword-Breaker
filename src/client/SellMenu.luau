@@ -126,7 +126,6 @@ function SellMenu.start()
 			confirming = false
 			paint()
 		else
-			window.Visible = false
 			Ui.toggle("Backpack")
 		end
 	end)

@@ -379,7 +379,7 @@ function SkillTree.start()
 	close.TextSize = 22
 	close.ZIndex = Z_FRONT
 	close.Activated:Connect(function()
-		overlay.Visible = false
+		Ui.close(overlay)
 	end)
 
 	-- Mover y acercar -----------------------------------------------------------------------
