@@ -1,5 +1,5 @@
 -- Vida del mapa japonés (Config.Theme = "japan"): pétalos de cerezo que caen siempre alrededor de la cámara, motas
--- doradas que flotan, farolillos y linternas que laten con su luz, animales que pasean y luciérnagas e incienso.
+-- doradas que flotan, animales que pasean y luciérnagas e incienso. MapLights anima las linternas según la hora.
 -- Todo es solo de este cliente; el modo rendimiento (Performance) apaga las partículas y luces y para las animaciones.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -154,7 +154,6 @@ function JapanFx.start()
 		end
 	end
 
-	local lamps = {}
 	local function track(list: { [Instance]: boolean }, tag: string)
 		CollectionService:GetInstanceAddedSignal(tag):Connect(function(item)
 			list[item] = true
@@ -166,7 +165,6 @@ function JapanFx.start()
 			list[item] = true
 		end
 	end
-	track(lamps, "LanternGlow")
 	local circles, wisps, beams = {}, {}, {}
 	track(circles, "MagicCircle")
 	track(wisps, "Wisp")
@@ -188,7 +186,6 @@ function JapanFx.start()
 		addCritter(model)
 	end
 
-	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		local camera = workspace.CurrentCamera
 		if not camera then
@@ -266,18 +263,6 @@ function JapanFx.start()
 			end
 		end
 
-		-- Los farolillos laten a unos 20 cuadros por segundo: de sobra para una luz.
-		acc += dt
-		if acc >= 0.05 then
-			acc = 0
-			for lamp in lamps do
-				local paper = lamp :: BasePart
-				if paper.Parent then
-					local wave = 0.5 + 0.5 * math.sin(now * 2.2 + paper.Position.X * 0.37 + paper.Position.Z * 0.21)
-					paper.Transparency = 0.05 + 0.2 * wave
-				end
-			end
-		end
 	end)
 end
 
