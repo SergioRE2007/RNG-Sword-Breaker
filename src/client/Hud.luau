@@ -157,7 +157,7 @@ function Hud.start()
 	travel.Name = "Travel"
 	travel.AnchorPoint = Vector2.new(0.5, 0)
 	travel.Position = UDim2.new(0.5, 0, 0, 10)
-	travel.Size = UDim2.fromOffset(0, 70)
+	travel.Size = UDim2.fromOffset(0, 74)
 	travel.AutomaticSize = Enum.AutomaticSize.X
 	travel.BackgroundTransparency = 1
 	travel.Parent = gui
@@ -198,8 +198,8 @@ function Hud.start()
 		local button = Ui.button(travel, "", entry[3])
 		button.Name = "Travel_" .. entry[1]
 		button.LayoutOrder = order
-		button.Size = UDim2.fromOffset(220, 70) -- los tres igual de anchos: cabe "Mazmorras"
-		-- El logo, grande y dentro del botón; el nombre queda en segundo plano. La barra mide 70 de alto: lo que
+		button.Size = UDim2.fromOffset(220, 74) -- los tres igual de anchos: cabe "Mazmorras"
+		-- El logo, grande y dentro del botón; el nombre queda en segundo plano. La barra mide 74 de alto: lo que
 		-- va debajo (paneles de mazmorra, forja, gacha) empieza en Y = 84.
 		local iconBox = Instance.new("Frame")
 		iconBox.AnchorPoint = Vector2.new(0, 0.5)
