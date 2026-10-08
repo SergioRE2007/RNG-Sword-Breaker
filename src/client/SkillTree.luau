@@ -318,7 +318,7 @@ function SkillTree.start()
 	local titleBack = Instance.new("Frame")
 	titleBack.Name = "TitleBack"
 	titleBack.AnchorPoint = Vector2.new(0.5, 0)
-	titleBack.Position = UDim2.new(0.5, 0, 0, 94)
+	titleBack.Position = UDim2.new(0.5, 0, 0, 14)
 	titleBack.Size = UDim2.new(0.9, 0, 0, 68)
 	local titleLimit = Instance.new("UISizeConstraint")
 	titleLimit.MaxSize = Vector2.new(600, 68)
