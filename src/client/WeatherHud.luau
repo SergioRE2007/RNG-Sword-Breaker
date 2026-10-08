@@ -210,6 +210,13 @@ local function newBadge(parent: Instance, size: number, z: number): (Frame, Fram
 	return holder, box
 end
 
+-- Insignia suelta de un clima, de `size` píxeles (para otras ventanas: el menú de admin).
+function WeatherHud.badge(parent: Instance, size: number, id: string?, z: number?): Frame
+	local holder, box = newBadge(parent, size, z or 1)
+	drawBadge(holder, box, id)
+	return holder
+end
+
 -- Textos --------------------------------------------------------------------------------------------------
 
 -- "Suerte x2 · Armas x1.5", cada una con su color de las estadísticas. `long` = con el nombre entero.

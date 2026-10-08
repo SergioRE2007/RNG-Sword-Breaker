@@ -485,6 +485,28 @@ function Ui.hud(): Frame
 	return hudRoot :: Frame
 end
 
+-- Fila de botones pequeños de arriba a la izquierda, a continuación del de Ajustes (que está en 196, 14 y mide 44).
+-- Los botones nuevos de esa zona se cuelgan de aquí, de 44 x 44 y con su LayoutOrder, y se colocan solos uno tras otro.
+local topRow: Frame? = nil
+function Ui.topButtons(): Frame
+	if not topRow then
+		local row = Instance.new("Frame")
+		row.Name = "TopButtons"
+		row.Position = UDim2.fromOffset(248, 14)
+		row.Size = UDim2.fromOffset(0, 44)
+		row.AutomaticSize = Enum.AutomaticSize.X
+		row.BackgroundTransparency = 1
+		row.Parent = Ui.hud()
+		local layout = Instance.new("UIListLayout")
+		layout.FillDirection = Enum.FillDirection.Horizontal
+		layout.Padding = UDim.new(0, 8)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = row
+		topRow = row
+	end
+	return topRow :: Frame
+end
+
 -- Ventanas ------------------------------------------------------------------------------
 
 local windows = {} -- [nombre] = Frame

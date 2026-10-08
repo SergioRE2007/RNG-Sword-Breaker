@@ -3,15 +3,17 @@
 -- una semilla, así que es el mismo en todos los servidores a la vez sin guardar ni mandarse nada. El servidor solo
 -- publica el estado en atributos de workspace ("Weather", "WeatherStart", "WeatherEnds", "WeatherNext": ver
 -- shared/WeatherInfo); todo lo que se ve lo hace cada cliente (client/Weather).
--- Pruebas (solo en Studio): Config.Test.Weather pone un clima al entrar, el atributo "WeatherForce" de workspace lo
--- cambia en marcha (un id de Config.Weather.Events, o "none" para despejar) y el remote AdminWeather pasa al siguiente.
--- Lo forzado dura lo que dura ese clima (o hasta el siguiente tramo, si es "none") y luego vuelve el de la hora.
+-- Un administrador (server/Admin) puede poner un clima a mano en su servidor desde el menú de admin (remote
+-- AdminWeather): dura lo que dura ese clima (o hasta el siguiente tramo, si es despejar) y luego vuelve el de la hora;
+-- "WeatherForced" dice si el que hay está puesto a mano. Para pruebas, solo en Studio: Config.Test.Weather pone uno al
+-- entrar y el atributo "WeatherForce" de workspace lo cambia en marcha (un id de Config.Weather.Events, o "none").
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local WeatherInfo = require(ReplicatedStorage.Shared.WeatherInfo)
+local Admin = require(script.Parent.Admin)
 
 local Weather = {}
 
@@ -43,21 +45,17 @@ local function scheduled(now: number): (string, number, number, number)
 	return "", ends, nextStart, nextStart
 end
 
--- Lo mismo, contando lo que se haya forzado en Studio.
+-- Lo mismo, contando lo forzado (`forced`: un id de clima o "none" = despejado), que dura lo que ese clima o, si es
+-- despejar, hasta el siguiente tramo; después vuelve el del calendario.
 local function wanted(now: number): (string, number, number, number)
-	if STUDIO then
-		local force = workspace:GetAttribute("WeatherForce")
-		if force ~= forced then
-			forced = if type(force) == "string" and (force == "none" or cfg.Events[force]) then force else nil
-			forcedAt = now
+	if forced then
+		local nextStart = (math.floor(forcedAt / cfg.Interval) + 1) * cfg.Interval
+		local ends = if forced == "none" then nextStart else forcedAt + WeatherInfo.duration(forced)
+		if now < ends then
+			return if forced == "none" then "" else forced, forcedAt, ends, math.max(nextStart, ends)
 		end
-		if forced then
-			local nextStart = (math.floor(forcedAt / cfg.Interval) + 1) * cfg.Interval
-			local ends = if forced == "none" then nextStart else forcedAt + WeatherInfo.duration(forced)
-			if now < ends then
-				return if forced == "none" then "" else forced, forcedAt, ends, math.max(nextStart, ends)
-			end
-			forced = nil
+		forced = nil
+		if STUDIO then
 			workspace:SetAttribute("WeatherForce", nil)
 		end
 	end
@@ -73,6 +71,7 @@ end
 local function update()
 	local now = wallClock()
 	local id, start, ends, nextStart = wanted(now)
+	workspace:SetAttribute("WeatherForced", forced ~= nil) -- para el menú de admin: ¿es del calendario o puesto a mano?
 	if id == shown and math.abs(ends - shownEnds) < 0.5 then
 		return
 	end
@@ -88,23 +87,43 @@ local function update()
 	shown, shownEnds = id, ends
 end
 
+-- Pone un clima a mano (un id, o "none" para despejar) desde ahora, o vuelve al del calendario (nil o algo que no valga).
+local function force(value: unknown)
+	forced = if type(value) == "string" and (value == "none" or cfg.Events[value]) then value else nil
+	forcedAt = wallClock()
+	update()
+end
+
 function Weather.start()
 	if STUDIO then
 		local initial = Config.Test.Weather
 		if type(initial) == "string" and cfg.Events[initial] then
 			workspace:SetAttribute("WeatherForce", initial)
 		end
-		workspace:GetAttributeChangedSignal("WeatherForce"):Connect(update)
-
-		-- Tecla de pruebas del cliente: siguiente clima de la lista y, tras el último, despejado.
-		Remotes.AdminWeather.OnServerEvent:Connect(function()
-			if not Config.Test.Admin then
-				return
+		workspace:GetAttributeChangedSignal("WeatherForce"):Connect(function()
+			local value = workspace:GetAttribute("WeatherForce")
+			if value ~= forced then
+				force(value)
 			end
-			local index = table.find(cfg.Order, shown or "") or 0
-			workspace:SetAttribute("WeatherForce", cfg.Order[index + 1] or "none")
 		end)
+		force(workspace:GetAttribute("WeatherForce"))
 	end
+
+	-- Órdenes del menú de admin, solo de administradores (server/Admin): un id de clima, "none" (despejar), "auto"
+	-- (volver al calendario) o "next" (el siguiente de la lista y, tras el último, despejado). Vale para este servidor.
+	Remotes.AdminWeather.OnServerEvent:Connect(function(player: Player, action: unknown)
+		if not Admin.is(player) or type(action) ~= "string" then
+			return
+		end
+		if action == "next" then
+			local index = table.find(cfg.Order, shown or "") or 0
+			force(cfg.Order[index + 1] or "none")
+		elseif action == "auto" then
+			force(nil)
+		elseif action == "none" or cfg.Events[action] then
+			force(action)
+		end
+	end)
 
 	update()
 	task.spawn(function()

@@ -232,7 +232,7 @@ function Weather.start()
 	if RunService:IsStudio() and Config.Test.Admin then
 		UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
 			if not processed and input.KeyCode == NEXT_KEY then
-				Remotes.AdminWeather:FireServer()
+				Remotes.AdminWeather:FireServer("next")
 			end
 		end)
 	end

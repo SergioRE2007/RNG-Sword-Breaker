@@ -11,7 +11,7 @@ Config.WalkSpeed = 30 -- velocidad al andar (la normal de Roblox es 16)
 Config.Test = {
 	InfiniteMoney = true, -- monedas y gemas infinitas
 	AllWeapons = true, -- una copia de cada arma de Config.Swords en la mochila al entrar
-	Admin = true, -- botón "Admin" en las tiendas de Rasgos y Grados: eliges a mano el rasgo o grado de la espada, sin tirar ni gastar
+	Admin = true, -- botón "Admin" en las tiendas de Rasgos y Grados: eliges a mano el rasgo o grado de la espada, sin tirar ni gastar. También te hace administrador en Studio (menú "Admin" del clima: server/Admin)
 	TradeBot = true, -- "Bot de pruebas" en la lista de Comercio: acepta y confirma solo, para probar un trato sin otro jugador
 	AllGamepasses = true, -- todos los pases de juego de Config.Gamepasses (para probar sus ventajas sin comprarlos)
 	AllGear = true, -- todos los accesorios (Config.Artifacts) y una pieza de armadura de cada hueco y cada mazmorra al entrar
@@ -20,6 +20,9 @@ Config.Test = {
 	PartyBots = 0, -- compañeros "fantasma" que se unen a tu grupo de mazmorra (cuentan para el tamaño y el escalado, no pelean): para probar con un solo jugador
 	Weather = "", -- id de un clima de Config.Weather.Events para tenerlo puesto al entrar ("" = el que toque por la hora)
 }
+-- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
+-- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
+Config.Admins = { 4490621018 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
 Config.SwingWindow = 1.15 -- cuánto sigue vivo el espadazo, en veces el tiempo entre golpes: mientras dura golpea a lo que entre en su alcance, cada cosa una sola vez (1.15 = lo que dura la animación; 0 = solo el instante del clic)
