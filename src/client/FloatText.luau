@@ -26,8 +26,8 @@ FloatText.STYLES = {
 	enemy = { life = 0.7, size = 30, stroke = 2.5, top = Color3.fromRGB(255, 238, 150), bottom = Color3.fromRGB(255, 135, 35), flash = Color3.fromRGB(255, 120, 40), shine = 0.22, shineAt = 0.04, from = 0.7, peak = 1.12, popIn = 0.06, popOut = 0.16, rise = 3.2, riseEnd = 1, drift = 0.9, rotation = 5, fade = 0.35, shrink = 0.85 },
 	final = { life = 0.9, size = 40, stroke = 3, top = Color3.fromRGB(255, 240, 130), bottom = Color3.fromRGB(255, 70, 50), flash = Color3.fromRGB(255, 255, 255), shine = 0.3, shineAt = 0.05, from = 0.6, peak = 1.3, popIn = 0.07, popOut = 0.2, rise = 3.8, riseEnd = 1, drift = 0.6, rotation = 4, wobble = 4, fade = 0.35, shrink = 0.85 },
 	box = { life = 0.5, size = 25, stroke = 2, top = Color3.fromRGB(220, 245, 255), bottom = Color3.fromRGB(85, 170, 255), flash = Color3.fromRGB(90, 180, 255), from = 0.8, peak = 1.06, popIn = 0.04, popOut = 0.1, rise = 1.8, riseEnd = 1, drift = 0.5, rotation = 3, fade = 0.4, shrink = 0.9 },
-	coin = { life = 1.1, size = 30, stroke = 2.5, top = Color3.fromRGB(255, 242, 120), bottom = Color3.fromRGB(255, 150, 0), flash = Color3.fromRGB(255, 230, 90), shine = 0.4, shineAt = 0.2, icon = "coin", from = 0.85, peak = 1.08, popIn = 0.1, popOut = 0.25, start = -1, rise = 3.5, riseEnd = 0.6, arc = 0.6, side = 1, rotation = 3, fade = 0.25 },
-	gem = { life = 1.1, size = 28, stroke = 2.5, top = Color3.fromRGB(245, 210, 255), bottom = Color3.fromRGB(165, 80, 255), flash = Color3.fromRGB(220, 150, 255), shine = 0.4, shineAt = 0.25, icon = "gem", from = 0.85, peak = 1.08, popIn = 0.1, popOut = 0.25, start = -1, rise = 3.5, riseEnd = 0.6, arc = 0.6, side = -1, rotation = 3, fade = 0.25 },
+	coin = { life = 1.1, size = 30, stroke = 2.5, top = Color3.fromRGB(255, 242, 120), bottom = Color3.fromRGB(255, 150, 0), flash = Color3.fromRGB(255, 230, 90), shine = 0.4, shineAt = 0.2, icon = "coin", from = 0.85, peak = 1.08, popIn = 0.1, popOut = 0.25, start = -1, rise = 2.2, riseEnd = 0.6, arc = 0.6, side = 1, shift = 4.6, rotation = 3, fade = 0.25 },
+	gem = { life = 1.1, size = 28, stroke = 2.5, top = Color3.fromRGB(245, 210, 255), bottom = Color3.fromRGB(165, 80, 255), flash = Color3.fromRGB(220, 150, 255), shine = 0.4, shineAt = 0.25, icon = "gem", from = 0.85, peak = 1.08, popIn = 0.1, popOut = 0.25, start = -1, rise = 2.2, riseEnd = 0.6, arc = 0.6, side = -1, shift = -4.6, rotation = 3, fade = 0.25 },
 	notice = { life = 1.2, size = 24, stroke = 2.5, top = WHITE, bottom = WHITE, flash = WHITE, shine = 0.45, shineAt = 0.2, from = 0.85, peak = 1.1, popIn = 0.1, popOut = 0.25, rise = 2.5, riseEnd = 0.7, rotation = 2, fade = 0.3 },
 }
 
@@ -63,6 +63,8 @@ function FloatText.sample(style, t: number, v): (number, number, number, number,
 	local rise = outCubic(math.min(p / style.riseEnd, 1))
 	local y = (style.start or 0) * (1 - rise) + style.rise * rise
 	local x = (style.drift or 0) * v.drift * outQuad(p) + (style.arc or 0) * (style.side or 1) * math.sin(p * math.pi)
+	-- `shift`: se aparta hacia un lado y se queda ahí (monedas y gemas, para no tapar el orbe de la tirada de arma).
+	x += (style.shift or 0) * rise
 
 	local rotation = style.rotation * v.rotation * (1 - 0.6 * p)
 	if style.wobble and t < 0.2 then
