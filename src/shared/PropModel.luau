@@ -1,5 +1,6 @@
 -- Piezas del mapa del bosque japonés hechas en Blender (tools/blender/crear_mapa_japones.py), importadas en Studio y
--- guardadas en Shared.MapMeshes: mallas "<Pieza>_<Papel>" y "<Pieza>_Origin" (centro del suelo de la pieza). Las
+-- guardadas en Shared.MapMeshes y, para las actualizadas, Shared.MapMeshesPatch: mallas "<Pieza>_<Papel>" y
+-- "<Pieza>_Origin" (centro del suelo de la pieza). Las
 -- marcas Axis_* dan la escala y los ejes de la importación. Se leen una vez; sin el archivo `place` devuelve nil y el
 -- mapa se queda sin esas piezas (suelo, luz y agua siguen).
 local PropModel = {}
@@ -12,37 +13,41 @@ local function load()
 		return templates
 	end
 	templates = {}
-	local folder = script.Parent:FindFirstChild("MapMeshes")
-	local axis = folder and folder:FindFirstChild("Axis_Origin", true) :: BasePart?
-	local up = folder and folder:FindFirstChild("Axis_Up", true) :: BasePart?
-	local front = folder and folder:FindFirstChild("Axis_Front", true) :: BasePart?
-	if not (axis and up and front) then
-		return templates
-	end
-	local upVector = up.Position - axis.Position
-	local studs = upVector.Magnitude / 2 -- lo que mide un stud en la importación
-	local back = (axis.Position - front.Position).Unit
-	local frame = CFrame.fromMatrix(Vector3.zero, upVector.Unit:Cross(back), upVector.Unit, back)
-
-	local origins = {}
-	for _, item in folder:GetDescendants() do
-		local name = item:IsA("BasePart") and string.match(item.Name, "^(%a+)_Origin$")
-		if name and name ~= "Axis" then
-			origins[name] = item
+	-- Una importación parcial sustituye solo sus piezas, conservando las demás del mapa.
+	for _, fileName in { "MapMeshes", "MapMeshesPatch" } do
+		local folder = script.Parent:FindFirstChild(fileName)
+		local axis = folder and folder:FindFirstChild("Axis_Origin", true) :: BasePart?
+		local up = folder and folder:FindFirstChild("Axis_Up", true) :: BasePart?
+		local front = folder and folder:FindFirstChild("Axis_Front", true) :: BasePart?
+		if not (folder and axis and up and front) then
+			continue
 		end
-	end
-	for _, item in folder:GetDescendants() do
-		local name, role = string.match(item.Name, "^(%a+)_(%a+)$")
-		if item:IsA("BasePart") and name and role ~= "Origin" and origins[name] then
-			local list = templates[name] or {}
-			templates[name] = list
-			table.insert(list, {
-				part = item,
-				role = role,
-				offset = CFrame.new(frame:VectorToObjectSpace(item.Position - origins[name].Position) / studs)
-					* (frame.Rotation:Inverse() * item.CFrame.Rotation),
-				size = item.Size / studs,
-			})
+		local upVector = up.Position - axis.Position
+		local studs = upVector.Magnitude / 2
+		if studs <= 0 or (axis.Position - front.Position).Magnitude <= 0 then
+			continue
+		end
+		local back = (axis.Position - front.Position).Unit
+		local frame = CFrame.fromMatrix(Vector3.zero, upVector.Unit:Cross(back), upVector.Unit, back)
+		local origins = {}
+		for _, item in folder:GetDescendants() do
+			local name = item:IsA("BasePart") and string.match(item.Name, "^(%a+)_Origin$")
+			if name and name ~= "Axis" then
+				origins[name] = item
+				templates[name] = {}
+			end
+		end
+		for _, item in folder:GetDescendants() do
+			local name, role = string.match(item.Name, "^(%a+)_(%a+)$")
+			if item:IsA("BasePart") and name and role ~= "Origin" and origins[name] then
+				table.insert(templates[name], {
+					part = item,
+					role = role,
+					offset = CFrame.new(frame:VectorToObjectSpace(item.Position - origins[name].Position) / studs)
+						* (frame.Rotation:Inverse() * item.CFrame.Rotation),
+					size = item.Size / studs,
+				})
+			end
 		end
 	end
 	return templates
@@ -107,24 +112,28 @@ local function collisions(model: Model, name: string, origin: CFrame, scale: num
 		local y, width = 2, 11
 		for tier = 0, 4 do
 			local height = 4.6 - tier * 0.35
-			box(Vector3.new(width, height + 2.3, width), CFrame.new(0, y + (height + 2.3) / 2, 0))
-			y += height + 2.3
+			box(Vector3.new(width, height + 2.1, width), CFrame.new(0, y + (height + 2.1) / 2, 0))
+			y += height + 2.1
 			width -= 1.35
 		end
 	elseif name == "Fence" then
 		box(Vector3.new(8.6, 3.4, 0.6), CFrame.new(0, 1.7, 0))
 	elseif name == "Bridge" then
-		local function point(i: number): Vector3
-			local t = i / 8
+		local function point(t: number): Vector3
 			return Vector3.new(-9 + 18 * t, 3.2 * math.sin(math.pi * t) + 0.5, 0)
 		end
-		for i = 0, 8 do
-			local slope = math.atan(3.2 * math.pi / 18 * math.cos(math.pi * i / 8))
-			box(Vector3.new(2.2, 0.5, 6.2), CFrame.new(point(i)) * CFrame.Angles(0, 0, slope))
+		for i = 0, 23 do
+			local a, b = point(i / 24), point((i + 1) / 24)
+			local slope = math.atan2(b.Y - a.Y, b.X - a.X)
+			-- El borde superior coincide con la cubierta; el resto queda oculto debajo.
+			box(Vector3.new((b - a).Magnitude + 0.02, 0.4, 6.2), CFrame.new((a + b) / 2) * CFrame.Angles(0, 0, slope))
+		end
+		for _, side in { -1, 1 } do
+			box(Vector3.new(2.4, 1, 6.8), CFrame.new(side * 10.2, 0.4, 0))
 		end
 		-- Barandilla continua a cada lado: un tramo entre cada par de postes, de la cubierta al pasamanos.
 		for i = 0, 7 do
-			local a, b = point(i), point(i + 1)
+			local a, b = point(i / 8), point((i + 1) / 8)
 			local mid = (a + b) / 2
 			local angle = math.atan2(b.Y - a.Y, b.X - a.X)
 			for _, side in { -1, 1 } do
