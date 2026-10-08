@@ -1,18 +1,23 @@
 -- Menú de admin: una ventana que solo existe para los administradores del juego (atributo "Admin" del jugador, que
 -- pone server/Admin: el dueño y los de Config.Admins; en Studio, con Config.Test.Admin). A los demás no se les crea
 -- ni el botón ni la ventana, y aunque alguien se la fabricara, el servidor comprueba cada orden.
--- De momento lleva el clima: una casilla por clima de Config.Weather (pulsarla lo pone ya en este servidor, para todos
--- y con su suerte), despejar el cielo y volver al calendario. Botón `Hud.HudRoot.Menu.Admin`, ventana `Hud.Admin`
--- (`Body.Status`, `Body.Grid.Weather_<id>`, `Body.Actions.Clear` y `.Auto`).
+-- La ventana `Hud.Admin` lleva un panel por pestaña (como la mochila): `TabWeather` y `Body.Weather`, de momento. Un
+-- panel nuevo = una entrada en PANELS con su función, que recibe el marco donde montarse. El botón es pequeño y va
+-- arriba a la izquierda, junto al de Ajustes: `Hud.HudRoot.TopButtons.Admin`.
+-- Panel del clima: una casilla por clima de Config.Weather (pulsarla lo pone ya en este servidor, para todos y con
+-- su suerte), despejar el cielo y volver al calendario (`Body.Weather.Status`, `.Grid.Weather_<id>`, `.Actions.Clear`
+-- y `.Auto`).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local WeatherInfo = require(ReplicatedStorage.Shared.WeatherInfo)
+local Performance = require(script.Parent.Performance)
 local Ui = require(script.Parent.Ui)
 local WeatherHud = require(script.Parent.WeatherHud)
 
@@ -26,7 +31,8 @@ local WHITE = Color3.new(1, 1, 1)
 local GOLD = Color3.fromRGB(255, 205, 70)
 local ON = Color3.fromRGB(85, 210, 70)
 
--- Medidas de la ventana (en su tamaño de diseño; Ui.window la encoge sola en pantallas pequeñas).
+-- Medidas del panel del clima, que es el que da el tamaño a la ventana (en su tamaño de diseño; Ui.window la encoge
+-- sola en pantallas pequeñas).
 local PAD = 12
 local STATUS = 62
 local COLUMNS = 4
@@ -36,22 +42,23 @@ local ROWS = math.ceil(#cfg.Order / COLUMNS)
 local GRID_HEIGHT = ROWS * CELL.Y + (ROWS - 1) * GAP
 local ACTIONS = 52
 local BODY_HEIGHT = PAD + STATUS + 34 + GRID_HEIGHT + PAD + ACTIONS + PAD
+-- Pestañas: asoman por la izquierda de la ventana, como las de la mochila.
+local TAB = Vector2.new(96, 66)
+local TAB_X, TAB_OUT = -108, -118
+local TAB_STEP = 78
 
 local function hex(color: Color3): string
 	return "#" .. color:ToHex()
 end
 
-local function build()
-	local window, body = Ui.window("Admin", "Admin", Vector2.new(600, BODY_HEIGHT + 78), function(parent)
-		Ui.starIcon(parent, GOLD)
-	end)
-
+-- Panel del clima. `pane` es su marco dentro de la ventana y `window`, la ventana (para saber si está abierta).
+local function weatherPanel(pane: Frame, window: Frame)
 	-- Qué clima hay ahora y si es del calendario o está puesto a mano.
 	local status = Instance.new("Frame")
 	status.Name = "Status"
 	status.Position = UDim2.fromOffset(PAD, PAD)
 	status.Size = UDim2.new(1, -PAD * 2, 0, STATUS)
-	status.Parent = body
+	status.Parent = pane
 	Ui.round(status, 12)
 	Ui.stroke(status, BLACK, 3)
 	Ui.panel(status, Color3.fromRGB(40, 38, 80))
@@ -73,7 +80,7 @@ local function build()
 	detail.Size = UDim2.new(1, -74, 0, 20)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 
-	local heading = Ui.label(body, 18)
+	local heading = Ui.label(pane, 18)
 	heading.Name = "Heading"
 	heading.Position = UDim2.fromOffset(PAD + 4, PAD + STATUS + 6)
 	heading.Size = UDim2.new(1, -PAD * 2 - 8, 0, 24)
@@ -86,7 +93,7 @@ local function build()
 	grid.Position = UDim2.fromOffset(PAD, PAD + STATUS + 34)
 	grid.Size = UDim2.new(1, -PAD * 2, 0, GRID_HEIGHT)
 	grid.BackgroundTransparency = 1
-	grid.Parent = body
+	grid.Parent = pane
 	local layout = Instance.new("UIGridLayout")
 	layout.CellSize = UDim2.fromOffset(CELL.X, CELL.Y)
 	layout.CellPadding = UDim2.fromOffset(GAP, GAP)
@@ -137,7 +144,7 @@ local function build()
 	actions.Position = UDim2.fromOffset(PAD, PAD + STATUS + 34 + GRID_HEIGHT + PAD)
 	actions.Size = UDim2.new(1, -PAD * 2, 0, ACTIONS)
 	actions.BackgroundTransparency = 1
-	actions.Parent = body
+	actions.Parent = pane
 	local function action(name: string, text: string, color: Color3, order: number, send: string)
 		local button = Ui.button(actions, text, color)
 		button.Name = name
@@ -152,7 +159,7 @@ local function build()
 	action("Clear", "Despejar el cielo", Ui.COLORS.blue, 0, "none")
 	action("Auto", "Volver al calendario", Ui.COLORS.green, 1, "auto")
 
-	-- Estado: se repinta cuando cambia el clima y, con la ventana abierta, el reloj unas veces por segundo.
+	-- Estado: se repinta cuando cambia el clima y, con el panel a la vista, el reloj unas veces por segundo.
 	local shownId: string? = "?"
 	local function refresh()
 		local id, def = WeatherInfo.current()
@@ -184,32 +191,103 @@ local function build()
 	local elapsed = 0
 	RunService.Heartbeat:Connect(function(dt: number)
 		elapsed += dt
-		if elapsed >= 0.25 and window.Visible then
+		if elapsed >= 0.25 and window.Visible and pane.Visible then
 			elapsed = 0
 			refresh()
 		end
 	end)
+end
 
-	-- Botón en el menú de la izquierda, como los demás (logo arriba y nombre debajo).
-	local menu = Ui.hud():WaitForChild("Menu")
-	local item = Ui.button(menu, "", Color3.fromRGB(196, 70, 86))
-	item.Name = "Admin"
-	item.LayoutOrder = 99
-	local iconBox = Instance.new("Frame")
-	iconBox.Name = "Icon"
-	iconBox.AnchorPoint = Vector2.new(0.5, 0)
-	iconBox.Position = UDim2.new(0.5, 0, 0, 2)
-	iconBox.Size = UDim2.fromOffset(68, 68)
-	iconBox.BackgroundTransparency = 1
-	iconBox.Parent = item
-	Ui.starIcon(iconBox, GOLD)
-	local label = Ui.label(item, 18)
-	label.AnchorPoint = Vector2.new(0.5, 1)
-	label.Position = UDim2.new(0.5, 0, 1, -5)
-	label.Size = UDim2.new(1, -8, 0, 20)
-	label.Text = "Admin"
-	Ui.sparkle(item, 6)
-	item.Activated:Connect(function()
+-- Los paneles del menú, en el orden de sus pestañas: clave (nombres `Tab<clave>` y `Body.<clave>`), nombre de la
+-- pestaña, su color, su icono y la función que lo monta.
+local PANELS = {
+	{
+		key = "Weather", name = "Clima", color = Color3.fromRGB(60, 150, 235),
+		icon = function(parent: Frame)
+			local badge = WeatherHud.badge(parent, 44, "rain")
+			badge.AnchorPoint = Vector2.new(0.5, 0.5)
+			badge.Position = UDim2.fromScale(0.5, 0.5)
+		end,
+		build = weatherPanel,
+	},
+}
+
+local function build()
+	local window, body = Ui.window("Admin", "Admin", Vector2.new(600, BODY_HEIGHT + 78), function(parent)
+		Ui.starIcon(parent, GOLD)
+	end)
+
+	local panes: { [string]: Frame } = {}
+	local tabs: { [string]: { button: TextButton, y: number } } = {}
+	local function show(key: string)
+		for other, pane in panes do
+			local opening = other == key and not pane.Visible
+			pane.Visible = other == key
+			local tab = tabs[other]
+			Ui.setSelected(tab.button, other == key)
+			-- La pestaña elegida se asoma un poco más y su panel entra deslizándose (sin animar en modo rendimiento).
+			local out = UDim2.fromOffset(if other == key then TAB_OUT else TAB_X, tab.y)
+			if Performance.get() then
+				tab.button.Position = out
+			else
+				TweenService:Create(tab.button, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = out }):Play()
+				if opening then
+					pane.Position = UDim2.fromOffset(24, 0)
+					TweenService:Create(pane, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(0, 0) }):Play()
+				end
+			end
+		end
+	end
+	for order, panel in PANELS do
+		local pane = Instance.new("Frame")
+		pane.Name = panel.key
+		pane.Size = UDim2.fromScale(1, 1)
+		pane.BackgroundTransparency = 1
+		pane.Visible = false
+		pane.Parent = body
+		panes[panel.key] = pane
+		panel.build(pane, window)
+
+		local y = TAB.Y + (order - 1) * TAB_STEP
+		local tab = Ui.button(window, "", panel.color)
+		tab.Name = "Tab" .. panel.key
+		tab.Position = UDim2.fromOffset(TAB_X, y)
+		tab.Size = UDim2.fromOffset(TAB.X, TAB.Y)
+		local iconBox = Instance.new("Frame")
+		iconBox.Name = "Icon"
+		iconBox.AnchorPoint = Vector2.new(0.5, 0)
+		iconBox.Position = UDim2.new(0.5, 0, 0, -1)
+		iconBox.Size = UDim2.fromOffset(50, 50)
+		iconBox.BackgroundTransparency = 1
+		iconBox.Parent = tab
+		panel.icon(iconBox)
+		local label = Ui.label(tab, 15)
+		label.AnchorPoint = Vector2.new(0.5, 1)
+		label.Position = UDim2.new(0.5, 0, 1, -3)
+		label.Size = UDim2.new(1, -6, 0, 17)
+		label.Text = panel.name
+		label.TextScaled = true
+		local limit = Instance.new("UITextSizeConstraint")
+		limit.MaxTextSize = 15
+		limit.MinTextSize = 11
+		limit.Parent = label
+		tabs[panel.key] = { button = tab, y = y }
+		tab.Activated:Connect(function()
+			show(panel.key)
+		end)
+	end
+	show(PANELS[1].key)
+
+	-- Botón pequeño arriba a la izquierda, junto al de Ajustes y del mismo tamaño.
+	local button = Ui.button(Ui.topButtons(), "", Color3.fromRGB(196, 70, 86))
+	button.Name = "Admin"
+	button.LayoutOrder = 100
+	button.Size = UDim2.fromOffset(44, 44)
+	Ui.starIcon(button, GOLD)
+	Ui.tip(button, function()
+		return "<b>Admin</b>", GOLD
+	end, true)
+	button.Activated:Connect(function()
 		Ui.toggle("Admin")
 	end)
 end
