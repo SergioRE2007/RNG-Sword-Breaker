@@ -142,9 +142,17 @@ end
 -- las mazmorras). Pasa por el mismo tiempo de espera que los clics.
 function SwordController.swing()
 	local character = player.Character
-	local tool = character and character:FindFirstChildWhichIsA("Tool")
-	if tool and tool:GetAttribute("Sword") then
+	local tool = swordIn(character)
+	if tool then
 		swing(tool)
+		return
+	end
+	-- Guardada: se saca sola y el siguiente intento ya golpea.
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local stored = swordIn(player:FindFirstChildOfClass("Backpack"))
+	if stored and humanoid and humanoid.Health > 0 and not ForgeScene.isActive() then
+		equipmentRevision += 1
+		humanoid:EquipTool(stored)
 	end
 end
 
