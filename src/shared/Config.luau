@@ -251,7 +251,7 @@ Config.Theme = "japan"
 -- parte de la vuelta que es de día (de 6 a 18 h). Es el mismo para todos (sigue la hora del servidor).
 Config.DayCycle = { Length = 720, DayShare = 2 / 3 }
 
-Config.PlotLighting = { Height = 18, Offset = 0.18, Brightness = 0.8, Range = 55 }
+Config.PlotLighting = { Height = 18, Offset = 0.18, Brightness = 1.5, Range = 55 }
 Config.Water = { Depth = 6, Transparency = 0.35, WaveHeight = 0.12, WaveSpeed = 0.9 }
 
 -- Mapa: un hub circular en el centro y las parcelas en círculo a su alrededor.
