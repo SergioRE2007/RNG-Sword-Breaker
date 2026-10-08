@@ -37,18 +37,18 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 	box.Size = UDim2.fromOffset(270, 56)
 	box.Parent = gui
 	Ui.pill(box, color)
-	-- El logo es lo que manda: más alto que la barra, asomando por arriba y por abajo.
+	-- El logo, tan alto como la barra y dentro de ella (un poco más arriba que el centro, por el labio de abajo).
 	local iconBox = Instance.new("Frame")
 	iconBox.AnchorPoint = Vector2.new(0, 0.5)
-	iconBox.Position = UDim2.new(0, -4, 0.5, 0)
-	iconBox.Size = UDim2.fromOffset(70, 70)
+	iconBox.Position = UDim2.new(0, 2, 0.5, -2)
+	iconBox.Size = UDim2.fromOffset(58, 58)
 	iconBox.BackgroundTransparency = 1
 	iconBox.Parent = box
 	icon(iconBox, color)
 	local text = Ui.label(box, 28)
 	text.Name = "Amount"
-	text.Position = UDim2.fromOffset(66, 0)
-	text.Size = UDim2.new(1, -74, 1, 0)
+	text.Position = UDim2.fromOffset(60, 0)
+	text.Size = UDim2.new(1, -68, 1, 0)
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	Ui.sparkle(box, 5)
 
