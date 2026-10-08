@@ -31,4 +31,5 @@ require(script.Rebirth).start()
 require(script.Leaderboards).start()
 require(script.BestRoll).start()
 require(script.Missions).start()
+require(script.Admin).start() -- antes de quien obedece órdenes de admin
 require(script.Weather).start()

@@ -33,5 +33,6 @@ require(script.ArmorAura).start()
 require(script.PotionFx).start()
 require(script.JapanFx).start()
 require(script.Weather).start() -- después de DayCycle, DungeonFx y JapanFx: mezcla su luz y amaina sus pétalos
+require(script.AdminPanel).start() -- menú de admin (solo para administradores); después de Hud y de Weather
 require(script.StationFx).start()
 require(script.HitboxDebug).start() -- opción "Ver hitbox" de Ajustes
