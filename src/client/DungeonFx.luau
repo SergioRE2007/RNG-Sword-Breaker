@@ -194,6 +194,11 @@ local function enter(name: string)
 	end
 end
 
+-- Zona en la que está el jugador: "surface", "lobby" o "dungeon:<id>" (client/Weather: el clima solo se ve arriba).
+function DungeonFx.zone(): string
+	return zone
+end
+
 function DungeonFx.start()
 	-- La luz de la isla la pone el servidor al arrancar: se espera a tenerla para guardarla como "superficie".
 	task.spawn(function()

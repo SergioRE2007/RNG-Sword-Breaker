@@ -440,4 +440,23 @@ equal(select(5, float.sample(styles.coin, 0.3, still)), 0, "moneda visible tras 
 equal(select(3, float.sample(styles.coin, 0, still)) < 0, true, "moneda sale por debajo")
 equal(styles.box.life < styles.enemy.life, true, "caja más corta que enemigo")
 
+-- Clima: las probabilidades de los tramos suman 1 y la suerte del clima en curso entra por Stats y se va al despejar.
+local weather = f.load("src/shared/WeatherInfo")
+local stats = f.load("src/shared/Stats")
+local events = f.config.Weather.Events
+local chances = 0
+for _, id in f.config.Weather.Order do
+	chances += weather.chance(id)
+end
+near(chances, 1, "las probabilidades del clima suman 1")
+local spawnBefore, gachaBefore = stats.spawnLuck(f.player), stats.gachaLuck(f.player)
+f.workspace:SetAttribute("Weather", "starfall")
+near(stats.spawnLuck(f.player) / spawnBefore, events.starfall.luck, "el clima da suerte de destructibles")
+near(stats.gachaLuck(f.player) / gachaBefore, events.starfall.weaponLuck, "los climas raros dan suerte de armas")
+f.workspace:SetAttribute("Weather", "rain")
+near(stats.spawnLuck(f.player) / spawnBefore, events.rain.luck, "la lluvia da su suerte de destructibles")
+near(stats.gachaLuck(f.player) / gachaBefore, 1, "la lluvia no da suerte de armas")
+f.workspace:SetAttribute("Weather", "")
+near(stats.spawnLuck(f.player) / spawnBefore, 1, "despejado: la suerte vuelve a ser la de antes")
+
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)

@@ -2,7 +2,8 @@
 -- atardecer, anochecer) mezcladas entre la anterior y la siguiente; el reloj de Lighting avanza solo, sincronizado con
 -- la hora del servidor para que todos vean lo mismo, y va más lento de día (Config.DayCycle.DayShare). El sol y la luna
 -- son los del Sky de SceneryJapan. Solo actúa en la superficie: DungeonFx lo apaga dentro del lobby y de las mazmorras
--- (que llevan su propia luz) y lo reactiva al volver. Librería con start().
+-- (que llevan su propia luz) y lo reactiva al volver. El clima (client/Weather) mezcla su luz encima de la de la hora
+-- con DayCycle.setWeather. Librería con start().
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -56,6 +57,20 @@ local KEYS = {
 local base: { [string]: any }? = nil
 local active = false
 
+-- Clima (client/Weather lo pone con DayCycle.setWeather): una luz que se mezcla sobre la de la hora con su peso (0 =
+-- nada, 1 = entera). Campos, todos opcionales: `ambient`, `outdoor`, `sun`, `air`, `decay` y `tint` (colores hacia los
+-- que tira, tanto como diga `blend`), `brightness` (multiplica el brillo), `density`, `haze` y `saturation` (valores a
+-- los que llega), `dark` (0 a 1: lo "de noche" que deja el mapa, para que se enciendan los farolillos), `night` (cuánto
+-- de sus colores conserva de noche: la niebla sigue siendo clara) y `clock` (hora
+-- propia: la Aurora o la Lluvia de estrellas son de noche). Con hora propia, el reloj que se ve va hacia ella por el
+-- lado corto, deprisa pero sin saltos, y vuelve igual al acabar: `shift` son las horas que lleva de diferencia.
+local mood: { [string]: any }? = nil
+local moodWeight = 0
+local moodHolds = false -- el clima sigue puesto (false = se está yendo)
+local shift = 0
+local MOOD_COLORS = { "ambient", "outdoor", "sun", "air", "decay" }
+local MOOD_VALUES = { "density", "haze", "saturation" }
+
 -- Hora del reloj (0-24) según la hora del servidor: la parte de día (6 a 18) dura DayShare de la vuelta y la noche el resto.
 local function clockNow(): number
 	local cfg = Config.DayCycle
@@ -89,17 +104,83 @@ local function daylight(clock: number): number
 	return math.clamp((sun + 0.2) / 0.5, 0, 1)
 end
 
--- 0 de día, 1 de noche cerrada: lo usan las luces del mapa (farolillos, linternas) para encenderse al anochecer.
-function DayCycle.night(): number
-	return 1 - daylight(clockNow())
+-- La hora que se ve: la de verdad más lo que la haya movido el clima.
+local function shownClock(): number
+	return (clockNow() + shift) % 24
 end
 
--- La luz de una hora, con los mismos campos que Config.DungeonThemes[id].light más `sun` (nil si aún no hay base).
-function DayCycle.profileAt(clock: number): { [string]: any }?
+-- Acerca la hora que se ve a la del clima (o de vuelta a la de verdad): media vuelta de reloj en lo que dura la
+-- transición del clima como mucho, y frenando al llegar.
+local function chase(dt: number)
+	local goal = if mood and moodHolds then mood.clock else nil
+	if not goal and shift == 0 then
+		return
+	end
+	local missing = ((goal or clockNow()) - shownClock() + 12) % 24 - 12
+	local speed = 12 / Config.Weather.Fade * dt
+	shift += math.clamp(missing * math.min(5 * dt, 1), -speed, speed)
+	if not goal and math.abs(missing) < 0.01 then
+		shift = 0
+	end
+end
+
+-- La luz de la hora con la del clima encima.
+local function withMood(look: { [string]: any }, clock: number): { [string]: any }
+	local weather, weight = mood, moodWeight
+	if not weather or weight <= 0 then
+		return look
+	end
+	look = table.clone(look)
+	-- Los colores del clima se apagan de noche (hasta `night`: 0.4 si no lo dice), salvo los de los climas con hora
+	-- propia: ya están pensados para ella.
+	local dim = weather.night or 0.4
+	local lit = if weather.clock then 1 else dim + (1 - dim) * daylight(clock)
+	local blend = (weather.blend or 0.7) * weight
+	for _, key in MOOD_COLORS do
+		local color = weather[key]
+		if color then
+			look[key] = look[key]:Lerp(Color3.new(color.R * lit, color.G * lit, color.B * lit), blend)
+		end
+	end
+	if weather.tint then
+		look.tint = look.tint:Lerp(weather.tint, blend)
+	end
+	if weather.brightness then
+		-- Lo que oscurece un clima, de noche oscurece menos: la noche ya es oscura y se quedaba todo en negro.
+		local change = (weather.brightness - 1) * weight
+		look.brightness *= 1 + (if change < 0 then change * lit else change)
+	end
+	for _, key in MOOD_VALUES do
+		if weather[key] then
+			look[key] += (weather[key] - look[key]) * weight
+		end
+	end
+	return look
+end
+
+-- 0 de día, 1 de noche cerrada: lo usan las luces del mapa (farolillos, linternas) para encenderse al anochecer, y
+-- también con los climas que oscurecen (tormenta, eclipse).
+function DayCycle.night(): number
+	local night = 1 - daylight(shownClock())
+	if mood and mood.dark then
+		night = math.max(night, mood.dark * moodWeight)
+	end
+	return night
+end
+
+-- Pone (o quita, con nil) la luz del clima y su peso. `holds` = el clima sigue puesto; false mientras se va.
+function DayCycle.setWeather(look: { [string]: any }?, weight: number, holds: boolean?)
+	mood, moodWeight, moodHolds = look, math.clamp(weight, 0, 1), holds == true
+end
+
+local function build(clock: number, weather: boolean): { [string]: any }?
 	if not base then
 		return nil
 	end
 	local look = lookAt(clock)
+	if weather then
+		look = withMood(look, clock)
+	end
 	local air = base.atmosphere
 	return {
 		clock = clock,
@@ -113,9 +194,14 @@ function DayCycle.profileAt(clock: number): { [string]: any }?
 	}
 end
 
--- La luz de ahora.
+-- La luz de una hora, con los mismos campos que Config.DungeonThemes[id].light más `sun` (nil si aún no hay base).
+function DayCycle.profileAt(clock: number): { [string]: any }?
+	return build(clock, false)
+end
+
+-- La luz de ahora, con el clima que haya.
 function DayCycle.profile(): { [string]: any }?
-	return DayCycle.profileAt(clockNow())
+	return build(shownClock(), true)
 end
 
 function DayCycle.setBase(snapshot: { [string]: any })
@@ -127,7 +213,8 @@ function DayCycle.setActive(on: boolean)
 end
 
 function DayCycle.start()
-	RunService.RenderStepped:Connect(function()
+	RunService.RenderStepped:Connect(function(dt)
+		chase(dt)
 		if not active then
 			return
 		end

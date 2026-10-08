@@ -32,5 +32,6 @@ require(script.ObjectInfo).start()
 require(script.ArmorAura).start()
 require(script.PotionFx).start()
 require(script.JapanFx).start()
+require(script.Weather).start() -- después de DayCycle, DungeonFx y JapanFx: mezcla su luz y amaina sus pétalos
 require(script.StationFx).start()
 require(script.HitboxDebug).start() -- opción "Ver hitbox" de Ajustes
