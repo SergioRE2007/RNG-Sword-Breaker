@@ -150,7 +150,7 @@ function Ui.bevel(instance: GuiObject)
 	limit.Parent = base
 	local shade = Instance.new("UIGradient")
 	shade.Rotation = 90
-	shade.Transparency = NumberSequence.new(0.62, 0.35)
+	shade.Transparency = NumberSequence.new(0.86, 0.6)
 	shade.Parent = base
 
 	-- La interfaz ordena el ZIndex globalmente: si a un botón se le sube la capa a mano, su relieve se quedaba
@@ -259,35 +259,13 @@ function Ui.panel(frame: GuiObject, base: Color3, accent: Color3?)
 	end
 end
 
--- Sombra exterior: una copia oscura del marco, caída `drop` px, una capa por debajo (la interfaz ordena el ZIndex
--- globalmente, así que un hijo con menos ZIndex que su padre se pinta detrás). Separa del fondo lo que flota
--- sobre el juego (HUD). Sigue la capa del marco si se le cambia.
-function Ui.shadow(frame: GuiObject, drop: number?): Frame
-	local corner = frame:FindFirstChildOfClass("UICorner")
-	local shadow = Instance.new("Frame")
-	shadow.Name = "Shadow"
-	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-	shadow.Position = UDim2.new(0.5, 0, 0.5, drop or 5)
-	shadow.Size = UDim2.new(1, Ui.STYLE.border * 2, 1, Ui.STYLE.border * 2)
-	shadow.BackgroundColor3 = BLACK
-	shadow.BackgroundTransparency = 0.62
-	shadow.BorderSizePixel = 0
-	shadow.ZIndex = frame.ZIndex - 1
-	shadow.Parent = frame
-	Ui.round(shadow, (if corner then corner.CornerRadius.Offset else 10) + Ui.STYLE.border)
-	frame:GetPropertyChangedSignal("ZIndex"):Connect(function()
-		shadow.ZIndex = frame.ZIndex - 1
-	end)
-	return shadow
-end
-
--- Contador o chip con relieve: fondo del color, labio, borde negro y sombra exterior.
+-- Contador o chip con relieve: fondo del color, labio y borde negro. Sin sombra exterior: el usuario mandó
+-- quitar las sombras de toda la interfaz (ventanas y HUD).
 function Ui.pill(frame: GuiObject, color: Color3, radius: number?)
 	frame.BackgroundColor3 = color
 	Ui.round(frame, radius or 14)
 	Ui.bevel(frame)
 	Ui.stroke(frame, BLACK, Ui.STYLE.border)
-	Ui.shadow(frame)
 end
 
 -- Marca un botón (pestaña, opción) como elegido: borde blanco. El primer UIStroke directo del botón es su borde.
@@ -849,23 +827,6 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	Ui.stroke(frame, BLACK, 5)
 	Ui.gradient(frame, Color3.fromRGB(60, 66, 112), Color3.fromRGB(22, 24, 46), 90)
 
-	-- Sombra detrás de la ventana: va aparte (los hijos se pintan encima) y la sigue.
-	local shadow = Instance.new("Frame")
-	shadow.Name = name .. "Shadow"
-	shadow.AnchorPoint = frame.AnchorPoint
-	shadow.Position = frame.Position + UDim2.fromOffset(6, 9)
-	shadow.Size = frame.Size
-	shadow.BackgroundColor3 = BLACK
-	shadow.BackgroundTransparency = 0.4
-	shadow.BorderSizePixel = 0
-	shadow.Visible = false
-	shadow.ZIndex = 0
-	shadow.Parent = Ui.screen()
-	Ui.round(shadow, 18)
-	frame:GetPropertyChangedSignal("Visible"):Connect(function()
-		shadow.Visible = frame.Visible
-	end)
-
 	-- Bisel: una línea clara por dentro del borde.
 	local rim = Instance.new("Frame")
 	rim.Name = "Rim"
@@ -879,8 +840,6 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 
 	local scale = Instance.new("UIScale")
 	scale.Parent = frame
-	local shadowScale = Instance.new("UIScale")
-	shadowScale.Parent = shadow
 	local camera = workspace.CurrentCamera
 	local fitted = 1
 	local function fit()
@@ -890,14 +849,13 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 		-- Hasta un 22 % más grande que su tamaño de diseño si la pantalla da para ello.
 		fitted = math.clamp(math.min((view.X / 2 - 175) / (size.X / 2 + 100), (view.Y - 220) / size.Y), 0.45, MAX_WINDOW_SCALE)
 		scale.Scale = fitted
-		shadowScale.Scale = fitted
 	end
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 	fit()
 	-- Al abrirse entra desde abajo y al cerrarse baja (Ui.open / Ui.close).
 	addMotion(frame, MOTION.window, scale, function()
 		return fitted
-	end, shadow, shadowScale)
+	end)
 
 	local header = Instance.new("Frame")
 	header.Name = "Header"

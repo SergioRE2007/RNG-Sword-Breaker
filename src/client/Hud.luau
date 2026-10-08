@@ -209,7 +209,6 @@ function Hud.start()
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = button
 		entry[4](iconBox, entry[3])
-		Ui.shadow(button)
 		local label = Ui.label(button, 26)
 		label.Position = UDim2.fromOffset(74, 0)
 		label.Size = UDim2.new(1, -80, 1, -8) -- centrado en la cara, sin el labio
@@ -245,7 +244,6 @@ function Hud.start()
 	Ui.round(statsBox, 12)
 	Ui.stroke(statsBox, BLACK, 3)
 	Ui.panel(statsBox, Color3.fromRGB(46, 40, 96))
-	Ui.shadow(statsBox)
 	-- Las filas van en un marco de dentro: el relleno y la lista no deben mover el brillo ni el canto del panel.
 	local statsContent = Instance.new("Frame")
 	statsContent.Name = "Content"
@@ -343,7 +341,6 @@ function Hud.start()
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = item
 		entry[4](iconBox)
-		Ui.shadow(item)
 		local label = Ui.label(item, 18)
 		label.AnchorPoint = Vector2.new(0.5, 1)
 		label.Position = UDim2.new(0.5, 0, 1, -5)

@@ -133,7 +133,6 @@ local function buildUi()
 	Ui.round(decision, 14)
 	Ui.stroke(decision, BLACK, 4)
 	Ui.panel(decision, Color3.fromRGB(44, 40, 90))
-	Ui.shadow(decision)
 	-- Entra como las ventanas pequeñas; se cierra al instante (su Visible decide si se puede martillar).
 	local decisionScale = Instance.new("UIScale")
 	decisionScale.Parent = decision
