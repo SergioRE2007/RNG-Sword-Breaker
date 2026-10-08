@@ -2,6 +2,7 @@
 -- Solo presentación: los valores ya vienen calculados del servidor. Los carteles se reciclan (pool) y los mueve un
 -- único bucle que solo corre mientras hay alguno vivo; con demasiados a la vez se recicla el más viejo.
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 
 local Performance = require(script.Parent.Performance)
 
@@ -134,7 +135,8 @@ local function build(): Entry
 	layout.Parent = holder
 
 	local label = Instance.new("TextLabel")
-	label.AutomaticSize = Enum.AutomaticSize.X
+	-- El ancho se pone a mano en `spawn`: con AutomaticSize bajo un UIScale que cambia, la etiqueta reutilizada a veces
+	-- quedaba más ancha que su texto y el logo de la moneda se veía separado del número.
 	label.Size = UDim2.fromScale(0, 1)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.FredokaOne
@@ -293,6 +295,7 @@ function FloatText.spawn(kind: string, position: Vector3, text: string, opts: { 
 
 	entry.label.Text = text
 	entry.label.TextSize = style.size
+	entry.label.Size = UDim2.new(0, TextService:GetTextSize(text, style.size, Enum.Font.FredokaOne, Vector2.new(4000, 200)).X + 2, 1, 0)
 	entry.shine.Text = text
 	entry.shine.TextSize = style.size
 	entry.shine.Visible = style.shine ~= nil
