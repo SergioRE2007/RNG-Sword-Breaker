@@ -141,6 +141,9 @@ function Ui.bevel(instance: GuiObject)
 	base.Position = UDim2.new(0.5, 0, 1, -2)
 	base.Size = UDim2.new(1, -6, Ui.STYLE.lip, 0)
 	base.BackgroundColor3 = BLACK
+	-- Invisible: el usuario mandó quitar la franja oscura de debajo de los botones. La pieza se queda porque
+	-- Ui.pressable la usa para saber qué es un botón con relieve.
+	base.BackgroundTransparency = 1
 	base.BorderSizePixel = 0
 	base.Parent = instance
 	Ui.round(base, math.max(radius - 5, 2))
@@ -148,10 +151,6 @@ function Ui.bevel(instance: GuiObject)
 	limit.MinSize = Vector2.new(0, 3)
 	limit.MaxSize = Vector2.new(math.huge, 7)
 	limit.Parent = base
-	local shade = Instance.new("UIGradient")
-	shade.Rotation = 90
-	shade.Transparency = NumberSequence.new(0.86, 0.6)
-	shade.Parent = base
 
 	-- La interfaz ordena el ZIndex globalmente: si a un botón se le sube la capa a mano, su relieve se quedaba
 	-- por debajo y se veía plano. Las piezas del relieve (y las de Ui.pressable) siguen la capa del botón.
@@ -885,16 +884,6 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	fade.Rotation = 90
 	fade.Transparency = NumberSequence.new(0.68, 0.95)
 	fade.Parent = gloss
-	-- Franja oscura bajo la cabecera, para separarla del cuerpo.
-	local edge = Instance.new("Frame")
-	edge.Name = "Edge"
-	edge.AnchorPoint = Vector2.new(0, 1)
-	edge.Position = UDim2.fromScale(0, 1)
-	edge.Size = UDim2.new(1, 0, 0, 4)
-	edge.BackgroundColor3 = BLACK
-	edge.BackgroundTransparency = 0.5
-	edge.BorderSizePixel = 0
-	edge.Parent = header
 
 	-- Icono opcional a la izquierda del título (mochila, engranaje...), dibujado con marcos.
 	if icon then
@@ -947,19 +936,6 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	Ui.stroke(body, BLACK, 4)
 	Ui.gradient(body, Color3.fromRGB(66, 74, 124), Color3.fromRGB(30, 33, 64), 90)
 	Ui.pattern(body)
-	-- Sombra de la cabecera sobre el cuerpo: da la sensación de capas (la cabecera "encima").
-	local shade = Instance.new("Frame")
-	shade.Name = "HeaderShade"
-	shade.Size = UDim2.new(1, 0, 0, 26)
-	shade.BackgroundColor3 = BLACK
-	shade.BorderSizePixel = 0
-	shade.Parent = body
-	Ui.round(shade, 12)
-	local shadeFade = Instance.new("UIGradient")
-	shadeFade.Rotation = 90
-	shadeFade.Transparency = NumberSequence.new(0.55, 1)
-	shadeFade.Parent = shade
-
 	windows[name] = frame
 	return frame, body
 end
