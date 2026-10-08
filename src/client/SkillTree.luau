@@ -345,10 +345,10 @@ function SkillTree.start()
 	local hintLimit = Instance.new("UITextSizeConstraint")
 	hintLimit.MaxTextSize = 16
 	hintLimit.Parent = hint
-	hint.Text = `<font color="{Ui.SOFT}">Arrastra para moverte · rueda o botones para acercar</font>`
+	hint.Text = `<font color="{Ui.SOFT}">Arrastra para moverte · rueda para acercar</font>`
 	hint.ZIndex = Z_FRONT
 
-	-- Una columna del HUD reserva espacio para resumen, zoom y acciones.
+	-- Con Mejoras abierta el resto del HUD se esconde: solo quedan las estadísticas, "Mejorar todo" y la X.
 	local actions = Instance.new("Frame")
 	actions.Name = "UpgradeActions"
 	actions.AnchorPoint = Vector2.new(1, 1)
@@ -357,27 +357,23 @@ function SkillTree.start()
 	actions.BackgroundTransparency = 1
 	actions.Visible = false
 	actions.Parent = Ui.hud()
-	local actionLayout = Instance.new("UIListLayout")
-	actionLayout.FillDirection = Enum.FillDirection.Horizontal
-	actionLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	actionLayout.Padding = UDim.new(0.02, 0)
-	actionLayout.Parent = actions
 	local buyAll = Ui.button(actions, "Mejorar todo", Ui.COLORS.green)
 	buyAll.Name = "BuyAll"
-	buyAll.LayoutOrder = 1
-	buyAll.Size = UDim2.fromScale(0.62, 1)
-	buyAll.TextSize = 22
+	buyAll.Size = UDim2.fromScale(1, 1)
+	buyAll.TextSize = 24
 	buyAll.ZIndex = Z_FRONT
 	buyAll.Activated:Connect(function()
 		Remotes.BuyAllUpgrades:FireServer()
 	end)
 
-	local close = Ui.button(actions, "Cerrar", Ui.COLORS.red)
-	close.Name = "Close"
-	close.LayoutOrder = 2
-	close.Size = UDim2.fromScale(0.36, 1)
-	close.TextSize = 22
+	local close = Ui.button(Ui.hud(), "X", Ui.COLORS.red)
+	close.Name = "UpgradeClose"
+	close.AnchorPoint = Vector2.new(1, 0)
+	close.Position = UDim2.new(1, -14, 0, 14)
+	close.Size = UDim2.fromOffset(64, 58)
+	close.TextSize = 32
 	close.ZIndex = Z_FRONT
+	close.Visible = false
 	close.Activated:Connect(function()
 		Ui.close(overlay)
 	end)
@@ -385,7 +381,6 @@ function SkillTree.start()
 	-- Mover y acercar -----------------------------------------------------------------------
 	local offset = Vector2.zero
 	local zoom = ZOOM_START
-	local extent = START_RADIUS -- distancia del centro al nodo más lejano; se mide al crear los nodos
 
 	local function place()
 		canvas.Position = UDim2.new(0.5, offset.X, 0.5, offset.Y)
@@ -400,48 +395,6 @@ function SkillTree.start()
 		place()
 	end
 
-	-- El HUD escala este contenedor igual que las estadísticas.
-	local zoomControls = Instance.new("Frame")
-	zoomControls.Name = "UpgradeControls"
-	zoomControls.AnchorPoint = Vector2.new(1, 1)
-	zoomControls.Position = UDim2.new(1, -14, 1, -86)
-	zoomControls.Size = UDim2.fromOffset(300, 58)
-	zoomControls.BackgroundTransparency = 1
-	zoomControls.Visible = false
-	zoomControls.Parent = Ui.hud()
-	local controlLayout = Instance.new("UIListLayout")
-	controlLayout.FillDirection = Enum.FillDirection.Horizontal
-	controlLayout.Padding = UDim.new(0.02, 0)
-	controlLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	controlLayout.Parent = zoomControls
-
-	local function zoomButton(text: string, order: number, action: () -> ())
-		local item = Ui.button(zoomControls, text, Ui.COLORS.blue)
-		item.LayoutOrder = order
-		item.Size = UDim2.fromScale(0.235, 1)
-		item.TextSize = if #text > 1 then 20 else 34
-		item.ZIndex = Z_FRONT
-		item.Activated:Connect(action)
-		return item
-	end
-	zoomButton("Centrar", 1, function()
-		offset = Vector2.zero
-		zoom = ZOOM_START
-		place()
-	end).Name = "Center"
-	-- Aleja lo justo para que quepa la galaxia entera, dejando sitio a los contadores y a los botones.
-	zoomButton("Ver todo", 4, function()
-		local view = overlay.AbsoluteSize
-		offset = Vector2.new(0, 30)
-		zoom = math.clamp(math.min(view.X - 620, view.Y - 250) / (2 * extent), ZOOM_MIN, ZOOM_MAX)
-		place()
-	end).Name = "Fit"
-	zoomButton("-", 2, function()
-		setZoom(zoom / 1.3, Vector2.zero)
-	end).Name = "ZoomOut"
-	zoomButton("+", 3, function()
-		setZoom(zoom * 1.3, Vector2.zero)
-	end).Name = "ZoomIn"
 
 	local dragging = false
 	local last = Vector3.zero
@@ -659,7 +612,6 @@ function SkillTree.start()
 			nodes[name], lines[name], ends[name] = {}, {}, {}
 			for level = 1, upgrade.maxLevel do
 				local milestone = level % 5 == 0 or level == upgrade.maxLevel
-				extent = math.max(extent, points[level].Magnitude + HEX)
 				local fromPoint = if level == 1 then Vector2.zero else points[level - 1]
 				ends[name][level] = { from = fromPoint, to = points[level] }
 				lines[name][level] = line(canvas, fromPoint, points[level])
@@ -781,19 +733,29 @@ function SkillTree.start()
 		end
 	end
 
+	-- Lo que se esconde del HUD mientras esta pantalla está abierta, para devolverlo al cerrarla.
+	local hidden: { GuiObject } = {}
 	overlay:GetPropertyChangedSignal("Visible"):Connect(function()
-		-- Las estadísticas de abajo a la derecha solo se ven mientras esta pantalla está abierta.
 		local dock = Ui.hud():FindFirstChild("StatsDock")
+		if overlay.Visible then
+			for _, item in Ui.hud():GetChildren() do
+				if item:IsA("GuiObject") and item.Visible and item ~= dock then
+					item.Visible = false
+					table.insert(hidden, item)
+				end
+			end
+		else
+			for _, item in hidden do
+				item.Visible = true
+			end
+			table.clear(hidden)
+		end
+		-- Las estadísticas de abajo a la derecha solo se ven mientras esta pantalla está abierta.
 		if dock then
 			dock.Visible = overlay.Visible
 		end
-		zoomControls.Visible = overlay.Visible
 		actions.Visible = overlay.Visible
-		-- Las pociones activas ocupan ese mismo rincón: se esconden mientras las estadísticas están a la vista.
-		local potions = Ui.hud():FindFirstChild("Potions")
-		if potions then
-			potions.Visible = not overlay.Visible
-		end
+		close.Visible = overlay.Visible
 		if overlay.Visible then
 			refresh()
 			if not animation then
