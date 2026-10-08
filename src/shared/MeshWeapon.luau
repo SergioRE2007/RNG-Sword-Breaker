@@ -102,8 +102,7 @@ local function template(name: string)
 	pending[name] = ready
 	local ok, result = pcall(buildTemplate, name)
 	pending[name] = nil
-	ready:Fire(ok, result)
-	ready:Destroy()
+	ready:Fire(ok, result) -- sin Destroy: con señales diferidas cortaría a quien aún espera
 	if not ok then error(result) end
 	return result
 end
