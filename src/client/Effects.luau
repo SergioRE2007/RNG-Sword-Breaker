@@ -1,4 +1,4 @@
--- Efectos visuales locales: números de daño, barra de vida, temblor y escombros con físicas.
+-- Efectos visuales locales: números de daño (los anima client/FloatText), barra de vida, temblor y escombros con físicas.
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
@@ -10,6 +10,7 @@ local ObjectModel = require(ReplicatedStorage.Shared.ObjectModel)
 local ObjectSpec = require(ReplicatedStorage.Shared.ObjectSpec)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local FloatText = require(script.Parent.FloatText)
 local ObjectBreak = require(script.Parent.ObjectBreak)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
@@ -28,38 +29,6 @@ local rng = Random.new()
 local healthBar, healthFill, healthLabel
 local healthConnection
 local healthToken = 0
-
--- Texto que sube y se apaga. `emphasis` (1 si no se pone) lo agranda y lo deja más rato: para lo importante.
-local function popup(position: Vector3, text: string, color: Color3, emphasis: number?)
-	local grow = emphasis or 1
-	local anchor = Instance.new("Attachment")
-	anchor.WorldPosition = position + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1))
-	anchor.Parent = workspace.Terrain
-
-	local gui = Instance.new("BillboardGui")
-	gui.Adornee = anchor
-	gui.Size = UDim2.fromOffset(160 + 200 * (grow - 1), 40 * grow)
-	gui.AlwaysOnTop = true
-	gui.Parent = anchor
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = color
-	label.TextStrokeTransparency = if grow > 1 then 0 else 0.3
-	label.Font = Enum.Font.FredokaOne
-	label.TextSize = 24 * grow
-	label.Parent = gui
-
-	local life = 0.8 * grow
-	local info = TweenInfo.new(life, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(gui, info, { StudsOffset = Vector3.new(0, 4, 0) }):Play()
-	-- Lo importante se queda a la vista casi todo el rato y se apaga al final.
-	local fade = if grow > 1 then TweenInfo.new(life * 0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, life * 0.65) else info
-	TweenService:Create(label, fade, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
-	Debris:AddItem(anchor, life + 0.1)
-end
 
 local function createHealthBar()
 	healthBar = Instance.new("BillboardGui")
@@ -188,7 +157,13 @@ function Effects.start()
 	createHealthBar()
 
 	Remotes.Hit.OnClientEvent:Connect(function(hitter: Player, part: BasePart?, position: Vector3, damage: number)
-		popup(position, Format.short(damage), Color3.fromRGB(255, 255, 255))
+		-- Cajas: número compacto; enemigos: de impacto, más grande si es el golpe que lo remata (vida que le quedaba).
+		local box = part ~= nil and CollectionService:HasTag(part, "Destructible")
+		FloatText.spawn(if box then "box" else "enemy", position, Format.short(damage), {
+			target = if part and part.Parent then part else nil,
+			final = part ~= nil and damage >= (part:GetAttribute("HP") or math.huge),
+			other = hitter ~= player,
+		})
 		Sfx.play("hit", if hitter == player then 1 else 0.35)
 		if part and part.Parent then
 			-- Los enemigos de las mazmorras se mueven solos (no anclados): no se sacuden.
@@ -222,16 +197,19 @@ function Effects.start()
 			-- Los números salen a la altura de los ojos aunque el objeto sea altísimo.
 			local top = cframe.Position + Vector3.new(0, math.min(size.Y / 2 + 1, POPUP_HEIGHT - size.Y / 2), 0)
 			if reward > 0 then
-				popup(top, "+" .. Format.short(reward), Color3.fromRGB(255, 215, 70))
+				FloatText.spawn("coin", top, "+" .. Format.short(reward))
 			end
 			if gems > 0 then
-				popup(top + Vector3.new(0, 2, 0), `+{Format.short(gems)} gemas`, Color3.fromRGB(190, 110, 255))
+				FloatText.spawn("gem", top + Vector3.new(0, 2, 0), `+{Format.short(gems)} gemas`)
 			end
 			-- Tiradas de arma que ha dado: se anuncian cuando el objeto tenía algo de especial (varias tiradas, rareza
 			-- o buen tamaño); las de un objeto corriente ya se ven en el panel de arriba.
 			if info and info.rolls > 0 and (info.rolls > 1 or info.scale >= ROLL_POPUP_SCALE or quality > 1) then
 				local rolls = if info.rolls == 1 then "1 tirada" else `¡{info.rolls} tiradas!`
-				popup(top + Vector3.new(0, 4.5, 0), `{rolls}  ·  suerte x{Format.multiplier(info.luck)}`, ObjectSpec.rarity(quality).color:Lerp(Color3.new(1, 1, 1), 0.25), if quality >= 4 or info.rolls > 1 then 1.5 else 1.15)
+				FloatText.spawn("notice", top + Vector3.new(0, 4.5, 0), `{rolls}  ·  suerte x{Format.multiplier(info.luck)}`, {
+					color = ObjectSpec.rarity(quality).color:Lerp(Color3.new(1, 1, 1), 0.25),
+					emphasis = if quality >= 4 or info.rolls > 1 then 1.5 else 1.15,
+				})
 			end
 			if quality >= 5 then
 				Sfx.play("win")

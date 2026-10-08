@@ -428,4 +428,15 @@ local stone, collision = rocks:FindFirstChild("Stone"), rocks:FindFirstChild("Ma
 near((stone.CFrame.Position - collision.CFrame.Position).Magnitude, 0, "rocas: colisión alineada a escala tres")
 near((stone.Size - collision.Size).Magnitude, 0, "rocas: tamaño de colisión")
 
+-- Números flotantes: pop de impacto, apagado al final y cajas más cortas que enemigos.
+local float = f.load("src/client/FloatText")
+local still = { life = 1, scale = 1, drift = 0, rotation = 0 }
+local styles = float.STYLES
+near(float.sample(styles.enemy, 0, still), 0.7, "daño sale pequeño")
+equal(float.sample(styles.enemy, styles.enemy.popIn, still) > 1, true, "pop de impacto")
+equal(select(5, float.sample(styles.enemy, styles.enemy.life, still)), 1, "daño apagado al final")
+equal(select(5, float.sample(styles.coin, 0.3, still)), 0, "moneda visible tras el pop")
+equal(select(3, float.sample(styles.coin, 0, still)) < 0, true, "moneda sale por debajo")
+equal(styles.box.life < styles.enemy.life, true, "caja más corta que enemigo")
+
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)
