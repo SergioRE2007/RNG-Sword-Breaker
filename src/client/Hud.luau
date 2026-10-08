@@ -337,8 +337,8 @@ function Hud.start()
 		local iconBox = Instance.new("Frame")
 		iconBox.Name = "Icon"
 		iconBox.AnchorPoint = Vector2.new(0.5, 0)
-		iconBox.Position = UDim2.new(0.5, 0, 0, -2)
-		iconBox.Size = UDim2.fromOffset(76, 76)
+		iconBox.Position = UDim2.new(0.5, 0, 0, 2)
+		iconBox.Size = UDim2.fromOffset(68, 68) -- el logo acaba justo encima del nombre
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = item
 		entry[4](iconBox)
