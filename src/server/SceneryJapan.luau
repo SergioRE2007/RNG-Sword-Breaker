@@ -526,7 +526,12 @@ function SceneryJapan.start()
 	end)
 
 	-- Horizonte: el monte Fuji y cordilleras moradas entre la niebla rosada, y nubes de atardecer.
-	PropModel.place(folder, "Fuji", CFrame.new(Vector3.new(-760, -4, -820)), 3.2, { StoneDark = Color3.fromRGB(150, 118, 190), Pink = Color3.fromRGB(255, 160, 190), White = Color3.fromRGB(255, 242, 248) })
+	local fuji = PropModel.place(folder, "Fuji", CFrame.new(Vector3.new(-760, -4, -820)), 3.2, { StoneDark = Color3.fromRGB(150, 118, 190), Pink = Color3.fromRGB(255, 160, 190), White = Color3.fromRGB(255, 242, 248) })
+	if fuji then
+		-- Dónde está la cima, para la erupción del clima volcánico (client/WeatherFx): el cliente puede no tener el modelo.
+		local center, size = fuji:GetBoundingBox()
+		workspace:SetAttribute("VolcanoCrater", center.Position + Vector3.new(0, size.Y / 2, 0))
+	end
 	ring(11, 880, 0, function(position)
 		local side = Vector3.new(-position.Z, 0, position.X).Unit
 		for peak = -2, 2 do

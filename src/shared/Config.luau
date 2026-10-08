@@ -18,6 +18,7 @@ Config.Test = {
 	AllPotions = 2, -- copias de cada poción (Config.Potions) en la mochila al entrar; 0 = ninguna. InfiniteMoney no las hace infinitas, para poder probar que se gastan
 	RevealSlow = 1, -- por cuánto se alargan los tiempos de la presentación de las tiradas (client/RollReveal): con 4 se ve a cámara lenta para revisarla en capturas
 	PartyBots = 0, -- compañeros "fantasma" que se unen a tu grupo de mazmorra (cuentan para el tamaño y el escalado, no pelean): para probar con un solo jugador
+	Weather = "", -- id de un clima de Config.Weather.Events para tenerlo puesto al entrar ("" = el que toque por la hora)
 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
@@ -253,6 +254,36 @@ Config.DayCycle = { Length = 720, DayShare = 2 / 3 }
 
 Config.PlotLighting = { Height = 18, Offset = 0.18, Brightness = 1, Range = 55 }
 Config.Water = { Depth = 6, Transparency = 0.35, WaveHeight = 0.12, WaveSpeed = 0.9 }
+
+-- CLIMA (server/Weather y client/Weather). Cada `Interval` segundos empieza un evento de clima, el mismo en todos los
+-- servidores (sale de la hora), que dura `Duration` (o el "duration" del evento); el resto del tramo está despejado.
+-- Se tira del más raro al más común de `Order` ("rarity" = 1 entre N por tramo; el primero es el de relleno), así que
+-- lo que enseñan los carteles es la probabilidad real (WeatherInfo.chance). Mientras dura, todos los jugadores tienen
+-- "luck" (suerte de destructibles: entra por Stats.spawnLuck, como la poción de cajas) y, los más raros, "weaponLuck"
+-- (suerte de armas: Stats.gachaLuck). "tier" = posición en Config.RarityTiers (nombre y color de su rareza en los
+-- carteles) y "color" el del evento. Lo que se ve de cada uno (luz, cielo, partículas) está en client/WeatherDefs.
+-- Un clima nuevo = una entrada aquí, su id en `Order` (por rareza) y su aspecto en WeatherDefs.
+Config.Weather = {
+	Interval = 1800,
+	Duration = 600,
+	Fade = 8, -- segundos que tardan la luz y las partículas en entrar y en irse
+	LowTime = 60, -- el reloj del HUD se pone rojo y late cuando quedan menos segundos
+	Order = { "rain", "petals", "fog", "snow", "storm", "goldenRain", "volcanic", "aurora", "bloodMoon", "eclipse", "cosmic", "starfall" },
+	Events = {
+		rain = { name = "Lluvia", desc = "Llueve sobre toda la isla.", rarity = 1, tier = 1, luck = 2, color = Color3.fromRGB(90, 150, 235) },
+		petals = { name = "Vendaval de sakura", desc = "El viento arranca los pétalos de todos los cerezos.", rarity = 3, tier = 1, luck = 2, color = Color3.fromRGB(255, 140, 190) },
+		fog = { name = "Niebla", desc = "Una bruma espesa se traga el bosque.", rarity = 4, tier = 1, luck = 2.5, color = Color3.fromRGB(190, 205, 225) },
+		snow = { name = "Nevada", desc = "Nieva en silencio sobre los tejados.", rarity = 6, tier = 2, luck = 3, color = Color3.fromRGB(160, 225, 255) },
+		storm = { name = "Tormenta eléctrica", desc = "Diluvia y caen rayos por todo el mapa.", rarity = 10, tier = 2, luck = 4, color = Color3.fromRGB(255, 225, 90) },
+		goldenRain = { name = "Lluvia dorada", desc = "Llueve con sol: gotas de oro y un arcoíris.", rarity = 16, tier = 3, luck = 6, color = Color3.fromRGB(255, 200, 60) },
+		volcanic = { name = "Erupción del Fuji", desc = "El Fuji despierta: cielo rojo, ceniza y ascuas.", rarity = 30, tier = 3, luck = 10, color = Color3.fromRGB(255, 110, 50) },
+		aurora = { name = "Aurora", desc = "Cintas de luz bailan en el cielo de la noche.", rarity = 50, tier = 4, luck = 15, color = Color3.fromRGB(90, 240, 170) },
+		bloodMoon = { name = "Luna de sangre", desc = "Una luna enorme tiñe la noche de rojo.", rarity = 80, tier = 4, luck = 20, color = Color3.fromRGB(230, 50, 60) },
+		eclipse = { name = "Eclipse", desc = "La luna tapa el sol: se hace de noche y solo queda la corona.", rarity = 150, tier = 5, luck = 30, weaponLuck = 1.5, color = Color3.fromRGB(150, 130, 235) },
+		cosmic = { name = "Tormenta cósmica", desc = "El cielo se abre y se ve el espacio.", rarity = 300, tier = 6, luck = 50, weaponLuck = 2, color = Color3.fromRGB(190, 90, 255) },
+		starfall = { name = "Lluvia de estrellas", desc = "El cielo entero se enciende y las estrellas caen sobre la isla.", rarity = 500, tier = 7, luck = 100, weaponLuck = 3, color = Color3.fromRGB(130, 225, 255) },
+	},
+}
 
 -- Mapa: un hub circular en el centro y las parcelas en círculo a su alrededor.
 Config.Plot = {

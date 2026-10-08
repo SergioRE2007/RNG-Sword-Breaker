@@ -5,15 +5,16 @@ local Chance = {}
 local rng = Random.new()
 local STEP = 1e-6
 
--- true con probabilidad p.
-function Chance.roll(p: number): boolean
+-- true con probabilidad p. Con `random` tira de ese generador (para tiradas con semilla, como la del clima de cada tramo).
+function Chance.roll(p: number, random: Random?): boolean
+	local source = random or rng
 	while p < STEP do
-		if rng:NextNumber() >= STEP then
+		if source:NextNumber() >= STEP then
 			return false
 		end
 		p /= STEP
 	end
-	return rng:NextNumber() < p
+	return source:NextNumber() < p
 end
 
 return Chance

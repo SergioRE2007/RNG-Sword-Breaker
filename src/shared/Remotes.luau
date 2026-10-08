@@ -48,6 +48,7 @@ local NAMES = {
 	"PartyState", -- servidor -> cliente: ({ room, mine, parties }) la sala que miras, tu grupo (zona, líder, miembros, listos, opciones, estado) y los grupos abiertos de esa sala; nil = nada que enseñar
 	"PartyInvite", -- servidor -> cliente: (userId del líder, nombre del líder, zona) te invitan a un grupo de mazmorra
 	"UsePotion", -- cliente -> servidor: (familia de Config.Potions.Families, tier) usar una poción del inventario; el servidor decide si activa, mejora, suma tiempo o rechaza
+	"AdminWeather", -- cliente -> servidor: pasar al siguiente clima de Config.Weather.Order (y luego a despejado); modo admin de pruebas, solo en Studio
 }
 
 local Remotes = {}

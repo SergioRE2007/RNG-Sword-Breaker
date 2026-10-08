@@ -4,6 +4,7 @@ local Config = require(script.Parent.Config)
 local Permanent = require(script.Parent.Permanent)
 local PotionInfo = require(script.Parent.PotionInfo)
 local Upgrades = require(script.Parent.Upgrades)
+local WeatherInfo = require(script.Parent.WeatherInfo)
 
 local Stats = {}
 
@@ -103,6 +104,13 @@ function Stats.potion(player: Player, family: string): number
 	return if tier > 0 then PotionInfo.multiplier(family, tier) else 1
 end
 
+-- Clima en curso (Config.Weather; server/Weather lo publica en workspace, el mismo para todos): por cuánto multiplica
+-- "luck" (suerte de destructibles, en Stats.spawnLuck) o "weaponLuck" (suerte de armas, en Stats.gachaLuck). 1 si está
+-- despejado o ese clima no la da.
+function Stats.weather(stat: string): number
+	return WeatherInfo.multiplier(stat)
+end
+
 local function upgrade(player: Player, name: string): number
 	return Upgrades.value(name, player:GetAttribute("Upgrade_" .. name) or 0)
 end
@@ -153,9 +161,10 @@ end
 -- Suerte de armas propia del jugador: multiplica la del objeto que da la tirada (ObjectSpec.luck), que es de donde
 -- sale casi toda, y es la única que mejora el metal y el tamaño. No hay mejora que la compre (la de suerte es solo
 -- para los destructibles: decidido por el usuario), y el rasgo, los artefactos y la armadura tampoco entran aquí:
--- cuentan en Stats.luck. Aquí van solo las fuentes directas: los renacimientos y la poción de suerte de armas.
+-- cuentan en Stats.luck. Aquí van solo las fuentes directas: los renacimientos, la poción de suerte de armas y los
+-- climas más raros.
 function Stats.gachaLuck(player: Player): number
-	return Stats.rebirthBonus(player, "gachaLuck") * Stats.potion(player, "weaponLuck")
+	return Stats.rebirthBonus(player, "gachaLuck") * Stats.potion(player, "weaponLuck") * Stats.weather("weaponLuck")
 end
 
 -- Segundos por tirada gratis del gacha (solo con Config.Gacha.FreeRoll): la mejora "Velocidad de aparición"
@@ -180,9 +189,9 @@ end
 -- Poción de suerte de cajas: multiplica la probabilidad con la que aparecen los objetos de la parcela, tanto la de su tipo
 -- (server/Destructibles la suma a Stats.luck al elegirlo) como la de su rareza y su tamaño (en Stats.objectLuck). No toca
 -- la suerte de las armas (Stats.gachaLuck), los accesorios ni los rasgos y grados: las armas solo ganan de rebote, porque
--- salen objetos mejores.
+-- salen objetos mejores. El clima (Stats.weather) da esta misma suerte a todos mientras dura.
 function Stats.spawnLuck(player: Player): number
-	return Stats.potion(player, "boxLuck")
+	return Stats.potion(player, "boxLuck") * Stats.weather("luck")
 end
 
 -- Monedas: artefactos, y el rasgo y el grado de la espada equipada.

@@ -14,6 +14,17 @@ local JapanFx = {}
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local CRITTER_RANGE = 240
 
+-- Pétalos y motas de siempre, con su ritmo normal: el clima los amaina (JapanFx.setCalm).
+local drifting: { [ParticleEmitter]: number } = {}
+
+-- Amaina los pétalos y las motas que caen siempre: 0 = como siempre, 1 = ninguno. Lo usa client/Weather mientras
+-- llueve, nieva o cae ceniza, para que no se mezclen con lo que cae del clima.
+function JapanFx.setCalm(amount: number)
+	for emitter, rate in drifting do
+		emitter.Rate = rate * (1 - math.clamp(amount, 0, 1))
+	end
+end
+
 local function emitterPart(name: string): Part
 	local anchor = Instance.new("Part")
 	anchor.Name = name
@@ -142,9 +153,11 @@ function JapanFx.start()
 
 	-- Una nube de pétalos y motas que acompaña a la cámara: cae desde arriba y se renueva sola.
 	local sky = emitterPart("JapanSky")
-	pink().Parent = sky
 	local low = emitterPart("JapanLow")
-	motes().Parent = low
+	for emitter, anchor in { [pink()] = sky, [motes()] = low } do
+		drifting[emitter] = emitter.Rate
+		emitter.Parent = anchor
+	end
 
 	-- Luciérnagas e incienso donde el servidor puso las marcas.
 	for tag, make in { FireflySpot = fireflies, SmokeSpot = incense, MagicMist = magicMist } do
