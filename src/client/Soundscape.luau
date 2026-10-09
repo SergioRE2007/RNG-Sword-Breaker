@@ -20,7 +20,7 @@ local AMBIENTS = {
 	day = { 124805672014218, 2.3 },
 	-- La noche está compuesta con tools/sonidos/componer.mjs (grillos, agua, bambú y búho sueltos sobre una brisa
 	-- hecha por código): el ambiente pedido de una vez le sonaba saturado al usuario. Muy bajo, pedido por él.
-	night = { 137642913626647, 0.3 },
+	night = { 137642913626647, 0.12 },
 	lobby = { 103233526142547, 0.4 },
 	dungeon = { 116580300543207, 0.31 },
 }
