@@ -1,0 +1,7 @@
+{
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"mpg123-decoder": "^1.0.3"
+	}
+}

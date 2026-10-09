@@ -23,7 +23,8 @@ local DISC = "rbxasset://textures/whiteCircle.png" -- disco liso
 local GLOW = "rbxasset://textures/glow.png" -- resplandor con rayos
 
 -- Audios propios (hechos con tools/sonidos): el ambiente en bucle de cada clima y los golpes sueltos, con varias
--- grabaciones de las que sale una cualquiera.
+-- grabaciones de las que sale una cualquiera. Los bucles vienen grabados a volúmenes muy distintos (los pétalos y
+-- la niebla, diez veces más flojos que la tormenta): el `volume` de cada capa ya lo tiene en cuenta.
 local function audio(id: number): string
 	return string.format("rbxassetid://%d", id)
 end
@@ -73,7 +74,7 @@ WeatherDefs.events = {
 				speed = { 0.5, 1.5 }, spread = { 0, 180 }, accel = Vector3.new(2, 0, 1), rot = { 0, 360 }, spin = { -5, 5 },
 				size = { { 0, 14 }, { 1, 26 } }, alpha = { { 0, 1 }, { 0.25, 0.86 }, { 0.75, 0.9 }, { 1, 1 } }, influence = 0.7,
 			},
-			{ kind = "sound", id = LOOPS.rain, volume = 0.3 },
+			{ kind = "sound", id = LOOPS.rain, volume = 0.65 },
 		},
 	},
 
@@ -100,7 +101,7 @@ WeatherDefs.events = {
 				rate = 40, life = { 0.5, 0.8 }, speed = { 110, 150 }, spread = { 3, 3 }, size = 0.6, squash = -3, orient = ALONG,
 				alpha = { { 0, 1 }, { 0.3, 0.72 }, { 1, 1 } }, glow = 0.5,
 			},
-			{ kind = "sound", id = LOOPS.petals, volume = 0.2 },
+			{ kind = "sound", id = LOOPS.petals, volume = 2.5 },
 		},
 	},
 
@@ -114,7 +115,7 @@ WeatherDefs.events = {
 		clouds = { color = rgb(214, 220, 230), blend = 0.8 },
 		calm = 0.7,
 		layers = {
-			{ kind = "sound", id = LOOPS.fog, volume = 0.15 },
+			{ kind = "sound", id = LOOPS.fog, volume = 1.25 },
 			{
 				kind = "particles", name = "Banks", at = "ground", height = 4, area = Vector3.new(210, 6, 210),
 				texture = SMOKE, face = Enum.NormalId.Top, color = rgb(232, 238, 246), rate = 9, life = { 12, 17 },
@@ -152,7 +153,7 @@ WeatherDefs.events = {
 				spread = { 25, 25 }, accel = Vector3.new(2, 0, 1), rot = { 0, 360 }, spin = { -70, 70 }, size = 0.55,
 				alpha = { { 0, 1 }, { 0.1, 0.2 }, { 0.9, 0.3 }, { 1, 1 } }, glow = 0.6, influence = 0.3,
 			},
-			{ kind = "sound", id = LOOPS.snow, volume = 0.2 },
+			{ kind = "sound", id = LOOPS.snow, volume = 0.43 },
 		},
 	},
 
@@ -200,7 +201,7 @@ WeatherDefs.events = {
 		calm = 0.6,
 		extras = { rays = { Intensity = 0.2 }, bloom = { Intensity = 0.6 } },
 		layers = {
-			{ kind = "sound", id = LOOPS.goldenRain, volume = 0.3 },
+			{ kind = "sound", id = LOOPS.goldenRain, volume = 1 },
 			{
 				kind = "particles", name = "GoldRain", at = "above", height = 42, area = Vector3.new(110, 1, 110),
 				texture = DOT, color = { rgb(255, 216, 96), rgb(255, 178, 46) }, rate = 620, life = { 0.7, 0.9 },
@@ -320,7 +321,7 @@ WeatherDefs.events = {
 				speed = { 0.4, 1.4 }, spread = { 60, 60 }, accel = Vector3.new(0, 0.5, 0), size = { { 0, 0 }, { 0.3, 0.3 }, { 1, 0 } },
 				alpha = { { 0, 1 }, { 0.3, 0.1 }, { 1, 1 } }, glow = 1,
 			},
-			{ kind = "sound", id = LOOPS.bloodMoon, volume = 0.25 },
+			{ kind = "sound", id = LOOPS.bloodMoon, volume = 0.45 },
 		},
 	},
 
@@ -382,7 +383,7 @@ WeatherDefs.events = {
 				kind = "streaks", rate = 0.7, pool = 8, colors = { rgb(200, 150, 255), rgb(140, 220, 255) }, length = { 500, 900 },
 				life = { 0.6, 1.1 }, width = { 8, 14 }, bigChance = 0,
 			},
-			{ kind = "sound", id = LOOPS.cosmic, volume = 0.25 },
+			{ kind = "sound", id = LOOPS.cosmic, volume = 0.4 },
 		},
 	},
 
@@ -410,7 +411,7 @@ WeatherDefs.events = {
 				kind = "streaks", rate = 70, pool = 130, colors = { Color3.new(1, 1, 1), rgb(150, 225, 255), rgb(255, 226, 150), rgb(255, 170, 225), rgb(170, 190, 255) },
 				length = { 600, 1200 }, life = { 0.6, 1.2 }, width = { 9, 20 }, bigChance = 0.06, flash = 0.14, bright = 3,
 			},
-			{ kind = "sound", id = LOOPS.starfall, volume = 0.2 },
+			{ kind = "sound", id = LOOPS.starfall, volume = 0.7 },
 			{
 				kind = "meteors", every = 2.2, radius = 400, max = 10, size = { 2.6, 5 },
 				colors = { rgb(140, 225, 255), rgb(255, 226, 140), rgb(255, 160, 220), rgb(200, 180, 255) },
