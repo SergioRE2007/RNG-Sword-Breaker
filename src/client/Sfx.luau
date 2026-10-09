@@ -15,33 +15,34 @@ local DEFAULT_VOLUME = 0.7
 
 -- nombre = { sonido, volumen, tono mínimo, tono máximo }
 local EVENTS = {
-	-- Interfaz. Una sola grabación cada uno: un botón tiene que sonar siempre igual.
-	click = { 127498863959231, 0.45, 0.97, 1.05 },
-	hover = { 112336389213652, 0.15, 0.97, 1.05 },
-	tick = { 109272899066209, 0.35, 0.98, 1.04 },
-	open = { 104050042655641, 0.3, 0.97, 1.03 },
-	close = { 93262936570566, 0.25, 0.97, 1.03 },
+	-- Interfaz. Pedido por el usuario: siempre iguales, una sola grabación y sin azar en el tono (mínimo = máximo).
+	click = { 127498863959231, 0.45, 1, 1 },
+	hover = { 112336389213652, 0.15, 1, 1 },
+	tick = { 109272899066209, 0.35, 1, 1 },
+	open = { 104050042655641, 0.3, 1, 1 },
+	close = { 93262936570566, 0.25, 1, 1 },
 	toast = { 116871010533956, 0.4, 1, 1 },
 	error = { 81277813295867, 0.5, 1, 1 },
-	buy = { 121614318104194, 0.55, 0.98, 1.03 },
-	buyPing = { 100075584075241, 0.4, 1, 1.04 },
-	equip = { 91947373481346, 0.45, 0.96, 1.05 },
-	sell = { 89376802223171, 0.55, 0.98, 1.03 },
-	teleport = { 114142918150751, 0.5, 0.98, 1.03 },
-	potion = { 126924859318135, 0.5, 0.98, 1.03 },
+	buy = { 121614318104194, 0.55, 1, 1 },
+	buyPing = { 100075584075241, 0.4, 1, 1 },
+	equip = { 91947373481346, 0.45, 1, 1 },
+	sell = { 89376802223171, 0.55, 1, 1 },
+	teleport = { 114142918150751, 0.5, 1, 1 },
+	potion = { 126924859318135, 0.5, 1, 1 },
 	rebirth = { 101551001530213, 0.8, 1, 1 },
-	coin = { 122751732815655, 0.35, 1.15, 1.25 }, -- la misma grabación que coin_break
+	coin = { 122751732815655, 0.35, 1.2, 1.2 }, -- la misma grabación que coin_break
 
 	-- Tiradas: las de arma (client/RollReveal: orbe, carga y un sonido por nivel) y las de rasgo y grado.
-	orb = { 125342078017629, 0.4, 0.96, 1.06 },
+	-- También fijos: cada nivel tiene que reconocerse por su sonido.
+	orb = { 125342078017629, 0.4, 1, 1 },
 	charge = { 93541821621705, 0.4, 1, 1 },
-	reveal_1 = { 96883121683271, 0.4, 0.95, 1.08 },
-	reveal_2 = { 123562546673300, 0.5, 0.98, 1.04 },
+	reveal_1 = { 96883121683271, 0.4, 1, 1 },
+	reveal_2 = { 123562546673300, 0.5, 1, 1 },
 	reveal_3 = { 126095692231161, 0.6, 1, 1 },
 	reveal_4 = { 109717760520982, 0.7, 1, 1 },
 	reveal_5 = { 118337535145235, 0.8, 1, 1 },
-	collect = { 126460414904264, 0.45, 0.97, 1.06 },
-	roll = { 108088062003601, 0.5, 0.98, 1.03 },
+	collect = { 126460414904264, 0.45, 1, 1 },
+	roll = { 108088062003601, 0.5, 1, 1 },
 	rare = { 113476440126433, 0.7, 1, 1 },
 	win = { 107352736766334, 0.7, 1, 1 },
 	forge_hit = { { 97714408632464, 119769094792609, 107416494139217 }, 0.6, 0.95, 1.06 },
@@ -71,9 +72,9 @@ local EVENTS = {
 	break_crystal = { { 119069323046508, 124381482851282, 84485501183800 }, 0.7, 0.95, 1.05 },
 	break_energy = { { 79984574853273, 110014679976388, 111533369472047 }, 0.75, 0.95, 1.05 },
 	break_enemy = { { 115006131003853, 84957959293785, 122984665353813 }, 0.75, 0.95, 1.05 },
-	-- Monedas y gemas de un objeto roto. La moneda, una sola grabación y casi sin azar: la nota la pone la
+	-- Monedas y gemas de un objeto roto. La moneda, una sola grabación y sin azar: la nota la pone la
 	-- racha (client/Effects).
-	coin_break = { 122751732815655, 0.4, 1, 1.02 },
+	coin_break = { 122751732815655, 0.4, 1, 1 },
 	gem_break = { { 77515014943097, 98240894659000, 81665304125411 }, 0.45, 0.97, 1.05 },
 }
 
