@@ -7,6 +7,7 @@ local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
+local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 
@@ -137,6 +138,7 @@ function SellMenu.start()
 		end
 		local ids = {}
 		for id in selected do table.insert(ids, id) end
+		Sfx.play("sell")
 		Remotes.SellSwords:FireServer(ids)
 		selected = {}
 		confirming = false

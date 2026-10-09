@@ -160,7 +160,7 @@ function Rebirth.start()
 	player:GetAttributeChangedSignal("Rebirths"):Connect(function()
 		local now = Stats.rebirths(player)
 		if now > last then
-			Sfx.play("win")
+			Sfx.play("rebirth")
 			if not Performance.get() then
 				flash.BackgroundTransparency = 0.35
 				TweenService:Create(flash, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()

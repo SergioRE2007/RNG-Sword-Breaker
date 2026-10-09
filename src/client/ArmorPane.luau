@@ -135,6 +135,7 @@ function ArmorPane.build(pane: Frame, helpers)
 		end, true)
 		cell.Activated:Connect(function()
 			if entry.piece then
+				Sfx.play("equip")
 				Remotes.EquipArmor:FireServer(entry.piece.id)
 			end
 		end)
@@ -239,6 +240,7 @@ function ArmorPane.build(pane: Frame, helpers)
 
 	equipButton.Activated:Connect(function()
 		if find(selected) then
+			Sfx.play("equip")
 			Remotes.EquipArmor:FireServer(selected)
 		else
 			Sfx.play("error")

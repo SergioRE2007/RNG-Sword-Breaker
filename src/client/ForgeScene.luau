@@ -19,6 +19,7 @@ local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
+local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 
 local ForgeScene = {}
@@ -677,6 +678,7 @@ local function strike(auto: boolean): boolean
 	end
 
 	-- Impacto.
+	Sfx.play(if super then "forge_super" else "forge_hit", nil, nil, s.hitAt)
 	burst(entry, index, super, s.hitAt)
 	vibrate(if super then 0.34 else 0.1 + index * 0.012)
 	shake(if super then 0.55 else 0.03 + index * 0.006)

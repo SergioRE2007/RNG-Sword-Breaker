@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local ForgeScene = require(script.Parent.ForgeScene)
+local Sfx = require(script.Parent.Sfx)
 local SwingAnim = require(script.Parent.SwingAnim)
 
 local SwordController = {}
@@ -40,11 +41,16 @@ function SwordController.toggle()
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return end
 	equipmentRevision += 1
+	local root = character:FindFirstChild("HumanoidRootPart")
 	if swordIn(character) then
 		humanoid:UnequipTools()
+		Sfx.play("sheath", nil, nil, root)
 	else
 		local tool = swordIn(player:FindFirstChildOfClass("Backpack"))
-		if tool then humanoid:EquipTool(tool) end
+		if tool then
+			humanoid:EquipTool(tool)
+			Sfx.play("unsheath", nil, nil, root)
+		end
 	end
 end
 
@@ -60,7 +66,8 @@ local function swing(tool: Tool)
 	end
 	lastSwing = now
 
-	if not SwingAnim.play(player.Character, cooldown, (Stats.weapon(player))) then
+	local kind = (Stats.weapon(player))
+	if not SwingAnim.play(player.Character, cooldown, kind) then
 		-- Sin esqueleto R15: el script Animate por defecto reproduce el tajo al ver este valor en la herramienta.
 		local anim = Instance.new("StringValue")
 		anim.Name = "toolanim"
@@ -68,11 +75,7 @@ local function swing(tool: Tool)
 		anim.Parent = tool
 	end
 
-	local handle = tool:FindFirstChild("Handle")
-	local sound = handle and handle:FindFirstChild("Slash")
-	if sound then
-		sound:Play()
-	end
+	Sfx.swing(kind, cooldown, player.Character)
 
 	Remotes.Swing:FireServer()
 	if SwordController.onSwing then

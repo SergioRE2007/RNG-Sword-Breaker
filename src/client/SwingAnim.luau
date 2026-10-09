@@ -13,6 +13,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 
 local Performance = require(script.Parent.Performance)
+local Sfx = require(script.Parent.Sfx)
 local SwingClips = require(script.Parent.SwingClips)
 
 local SwingAnim = {}
@@ -202,7 +203,7 @@ local function step()
 end
 
 -- Impacto contra el suelo (marcadores "impacto" de Blender): la cámara tiembla un momento y sale una onda de polvo.
-local function slam(character: Model)
+local function slam(character: Model, cooldown: number)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not humanoid or not root then
@@ -231,6 +232,8 @@ local function slam(character: Model)
 	ring.Size = Vector3.new(0.4, 3, 3)
 	ring.CFrame = CFrame.new(root.Position + root.CFrame.LookVector * 5 - Vector3.new(0, root.Size.Y / 2 + 1.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	ring.Parent = workspace
+	-- El estruendo sale del punto del suelo donde cae; el de los demás, algo más flojo.
+	Sfx.play("slam", Sfx.cadence(cooldown) * (if character == Players.LocalPlayer.Character then 1 else 0.7), nil, ring.Position)
 	local tween = TweenService:Create(ring, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.4, 22, 22), Transparency = 1 })
 	tween.Completed:Connect(function()
 		ring:Destroy()
@@ -277,7 +280,7 @@ function SwingAnim.play(character: Model?, cooldown: number, kind: string): bool
 	for _, impact in clip.impacts do
 		task.delay(duration * impact, function()
 			if active[character] == swing then
-				slam(character)
+				slam(character, cooldown)
 			end
 		end)
 	end
@@ -289,7 +292,9 @@ function SwingAnim.start()
 	-- Golpes de los demás jugadores (el propio se lanza desde SwordController sin esperar al servidor).
 	Remotes.SwingFx.OnClientEvent:Connect(function(other: Player)
 		if other ~= Players.LocalPlayer then
-			SwingAnim.play(other.Character, Stats.cooldown(other), (Stats.weapon(other)))
+			local cooldown, kind = Stats.cooldown(other), (Stats.weapon(other))
+			SwingAnim.play(other.Character, cooldown, kind)
+			Sfx.swing(kind, cooldown, other.Character, 0.7) -- el espadazo de otro: desde su sitio y algo más flojo
 		end
 	end)
 end

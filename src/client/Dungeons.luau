@@ -253,7 +253,7 @@ local function buildRunPanel()
 		detail.Text = `<font color="{Ui.SOFT}">Oleada</font> {math.max(wave, 1)}/{waves}  <font color="{Ui.SOFT}">·  Enemigos</font> {if wave == 0 then "..." else tostring(enemies)}  <font color="{Ui.SOFT}">·</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
 		if wave ~= shownWave and wave > 0 then
 			shownWave = wave
-			Sfx.play("roll")
+			Sfx.play("wave")
 			Ui.toast(if wave >= waves then "¡Oleada final: el jefe!" else `Oleada {wave} de {waves}`, level.color)
 		end
 	end
@@ -441,7 +441,7 @@ local function buildFeedback()
 	local token = 0
 	Remotes.DungeonEvent.OnClientEvent:Connect(function(kind: string, data)
 		if kind == "hurt" then
-			Sfx.play("hit", 0.9)
+			Sfx.play("hurt")
 			if not Performance.get() then
 				hurt.BackgroundTransparency = 0.55
 				TweenService:Create(hurt, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
@@ -469,7 +469,7 @@ local function buildFeedback()
 				end
 			end
 			loot.Text = if #lines > 0 then table.concat(lines, "\n") else `<font color="{Ui.SOFT}">Sin premios esta vez.</font>`
-			Sfx.play(if data.won then "win" else "error")
+			Sfx.play(if data.won then "dungeon_win" else "dungeon_lose")
 			card.Visible = true
 			if not Performance.get() then
 				cardScale.Scale = 0.6

@@ -389,10 +389,7 @@ function Ui.pressable(item: GuiButton, grow: number?)
 		over = true
 		to(big, 0.18, Enum.EasingStyle.Back)
 		lit(true)
-		-- Solo los botones (los que tienen labio): en una rejilla de casillas sería un repiqueteo.
-		if base then
-			Sfx.play("tick", 0.3)
-		end
+		-- Sin sonido al pasar el ratón (pedido por el usuario): solo suena al pulsar.
 	end)
 	item.MouseLeave:Connect(function()
 		over = false
@@ -663,6 +660,9 @@ function Ui.close(frame: GuiObject)
 	end
 	if m.state == "closed" or m.state == "closing" then
 		return
+	end
+	if frame.Visible then
+		Sfx.play("close")
 	end
 	if Performance.get() or not frame.Visible then
 		stopMotion(m)

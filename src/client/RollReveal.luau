@@ -57,11 +57,11 @@ local LABEL = Vector2.new(300, 108) -- tamaño del cartel en píxeles, sin escal
 -- cámara, shake = fuerza del temblor, absorb = el orbe traga energía de alrededor, rays = rayos que giran,
 -- flash = destello de pantalla, grow = tamaño del cartel, sounds = lo que suena al destaparse.
 local LEVELS = {
-	{ charge = 0.2, pulses = 1, rise = 0, hover = 0.42, fly = 0.38, turns = 0, sparks = 8, grow = 1, sounds = { "coin" } },
-	{ charge = 0.36, pulses = 2, rise = 0.4, hover = 0.7, fly = 0.44, turns = 0, sparks = 16, aura = 8, grow = 1.1, sounds = { "gem" } },
-	{ charge = 0.7, pulses = 3, rise = 0.9, hover = 1.1, fly = 0.52, turns = 0.5, sparks = 28, aura = 14, shock = 1, light = 0.8, grow = 1.25, sounds = { "rare", "gem" } },
-	{ charge = 1.25, pulses = 5, rise = 1.8, hover = 1.6, fly = 0.7, turns = 1, sparks = 46, aura = 22, shock = 2, light = 1.2, beam = 1.4, punch = 5, shake = 0.4, absorb = true, grow = 1.45, sounds = { "rare", "win" } },
-	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.2, fly = 0.85, turns = 1.5, sparks = 80, aura = 34, shock = 3, light = 1.6, beam = 2.6, punch = 9, shake = 0.7, absorb = true, rays = true, flash = true, grow = 1.7, sounds = { "win", "rare" } },
+	{ charge = 0.2, pulses = 1, rise = 0, hover = 0.42, fly = 0.38, turns = 0, sparks = 8, grow = 1, sounds = { "reveal_1" } },
+	{ charge = 0.36, pulses = 2, rise = 0.4, hover = 0.7, fly = 0.44, turns = 0, sparks = 16, aura = 8, grow = 1.1, sounds = { "reveal_2" } },
+	{ charge = 0.7, pulses = 3, rise = 0.9, hover = 1.1, fly = 0.52, turns = 0.5, sparks = 28, aura = 14, shock = 1, light = 0.8, grow = 1.25, sounds = { "reveal_3" } },
+	{ charge = 1.25, pulses = 5, rise = 1.8, hover = 1.6, fly = 0.7, turns = 1, sparks = 46, aura = 22, shock = 2, light = 1.2, beam = 1.4, punch = 5, shake = 0.4, absorb = true, grow = 1.45, sounds = { "reveal_4" } },
+	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.2, fly = 0.85, turns = 1.5, sparks = 80, aura = 34, shock = 3, light = 1.6, beam = 2.6, punch = 9, shake = 0.7, absorb = true, rays = true, flash = true, grow = 1.7, sounds = { "reveal_5" } },
 }
 -- Frase encima del cartel en los niveles altos.
 local LINES = { [3] = "¡Buena tirada!", [4] = "¡El destino te ha elegido!", [5] = "¡Los cielos se abren ante ti!" }
@@ -372,7 +372,7 @@ end
 -- El arma llega al jugador: chispas, sonido y, si era buena, su nombre subiendo junto a él.
 local function collect(roll, level: number, color: Color3)
 	local root = rootPart()
-	Sfx.play("buyPing", if level >= 2 then 0.8 else 0.45)
+	Sfx.play("collect", if level >= 2 then 0.8 else 0.45, nil, root)
 	if not root then
 		return
 	end
@@ -474,7 +474,7 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 			ring(folder, orb.Position, ORB, ORB * (2.4 + level * 0.5), if pulse > fx.pulses - 2 and level >= 3 then bright else MYSTERY, beat * 0.9)
 		end
 		if level >= 2 then
-			Sfx.play("tick", 0.6)
+			Sfx.play("charge", 0.6, 2 ^ ((pulse - 1) / 12), orb.Position) -- cada pulso suena una nota más arriba
 		end
 		if fx.rays then
 			shake(0.1 + pulse * 0.04, beat)
@@ -517,7 +517,7 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 	follow.Parent = folder
 
 	for delay, name in fx.sounds do
-		task.delay((delay - 1) * 0.12, Sfx.play, name, if level == 1 then 0.6 else 1) -- las normales suenan flojo: salen a todas horas
+		task.delay((delay - 1) * 0.12, Sfx.play, name, if level == 1 then 0.6 else 1, nil, position) -- las normales suenan flojo: salen a todas horas
 	end
 	local lamp: PointLight? = nil
 	if not lite then
@@ -785,7 +785,7 @@ local function play(batch)
 	Debris:AddItem(folder, 45) -- red de seguridad: ninguna tanda dura tanto
 
 	-- Sale un orbe por tirada, en abanico de cara al jugador.
-	Sfx.play("tick", 0.6)
+	Sfx.play("orb", 0.6, nil, heart)
 	local count = batch.count
 	local slots, orbs = {}, {}
 	for index = 1, count do

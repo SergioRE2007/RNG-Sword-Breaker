@@ -1,5 +1,5 @@
 -- Ajustes: botón con engranaje arriba a la izquierda (bajo los botones de Roblox) y una ventana con
--- el modo rendimiento, el volumen de la música y la venta automática de espadas. Cada ajuste vive
+-- el modo rendimiento, los volúmenes (música, efectos y ambiente) y la venta automática de espadas. Cada ajuste vive
 -- en el cliente (el modo rendimiento y el volumen solo duran la sesión; la venta automática la
 -- guarda el servidor). La música todavía no existe: cuando se añada, sus Sound deben ir en el
 -- SoundGroup "Music" de SoundService, que es el que mueve el deslizador.
@@ -63,7 +63,7 @@ end
 
 function Settings.start()
 	local gui = Ui.hud()
-	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 658), function(parent)
+	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 772), function(parent) -- seis filas de 104 + 10
 		Ui.image(parent, "ajustes")
 	end)
 
@@ -138,8 +138,28 @@ function Settings.start()
 	effectsSlider.Size = UDim2.new(1, -60, 0, 22)
 	paintEffects(effects.Volume)
 
+	-- Volumen del ambiente ---------------------------------------------------------------
+	local ambienceRow = row(list, 4, "Volumen del ambiente", "El sonido de fondo de cada zona, las estaciones y el clima.", true, Color3.fromRGB(60, 200, 190))
+	local ambience = Sfx.ambience()
+	local ambiencePercent = Ui.label(ambienceRow, 22)
+	ambiencePercent.AnchorPoint = Vector2.new(1, 0)
+	ambiencePercent.Position = UDim2.new(1, -14, 0, 8)
+	ambiencePercent.Size = UDim2.fromOffset(110, 30)
+	ambiencePercent.TextXAlignment = Enum.TextXAlignment.Right
+	local function paintAmbience(value: number)
+		ambiencePercent.Text = `{math.floor(value * 100 + 0.5)}%`
+	end
+	local ambienceSlider = Ui.slider(ambienceRow, ambience.Volume, function(value)
+		ambience.Volume = value
+		paintAmbience(value)
+	end)
+	ambienceSlider.AnchorPoint = Vector2.new(0, 1)
+	ambienceSlider.Position = UDim2.new(0, 24, 1, -10)
+	ambienceSlider.Size = UDim2.new(1, -60, 0, 22)
+	paintAmbience(ambience.Volume)
+
 	-- Venta automática -------------------------------------------------------------------
-	local sellRow = row(list, 4,"Venta automática", "Las espadas nuevas menos raras que 1 entre N se venden solas. Admite 1000, 1.5K, 2M... Déjalo vacío para no vender.", false, Ui.COLORS.green)
+	local sellRow = row(list, 5,"Venta automática", "Las espadas nuevas menos raras que 1 entre N se venden solas. Admite 1000, 1.5K, 2M... Déjalo vacío para no vender.", false, Ui.COLORS.green)
 	local sellBox = Instance.new("TextBox")
 	sellBox.Name = "AutoSell"
 	sellBox.AnchorPoint = Vector2.new(1, 0.5)
@@ -174,7 +194,7 @@ function Settings.start()
 
 	-- Ver hitbox -------------------------------------------------------------------------
 	-- Solo cambia el atributo local "HitboxDebug" del jugador: quien dibuja es client/HitboxDebug.
-	local hitboxRow = row(list, 5, "Ver hitbox", "Dibuja en el suelo hasta dónde llega tu arma (en blanco mientras dura el golpe) y marca en verde lo que alcanzarías.", false, Ui.COLORS.red)
+	local hitboxRow = row(list, 6, "Ver hitbox", "Dibuja en el suelo hasta dónde llega tu arma (en blanco mientras dura el golpe) y marca en verde lo que alcanzarías.", false, Ui.COLORS.red)
 	local hitboxButton = Ui.button(hitboxRow, "", Ui.COLORS.gray)
 	hitboxButton.Name = "Hitbox"
 	hitboxButton.AnchorPoint = Vector2.new(1, 0.5)

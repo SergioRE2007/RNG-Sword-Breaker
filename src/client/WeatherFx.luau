@@ -200,7 +200,10 @@ local function ticker(length: number, chance: number, salt: number)
 end
 
 -- Un golpe de sonido suelto, más flojo cuanto más lejos de la cámara y con el retraso de la distancia.
-local function boom(id: string, at: Vector3, eye: Vector3, volume: number, pitch: number, reach: number)
+local function boom(id: string | { string }, at: Vector3, eye: Vector3, volume: number, pitch: number, reach: number)
+	if type(id) == "table" then
+		id = id[math.random(#id)] -- varias grabaciones: una cualquiera (el sonido no tiene que coincidir entre jugadores)
+	end
 	local distance = (at - eye).Magnitude
 	local loud = volume * math.clamp(1 - distance / reach, 0.15, 1)
 	task.delay(math.min(distance / 700, 1.2), function()
@@ -209,9 +212,17 @@ local function boom(id: string, at: Vector3, eye: Vector3, volume: number, pitch
 		sound.Volume = loud
 		sound.PlaybackSpeed = pitch
 		sound.SoundGroup = Sfx.group()
-		sound.Parent = SoundService
+		-- Sale de donde ha caído, para oírlo por su lado. Lo flojo que llega ya está calculado arriba: con la
+		-- distancia mínima tan grande, Roblox no lo baja otra vez.
+		local anchor = Instance.new("Attachment")
+		anchor.Position = at
+		anchor.Parent = workspace.Terrain
+		sound.RollOffMode = Enum.RollOffMode.Linear
+		sound.RollOffMinDistance = 10000
+		sound.RollOffMaxDistance = 20000
+		sound.Parent = anchor
 		sound:Play()
-		Debris:AddItem(sound, 6)
+		Debris:AddItem(anchor, 6)
 	end)
 end
 
@@ -277,7 +288,7 @@ builders.sound = function(def)
 	sound.Looped = true
 	sound.Volume = 0
 	sound.PlaybackSpeed = def.pitch or 1
-	sound.SoundGroup = Sfx.group()
+	sound.SoundGroup = Sfx.ambience() -- el ambiente del clima va con el deslizador de ambiente; los truenos, con los efectos
 	sound.Parent = SoundService
 	sound:Play()
 	return {
@@ -357,7 +368,8 @@ builders.lightning = function(def, parent)
 		Debris:AddItem(lamp, 0.6)
 		flash(Enum.PartType.Cylinder, CFrame.new(ground + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2),
 			Vector3.new(0.3, 4, 4), Vector3.new(0.3, 34, 34), color, 0.3, 0.4)
-		boom(def.sound or BOOM, ground, eye, 0.9, random:NextNumber(0.45, 0.7), 900)
+		-- El estruendo de serie se baja de tono para que parezca un trueno; uno de verdad va casi al suyo.
+		boom(def.sound or BOOM, ground, eye, 0.9, random:NextNumber(0.45, 0.7) * (if def.sound then 1.6 else 1), 900)
 
 		-- Parpadea dos veces y se apaga.
 		task.spawn(function()

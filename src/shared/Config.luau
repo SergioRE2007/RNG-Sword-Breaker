@@ -316,7 +316,7 @@ Config.Destructibles = {
 	{ name = "Meteorito", rarity = 1e6, hp = 1800, reward = 2e7, gems = 5e4, size = Vector3.new(12, 10, 12), color = Color3.fromRGB(200, 70, 30), material = Enum.Material.CrackedLava },
 	{ name = "Núcleo", rarity = 5e7, hp = 11000, reward = 1e9, gems = 1.5e6, size = Vector3.new(9, 9, 9), color = Color3.fromRGB(60, 255, 140), material = Enum.Material.Neon },
 	{ name = "Estrella", rarity = 5e9, hp = 96000, reward = 1e11, gems = 1e8, size = Vector3.new(12, 12, 12), color = Color3.fromRGB(255, 240, 150), material = Enum.Material.Neon },
-	{ name = "Agujero negro", rarity = 1e12, hp = 1.3e6, reward = 2.5e13, gems = 1e10, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(5, 5, 10), material = Enum.Material.Glass },
+	{ name = "Agujero negro", rarity = 1e12, hp = 1.3e6, reward = 2.5e13, gems = 1e10, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(5, 5, 10), material = Enum.Material.Glass, sound = "energy" },
 	{ name = "Fragmento del vacío", rarity = 1e15, hp = 3.3e7, reward = 3e16, gems = 5e12, size = Vector3.new(8, 24, 8), color = Color3.fromRGB(130, 50, 255), material = Enum.Material.ForceField },
 	{ name = "Singularidad", rarity = 1e18, hp = 8.5e8, reward = 4e19, gems = 3e15, size = Vector3.new(10, 10, 10), color = Color3.fromRGB(255, 60, 200), material = Enum.Material.Neon },
 	{ name = "Origen", rarity = 1e21, hp = 2.2e10, reward = 5e22, gems = 1e18, size = Vector3.new(14, 18, 14), color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },

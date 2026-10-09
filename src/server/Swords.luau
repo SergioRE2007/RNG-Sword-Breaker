@@ -24,12 +24,6 @@ local function build(level: number, metal: number, size: number): Tool
 		tool.Grip = CFrame.Angles(math.rad(90), 0, 0)
 	end
 
-	local slash = Instance.new("Sound")
-	slash.Name = "Slash"
-	slash.SoundId = "rbxasset://sounds/swordslash.wav"
-	slash.Volume = 0.6
-	slash.Parent = handle
-
 	return tool
 end
 

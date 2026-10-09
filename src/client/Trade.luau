@@ -1044,7 +1044,6 @@ local function buildTrade()
 			if not Ui.isOpen(window) then
 				Ui.toggle("Trade")
 			end
-			Sfx.play("open")
 		end
 		render()
 	end)
