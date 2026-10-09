@@ -12,6 +12,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Sfx = {}
 
 local DEFAULT_VOLUME = 0.7
+local DEFAULT_AMBIENCE = 0.5 -- el fondo, a la mitad: al máximo le pareció fuerte al usuario
 
 -- nombre = { sonido, volumen, tono mínimo, tono máximo }
 local EVENTS = {
@@ -149,12 +150,18 @@ local FAMILIES = {
 }
 
 local group: SoundGroup
+local ambience: SoundGroup
 local template: { [string]: { Sound } } = {}
 local lastPlayed: { [string]: number } = {}
 local lastVariant: { [string]: number } = {}
 
 function Sfx.group(): SoundGroup
 	return group
+end
+
+-- El grupo del sonido de fondo (ambiente de cada zona, estaciones y clima), con su propio deslizador en Ajustes.
+function Sfx.ambience(): SoundGroup
+	return ambience
 end
 
 -- Familia de sonido ("wood", "stone", "crystal" o "energy") de un objeto de las parcelas, por su índice de
@@ -270,6 +277,13 @@ if not group then
 	group.Name = "Sfx"
 	group.Volume = DEFAULT_VOLUME
 	group.Parent = SoundService
+end
+ambience = SoundService:FindFirstChild("Ambience") :: SoundGroup
+if not ambience then
+	ambience = Instance.new("SoundGroup")
+	ambience.Name = "Ambience"
+	ambience.Volume = DEFAULT_AMBIENCE
+	ambience.Parent = SoundService
 end
 
 return Sfx

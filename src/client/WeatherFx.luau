@@ -288,7 +288,7 @@ builders.sound = function(def)
 	sound.Looped = true
 	sound.Volume = 0
 	sound.PlaybackSpeed = def.pitch or 1
-	sound.SoundGroup = Sfx.group()
+	sound.SoundGroup = Sfx.ambience() -- el ambiente del clima va con el deslizador de ambiente; los truenos, con los efectos
 	sound.Parent = SoundService
 	sound:Play()
 	return {

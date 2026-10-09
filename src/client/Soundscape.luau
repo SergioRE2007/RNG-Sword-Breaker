@@ -64,7 +64,7 @@ local function station(part: Instance)
 		sound.PlaybackRegionsEnabled = true
 		sound.LoopRegion = info[5]
 	end
-	sound.SoundGroup = Sfx.group()
+	sound.SoundGroup = Sfx.ambience()
 	sound.Parent = part
 	sound:Play()
 end
@@ -78,7 +78,7 @@ function Soundscape.start()
 		sound.SoundId = asset(info[1])
 		sound.Looped = true
 		sound.Volume = 0
-		sound.SoundGroup = Sfx.group()
+		sound.SoundGroup = Sfx.ambience()
 		sound.Parent = SoundService
 		sounds[name] = sound
 		weights[name] = 0
