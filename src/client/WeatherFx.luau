@@ -212,9 +212,17 @@ local function boom(id: string | { string }, at: Vector3, eye: Vector3, volume: 
 		sound.Volume = loud
 		sound.PlaybackSpeed = pitch
 		sound.SoundGroup = Sfx.group()
-		sound.Parent = SoundService
+		-- Sale de donde ha caído, para oírlo por su lado. Lo flojo que llega ya está calculado arriba: con la
+		-- distancia mínima tan grande, Roblox no lo baja otra vez.
+		local anchor = Instance.new("Attachment")
+		anchor.Position = at
+		anchor.Parent = workspace.Terrain
+		sound.RollOffMode = Enum.RollOffMode.Linear
+		sound.RollOffMinDistance = 10000
+		sound.RollOffMaxDistance = 20000
+		sound.Parent = anchor
 		sound:Play()
-		Debris:AddItem(sound, 6)
+		Debris:AddItem(anchor, 6)
 	end)
 end
 

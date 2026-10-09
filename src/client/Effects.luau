@@ -161,7 +161,7 @@ end
 -- Moneda de un objeto roto: con una racha, cada una suena una nota más arriba (y al llegar al final, de vuelta).
 -- Las que caen a la vez (un golpe que rompe varios objetos) suenan una detrás de otra.
 local coinStep, lastCoin = 0, 0
-local function coinSound()
+local function coinSound(where: Vector3)
 	local now = os.clock()
 	local at = math.max(now + 0.06, lastCoin + COIN_GAP) -- un pelín después de la rotura, para que no la tape
 	if at - now > COIN_QUEUE then
@@ -171,7 +171,7 @@ local function coinSound()
 	lastCoin = at
 	local phase = coinStep % (2 * #COIN_NOTES - 2)
 	local note = COIN_NOTES[if phase < #COIN_NOTES then phase + 1 else 2 * #COIN_NOTES - 1 - phase]
-	task.delay(at - now, Sfx.play, "coin_break", 1, 2 ^ (note / 12))
+	task.delay(at - now, Sfx.play, "coin_break", 1, 2 ^ (note / 12), where)
 end
 
 function Effects.start()
@@ -186,7 +186,8 @@ function Effects.start()
 			other = hitter ~= player,
 		})
 		local sound = if box then "hit_" .. Sfx.family((part :: BasePart):GetAttribute("Index")) else "hit_enemy"
-		Sfx.play(sound, if hitter == player then 1 else 0.35)
+		-- Sale del sitio del golpe; los de los demás, algo más flojos (y con la distancia se van apagando).
+		Sfx.play(sound, if hitter == player then 1 else 0.7, nil, position)
 		if part and part.Parent then
 			-- Los enemigos de las mazmorras se mueven solos (no anclados): no se sacuden.
 			if part.Anchored then
@@ -216,18 +217,18 @@ function Effects.start()
 		-- Cada material rompe con su sonido y, cuanto más grande el objeto, más grave y más fuerte.
 		local big = math.clamp(size.Magnitude / BREAK_SIZE, 0.5, 6)
 		local family = if objectIndex then Sfx.family(objectIndex) else "enemy"
-		Sfx.play("break_" .. family, (if breaker == player then 1 else 0.4) * math.min(big ^ 0.2, 1.3), big ^ -0.25)
+		Sfx.play("break_" .. family, (if breaker == player then 1 else 0.7) * math.min(big ^ 0.2, 1.3), big ^ -0.25, cframe.Position)
 		if breaker == player then
 			healthBar.Enabled = false
 			-- Los números salen a la altura de los ojos aunque el objeto sea altísimo.
 			local top = cframe.Position + Vector3.new(0, math.min(size.Y / 2 + 1, POPUP_HEIGHT - size.Y / 2), 0)
 			if reward > 0 then
 				FloatText.spawn("coin", top, "+" .. Format.short(reward))
-				coinSound()
+				coinSound(top)
 			end
 			if gems > 0 then
 				FloatText.spawn("gem", top + Vector3.new(0, 2, 0), `+{Format.short(gems)} gemas`)
-				task.delay(0.13, Sfx.play, "gem_break")
+				task.delay(0.13, Sfx.play, "gem_break", nil, nil, top)
 			end
 			-- Tiradas de arma que ha dado: se anuncian cuando el objeto tenía algo de especial (varias tiradas, rareza
 			-- o buen tamaño); las de un objeto corriente ya se ven en el panel de arriba.

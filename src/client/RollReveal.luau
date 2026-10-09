@@ -372,7 +372,7 @@ end
 -- El arma llega al jugador: chispas, sonido y, si era buena, su nombre subiendo junto a él.
 local function collect(roll, level: number, color: Color3)
 	local root = rootPart()
-	Sfx.play("collect", if level >= 2 then 0.8 else 0.45)
+	Sfx.play("collect", if level >= 2 then 0.8 else 0.45, nil, root)
 	if not root then
 		return
 	end
@@ -474,7 +474,7 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 			ring(folder, orb.Position, ORB, ORB * (2.4 + level * 0.5), if pulse > fx.pulses - 2 and level >= 3 then bright else MYSTERY, beat * 0.9)
 		end
 		if level >= 2 then
-			Sfx.play("charge", 0.6, 2 ^ ((pulse - 1) / 12)) -- cada pulso suena una nota más arriba
+			Sfx.play("charge", 0.6, 2 ^ ((pulse - 1) / 12), orb.Position) -- cada pulso suena una nota más arriba
 		end
 		if fx.rays then
 			shake(0.1 + pulse * 0.04, beat)
@@ -517,7 +517,7 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 	follow.Parent = folder
 
 	for delay, name in fx.sounds do
-		task.delay((delay - 1) * 0.12, Sfx.play, name, if level == 1 then 0.6 else 1) -- las normales suenan flojo: salen a todas horas
+		task.delay((delay - 1) * 0.12, Sfx.play, name, if level == 1 then 0.6 else 1, nil, position) -- las normales suenan flojo: salen a todas horas
 	end
 	local lamp: PointLight? = nil
 	if not lite then
@@ -785,7 +785,7 @@ local function play(batch)
 	Debris:AddItem(folder, 45) -- red de seguridad: ninguna tanda dura tanto
 
 	-- Sale un orbe por tirada, en abanico de cara al jugador.
-	Sfx.play("orb", 0.6)
+	Sfx.play("orb", 0.6, nil, heart)
 	local count = batch.count
 	local slots, orbs = {}, {}
 	for index = 1, count do

@@ -27,7 +27,7 @@ local EVENTS = {
 	buyPing = { 100075584075241, 0.3, 1, 1 },
 	equip = { 91947373481346, 0.35, 1, 1 },
 	sell = { 89376802223171, 0.45, 1, 1 },
-	teleport = { 114142918150751, 0.5, 1, 1 },
+	teleport = { 113376444315480, 0.5, 1, 1 }, -- el "destello 2" que eligió el usuario
 	potion = { 126924859318135, 0.5, 1, 1 },
 	rebirth = { 101551001530213, 0.8, 1, 1 },
 	coin = { 122751732815655, 0.3, 1.2, 1.2 }, -- la misma grabación que coin_break
@@ -111,7 +111,7 @@ local GAIN = {
 	[91947373481346] = 11.78, -- equip_1
 	[81277813295867] = 4.22, -- error_1
 	[89376802223171] = 1.37, -- sell_1
-	[114142918150751] = 0.85, -- teleport_1
+	[113376444315480] = 2.94, -- teleport_destello_2
 	[116871010533956] = 2.47, -- toast_1
 	[139542095715371] = 13.88, -- hover_burbuja_2 (click)
 	[93541821621705] = 1.14, -- charge_1
@@ -126,6 +126,11 @@ local GAIN = {
 	[126095692231161] = 2.66, -- reveal_3_1
 }
 local MAX_VOLUME = 10 -- el tope de Sound.Volume
+-- Sonidos del mundo (los que se lanzan con `at`): a pleno volumen hasta ROLLOFF_MIN studs de la cámara y de ahí
+-- bajando hasta callar del todo en ROLLOFF_MAX.
+local ROLLOFF_MIN = 40
+local ROLLOFF_MAX = 200
+local SWING_QUIET = 0.35 -- con menos segundos que estos entre golpes, el espadazo va bajando de volumen
 
 -- A qué suena cada material de Config.Destructibles (lo que no sale aquí suena a piedra). Un objeto se lo
 -- salta poniendo `sound = "<familia>"` en su entrada.
@@ -158,8 +163,10 @@ function Sfx.family(index: number?): string
 end
 
 -- Suena el evento. `quiet` (0 a 1) lo baja (por ejemplo para los golpes de otros jugadores) y `pitch`
--- multiplica el tono (más de 1, más agudo).
-function Sfx.play(name: string, quiet: number?, pitch: number?)
+-- multiplica el tono (más de 1, más agudo). Con `at` (un punto del mundo o una pieza) el sonido sale de ahí:
+-- se oye por su lado y más flojo cuanto más lejos de la cámara. Sin él suena igual por los dos oídos, que es
+-- lo suyo para la interfaz, los avisos y los premios.
+function Sfx.play(name: string, quiet: number?, pitch: number?, at: (Vector3 | Instance)?)
 	local info = EVENTS[name]
 	local variants = template[name]
 	if not info or not variants then
@@ -180,17 +187,35 @@ function Sfx.play(name: string, quiet: number?, pitch: number?)
 	local sound = variants[index]:Clone()
 	sound.Volume = math.min(sound.Volume * (quiet or 1), MAX_VOLUME) -- la plantilla ya lleva el volumen del evento
 	sound.PlaybackSpeed = (info[3] + (info[4] - info[3]) * math.random()) * (pitch or 1)
-	sound.Parent = SoundService
+	-- Lo que se borra al acabar: el sonido o, si sale de un punto del mundo, el enganche que se le pone ahí.
+	local holder: Instance = sound
+	if typeof(at) == "Vector3" then
+		local anchor = Instance.new("Attachment")
+		anchor.Name = "Sfx"
+		anchor.Position = at
+		anchor.Parent = workspace.Terrain
+		sound.Parent = anchor
+		holder = anchor
+	else
+		sound.Parent = if typeof(at) == "Instance" then at else SoundService
+	end
 	sound.Ended:Once(function()
-		sound:Destroy()
+		holder:Destroy()
 	end)
 	sound:Play()
 	-- Por si no llega a terminar (la cargaron mal).
 	task.delay(8, function()
-		if sound.Parent then
-			sound:Destroy()
+		if holder.Parent then
+			holder:Destroy()
 		end
 	end)
+end
+
+-- El silbido de un espadazo, que sale del personaje que lo da. Cuanto más rápido se golpea, más flojo (con la
+-- velocidad al máximo salen varios por segundo).
+function Sfx.swing(kind: string, cooldown: number, character: Model?, quiet: number?)
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	Sfx.play("swing_" .. kind, math.clamp((cooldown / SWING_QUIET) ^ 0.5, 0.4, 1) * (quiet or 1), nil, root)
 end
 
 function Sfx.start()
@@ -210,6 +235,9 @@ function Sfx.start()
 			sound.Name = name
 			sound.SoundId = if type(source) == "number" then string.format("rbxassetid://%d", source) else "rbxasset://sounds/" .. source
 			sound.Volume = math.min(info[2] * (GAIN[source] or 1), MAX_VOLUME)
+			sound.RollOffMode = Enum.RollOffMode.Linear
+			sound.RollOffMinDistance = ROLLOFF_MIN
+			sound.RollOffMaxDistance = ROLLOFF_MAX
 			sound.SoundGroup = group
 			sound.Parent = bank
 			table.insert(variants, sound)

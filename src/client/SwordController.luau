@@ -10,8 +10,6 @@ local SwingAnim = require(script.Parent.SwingAnim)
 
 local SwordController = {}
 
-local SWING_QUIET = 0.35 -- con menos segundos que estos entre golpes, el espadazo va bajando de volumen
-
 -- Si se le pone una función, se llama en cada espadazo que sale (la usa HitboxDebug, el modo de pruebas).
 SwordController.onSwing = nil :: (() -> ())?
 
@@ -72,8 +70,7 @@ local function swing(tool: Tool)
 		anim.Parent = tool
 	end
 
-	-- Cada tipo de arma silba a lo suyo; cuanto más rápido se golpea, más flojo (al máximo salen varios por segundo).
-	Sfx.play("swing_" .. kind, math.clamp((cooldown / SWING_QUIET) ^ 0.5, 0.4, 1))
+	Sfx.swing(kind, cooldown, player.Character)
 
 	Remotes.Swing:FireServer()
 	if SwordController.onSwing then

@@ -71,6 +71,17 @@ const BATCHES = {
 		s("hover_cristal", 0.5, "Cristal: un tintineo", "UI hover sound, one tiny delicate glass ting, soft and bright, very short, dry", 2),
 		s("hover_tambor", 0.5, "Tambor: golpe sordo", "UI hover sound, one soft low muted thump, tiny felt drum tap, very short, dry", 2),
 	],
+	// Opciones para el sonido de teletransporte (el usuario elige una).
+	teleporte: [
+		s("teleport_magia", 1.0, "Magia: remolino de destellos", "Magic teleport, quick shimmering sparkle swirl, bright and airy, fantasy game sound, short", 2),
+		s("teleport_warp", 1.0, "Warp: energía que sube y pop", "Sci-fi warp teleport, fast rising energy zip ending in a soft pop, game sound, short", 2),
+		s("teleport_viento", 0.8, "Viento: ráfaga rápida", "Quick wind dash whoosh, fast airy swoosh passing by, ninja dash, game sound, short, dry", 2),
+		s("teleport_humo", 0.9, "Humo: bomba de humo ninja", "Ninja smoke bomb vanish, soft poof with a quick airy whoosh, game sound, short", 2),
+		s("teleport_campana", 1.2, "Campana: tono de templo", "Mystical teleport chime, soft temple bell tone with a quick shimmering whoosh, japanese fantasy game sound, short", 2),
+		s("teleport_portal", 1.2, "Portal: grave y resonante", "Portal opening and closing, quick deep whoosh with a resonant low hum, fantasy game sound, short", 2),
+		s("teleport_destello", 0.6, "Destello: parpadeo corto", "Quick bright flash zap, short sparkling blink, light and clean, game sound, very short", 2),
+		s("teleport_burbuja", 0.8, "Burbuja: blup que sube", "Soft bubbly warp, quick watery bloop with a rising pitch, cute cartoon game sound, short", 2),
+	],
 	tiradas: [
 		s("orb", 0.5, "Aparece el orbe de una tirada", "Magic orb appearing, soft bubbly energy pop with a quick shimmer, fantasy game sound, short, dry", 2),
 		s("charge", 0.5, "El orbe se carga (cada pulso)", "Energy charging pulse, single short rising magical hum blip, building tension, game sound, dry", 2),

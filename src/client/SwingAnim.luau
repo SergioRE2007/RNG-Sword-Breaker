@@ -13,6 +13,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 
 local Performance = require(script.Parent.Performance)
+local Sfx = require(script.Parent.Sfx)
 local SwingClips = require(script.Parent.SwingClips)
 
 local SwingAnim = {}
@@ -289,7 +290,9 @@ function SwingAnim.start()
 	-- Golpes de los demás jugadores (el propio se lanza desde SwordController sin esperar al servidor).
 	Remotes.SwingFx.OnClientEvent:Connect(function(other: Player)
 		if other ~= Players.LocalPlayer then
-			SwingAnim.play(other.Character, Stats.cooldown(other), (Stats.weapon(other)))
+			local cooldown, kind = Stats.cooldown(other), (Stats.weapon(other))
+			SwingAnim.play(other.Character, cooldown, kind)
+			Sfx.swing(kind, cooldown, other.Character, 0.7) -- el espadazo de otro: desde su sitio y algo más flojo
 		end
 	end)
 end
