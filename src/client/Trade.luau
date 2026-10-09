@@ -565,10 +565,19 @@ local function buildTrade()
 		end)
 		table.insert(amountRows, row)
 	end
-	amountRow(1, "Monedas", Ui.COLORS.coins, "coins")
-	amountRow(2, "Gemas", Ui.COLORS.purple, "gems")
-	for order, key in Config.ItemOrder do
-		amountRow(2 + order, Config.Items[key].name, Config.Items[key].color, "items", key)
+	-- Solo las filas de lo que se puede comerciar (Config.Trade.Allow: monedas y gemas, no); la rejilla las recoloca sola.
+	local allow = Config.Trade.Allow
+	local rowCount = 0
+	local function allowedRow(name: string, color: Color3, category: string, key: string?)
+		if allow[category] then
+			rowCount += 1
+			amountRow(rowCount, name, color, category, key)
+		end
+	end
+	allowedRow("Monedas", Ui.COLORS.coins, "coins")
+	allowedRow("Gemas", Ui.COLORS.purple, "gems")
+	for _, key in Config.ItemOrder do
+		allowedRow(Config.Items[key].name, Config.Items[key].color, "items", key)
 	end
 
 	-- Pestañas.
@@ -576,7 +585,7 @@ local function buildTrade()
 	local tabButtons = {}
 	local stockCells = {} -- [id o índice] = casilla de la pestaña que se ve
 	local stockKey: string? = nil
-	local TABS = { { "swords", "Espadas", Ui.COLORS.red }, { "armor", "Armadura", Ui.COLORS.orange }, { "artifacts", "Accesorios", Ui.COLORS.purple }, { "amounts", "Monedas y objetos", Ui.COLORS.blue } }
+	local TABS = { { "swords", "Espadas", Ui.COLORS.red }, { "armor", "Armadura", Ui.COLORS.orange }, { "artifacts", "Accesorios", Ui.COLORS.purple }, { "amounts", if allow.coins or allow.gems then "Monedas y objetos" else "Objetos", Ui.COLORS.blue } }
 
 	local function locked(): boolean
 		return current == nil or current.state ~= "editing"

@@ -175,10 +175,11 @@ Config.Gacha = {
 }
 
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
--- (los que dan gemas) al romperse.
+-- (los que dan gemas) al romperse. La del Cristal de rasgo va con el calendario de tools/equilibrio (objetivo.rasgo):
+-- al 5 % de antes la parcela daba ella sola varias veces las tiradas de rasgo que pide el calendario.
 Config.ItemOrder = { "traitCrystal", "missionToken", "gradeCrystal" }
 Config.Items = {
-	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.05, color = Color3.fromRGB(90, 230, 255) },
+	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.007, color = Color3.fromRGB(90, 230, 255) },
 	-- Moneda gratuita (f2p) que dan las misiones diarias y semanales. De momento no se gasta en nada: en el futuro servirá para comprar cosas difíciles o pases. No cae de los objetos (sin dropChance).
 	missionToken = { name = "Ficha de misión", description = "La dan las misiones diarias y semanales. Más adelante servirá para comprar cosas difíciles de conseguir.", color = Color3.fromRGB(255, 190, 60) },
 	-- Lo sueltan los enemigos de las mazmorras y se saca al desmontar armadura. No cae de los objetos (sin dropChance).
@@ -423,7 +424,9 @@ Config.Upgrades = {
 	rollSpeed = { name = "Velocidad de aparición", short = "Aparición", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, costs = { 2600, 73000, 380000, 5.7e7, 6.1e9, 5.7e12, 5.4e14, 2.1e17, 2e19, 5.8e21 }, display = "%.2fs" },
 }
 
--- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Números a ojo, sin equilibrar.
+-- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Lo que suma un jugador a cada hora
+-- (calidad, "bonus" de la zona y bases de aquí) está medido con tools/equilibrio/informe.luau contra la tabla
+-- `armadura` de objetivo.luau: si tocas las bases, pásalo.
 -- Cada pieza guarda sus valores ya tirados (PlayerData recorta al cargar los porcentajes de las guardadas con la regla
 -- antigua, cuando escalaban con el power). Valor de un stat = base del hueco * azar (Roll) * mult de la calidad * lo
 -- que escala con la zona (shared/ArmorStats.scaling): la vida, su "power"; los porcentajes, su "bonus", mucho más
@@ -437,7 +440,7 @@ Config.Armor = {
 	Slots = {
 		helmet = { name = "Casco", stats = { health = 40, luck = 0.05 } },
 		chest = { name = "Pechera", stats = { health = 100 } },
-		legs = { name = "Grebas", stats = { health = 60, rollSpeed = 0.04 } },
+		legs = { name = "Grebas", stats = { health = 60, rollSpeed = 0.03 } },
 		boots = { name = "Botas", stats = { health = 30, damage = 0.03, luck = 0.03 } },
 	},
 	StatOrder = { "health", "damage", "luck", "rollSpeed" },
@@ -448,26 +451,33 @@ Config.Armor = {
 		rollSpeed = { name = "Velocidad de aparición", scales = false, color = Color3.fromRGB(255, 200, 90) },
 	},
 	-- Calidades, de peor a mejor: "odds" = 1 entre N de que salga (la suerte de la dificultad y del enemigo divide N),
-	-- "mods" = modificadores extra que trae, "value" = Cristales de grado al desmontarla (por el loot de su dificultad).
+	-- "mods" = modificadores extra que trae, "value" = Cristales de grado al desmontarla: las corrientes no dan ninguno y
+	-- ya no se multiplica por el loot de la zona (daba 1 a 100 por pieza y por x2048: de ahí salía el 96 % de los
+	-- cristales de grado). Ahora desmontar da alrededor de la mitad de los cristales de grado y los enemigos el resto.
 	-- Son propias de la armadura (no las rarezas de las espadas). No cambies el orden: lo nuevo, al final.
 	Qualities = {
-		{ name = "Común", odds = 1, mult = 1, mods = 0, value = 1, color = Color3.fromRGB(190, 195, 205) },
-		{ name = "Poco común", odds = 4, mult = 1.4, mods = 0, value = 2, color = Color3.fromRGB(90, 220, 100) },
-		{ name = "Rara", odds = 20, mult = 2, mods = 1, value = 4, color = Color3.fromRGB(70, 150, 255) },
-		{ name = "Épica", odds = 150, mult = 3, mods = 1, value = 10, color = Color3.fromRGB(180, 90, 255) },
-		{ name = "Legendaria", odds = 2000, mult = 5, mods = 2, value = 30, color = Color3.fromRGB(255, 190, 40) },
-		{ name = "Mítica", odds = 50000, mult = 8, mods = 3, value = 100, color = Color3.fromRGB(255, 70, 70) },
+		{ name = "Común", odds = 1, mult = 1, mods = 0, value = 0, color = Color3.fromRGB(190, 195, 205) },
+		{ name = "Poco común", odds = 4, mult = 1.4, mods = 0, value = 0, color = Color3.fromRGB(90, 220, 100) },
+		{ name = "Rara", odds = 20, mult = 2, mods = 1, value = 1, color = Color3.fromRGB(70, 150, 255) },
+		{ name = "Épica", odds = 150, mult = 3, mods = 1, value = 2, color = Color3.fromRGB(180, 90, 255) },
+		{ name = "Legendaria", odds = 2000, mult = 5, mods = 2, value = 5, color = Color3.fromRGB(255, 190, 40) },
+		{ name = "Mítica", odds = 50000, mult = 8, mods = 3, value = 15, color = Color3.fromRGB(255, 70, 70) },
 	},
 	-- Modificadores extra: "chance" = peso de salir, "value" = base (se escala como los stats del hueco).
 	Mods = {
 		{ stat = "health", value = 30, chance = 40 },
 		{ stat = "luck", value = 0.04, chance = 25 },
 		{ stat = "damage", value = 0.04, chance = 25 },
-		{ stat = "rollSpeed", value = 0.03, chance = 10 },
+		{ stat = "rollSpeed", value = 0.02, chance = 10 },
 	},
 }
 
--- MAZMORRAS (partida): cada grupo juega en su arena. Números a ojo, sin equilibrar.
+-- MAZMORRAS (partida): cada grupo juega en su arena. Lo que dan (ClearDrops aquí, "drops" de Config.Enemies, "loot" y
+-- "qualityLuck" de Config.Dungeons) está ajustado con tools/equilibrio para dos cosas: que el jugador normal lleve a
+-- cada hora el rasgo, el grado y la armadura que le supone el calendario (objetivo.rasgo, .grado y .armadura), y que
+-- quien deje el personaje en Auto y Repetir 24 h en la última zona saque unos 15 000 cristales de rasgo y 15 000 de
+-- grado (objetivo.bucle, decidido por el usuario). Una partida dura de 25 s a algo más de un minuto: la de la primera
+-- zona da de media medio cristal de rasgo y un cuarto de grado, y la de la última, unos cuatro de cada.
 Config.Dungeon = {
 	TimeLimit = 300, -- segundos para terminar la mazmorra
 	WaveDelay = 2, -- pausa entre oleadas
@@ -485,8 +495,8 @@ Config.Dungeon = {
 	},
 	-- Premio por terminar la última oleada (mismo formato que los drops de los enemigos).
 	ClearDrops = {
-		{ kind = "item", item = "traitCrystal", chance = 1, min = 1, max = 2 },
-		{ kind = "item", item = "gradeCrystal", chance = 1, min = 1, max = 2 },
+		{ kind = "item", item = "traitCrystal", chance = 0.15 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.08 },
 		{ kind = "potion", chance = 0.06 },
 	},
 }
@@ -543,28 +553,33 @@ Config.DungeonLobby = {
 -- Mazmorras (zonas), de menor a mayor. El jugador solo ve "name" (la zona) y "tagline"; "difficulty" es la etiqueta
 -- interna del equilibrio (Fácil … Infinito) y no se enseña. "id" = clave estable (la usa Config.DungeonThemes).
 -- "hp" = daño por golpe recomendado: la vida de un enemigo es su hp (en golpes) por este número. NÚMERO GENERADO por
--- tools/equilibrio: lo que pega el jugador tipo a la hora en que le toca cada zona (de los 5 min a las 175 h).
+-- tools/equilibrio (`generar.luau 9 mazmorras aplicar` lo rehace sin tocar lo demás): lo que pega el jugador tipo a
+-- la hora en que le toca cada zona (de los 5 min a las 175 h), suavizado con las zonas vecinas para que la escalera
+-- suba parejo (x10 a x40 por zona; sin suavizar había un salto de x200 y otro de x2).
 -- "power" multiplica el daño de los enemigos Y la vida de la armadura que cae: cada dificultad pide la armadura de la
 -- anterior. "bonus" multiplica los porcentajes de esa armadura (suerte, ataque): crece mucho más despacio que el
--- power para que la armadura no tape al resto de fuentes de suerte y de daño.
--- "count" = más enemigos, "loot" = más cristales, "qualityLuck" = mejor calidad de armadura.
+-- power para que la armadura no tape al resto de fuentes de suerte y de daño (x1 a x10,5: con él, el jugador simulado
+-- lleva la suerte y el ataque de la tabla `armadura` de objetivo.luau).
+-- "count" = más enemigos, "loot" = más cristales (x1 a x6,5; la parte decimal es la probabilidad de uno más),
+-- "qualityLuck" = mejor calidad de armadura (x1 a x30: en una partida de 260 h caen 4 o 5 piezas Míticas).
+-- Antes llegaban a x2048 y x12000 y sobraban cristales y armadura Mítica: el juego entero se acababa en 12 h.
 -- "set", "armorColor" y "armorMaterial" = nombre y aspecto de la armadura que cae ahí ("Casco de cuero").
 -- "color" = acento de la zona. "minDamage" (opcional) = daño mínimo para entrar (si no llega, la sala sale cerrada).
 -- No cambies el orden: las piezas de armadura guardan la posición. Lo nuevo, al final.
 Config.Dungeons = {
 	{ id = "forest", name = "Bosque de los Susurros", difficulty = "Fácil", tagline = "Raíces viejas que murmuran tu nombre.", hp = 200, power = 1, bonus = 1, count = 1, loot = 1, qualityLuck = 1, color = Color3.fromRGB(90, 210, 110), set = "de cuero", armorColor = Color3.fromRGB(150, 105, 65), armorMaterial = Enum.Material.Leather },
-	{ id = "mines", name = "Minas Abandonadas", difficulty = "Normal", tagline = "Galerías olvidadas donde algo sigue picando.", hp = 10000, power = 4, bonus = 1.3, count = 1.25, loot = 2, qualityLuck = 3, color = Color3.fromRGB(240, 170, 70), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
-	{ id = "crypt", name = "Cripta del Rey Caído", difficulty = "Difícil", tagline = "Un rey sin descanso y su corte de huesos.", hp = 200000, power = 16, bonus = 1.7, count = 1.5, loot = 4, qualityLuck = 10, color = Color3.fromRGB(160, 125, 225), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
-	{ id = "temple", name = "Templo de las Cenizas", difficulty = "Pesadilla", tagline = "Brasas, incienso y fieles que no se rinden.", hp = 3e6, power = 64, bonus = 2.2, count = 1.75, loot = 8, qualityLuck = 30, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
-	{ id = "abyss", name = "Abismo Sumergido", difficulty = "Abismo", tagline = "Aguas hundidas donde la luz ya no llega.", hp = 7e7, power = 256, bonus = 2.8, count = 2, loot = 16, qualityLuck = 100, color = Color3.fromRGB(50, 200, 210), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
+	{ id = "mines", name = "Minas Abandonadas", difficulty = "Normal", tagline = "Galerías olvidadas donde algo sigue picando.", hp = 8000, power = 4, bonus = 1.3, count = 1.25, loot = 1.3, qualityLuck = 1.4, color = Color3.fromRGB(240, 170, 70), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
+	{ id = "crypt", name = "Cripta del Rey Caído", difficulty = "Difícil", tagline = "Un rey sin descanso y su corte de huesos.", hp = 200000, power = 16, bonus = 1.65, count = 1.5, loot = 1.6, qualityLuck = 2, color = Color3.fromRGB(160, 125, 225), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
+	{ id = "temple", name = "Templo de las Cenizas", difficulty = "Pesadilla", tagline = "Brasas, incienso y fieles que no se rinden.", hp = 3e6, power = 64, bonus = 2.1, count = 1.75, loot = 2, qualityLuck = 2.8, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
+	{ id = "abyss", name = "Abismo Sumergido", difficulty = "Abismo", tagline = "Aguas hundidas donde la luz ya no llega.", hp = 8e7, power = 256, bonus = 2.6, count = 2, loot = 2.4, qualityLuck = 4, color = Color3.fromRGB(50, 200, 210), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
 	-- Endgame.
-	{ id = "inferno", name = "Caldera del Infierno", difficulty = "Infierno", tagline = "Una caldera viva: todo arde, todo golpea.", hp = 2e9, power = 1024, bonus = 3.5, count = 2, loot = 32, qualityLuck = 200, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
-	{ id = "void", name = "Páramo del Vacío", difficulty = "Vacío", tagline = "El suelo se acaba. El silencio, no.", hp = 9e9, power = 4096, bonus = 4.5, count = 2, loot = 64, qualityLuck = 400, color = Color3.fromRGB(130, 70, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
-	{ id = "nebula", name = "Jardín de la Nebulosa", difficulty = "Nebulosa", tagline = "Un jardín de polvo de estrellas… con dientes.", hp = 4e10, power = 16384, bonus = 5.5, count = 2.25, loot = 128, qualityLuck = 800, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
-	{ id = "galaxy", name = "Observatorio Galáctico", difficulty = "Galaxia", tagline = "Mira las estrellas. Ellas te miran a ti.", hp = 8e12, power = 65536, bonus = 7, count = 2.25, loot = 256, qualityLuck = 1500, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
-	{ id = "cosmos", name = "Bastión del Cosmos", difficulty = "Cosmos", tagline = "Torres de cristal que giran con el cosmos.", hp = 1.6e13, power = 262144, bonus = 8.5, count = 2.5, loot = 512, qualityLuck = 3000, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
-	{ id = "origin", name = "Santuario del Origen", difficulty = "Origen", tagline = "Donde todo empezó, y donde todo se mide.", hp = 2e14, power = 1048576, bonus = 10, count = 2.5, loot = 1024, qualityLuck = 6000, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
-	{ id = "infinity", name = "Trono del Infinito", difficulty = "Infinito", tagline = "El último trono. Nadie ha vuelto a sentarse.", hp = 2e15, power = 4194304, bonus = 12, count = 3, loot = 2048, qualityLuck = 12000, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
+	{ id = "inferno", name = "Caldera del Infierno", difficulty = "Infierno", tagline = "Una caldera viva: todo arde, todo golpea.", hp = 1e9, power = 1024, bonus = 3.1, count = 2, loot = 2.9, qualityLuck = 5.5, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
+	{ id = "void", name = "Páramo del Vacío", difficulty = "Vacío", tagline = "El suelo se acaba. El silencio, no.", hp = 1e10, power = 4096, bonus = 3.7, count = 2, loot = 3.4, qualityLuck = 7.5, color = Color3.fromRGB(130, 70, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
+	{ id = "nebula", name = "Jardín de la Nebulosa", difficulty = "Nebulosa", tagline = "Un jardín de polvo de estrellas… con dientes.", hp = 1e11, power = 16384, bonus = 4.3, count = 2.25, loot = 3.9, qualityLuck = 10, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
+	{ id = "galaxy", name = "Observatorio Galáctico", difficulty = "Galaxia", tagline = "Mira las estrellas. Ellas te miran a ti.", hp = 2e12, power = 65536, bonus = 5, count = 2.25, loot = 4.5, qualityLuck = 14, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
+	{ id = "cosmos", name = "Bastión del Cosmos", difficulty = "Cosmos", tagline = "Torres de cristal que giran con el cosmos.", hp = 2e13, power = 262144, bonus = 6.2, count = 2.5, loot = 5.1, qualityLuck = 18, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
+	{ id = "origin", name = "Santuario del Origen", difficulty = "Origen", tagline = "Donde todo empezó, y donde todo se mide.", hp = 2e14, power = 1048576, bonus = 8.2, count = 2.5, loot = 5.8, qualityLuck = 24, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
+	{ id = "infinity", name = "Trono del Infinito", difficulty = "Infinito", tagline = "El último trono. Nadie ha vuelto a sentarse.", hp = 2e15, power = 4194304, bonus = 10.5, count = 3, loot = 6.5, qualityLuck = 30, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
 }
 
 -- Aspecto de cada zona de Config.Dungeons, por su "id" (lo construye server/DungeonThemes y lo viste client/DungeonFx):
@@ -757,23 +772,25 @@ Config.DungeonThemes = {
 -- "speed" al andar, "attackRange" desde su borde, "attackTime" segundos entre golpes. scaleCount = false: su
 -- cantidad no crece con la dificultad. "look" = adornos ("horns", "crown"). "drops" = tabla de premios al morir (ver server/Loot): cada entrada lleva
 -- "kind" ("item" con item, min y max; "armor" con luck que multiplica la suerte de calidad) y "chance".
+-- Las "chance" de cristales y armadura van con el calendario de tools/equilibrio (ver Config.Dungeon): tras cambiarlas,
+-- pasar `lune run tools/equilibrio/informe.luau`, que juega las mazmorras y lo compara con el calendario.
 Config.Enemies = {
 	grunt = { name = "Esbirro", hp = 6, damage = 3, speed = 17, attackRange = 3.5, attackTime = 1.2, size = Vector3.new(4, 4, 4), color = Color3.fromRGB(120, 200, 90), drops = {
-		{ kind = "item", item = "traitCrystal", chance = 0.12 },
-		{ kind = "item", item = "gradeCrystal", chance = 0.12 },
-		{ kind = "armor", chance = 0.06 },
+		{ kind = "item", item = "traitCrystal", chance = 0.004 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.002 },
+		{ kind = "armor", chance = 0.015 },
 		{ kind = "potion", chance = 0.0006 },
 	} },
 	brute = { name = "Bruto", hp = 20, damage = 7, speed = 11, attackRange = 4, attackTime = 1.8, look = "horns", size = Vector3.new(6.5, 6.5, 6.5), color = Color3.fromRGB(200, 110, 70), drops = {
-		{ kind = "item", item = "traitCrystal", chance = 0.35 },
-		{ kind = "item", item = "gradeCrystal", chance = 0.35 },
-		{ kind = "armor", chance = 0.2, luck = 2 },
+		{ kind = "item", item = "traitCrystal", chance = 0.02 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.01 },
+		{ kind = "armor", chance = 0.05, luck = 2 },
 		{ kind = "potion", chance = 0.003 },
 	} },
 	boss = { name = "Guardián", hp = 120, damage = 12, speed = 13, attackRange = 5, attackTime = 2, scaleCount = false, look = "crown", size = Vector3.new(11, 11, 11), color = Color3.fromRGB(150, 80, 220), drops = {
-		{ kind = "item", item = "traitCrystal", chance = 1, min = 2, max = 4 },
-		{ kind = "item", item = "gradeCrystal", chance = 1, min = 2, max = 4 },
-		{ kind = "armor", chance = 1, luck = 5 },
+		{ kind = "item", item = "traitCrystal", chance = 0.15 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.08 },
+		{ kind = "armor", chance = 0.3, luck = 5 },
 		{ kind = "potion", chance = 0.02 },
 	} },
 }
@@ -782,6 +799,8 @@ Config.Enemies = {
 -- cancelar; InviteTime = lo que dura una invitación; RequestCooldown = espera entre invitaciones.
 -- Sugerencias dentro del trato ("Quiero" / "Te doy"): SuggestCooldown = espera entre sugerencias, SuggestTime = lo
 -- que dura una sin respuesta, SuggestMaxAmount = tope de la cantidad de un "Quiero", SuggestWant = qué se puede pedir.
+-- Allow = lo que se puede ofrecer y sugerir: objetos (cristales), espadas, armadura y accesorios. Monedas ("coins") y
+-- gemas ("gems") no están, decidido por el usuario: con ellas un jugador avanzado le regalaba el progreso a otro.
 Config.Trade = {
 	Countdown = 3,
 	InviteTime = 20,
@@ -789,7 +808,8 @@ Config.Trade = {
 	SuggestCooldown = 0.4,
 	SuggestTime = 20,
 	SuggestMaxAmount = 1e36,
-	SuggestWant = { coins = true, gems = true, items = true },
+	SuggestWant = { items = true },
+	Allow = { items = true, swords = true, armor = true, artifacts = true },
 }
 
 -- PASES DE JUEGO (gamepass; tienda del menú, client/PassShop y server/Passes). "id" = id del pase en Roblox

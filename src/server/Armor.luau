@@ -70,7 +70,8 @@ function Armor.give(player: Player, level: number, luck: number)
 		PlayerData.edit(player, function(edited)
 			edited.items[CRYSTAL] += crystals
 		end)
-		Remotes.Notice:FireClient(player, `Armadura llena: {ArmorStats.name(piece)} desmontada\n+{Format.short(crystals)} {Config.Items[CRYSTAL].name}`, quality.color)
+		local gained = if crystals > 0 then `\n+{Format.short(crystals)} {Config.Items[CRYSTAL].name}` else ""
+		Remotes.Notice:FireClient(player, `Armadura llena: {ArmorStats.name(piece)} desmontada{gained}`, quality.color)
 	end
 	local odds = quality.odds / luck
 	if odds >= Config.AnnounceOdds then
