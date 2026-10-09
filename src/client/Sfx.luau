@@ -16,10 +16,9 @@ local DEFAULT_VOLUME = 0.7
 -- nombre = { sonido, volumen, tono mínimo, tono máximo }
 local EVENTS = {
 	-- Interfaz. Pedido por el usuario: siempre iguales, una sola grabación y sin azar en el tono (mínimo = máximo).
-	click = { 127498863959231, 0.3, 1, 1 },
-	-- Pasar el ratón: la "kalimba 2" de las opciones que eligió el usuario. También le gustaron la burbuja 2
-	-- (139542095715371), la digital 1 (85764693908051) y la kalimba 1 (95148101729968): basta cambiar el id.
-	hover = { 74856046528466, 0.08, 1, 1 },
+	-- Pulsar un botón: la "burbuja 2" que eligió el usuario (salió de las opciones para pasar el ratón, que al
+	-- final va sin sonido).
+	click = { 139542095715371, 0.3, 1, 1 },
 	tick = { 109272899066209, 0.35, 1, 1 },
 	open = { 104050042655641, 0.2, 1, 1 },
 	close = { 87073814038077, 0.2, 1, 1 }, -- la versión 2, elegida por el usuario
@@ -109,7 +108,6 @@ local GAIN = {
 	[114717881619968] = 0.88, -- swing_dual_2
 	[100075584075241] = 6.04, -- buyPing_1
 	[121614318104194] = 1.27, -- buy_1
-	[127498863959231] = 1.91, -- click_1
 	[87073814038077] = 1.21, -- close_2
 	[91947373481346] = 11.78, -- equip_1
 	[81277813295867] = 4.22, -- error_1
@@ -117,10 +115,7 @@ local GAIN = {
 	[89376802223171] = 1.37, -- sell_1
 	[114142918150751] = 0.85, -- teleport_1
 	[116871010533956] = 2.47, -- toast_1
-	[139542095715371] = 13.88, -- hover_burbuja_2
-	[85764693908051] = 2.60, -- hover_digital_1
-	[95148101729968] = 48.71, -- hover_kalimba_1
-	[74856046528466] = 13.92, -- hover_kalimba_2
+	[139542095715371] = 13.88, -- hover_burbuja_2 (click)
 	[93541821621705] = 1.14, -- charge_1
 	[97714408632464] = 10.21, -- forge_hit_1
 	[119769094792609] = 7.83, -- forge_hit_2
