@@ -150,20 +150,21 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	end
 
 	-- Segundos que tarda en una partida de la zona `index` (de una a la siguiente) pegando `dano` cada `cooldown`
-	-- segundos, o nil si no le da tiempo a acabarla.
-	function M.duracionMazmorra(index: number, dano: number, cooldown: number): number?
+	-- segundos, o nil si no le da tiempo a acabarla. `area` = lleva un arma que pega alrededor (martillo, hacha).
+	-- Medido en Studio con el personaje en Auto (ver objetivo.mazmorra): los enemigos se le echan encima en piña, así
+	-- que cada espadazo se lleva a todos los de un tipo a la vez. Con un arma de área caen todos los tipos juntos (la
+	-- oleada dura los golpes del más duro); con una de frente va un tipo detrás de otro (se suman).
+	function M.duracionMazmorra(index: number, dano: number, cooldown: number, area: boolean?): number?
 		local zona = zonas[index]
 		local pelea = 0
 		for _, wave in oleadas[index] do
-			local golpes, mayor, cuantos = 0, 0, 0
+			local suma, mayor = 0, 0
 			for _, entry in wave do
 				local hits = math.max(1, math.ceil(entry.def.hp * zona.hp / dano - 1e-9))
-				golpes += hits * entry.n
+				suma += hits
 				mayor = math.max(mayor, hits)
-				cuantos += entry.n
 			end
-			-- Cada espadazo se lleva a varios mientras los haya; al más duro hay que darle todos los suyos.
-			pelea += Config.Dungeon.WaveDelay + maz.oleada + cuantos * maz.paso + math.max(mayor, golpes / math.min(cuantos, maz.porGolpe)) * cooldown
+			pelea += Config.Dungeon.WaveDelay + maz.oleada + (if area then mayor else suma) * cooldown
 		end
 		if pelea > Config.Dungeon.TimeLimit then
 			return nil
@@ -173,10 +174,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 
 	-- Zona que juega y lo que tarda en cada partida: la más alta que termina en `comoda` segundos (la primera, en lo
 	-- que tarde). nil si aún no puede con ninguna.
-	function M.zonaMazmorra(dano: number, cooldown: number): (number?, number?)
+	function M.zonaMazmorra(dano: number, cooldown: number, area: boolean?): (number?, number?)
 		local zona, segundos = nil, nil
 		for index = 1, #zonas do
-			local d = M.duracionMazmorra(index, dano, cooldown)
+			local d = M.duracionMazmorra(index, dano, cooldown, area)
 			if d and (d <= maz.comoda or index == 1) then
 				zona, segundos = index, d
 			end
@@ -184,15 +185,26 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		return zona, segundos
 	end
 
-	-- Cristales de rasgo y de grado que sueltan de media los enemigos y el final de una partida de esa zona (sin
-	-- contar lo que se saca al desmontar la armadura) y piezas de armadura que caen.
-	function M.botinMazmorra(index: number): { rasgo: number, grado: number, piezas: number }
-		local sum = { rasgo = 0, grado = 0, piezas = 0 }
+	-- Lo que da de media una partida de esa zona: cristales de rasgo y de grado que sueltan los enemigos y el final,
+	-- piezas de armadura que caen y cristales de grado que salen de desmontarlas todas.
+	function M.botinMazmorra(index: number): { rasgo: number, grado: number, piezas: number, desmontar: number }
+		local sum = { rasgo = 0, grado = 0, piezas = 0, desmontar = 0 }
+		-- Cristales que da de media desmontar una pieza que cae con esa suerte de calidad.
+		local function valorPieza(luck: number): number
+			local left, total = 1, 0
+			for quality = #armadura.Qualities, 1, -1 do
+				local p = math.min(1, luck / armadura.Qualities[quality].odds)
+				total += left * p * armadura.Qualities[quality].value
+				left *= 1 - p
+			end
+			return total
+		end
 		local function cuenta(drops, veces: number)
 			for _, drop in drops do
 				local chance = math.min(drop.chance or 1, 1) * veces
 				if drop.kind == "armor" then
 					sum.piezas += chance
+					sum.desmontar += chance * valorPieza(zonas[index].qualityLuck * (drop.luck or 1))
 				elseif drop.kind == "item" then
 					local amount = chance * math.max(((drop.min or 1) + (drop.max or 1)) / 2 * zonas[index].loot, 1)
 					if drop.item == "traitCrystal" then
@@ -288,6 +300,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		local mejor = { traits = 0, grades = 0 } -- lo más raro que ha sacado de cada cosa
 		local puesto = {} -- [hueco] = pieza de armadura que lleva
 		local mazZona, mazDur, presupuesto, mazSucio = nil, math.huge, 0, false
+		local area = false -- lleva un arma de área (martillo o hacha)
 		local mazParte = maz.parte * maz.atencion * (opts.ritmo or 1)
 		local cristalParcela = Config.Items.traitCrystal.dropChance or 0
 
@@ -367,7 +380,9 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			spawnTime = Stats.spawnTime(player)
 			cooldown = Stats.cooldown(player)
 			porGolpe = M.porGolpe(Upgrades.value("capacity", estado.upgrades.capacity or 0))
-			local zona, segundos = M.zonaMazmorra(damage, cooldown)
+			local _, kind = Stats.weapon(player)
+			area = kind.arc <= 0
+			local zona, segundos = M.zonaMazmorra(damage, cooldown, area)
 			mazZona, mazDur, mazSucio = zona, segundos or math.huge, false
 			if not zona then
 				presupuesto = 0
@@ -556,7 +571,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		for hour = 1, opts.horas do
 			horasFoto[hour] = true
 		end
-		for _, list in { objetivo.armadura, objetivo.tiradas.rasgo, objetivo.tiradas.grado } do
+		for _, list in { objetivo.armadura, objetivo.rasgo, objetivo.grado } do
 			for _, entry in list do
 				horasFoto[entry[1]] = true
 			end
@@ -833,6 +848,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		res.maz.mejor = mejor
 		res.estado = estado
 		res.dano = damage
+		res.cooldown, res.area = cooldown, area
 		res.suerte = luck
 		mundo.Weather = nil
 		return res

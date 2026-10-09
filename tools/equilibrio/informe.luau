@@ -167,16 +167,18 @@ print(`Objetos por partida: {Format.short(objetos / partidas)} · dejados por du
 local Modifiers = shared("Modifiers")
 local maz = objetivo.mazmorra
 print(`\n-- Mazmorras y cristales ({maz.parte * 100} % de la sesión en mazmorras; mediana, objetivo entre paréntesis) --`)
+-- Las tiradas objetivo de cada hora son las que aseguran (por pity) el rasgo o el grado que el calendario le supone
+-- al jugador a esa hora: con el pity que hay, casi todo lo raro sale por pity y no por suerte.
 local metas = {} -- [hora] = { rasgo = tiradas, grado = tiradas, armadura = { suerte, ataque, aparición } }
 local function meta(hour: number)
 	metas[hour] = metas[hour] or {}
 	return metas[hour]
 end
-for _, entry in objetivo.tiradas.rasgo do
-	meta(entry[1]).rasgo = entry[2]
+for _, entry in objetivo.rasgo do
+	meta(entry[1]).rasgo = Modifiers.pityLimit("traits", entry[2])
 end
-for _, entry in objetivo.tiradas.grado do
-	meta(entry[1]).grado = entry[2]
+for _, entry in objetivo.grado do
+	meta(entry[1]).grado = Modifiers.pityLimit("grades", entry[2])
 end
 for _, entry in objetivo.armadura do
 	meta(entry[1]).armadura = { entry[2], entry[3], entry[4] }
@@ -280,19 +282,27 @@ for index, zona in Config.Dungeons do
 end
 print("Zonas:\n" .. table.concat(parts, "\n"))
 
--- Quien deja el personaje en "Auto" y "Repetir" todo el día: lo que saca por hora en la zona que juega al final.
+-- Quien deja el personaje en "Auto" y "Repetir" sin parar en la mejor zona que juega al final de la partida: lo que
+-- saca en objetivo.bucle.horas (los cristales de grado, contando los de desmontar toda la armadura que cae).
 do
-	local danoFinal = med(function(run)
-		return run.dano
-	end)
-	local zona, segundos = M.zonaMazmorra(danoFinal, Config.BaseCooldown)
-	if zona and segundos then
-		local botin = M.botinMazmorra(zona)
-		local porHora = 3600 / segundos
-		local rasgoHora, gradoHora = botin.rasgo * porHora, botin.grado * porHora
-		local rarezaRasgo = Modifiers.pityLimit("traits", #Config.Traits)
-		local rarezaGrado = Modifiers.pityLimit("grades", #Config.Grades)
-		print(`En bucle sin parar (100 % del tiempo en {Config.Dungeons[zona].name}, {string.format("%.0f", segundos)} s por partida): {string.format("%.0f", rasgoHora)} cristales de rasgo y {string.format("%.0f", gradoHora)} de grado por hora, sin contar lo desmontado → {Config.Traits[#Config.Traits].name} asegurado en {string.format("%.0f", rarezaRasgo / rasgoHora)} h y {Config.Grades[#Config.Grades].name} en {string.format("%.0f", rarezaGrado / gradoHora)} h`)
+	local bucle = objetivo.bucle
+	local rasgos, grados, duraciones, zonasFinal = {}, {}, {}, {}
+	for _, run in runs do
+		local zona, segundos = M.zonaMazmorra(run.dano, run.cooldown, run.area)
+		if zona and segundos then
+			local botin = M.botinMazmorra(zona)
+			local veces = bucle.horas * 3600 / segundos
+			table.insert(rasgos, botin.rasgo * veces)
+			table.insert(grados, (botin.grado + botin.desmontar) * veces)
+			table.insert(duraciones, segundos)
+			table.insert(zonasFinal, zona)
+		end
+	end
+	if #rasgos > 0 then
+		local rasgo, grado = mediana(rasgos), mediana(grados)
+		local ultimoRasgo = Modifiers.pityLimit("traits", #Config.Traits)
+		local ultimoGrado = Modifiers.pityLimit("grades", #Config.Grades)
+		print(`En bucle sin parar {bucle.horas} h (en {Config.Dungeons[math.round(mediana(zonasFinal))].name}, {string.format("%.0f", mediana(duraciones))} s por partida): {string.format("%.0f", rasgo)} cristales de rasgo ({bucle.rasgo}) y {string.format("%.0f", grado)} de grado ({bucle.grado}) → {Config.Traits[#Config.Traits].name} asegurado en {string.format("%.1f", ultimoRasgo / rasgo * bucle.horas / 24)} días de bucle y {Config.Grades[#Config.Grades].name} en {string.format("%.1f", ultimoGrado / grado * bucle.horas / 24)}`)
 	end
 end
 

@@ -56,6 +56,9 @@ Objetivo.jugador = {
 }
 -- Lo que lleva puesto a cada hora (lo dan las mazmorras, que se equilibran para que esto se cumpla):
 -- { hora, índice de Config.Traits }, { hora, índice de Config.Grades } y { hora, suerte, ataque, aparición } de la armadura.
+-- De aquí salen los precios (generar.luau). El informe juega las mazmorras de verdad y dice cuánto se cumple: con los
+-- números de octubre de 2026 se cumple todo menos los dos últimos escalones, Trascendente y Z+, que por el objetivo
+-- del bucle (abajo) llegan hacia las 160–170 h y no a las 140; aun así la partida entera acaba en su hora.
 Objetivo.rasgo = { { 0.7, 3 }, { 1.5, 6 }, { 3, 9 }, { 5, 10 }, { 18, 11 }, { 60, 12 }, { 140, 13 } }
 Objetivo.grado = { { 1, 3 }, { 4, 5 }, { 10, 6 }, { 30, 7 }, { 70, 8 }, { 140, 9 } }
 Objetivo.armadura = {
@@ -71,21 +74,24 @@ Objetivo.armadura = {
 
 -- MAZMORRAS: cómo las juega el jugador tipo. Con esto el simulador juega también sus partidas de mazmorra (cristales,
 -- armadura y lo que saca al desmontarla) y el informe dice si se cumplen las tablas de arriba.
+-- Lo que dura una partida está medido en Studio con el personaje en Auto (9 oct 2026): con espada (0,35 s entre golpes)
+-- y todo cayendo de un golpe, 19 s de pelea (zona 4); con espada y 3 / 10 / 60 golpes para esbirro, bruto y jefe, 52 s
+-- (zona 5); con martillo (0,77 s) y 2 / 5 / 25 golpes, 42 s (zona 7). Los enemigos se le echan encima en piña y cada
+-- espadazo se lleva a todos los de un tipo: con el martillo cada oleada dura los golpes del más duro; con la espada,
+-- los de cada tipo uno detrás de otro (modelo.duracionMazmorra, que acierta esas tres medidas con un 7 % de margen).
+-- Con "Repetir", tres seguidas con martillo y todo de un golpe (zona 6): 20 s de pelea y 24 s de una a la siguiente.
+-- Sin medir: hacha (se cuenta como el martillo), espadas dobles y lanza (como la espada), y si aguanta vivo.
 Objetivo.mazmorra = {
 	parte = 0.15, -- parte de la sesión que pasa en mazmorras (el resto, 0,85, es la parcela y ya va en `eficiencia`)
 	atencion = 0.8, -- parte de ese tiempo que de verdad está peleando (la misma atención que en la parcela)
-	comoda = 90, -- segundos: juega la zona más alta que termina en menos de esto (la primera, en lo que tarde)
-	entrada = 8, -- segundos de una partida a la siguiente (salir, cargar la arena y que empiece la primera oleada)
-	oleada = 2, -- segundos de cada oleada hasta que tiene a los enemigos encima
-	paso = 0.3, -- segundos de más por enemigo (ir de uno a otro)
-	porGolpe = 1.5, -- enemigos que se lleva cada espadazo cuando hay varios
+	comoda = 75, -- segundos: juega la zona más alta que termina en menos de esto (la primera, en lo que tarde). Con espada es cuando ya pega más o menos el daño recomendado de la zona
+	entrada = 4, -- segundos de una partida a la siguiente con "Repetir" (medido: los 4 de Config.Dungeon.ExitDelay)
+	oleada = 2, -- segundos de cada oleada entre que aparecen los enemigos y los tiene encima (medido: de 1 a 3)
 }
--- Tiradas de rasgo y de grado que lleva hechas a cada hora: { hora, tiradas }. Son las que garantizan (por pity) el
--- rasgo o el grado que las tablas de arriba le suponen a esa hora. Decidido por el usuario.
-Objetivo.tiradas = {
-	rasgo = { { 5, 110 }, { 18, 600 }, { 60, 2600 }, { 140, 10000 }, { 200, 20000 } },
-	grado = { { 10, 80 }, { 30, 500 }, { 70, 1600 }, { 140, 5300 } },
-}
+-- Quien deja el personaje en "Auto" y "Repetir" sin parar en la mejor zona, ya con el juego completado: cristales de
+-- rasgo y de grado (contando los de desmontar la armadura) que saca en esas horas. Decidido por el usuario (9 oct
+-- 2026): con esto Paradoja (52 600 tiradas) son unos 3 días y medio de bucle e ∞ (62 500) unos 4.
+Objetivo.bucle = { horas = 24, rasgo = 15000, grado = 15000 }
 
 -- Horas de las que se guarda el estado del jugador tipo (Config.Test.Progress, para probar cada etapa en Studio).
 Objetivo.fotos = { 0.5, 2, 5, 15, 40, 80, 120, 170, 200 }
