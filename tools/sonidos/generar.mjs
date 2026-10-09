@@ -115,6 +115,14 @@ const BATCHES = {
 		s("unsheath", 0.6, "Sacar el arma", "Sword being drawn from its scabbard, quick metallic blade slide with a ring, short, dry", 2),
 		s("sheath", 0.6, "Guardar el arma", "Sword sliding back into its scabbard, quick blade slide ending in a soft click, short, dry", 2),
 	],
+	// Piezas sueltas y limpias para componer el ambiente de noche (tools/sonidos/componer.mjs). Los ambientes
+	// tranquilos pedidos de una vez salen casi mudos y son todo siseo: al subirlos suenan saturados y rotos.
+	noche_piezas: [
+		s("grillo", 2.0, "Grillo: una frase corta", "A single cricket chirping, a short phrase of four gentle chirps, clean close recording, no background noise", 3),
+		s("buho", 3.0, "Búho: dos ululatos", "A single owl hooting twice, soft and mellow, clean recording, no background noise", 2),
+		s("agua", 4.0, "Agua: unas gotas en un estanque", "A few gentle water drips and a tiny trickle into a pond, soft, clean close recording, no background noise", 2),
+		s("bambu", 2.5, "Bambú: dos golpes huecos", "Two soft hollow bamboo knocks, like a wooden wind chime, gentle, clean recording, no background noise", 2),
+	],
 	clima: [
 		s("w_rain", 10, "Lluvia", `Steady gentle rain falling on leaves and ground, soft and calm, ${LOOP}`, 1, true),
 		s("w_petals", 10, "Pétalos", `Gentle warm spring breeze through cherry trees, soft rustling leaves, calm, ${LOOP}`, 1, true),
