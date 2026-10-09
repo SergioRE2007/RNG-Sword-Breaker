@@ -60,6 +60,17 @@ const BATCHES = {
 		s("potion", 1.0, "Beber una poción", "Drinking a magic potion, quick gulp with bubbly fizz and a sparkle, cartoon game sound, short", 2),
 		s("rebirth", 3.0, "Renacer", "Epic rebirth ascension, rising magical swell ending in a bright triumphant burst with choir shimmer, game reward sound", 2),
 	],
+	// Opciones para el sonido de pasar el ratón por un botón (el usuario elige una).
+	raton: [
+		s("hover_madera", 0.5, "Madera: toque suave", "UI hover sound, one tiny soft wooden tick, muted and warm, very short, dry", 2),
+		s("hover_burbuja", 0.5, "Burbuja", "UI hover sound, one tiny soft bubble blip, round and gentle, very short, dry", 2),
+		s("hover_papel", 0.5, "Papel: una carta que se mueve", "UI hover sound, one light paper card flick, soft and airy, very short, dry", 2),
+		s("hover_digital", 0.5, "Digital: pitido limpio", "UI hover sound, one soft clean high sine blip, minimal and modern, very short, dry", 2),
+		s("hover_kalimba", 0.5, "Kalimba: una nota suave", "UI hover sound, one gentle muted kalimba pluck, soft single note, very short, dry", 2),
+		s("hover_aire", 0.5, "Aire: un soplo", "UI hover sound, one subtle soft air swish, barely audible whiff, very short, dry", 2),
+		s("hover_cristal", 0.5, "Cristal: un tintineo", "UI hover sound, one tiny delicate glass ting, soft and bright, very short, dry", 2),
+		s("hover_tambor", 0.5, "Tambor: golpe sordo", "UI hover sound, one soft low muted thump, tiny felt drum tap, very short, dry", 2),
+	],
 	tiradas: [
 		s("orb", 0.5, "Aparece el orbe de una tirada", "Magic orb appearing, soft bubbly energy pop with a quick shimmer, fantasy game sound, short, dry", 2),
 		s("charge", 0.5, "El orbe se carga (cada pulso)", "Energy charging pulse, single short rising magical hum blip, building tension, game sound, dry", 2),

@@ -147,6 +147,12 @@ end
 function Sfx.start()
 	-- El grupo lo crea el primero que lo pida (Ajustes también lo necesita antes de que arranque Sfx).
 	group = SoundService:FindFirstChild("Sfx") :: SoundGroup
+	-- Las plantillas se quedan colgadas de SoundService: solo así Roblox mantiene el audio cargado y cada sonido
+	-- arranca al momento. Sueltas, la primera copia de cada uno tardaba de 0,3 a 0,5 s en oírse (medido), y en
+	-- un botón eso se nota mucho.
+	local bank = Instance.new("Folder")
+	bank.Name = "SfxBank"
+	bank.Parent = SoundService
 	local list = {}
 	for name, info in EVENTS do
 		local variants = {}
@@ -155,12 +161,13 @@ function Sfx.start()
 			sound.Name = name
 			sound.SoundId = if type(source) == "number" then string.format("rbxassetid://%d", source) else "rbxasset://sounds/" .. source
 			sound.SoundGroup = group
+			sound.Parent = bank
 			table.insert(variants, sound)
 			table.insert(list, sound)
 		end
 		template[name] = variants
 	end
-	-- Se cargan de antemano para que el primer sonido de cada tipo no llegue tarde.
+	-- Y se piden cuanto antes, para que estén ya al entrar.
 	task.spawn(function()
 		pcall(function()
 			ContentProvider:PreloadAsync(list)
