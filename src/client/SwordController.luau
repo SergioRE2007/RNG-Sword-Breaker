@@ -5,9 +5,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local ForgeScene = require(script.Parent.ForgeScene)
+local Sfx = require(script.Parent.Sfx)
 local SwingAnim = require(script.Parent.SwingAnim)
 
 local SwordController = {}
+
+local SWING_QUIET = 0.35 -- con menos segundos que estos entre golpes, el espadazo va bajando de volumen
 
 -- Si se le pone una función, se llama en cada espadazo que sale (la usa HitboxDebug, el modo de pruebas).
 SwordController.onSwing = nil :: (() -> ())?
@@ -60,7 +63,8 @@ local function swing(tool: Tool)
 	end
 	lastSwing = now
 
-	if not SwingAnim.play(player.Character, cooldown, (Stats.weapon(player))) then
+	local kind = (Stats.weapon(player))
+	if not SwingAnim.play(player.Character, cooldown, kind) then
 		-- Sin esqueleto R15: el script Animate por defecto reproduce el tajo al ver este valor en la herramienta.
 		local anim = Instance.new("StringValue")
 		anim.Name = "toolanim"
@@ -68,11 +72,8 @@ local function swing(tool: Tool)
 		anim.Parent = tool
 	end
 
-	local handle = tool:FindFirstChild("Handle")
-	local sound = handle and handle:FindFirstChild("Slash")
-	if sound then
-		sound:Play()
-	end
+	-- Cada tipo de arma silba a lo suyo; cuanto más rápido se golpea, más flojo (al máximo salen varios por segundo).
+	Sfx.play("swing_" .. kind, math.clamp((cooldown / SWING_QUIET) ^ 0.5, 0.4, 1))
 
 	Remotes.Swing:FireServer()
 	if SwordController.onSwing then

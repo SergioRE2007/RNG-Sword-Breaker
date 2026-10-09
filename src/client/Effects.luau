@@ -22,6 +22,11 @@ local FRAGMENT_FADE = 0.5
 local HEALTH_BAR_TIMEOUT = 2
 local POPUP_HEIGHT = 12 -- altura máxima sobre el suelo a la que salen los premios de un objeto roto
 local ROLL_POPUP_SCALE = 1.5 -- desde este tamaño (escala) se anuncian las tiradas de un objeto aunque sea común y dé una sola
+local BREAK_SIZE = 6 -- diagonal (studs) del objeto que rompe con el tono normal: los mayores suenan más graves
+local COIN_CHAIN = 1.2 -- segundos: las monedas que caen más seguidas que esto van cambiando de nota
+local COIN_NOTES = { 0, 2, 4, 7, 9, 12 } -- semitonos de la racha de monedas: sube por la escala y vuelve a bajar
+local COIN_GAP = 0.07 -- segundos entre dos monedas que caen a la vez
+local COIN_QUEUE = 0.5 -- con más espera que esta, las monedas de más ya no suenan
 
 local player = Players.LocalPlayer
 local rng = Random.new()
@@ -153,6 +158,22 @@ local function shatter(cframe: CFrame, size: Vector3, color: Color3, material: E
 	end
 end
 
+-- Moneda de un objeto roto: con una racha, cada una suena una nota más arriba (y al llegar al final, de vuelta).
+-- Las que caen a la vez (un golpe que rompe varios objetos) suenan una detrás de otra.
+local coinStep, lastCoin = 0, 0
+local function coinSound()
+	local now = os.clock()
+	local at = math.max(now + 0.06, lastCoin + COIN_GAP) -- un pelín después de la rotura, para que no la tape
+	if at - now > COIN_QUEUE then
+		return
+	end
+	coinStep = if at - lastCoin < COIN_CHAIN then coinStep + 1 else 0
+	lastCoin = at
+	local phase = coinStep % (2 * #COIN_NOTES - 2)
+	local note = COIN_NOTES[if phase < #COIN_NOTES then phase + 1 else 2 * #COIN_NOTES - 1 - phase]
+	task.delay(at - now, Sfx.play, "coin_break", 1, 2 ^ (note / 12))
+end
+
 function Effects.start()
 	createHealthBar()
 
@@ -164,7 +185,8 @@ function Effects.start()
 			final = part ~= nil and damage >= (part:GetAttribute("HP") or math.huge),
 			other = hitter ~= player,
 		})
-		Sfx.play("hit", if hitter == player then 1 else 0.35)
+		local sound = if box then "hit_" .. Sfx.family((part :: BasePart):GetAttribute("Index")) else "hit_enemy"
+		Sfx.play(sound, if hitter == player then 1 else 0.35)
 		if part and part.Parent then
 			-- Los enemigos de las mazmorras se mueven solos (no anclados): no se sacuden.
 			if part.Anchored then
@@ -191,16 +213,21 @@ function Effects.start()
 		if quality > 1 and not Performance.get() then
 			ObjectBreak.burst(cframe, size, quality)
 		end
-		Sfx.play("break_", if breaker == player then 1 else 0.4)
+		-- Cada material rompe con su sonido y, cuanto más grande el objeto, más grave y más fuerte.
+		local big = math.clamp(size.Magnitude / BREAK_SIZE, 0.5, 6)
+		local family = if objectIndex then Sfx.family(objectIndex) else "enemy"
+		Sfx.play("break_" .. family, (if breaker == player then 1 else 0.4) * math.min(big ^ 0.2, 1.3), big ^ -0.25)
 		if breaker == player then
 			healthBar.Enabled = false
 			-- Los números salen a la altura de los ojos aunque el objeto sea altísimo.
 			local top = cframe.Position + Vector3.new(0, math.min(size.Y / 2 + 1, POPUP_HEIGHT - size.Y / 2), 0)
 			if reward > 0 then
 				FloatText.spawn("coin", top, "+" .. Format.short(reward))
+				coinSound()
 			end
 			if gems > 0 then
 				FloatText.spawn("gem", top + Vector3.new(0, 2, 0), `+{Format.short(gems)} gemas`)
+				task.delay(0.13, Sfx.play, "gem_break")
 			end
 			-- Tiradas de arma que ha dado: se anuncian cuando el objeto tenía algo de especial (varias tiradas, rareza
 			-- o buen tamaño); las de un objeto corriente ya se ven en el panel de arriba.
