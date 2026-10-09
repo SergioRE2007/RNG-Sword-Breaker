@@ -24,7 +24,7 @@ Trabajan dos personas, cada una con su Claude y su Studio (reparto de zonas y ar
 2. `list_roblox_studios` para obtener el `studio_id` del Studio abierto (`mi-juego`).
 3. Si Studio no tiene conexiones al puerto 34872, pedir al usuario que pulse Rojo → Connect.
 
-Entorno: Windows, PowerShell, Rojo 7.7.1 instalado con Rokit. Git y GitHub CLI (`gh`) instalados; repo `SergioRE2007/RNG-Sword-Breaker`, rama `main`, en la raíz de `mi-juego` (sin clon anidado). El archivo del lugar (`.rbxl`) no se sube. En el Studio de Sergio el lugar ya está publicado (`PlaceId` 13144818371, visto el 9 oct 2026; antes no lo estaba y de ahí vienen muchas notas de "sin probar el guardado"), así que una partida de Studio puede guardar: probar siempre con algún modo de `Config.Test` que no guarda (`InfiniteMoney`, `Progress`...).
+Entorno: Windows, PowerShell, Rojo 7.7.1 instalado con Rokit. Git y GitHub CLI (`gh`) instalados; repo `SergioRE2007/RNG-Sword-Breaker`, rama `main`, en la raíz de `mi-juego` (sin clon anidado). El archivo del lugar (`.rbxl`) no se sube. Sergio abre unas veces un lugar nuevo (`PlaceId` 0: el guardado no actúa) y otras uno guardado en Roblox ("wadwae", `PlaceId` 13144818371), donde una partida de Studio sí puede guardar: probar siempre con algún modo de `Config.Test` que no guarda (`InfiniteMoney`, `Progress`...). En `list_roblox_studios` el Studio sale con el nombre del lugar que tenga abierto, no como `mi-juego`: se reconoce porque tiene `ReplicatedStorage.Shared.Config`.
 
 ## Cómo trabajar
 
