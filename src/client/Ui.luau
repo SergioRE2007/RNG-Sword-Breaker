@@ -623,7 +623,6 @@ function Ui.open(frame: GuiObject)
 	if m.state == "open" or m.state == "opening" then
 		return
 	end
-	Sfx.play("open")
 	if m.state == "closed" then
 		m.home = frame.Position
 		m.travel = travelOf(m)
