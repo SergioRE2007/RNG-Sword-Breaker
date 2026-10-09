@@ -282,7 +282,7 @@ local function lit(model: Model?, brightness: number, range: number)
 end
 
 -- Camino de losas hasta cada parcela, con un torii a la entrada y linternas de piedra a los lados.
-local function path(parent: Instance, direction: Vector3, from: number, to: number, hue: Color3, first: boolean)
+local function path(parent: Instance, direction: Vector3, from: number, to: number, hue: Color3)
 	local width = 18
 	local tile = 9
 	local side = Vector3.new(-direction.Z, 0, direction.X)
@@ -299,13 +299,16 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 		local middle = direction * (from + length / 2) + side * sign * (width / 2 + 0.6) + Vector3.new(0, 0.6, 0)
 		decor(part(parent, "Curb", Vector3.new(1.2, 0.5, length), facing + middle, Color3.fromRGB(238, 52, 62), Enum.Material.SmoothPlastic))
 	end
-	-- Solo el primer camino lleva torii (con sus farolillos y dos guardianes de piedra); los demás quedan abiertos.
+	-- Torii a la entrada de cada camino (pedido por el usuario: antes solo lo llevaba el primero), del tamaño justo
+	-- para que sus columnas pisen los dos bordillos, con sus farolillos y dos guardianes de piedra por fuera.
 	local gate = direction * (from + 8)
-	if first and PropModel.place(parent, "Torii", CFrame.lookAt(gate, gate + direction), 1.15) then
+	local gateScale = (width / 2 + 0.6) / 6.55 -- en el modelo las columnas están a 6,55 del centro
+	if PropModel.place(parent, "Torii", CFrame.lookAt(gate, gate + direction), gateScale) then
 		for _, sign in { 1, -1 } do
-			local hang = CFrame.lookAt(gate, gate + direction) * CFrame.new(sign * 4.6, 8.2, 0)
-			PropModel.place(parent, "Chochin", hang, 1.1, { Red = hue })
-			local guard = gate + side * sign * 11
+			-- Los farolillos cuelgan del travesaño, que queda a 9,15 por la escala.
+			local hang = CFrame.lookAt(gate, gate + direction) * CFrame.new(sign * 6, 9.15 * gateScale - 2.73, 0)
+			PropModel.place(parent, "Chochin", hang, 1.3, { Red = hue })
+			local guard = gate + side * sign * 15.5
 			PropModel.place(parent, "Komainu", CFrame.lookAt(guard, guard - direction), 1.0) -- mira hacia quien llega del hub
 		end
 	end
@@ -479,7 +482,7 @@ function SceneryJapan.start()
 
 	-- Caminos con torii y linternas, con el farolillo del color de cada parcela.
 	ring(cfg.Count, 1, 0, function(direction, index)
-		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1), index == 1)
+		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1))
 	end)
 
 	-- Linternas de piedra en el borde del hub, entre las entradas.
