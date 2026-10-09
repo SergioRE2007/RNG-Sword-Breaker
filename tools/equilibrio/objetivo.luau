@@ -69,6 +69,24 @@ Objetivo.armadura = {
 	{ 175, 9, 7, 0.25 },
 }
 
+-- MAZMORRAS: cómo las juega el jugador tipo. Con esto el simulador juega también sus partidas de mazmorra (cristales,
+-- armadura y lo que saca al desmontarla) y el informe dice si se cumplen las tablas de arriba.
+Objetivo.mazmorra = {
+	parte = 0.15, -- parte de la sesión que pasa en mazmorras (el resto, 0,85, es la parcela y ya va en `eficiencia`)
+	atencion = 0.8, -- parte de ese tiempo que de verdad está peleando (la misma atención que en la parcela)
+	comoda = 90, -- segundos: juega la zona más alta que termina en menos de esto (la primera, en lo que tarde)
+	entrada = 8, -- segundos de una partida a la siguiente (salir, cargar la arena y que empiece la primera oleada)
+	oleada = 2, -- segundos de cada oleada hasta que tiene a los enemigos encima
+	paso = 0.3, -- segundos de más por enemigo (ir de uno a otro)
+	porGolpe = 1.5, -- enemigos que se lleva cada espadazo cuando hay varios
+}
+-- Tiradas de rasgo y de grado que lleva hechas a cada hora: { hora, tiradas }. Son las que garantizan (por pity) el
+-- rasgo o el grado que las tablas de arriba le suponen a esa hora. Decidido por el usuario.
+Objetivo.tiradas = {
+	rasgo = { { 5, 110 }, { 18, 600 }, { 60, 2600 }, { 140, 10000 }, { 200, 20000 } },
+	grado = { { 10, 80 }, { 30, 500 }, { 70, 1600 }, { 140, 5300 } },
+}
+
 -- Horas de las que se guarda el estado del jugador tipo (Config.Test.Progress, para probar cada etapa en Studio).
 Objetivo.fotos = { 0.5, 2, 5, 15, 40, 80, 120, 170, 200 }
 

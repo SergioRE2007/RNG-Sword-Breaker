@@ -1,5 +1,6 @@
--- Comercio entre jugadores. Uno invita, el otro acepta y se abre un trato: cada uno pone lo que da (monedas,
--- gemas, objetos, espadas, armadura y accesorios). Pasos, pensados contra los timos:
+-- Comercio entre jugadores. Uno invita, el otro acepta y se abre un trato: cada uno pone lo que da (objetos, espadas,
+-- armadura y accesorios; lo que se puede cambiar lo dice Config.Trade.Allow, y monedas y gemas no están: decidido
+-- por el usuario, para que el progreso no se pueda regalar). Pasos, pensados contra los timos:
 --   1. "editing": se cambian las ofertas; cualquier cambio quita el "aceptar" de los dos.
 --   2. "confirming": cuando los dos han aceptado las ofertas quedan bloqueadas y cada uno tiene que CONFIRMAR.
 --   3. "countdown": con los dos confirmados corren Config.Trade.Countdown segundos en los que cualquiera puede cancelar.
@@ -344,8 +345,8 @@ local function start(playerA: Player, playerB: Player?)
 				armor = { Armor.roll(3, 1, "helmet", 4) },
 			}
 			side.fake.armor[1].id = -1
-			side.offer.coins, side.offer.gems = 1000, 50
 			side.offer.items.gradeCrystal = 5
+			side.offer.items.traitCrystal = 3
 		end
 	end
 	-- Pasa de paso cuando los dos han aceptado o confirmado.
@@ -372,12 +373,12 @@ local function start(playerA: Player, playerB: Player?)
 		end
 	end
 	push(session)
-	-- Bot de pruebas: a los 3 s pide gemas, para ver una sugerencia recibida.
+	-- Bot de pruebas: a los 3 s pide cristales, para ver una sugerencia recibida.
 	for index, side in session.sides do
 		if side.bot then
 			task.delay(3, function()
 				if session.state == "editing" and not side.suggest then
-					setSuggest(session, side, session.sides[3 - index], { intent = "want", category = "gems", amount = 25 })
+					setSuggest(session, side, session.sides[3 - index], { intent = "want", category = "items", key = "traitCrystal", amount = 5 })
 				end
 			end)
 		end
@@ -400,6 +401,10 @@ local function applyOffer(session, side, other, category: unknown, key: unknown,
 	-- El bot de pruebas tiene de todo, pero solo cantidades.
 	local data = if side.bot then { coins = math.huge, gems = math.huge, items = {} } else PlayerData.read(side.player)
 	if session.state ~= "editing" or not data then
+		return false
+	end
+	-- Solo lo que se puede comerciar (monedas y gemas, no): esta es la única puerta por la que cambia una oferta.
+	if type(category) ~= "string" or not cfg.Allow[category] then
 		return false
 	end
 	local offer = side.offer
@@ -548,6 +553,9 @@ local function onSuggest(player: Player, intent: unknown, category: unknown, key
 		return
 	end
 	lastSuggest[player] = now
+	if type(category) ~= "string" or not cfg.Allow[category] then
+		return
+	end
 	local byAmount = category == "coins" or category == "gems" or category == "items"
 	if category == "items" then
 		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].potion then

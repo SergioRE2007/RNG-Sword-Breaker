@@ -46,7 +46,7 @@ function Cargar.nuevo()
 			return 0
 		end,
 	}
-	local services = { ReplicatedStorage = { Shared = node("src/shared") } }
+	local services = { ReplicatedStorage = { Shared = node("src/shared") }, HttpService = {} }
 	local cache = {}
 	local function load(path: string)
 		if cache[path] then

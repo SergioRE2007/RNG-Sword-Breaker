@@ -20,13 +20,24 @@ local Loot = {}
 local random = Random.new()
 local handlers = {}
 
--- Objeto de Config.Items: entre min y max (1 si no lo pone), por el multiplicador de la dificultad.
+-- Cantidad de un drop: entre min y max (1 si no lo pone), por el multiplicador de la dificultad. La parte decimal es
+-- la probabilidad de uno más (x1.4 = uno, y otro 4 de cada 10 veces): redondeando, un x1.4 no daba nada de más.
+function Loot.amount(drop, loot: number?): number
+	local amount = random:NextInteger(drop.min or 1, drop.max or 1) * (loot or 1)
+	local whole = math.floor(amount)
+	if random:NextNumber() < amount - whole then
+		whole += 1
+	end
+	return math.max(1, whole)
+end
+
+-- Objeto de Config.Items.
 function handlers.item(player: Player, drop, context, summary)
 	local item = Config.Items[drop.item]
 	if not item then
 		return
 	end
-	local amount = math.max(1, math.round(random:NextInteger(drop.min or 1, drop.max or 1) * (context.loot or 1)))
+	local amount = Loot.amount(drop, context.loot)
 	PlayerData.edit(player, function(data)
 		data.items[drop.item] += amount
 	end)

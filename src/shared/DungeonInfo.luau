@@ -19,8 +19,8 @@ function DungeonInfo.rewards(index: number): { { text: string, color: Color3 } }
 	end
 	return {
 		{ text = `Armadura {level.set}`, color = GOLD },
-		{ text = `Cristales x{Format.short(level.loot)}`, color = Config.Items.gradeCrystal.color },
-		{ text = `Calidad x{Format.short(level.qualityLuck)}`, color = Config.Items.traitCrystal.color },
+		{ text = `Cristales x{Format.multiplier(level.loot)}`, color = Config.Items.gradeCrystal.color },
+		{ text = `Calidad x{Format.multiplier(level.qualityLuck)}`, color = Config.Items.traitCrystal.color },
 	}
 end
 

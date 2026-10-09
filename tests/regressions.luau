@@ -504,4 +504,77 @@ equal(armorStats.cap("luck", #f.config.Armor.Qualities, lastZone) < 20, true, "t
 local oldArmor = fixture({ armor = { { id = 1, slot = "helmet", quality = 1, level = lastZone, stats = { { stat = "luck", value = 1e6 } } } } })
 equal(oldArmor.data.read(oldArmor.player).armor[1].stats[1].value <= armorStats.cap("luck", 1, lastZone), true, "armadura guardada recortada")
 
+-- Mazmorras: la escalera de zonas no tiene saltos raros y los premios no se disparan (antes: cristales x2048 y calidad x12000).
+local zones = f.config.Dungeons
+equal(zones[1].loot, 1, "la primera zona da los cristales de base")
+equal(zones[1].qualityLuck, 1, "la primera zona da la calidad de base")
+for index = 2, #zones do
+	local zone, before = zones[index], zones[index - 1]
+	local step = zone.hp / before.hp
+	equal(step >= 3 and step <= 60, true, `salto de daño recomendado de {before.name} a {zone.name}`)
+	equal(zone.loot >= before.loot and zone.loot <= 10, true, "cristales de " .. zone.name)
+	equal(zone.qualityLuck >= before.qualityLuck and zone.qualityLuck <= 40, true, "calidad de " .. zone.name)
+	equal(zone.bonus >= before.bonus, true, "bonus de " .. zone.name)
+end
+equal(f.config.Items.traitCrystal.dropChance <= 0.02, true, "cristal de rasgo de la parcela escaso")
+-- La armadura Mítica de la última zona es una meta larga: ni el jefe la suelta más de 1 vez de cada 100.
+local mythic = f.config.Armor.Qualities[#f.config.Armor.Qualities]
+for _, enemy in f.config.Enemies do
+	for _, drop in enemy.drops do
+		if drop.kind == "armor" then
+			equal(zones[lastZone].qualityLuck * (drop.luck or 1) / mythic.odds <= 0.01, true, "armadura Mítica rara con " .. enemy.name)
+		end
+	end
+end
+-- Cantidades con decimales: la parte decimal es la probabilidad de uno más, nunca menos de uno.
+local loot = f.load("src/server/Loot")
+local realNumber = f.random.NextNumber
+equal(loot.amount({}, 1), 1, "un cristal con x1")
+equal(loot.amount({}, 3), 3, "x3 exacto")
+f.random.NextNumber = function() return 0.39 end
+equal(loot.amount({}, 1.4), 2, "x1.4: uno más cuando toca")
+f.random.NextNumber = function() return 0.41 end
+equal(loot.amount({}, 1.4), 1, "x1.4: uno cuando no toca")
+f.random.NextNumber = realNumber
+-- Desmontar: solo cuenta la calidad de la pieza, y las corrientes no dan cristales.
+equal(armorStats.salvage({ quality = 1, level = lastZone }), 0, "desmontar una pieza Común no da cristales")
+equal(armorStats.salvage({ quality = #f.config.Armor.Qualities, level = 1 }), armorStats.salvage({ quality = #f.config.Armor.Qualities, level = lastZone }), "desmontar no depende de la zona")
+equal(armorStats.salvage({ quality = #f.config.Armor.Qualities, level = 1 }) > 0, true, "desmontar una Mítica da cristales")
+
+-- Comercio: ni monedas ni gemas, ni ofrecidas ni sugeridas; los cristales sí. (Con el bot de pruebas, que solo hay en Studio.)
+equal(f.config.Trade.Allow.coins, nil, "las monedas no se comercian")
+equal(f.config.Trade.Allow.gems, nil, "las gemas no se comercian")
+local tf = fixture(nil)
+tf.config.Test.TradeBot = true
+tf.services.RunService.IsStudio = function() return true end
+tf.load("src/server/Trade").start()
+tf.data.edit(tf.player, function(d)
+	d.coins, d.gems = 1e6, 1e6
+	d.items.gradeCrystal = 3
+end)
+tf.advance(10)
+tf.remotes.TradeRequest.OnServerEvent:fire(tf.player, 0)
+local function tradeState()
+	local sent = tf.remotes.TradeState.sent
+	return sent[#sent][2]
+end
+equal(tradeState().state, "editing", "trato abierto con el bot")
+equal(tradeState().them.coins, 0, "el bot no ofrece monedas")
+equal(tradeState().them.gems, 0, "el bot no ofrece gemas")
+equal(tradeState().them.items.traitCrystal > 0, true, "el bot ofrece cristales")
+for _, currency in { "coins", "gems" } do
+	tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, currency, nil, 5)
+	equal(tradeState().you[currency], 0, "oferta rechazada: " .. currency)
+	tf.advance(1)
+	tf.remotes.TradeSuggest.OnServerEvent:fire(tf.player, "want", currency, nil, 5)
+	equal(tradeState().you.suggest, nil, "sugerencia rechazada: quiero " .. currency)
+	tf.advance(1)
+	tf.remotes.TradeSuggest.OnServerEvent:fire(tf.player, "give", currency, nil, 5)
+	equal(tradeState().you.suggest, nil, "sugerencia rechazada: te doy " .. currency)
+end
+tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "items", "gradeCrystal", 2)
+equal(tradeState().you.items.gradeCrystal, 2, "los cristales sí se ofrecen")
+tf.remotes.TradeCancel.OnServerEvent:fire(tf.player)
+equal(tf.data.read(tf.player).coins, 1e6, "el trato cancelado no toca las monedas")
+
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)

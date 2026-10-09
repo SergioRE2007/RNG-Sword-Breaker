@@ -112,9 +112,9 @@ function ArmorStats.cap(stat: string, quality: number, level: number): number
 	return base * cfg.Roll.max * cfg.Qualities[quality].mult * ArmorStats.scaling(stat, level)
 end
 
--- Cristales de grado que da al desmontarla.
+-- Cristales de grado que da al desmontarla: solo cuenta su calidad (las corrientes no dan nada).
 function ArmorStats.salvage(piece): number
-	return cfg.Qualities[piece.quality].value * Config.Dungeons[piece.level].loot
+	return cfg.Qualities[piece.quality].value
 end
 
 return ArmorStats

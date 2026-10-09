@@ -2,6 +2,9 @@
 --   lune run tools/equilibrio/generar.luau [partidas]            enseña lo que saldría
 --   lune run tools/equilibrio/generar.luau [partidas] aplicar    y además lo escribe en src/shared/Config.luau y en
 --                                                                src/shared/BalanceSnapshots.luau
+--   lune run tools/equilibrio/generar.luau [partidas] mazmorras [aplicar]
+--                                                                solo el daño recomendado de las zonas de mazmorra, con
+--                                                                el Config que hay (no recalcula vidas ni precios)
 -- Calcula: Config.ObjectRolls.TypeLuckPower (para que el arma más rara salga cada `horasArmaTope` con la suerte al
 -- máximo), "reward" y "hp" de Config.Destructibles, los "costs" de Config.Upgrades y de Config.Rebirth, "rarity" de
 -- Config.Artifacts y el daño recomendado ("hp") de Config.Dungeons.
@@ -22,6 +25,7 @@ local M = Modelo.nuevo(shared, mundo, objetivo)
 
 local partidas = tonumber(process.args[1]) or 9
 local aplicar = table.find(process.args, "aplicar") ~= nil
+local soloMazmorras = table.find(process.args, "mazmorras") ~= nil
 local horas = objetivo.fotos[#objetivo.fotos]
 local mediana, redondo, tiempo = Util.mediana, Util.redondo, Util.tiempo
 local tipos = Config.Destructibles
@@ -43,6 +47,86 @@ local function jugar(modo: string, semilla: number, opts)
 		runs[index] = M.partida(o)
 	end
 	return runs
+end
+
+-- Números como se escriben en Config: 1200, 3.5e7...
+local function numero(value: number): string
+	if value < 1e6 then
+		return if value % 1 == 0 then string.format("%d", value) else string.format("%.1f", value)
+	end
+	local exp = math.floor(math.log10(value) + 1e-9)
+	local mant = math.round(value / 10 ^ exp * 10) / 10
+	if mant >= 10 then
+		mant, exp = mant / 10, exp + 1
+	end
+	return if mant % 1 == 0 then string.format("%de%d", mant, exp) else string.format("%.1fe%d", mant, exp)
+end
+local function lista(values: { number }): string
+	local parts = {}
+	for _, value in values do
+		table.insert(parts, numero(value))
+	end
+	return "{ " .. table.concat(parts, ", ") .. " }"
+end
+
+-- Mazmorras: daño recomendado de cada zona = el del jugador tipo a su hora, suavizado con el de las zonas vecinas (en
+-- escala logarítmica, como los precios). El jugador tipo sube de daño a escalones (un rasgo, un accesorio o un
+-- renacimiento a una hora en punto) y sin suavizar la escalera salía a trompicones: un salto de x200 y, detrás, dos
+-- zonas casi iguales (x2), que se abrían a la vez. `runs` = partidas del jugador que va justo al ritmo del calendario.
+local function escalera(runs): { number }
+	local crudo = {}
+	for index in Config.Dungeons do
+		crudo[index] = med(runs, function(run)
+			return run.danoMazmorra[index]
+		end)
+	end
+	local zonas = {}
+	for index in Config.Dungeons do
+		local value = crudo[index]
+		if index > 1 and index < #crudo then
+			value = math.exp(0.25 * math.log(crudo[index - 1]) + 0.5 * math.log(value) + 0.25 * math.log(crudo[index + 1]))
+		end
+		zonas[index] = redondo(value, 1)
+		if index > 1 then
+			zonas[index] = math.max(zonas[index], zonas[index - 1] * 3)
+		end
+	end
+	return zonas
+end
+-- La línea de Config de una zona con su daño recomendado nuevo (nil si la línea no es de una zona).
+local function lineaZona(line: string, zonas: { number }): string?
+	local head, id, tail = string.match(line, '^(%s*{ id = "(%a+)", .-, )hp = [^,]+,(.*)$')
+	for index, dungeon in Config.Dungeons do
+		if dungeon.id == id then
+			return `{head}hp = {numero(zonas[index])},{tail}`
+		end
+	end
+	return nil
+end
+
+if soloMazmorras then
+	local zonas = escalera(jugar("forzado", 5000))
+	for index, dungeon in Config.Dungeons do
+		print(`{dungeon.name}: hp = {numero(zonas[index])}{if index > 1 then ` (x{string.format("%.0f", zonas[index] / zonas[index - 1])})` else ""}`)
+	end
+	if not aplicar then
+		print("\n(No se ha escrito nada. Añade `aplicar` para escribirlo en Config.)")
+		return
+	end
+	local path = "src/shared/Config.luau"
+	local lines = string.split(fs.readFile(path), "\n")
+	local changed = 0
+	for position, line in lines do
+		local new = lineaZona(line, zonas)
+		if new then
+			lines[position] = new
+			changed += 1
+		end
+	end
+	assert(changed == #Config.Dungeons, `esperaba cambiar {#Config.Dungeons} líneas de Config y han sido {changed}`)
+	fs.writeFile(path, table.concat(lines, "\n"))
+	print(`\nEscrito: {changed} líneas de {path}.`)
+	return
 end
 
 -- Pistas de compra: cada mejora de Config.UpgradeOrder con calendario y los renacimientos.
@@ -207,16 +291,8 @@ for index, artifact in Config.Artifacts do
 	end
 end
 
--- 5. Mazmorras: daño recomendado = el del jugador tipo a la hora de cada una.
-local mazmorras = {}
-for index in Config.Dungeons do
-	mazmorras[index] = redondo(med(runs, function(run)
-		return run.danoMazmorra[index]
-	end), 1)
-	if index > 1 then
-		mazmorras[index] = math.max(mazmorras[index], mazmorras[index - 1] * 2)
-	end
-end
+-- 5. Mazmorras: daño recomendado (ver `escalera`).
+local mazmorras = escalera(runs)
 local forzadas = runs
 
 -- 6. Comprobación comprando de verdad, y corrección de los precios tramo a tramo.
@@ -259,25 +335,6 @@ for vuelta = 1, VUELTAS do
 end
 
 -- 7. Resultado.
-local function numero(value: number): string
-	if value < 1e6 then
-		return if value % 1 == 0 then string.format("%d", value) else string.format("%.1f", value)
-	end
-	local exp = math.floor(math.log10(value) + 1e-9)
-	local mant = math.round(value / 10 ^ exp * 10) / 10
-	if mant >= 10 then
-		mant, exp = mant / 10, exp + 1
-	end
-	return if mant % 1 == 0 then string.format("%de%d", mant, exp) else string.format("%.1fe%d", mant, exp)
-end
-local function lista(values: { number }): string
-	local parts = {}
-	for _, value in values do
-		table.insert(parts, numero(value))
-	end
-	return "{ " .. table.concat(parts, ", ") .. " }"
-end
-
 print(`\nTypeLuckPower = {Config.ObjectRolls.TypeLuckPower}`)
 for _, def in tipos do
 	print(`{def.name}: hp = {numero(def.hp)}, reward = {numero(def.reward)}`)
@@ -312,15 +369,12 @@ end
 -- 8. Escribir en Config.luau: solo cambian los números de las líneas que tocan.
 local path = "src/shared/Config.luau"
 local lines = string.split(fs.readFile(path), "\n")
-local byName, artifactByName, dungeonById = {}, {}, {}
+local byName, artifactByName = {}, {}
 for _, def in tipos do
 	byName[def.name] = def
 end
 for _, artifact in Config.Artifacts do
 	artifactByName[artifact.name] = artifact
-end
-for index, dungeon in Config.Dungeons do
-	dungeonById[dungeon.id] = mazmorras[index]
 end
 local changed = 0
 local function costsField(text: string, costs: { number }): string
@@ -362,10 +416,9 @@ for position, line in lines do
 		lines[position] = `{head}{Config.ObjectRolls.TypeLuckPower},{tail}`
 		changed += 1
 	end
-	local id
-	head, id, tail = string.match(line, '^(%s*{ id = "(%a+)", .-, )hp = [^,]+,(.*)$')
-	if id and dungeonById[id] then
-		lines[position] = `{head}hp = {numero(dungeonById[id])},{tail}`
+	local zona = lineaZona(line, mazmorras)
+	if zona then
+		lines[position] = zona
 		changed += 1
 	end
 end

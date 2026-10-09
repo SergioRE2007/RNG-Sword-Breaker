@@ -100,7 +100,9 @@ local function pieceTip(piece): (string, Color3)
 		end
 	end
 	table.insert(lines, if piece.worn then `<font color="{hex(Ui.COLORS.green)}">Equipada</font>` else `<font color="{Ui.SOFT}">No equipada</font>`)
-	table.insert(lines, `<font color="{Ui.SOFT}">Desmontar: +{Format.short(ArmorStats.salvage(piece))} {Config.Items.gradeCrystal.name}</font>`)
+	-- Las calidades corrientes no dan cristales al desmontarlas (Config.Armor.Qualities, "value").
+	local crystals = ArmorStats.salvage(piece)
+	table.insert(lines, `<font color="{Ui.SOFT}">Desmontar: {if crystals > 0 then `+{Format.short(crystals)} {Config.Items.gradeCrystal.name}` else "no da cristales"}</font>`)
 	return table.concat(lines, "\n"), quality.color
 end
 
@@ -234,7 +236,8 @@ function ArmorPane.build(pane: Frame, helpers)
 		end
 		equipButton.Text = if piece and piece.worn then "Quitar" else "Equipar"
 		equipButton.BackgroundColor3 = if not piece then Ui.COLORS.gray elseif piece.worn then Ui.COLORS.orange else Ui.COLORS.blue
-		salvageButton.Text = if piece then `Desmontar\n+{Format.short(ArmorStats.salvage(piece))} cristales` else "Desmontar"
+		local crystals = if piece then ArmorStats.salvage(piece) else 0
+		salvageButton.Text = if not piece then "Desmontar" elseif crystals > 0 then `Desmontar\n+{Format.short(crystals)} cristales` else "Desmontar\nsin cristales"
 		salvageButton.BackgroundColor3 = if piece then Ui.COLORS.red else Ui.COLORS.gray
 	end
 
