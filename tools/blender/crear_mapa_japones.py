@@ -4,14 +4,16 @@
 # Deja mapa_japones.blend, mapa_japones.fbx y mapa_japones1-3.png en Documents\Roblox\modelos. En Studio: Archivo >
 # Importar 3D con mapa_japones.fbx y guardar el modelo importado (clic derecho > Guardar en archivo) como
 # src/shared/MapMeshes.rbxm (y borrar el modelo de Workspace: lo trae Rojo).
-# Para actualizar algunas piezas: -- --only Sakura SakuraB Maple Pine Pagoda Bridge Shrine Komainu
-# y guardar esa importación como src/shared/MapMeshesPatch.rbxmx. PropModel sustituye solo esas piezas.
+# Para actualizar algunas piezas: -- --only Torii Bridge Temple
+# y pasar esa importación a src/shared/MapMeshesPatch.rbxmx (las piezas que ya tenga y no se toquen se quedan).
+# PropModel sustituye solo esas piezas. Con --only cada pieza deja además su vista de prueba (Torii1.png...).
 #
 # Cada pieza son varias mallas "<Pieza>_<Papel>", una por papel: el juego (shared/PropModel) les pone color y
 # material según el papel (Wood, Red, Pink, PinkLight, Orange, Leaf, LeafDark, Stone, StoneDark, Gold, Paper,
 # Roof, White, Black, Water). "<Pieza>_Origin" marca el centro del suelo de la pieza y Axis_* dan la escala y los
 # ejes de la importación. Medidas en studs, Y arriba, -Z al frente. Las piezas ya vienen a su tamaño real: el
-# juego solo las gira y las varía un poco de tamaño.
+# juego solo las gira y las varía un poco de tamaño. Una pieza grande se parte en varias con `p.group` (el templo
+# sale como TempleA, TempleB y TempleC, una por piso, con el mismo origen): cada malla, por debajo de 9000 triángulos.
 import math
 import os
 import random
@@ -137,11 +139,12 @@ def limb(a, b, r0, r1, n=7):
 class Piece:
     def __init__(self):
         self.parts = {}
+        self.group = ""  # las piezas grandes se parten en varias ("TempleA", "TempleB"...) que comparten origen
 
     def add(self, role, shape, matrix=None):
         verts, faces = shape
         matrix = matrix or Matrix.Identity(4)
-        mine = self.parts.setdefault(role, ([], []))
+        mine = self.parts.setdefault((self.group, role), ([], []))
         base = len(mine[0])
         mine[0].extend(tuple(matrix @ Vector(v)) for v in verts)
         mine[1].extend(tuple(base + i for i in f) for f in faces)
@@ -149,6 +152,118 @@ class Piece:
     def branch(self, role, a, b, r0, r1, n=7):
         m, shape = limb(a, b, r0, r1, n)
         self.add(role, shape, m)
+
+
+# ---------- Vigas curvas y tejados ----------
+
+def rect(width, height):
+    """Sección rectangular para `sweep`, apoyada en el camino."""
+    return [(-width / 2, 0), (width / 2, 0), (width / 2, height), (-width / 2, height)]
+
+
+def ridge(width, height):
+    """Sección triangular para `sweep`: una fila de tejas vista de frente."""
+    return [(-width / 2, 0), (width / 2, 0), (0, height)]
+
+
+def circle(radius, n=7):
+    return [(radius * math.cos(2 * math.pi * j / n), radius * math.sin(2 * math.pi * j / n)) for j in range(n)]
+
+
+def sweep(points, section, scales=None):
+    """Sólido cerrado que arrastra `section` ([(lado, arriba)]) por un camino de puntos. `scales` la agranda o la
+    encoge en cada punto."""
+    pts = [Vector(q) for q in points]
+    k = len(section)
+    verts = []
+    for i, q in enumerate(pts):
+        t = (pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]).normalized()
+        side = Vector((0, 1, 0)).cross(t)
+        side = side.normalized() if side.length > 1e-6 else Vector((1, 0, 0))
+        up = t.cross(side).normalized()
+        f = scales[i] if scales else 1
+        verts += [tuple(q + side * (a * f) + up * (b * f)) for a, b in section]
+    faces = [tuple(reversed(range(k))), tuple(k * (len(pts) - 1) + j for j in range(k))]
+    for i in range(len(pts) - 1):
+        for j in range(k):
+            j2 = (j + 1) % k
+            faces.append((k * i + j, k * i + j2, k * (i + 1) + j2, k * (i + 1) + j))
+    return verts, faces
+
+
+def frame(outer, inner, height):
+    """Marco cuadrado tumbado (un anillo de vigas de una sola pieza), con la base en y=0."""
+    verts = [(s * a, y, s * b) for y in (0, height) for s in (outer, inner) for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    faces = []
+    for i in range(4):
+        j = (i + 1) % 4
+        faces += [(i, j, 8 + j, 8 + i), (4 + j, 4 + i, 12 + i, 12 + j), (j, i, 4 + i, 4 + j), (8 + i, 8 + j, 12 + j, 12 + i)]
+    return verts, faces
+
+
+def giboshi(size=1.0):
+    """Remate de poste en forma de cebolla."""
+    return lathe([(0.34 * size, 0), (0.34 * size, 0.16 * size), (0.2 * size, 0.3 * size), (0.42 * size, 0.56 * size),
+                  (0.46 * size, 0.82 * size), (0.3 * size, 1.1 * size), (0.09 * size, 1.32 * size), (0, 1.42 * size)], 8)
+
+
+class HipRoof:
+    """Tejado a cuatro aguas de planta cuadrada: tendido en el alero y empinado arriba, con las esquinas levantadas y
+    algo salidas. `half` y `top` son la media anchura en el alero y arriba; `y0`, la altura del alero en el centro de
+    cada lado. Las cuentas son las del lado de -Z; los otros tres salen girándolo."""
+
+    def __init__(self, y0, half, top, rise, lift, flare=0.05, thick=0.6):
+        self.y0, self.half, self.top, self.rise, self.lift, self.flare, self.thick = y0, half, top, rise, lift, flare, thick
+
+    def at(self, u, v, drop=0.0):
+        """Punto del tejado: u de -1 a 1 a lo largo del alero, v de 0 (alero) a 1 (arriba), `drop` por debajo."""
+        w = self.half + (self.top - self.half) * v
+        k = abs(u) ** 3 * (1 - v) ** 2
+        w *= 1 + self.flare * k
+        return Vector((u * w, self.y0 + self.rise * (0.3 * v + 0.7 * v ** 2.2) + self.lift * k - drop, -w))
+
+    def over(self, x, v, drop=0.0):
+        """Punto del tejado sobre la coordenada x del alero (para lo que sube recto, como las tejas)."""
+        w = self.half + (self.top - self.half) * v
+        return self.at(max(-1.0, min(1.0, x / w)), v, drop)
+
+    def slab(self, n, m, v0=0.0, v1=1.0, drop=0.0, thick=None):
+        """Losa cerrada que sigue el tejado entre v0 y v1, con su cara de arriba `drop` por debajo de él."""
+        thick = self.thick if thick is None else thick
+        verts, faces = [], []
+        for side in range(4):
+            rot = R("Y", 90 * side)
+            base = len(verts)
+            for layer in (0, 1):
+                for i in range(n + 1):
+                    for j in range(m + 1):
+                        verts.append(tuple(rot @ self.at(-1 + 2 * i / n, v0 + (v1 - v0) * j / m, drop + layer * thick)))
+
+            def index(layer, i, j):
+                return base + layer * (n + 1) * (m + 1) + i * (m + 1) + j
+
+            for i in range(n):
+                for j in range(m):
+                    faces.append((index(0, i, j), index(0, i + 1, j), index(0, i + 1, j + 1), index(0, i, j + 1)))
+                    faces.append((index(1, i, j + 1), index(1, i + 1, j + 1), index(1, i + 1, j), index(1, i, j)))
+                for j in (0, m):
+                    faces.append((index(0, i, j), index(0, i + 1, j), index(1, i + 1, j), index(1, i, j)))
+        return verts, faces
+
+    def rows(self, spacing, section, v0=0.0, v1=1.0, steps=5, drop=0.0, margin=0.9):
+        """Vigas que suben rectas desde el alero, una cada `spacing`; las de las esquinas acaban al llegar a la
+        limatesa. Devuelve una lista de formas."""
+        count = max(1, round(2 * self.half / spacing))
+        out = []
+        for side in range(4):
+            rot = R("Y", 90 * side)
+            for c in range(count):
+                x = (c + 0.5 - count / 2) * 2 * self.half / count
+                reach = min(v1, (self.half - abs(x) - margin) / (self.half - self.top))
+                if reach < v0 + 0.06:
+                    continue
+                out.append(sweep([rot @ self.over(x, v0 + (reach - v0) * s / steps, drop) for s in range(steps + 1)], section))
+        return out
 
 
 # ---------- Árboles ----------
@@ -234,19 +349,41 @@ def bamboo(p):
 # ---------- Construcciones ----------
 
 def torii(p):
-    """Torii bermellón de 18 de ancho: dos columnas, travesaño, kasagi curvado negro y bases de piedra."""
+    """Torii bermellón de estilo myōjin, de 20 de ancho: columnas algo inclinadas hacia dentro sobre basas de piedra,
+    travesaño (nuki) que las atraviesa con sus cuñas, tablilla dorada en el centro y dintel doble que se curva hacia
+    arriba en las puntas (shimaki rojo y kasagi negro, más ancho por arriba)."""
+    def curve(x):
+        return 1.7 * (abs(x) / 10.3) ** 2.4
+
+    def lintel(length, y, section, slant=0.0, n=16):
+        """Viga a lo largo de X que sigue la curva; `slant` saca la parte de arriba en las puntas (corte inclinado)."""
+        k = len(section)
+        verts = []
+        for i in range(n + 1):
+            x = -length + 2 * length * i / n
+            tip = slant * (abs(x) / length) ** 8 * (1 if x > 0 else -1)
+            verts += [(x + tip * b, y + curve(x) + b, a) for a, b in section]
+        faces = [tuple(reversed(range(k))), tuple(k * n + j for j in range(k))]
+        for i in range(n):
+            for j in range(k):
+                j2 = (j + 1) % k
+                faces.append((k * i + j, k * i + j2, k * (i + 1) + j2, k * (i + 1) + j))
+        return verts, faces
+
     for s in (-1, 1):
-        p.add("StoneDark", cyl(1.5, 0.7, 8, 1.3), T(s * 6.4, 0, 0))
-        p.add("Red", cyl(0.95, 13.5, 10, 0.8), T(s * 6.4, 0.7, 0))
-        p.add("Black", cyl(1.02, 1.0, 10), T(s * 6.4, 0.7, 0))
-    p.add("Red", box(15.4, 0.9, 0.9), T(0, 9.6, 0))  # nuki
-    p.add("Gold", box(1.1, 2.2, 0.5), T(0, 11.2, -0.5))  # tablilla
-    p.add("Black", box(16.2, 0.9, 1.5), T(0, 14.0, 0))  # shimaki
-    p.add("Red", box(14.0, 0.5, 1.2), T(0, 13.4, 0))
-    for s in (-1, 1):  # kasagi: los extremos se levantan
-        p.add("Black", box(8.6, 1.1, 2.1), T(s * 6.4, 14.9, 0) @ R("Z", s * -9) @ T(s * 1.0, 0, 0))
-        p.add("Black", box(5.5, 1.1, 2.1), T(0, 14.7, 0))
-    p.add("Black", box(8.0, 0.5, 1.6), T(0, 15.55, 0) @ S(1, 1, 1))
+        p.add("StoneDark", lathe([(1.95, 0), (1.95, 0.3), (1.6, 0.85), (1.25, 0.95)], 12), T(s * 6.55, 0, 0))
+        p.branch("Red", (s * 6.55, 0.9, 0), (s * 6.25, 14.1, 0), 0.98, 0.84, 12)
+        p.branch("Black", (s * 6.55, 0.9, 0), (s * 6.515, 2.4, 0), 1.14, 1.1, 12)  # nemaki
+        p.add("Black", cyl(1.2, 0.36, 12, 1.05), T(s * 6.25, 13.95, 0))  # daiwa
+        for side in (-1, 1):  # cuñas del nuki
+            p.add("Black", box(0.5, 0.42, 1.4), T(s * 6.35 + side * 1.1, 10.46, 0))
+        p.add("Gold", box(0.16, 0.86, 0.72), T(s * 9.05, 9.7, 0))
+    p.add("Red", box(18.0, 1.1, 0.95), T(0, 9.7, 0))  # nuki
+    p.add("Red", box(1.0, 3.6, 0.85), T(0, 12.0, 0))  # gakuzuka
+    p.add("Black", box(2.8, 3.4, 1.3), T(0, 12.0, 0))  # tablilla, con una cara dorada a cada lado
+    p.add("Gold", box(2.2, 2.8, 1.36), T(0, 12.0, 0))
+    p.add("Red", lintel(9.5, 13.75, rect(1.5, 0.95)))  # shimaki
+    p.add("Black", lintel(10.3, 14.7, [(-0.85, 0), (0.85, 0), (1.3, 0.85), (0, 1.3), (-1.3, 0.85)], 0.55))  # kasagi
 
 
 def stone_lantern(p):
@@ -305,37 +442,44 @@ def pagoda(p):
 
 
 def bridge(p):
-    """Puente de cubierta continua: toda la estructura transversal queda debajo de la madera."""
+    """Puente de arco de 23 de largo: la cubierta nace a ras de suelo en los dos extremos (sin escalón ni estribo de
+    piedra), barandilla roja con postes rematados en dorado y dos pilas de madera en el agua."""
     n = 24
-    def point(t):
-        return Vector((-9 + 18 * t, 3.2 * math.sin(math.pi * t) + 0.5, 0))
+    half, height = 11.5, 3.3
+
+    def point(t, lift=0.0):
+        return Vector((-half + 2 * half * t, height * math.sin(math.pi * t) + lift, 0))
+
     # Una sola cubierta cerrada, sin caras internas duplicadas en los bordes de los tablones.
     verts = [(v.x, v.y + dy, z) for v in (point(i / n) for i in range(n + 1))
-             for dy, z in ((-0.3, -3.1), (-0.3, 3.1), (0.2, 3.1), (0.2, -3.1))]
+             for dy, z in ((-0.45, -3.1), (-0.45, 3.1), (0.08, 3.1), (0.08, -3.1))]
     faces = [(3, 2, 1, 0), tuple(4 * n + j for j in range(4))]
     for i in range(n):
         for j in range(4):
             k = (j + 1) % 4
             faces.append((4 * i + j, 4 * i + k, 4 * (i + 1) + k, 4 * (i + 1) + j))
     p.add("Wood", (verts, faces))
+    for s in (-1, 1):
+        # Largueros curvos bajo los bordes de la cubierta y los dos pasamanos.
+        p.add("Red", sweep([point(i / n, -1.0) + Vector((0, 0, s * 2.8)) for i in range(n + 1)], rect(0.5, 0.62)))
+        p.add("Red", sweep([point(i / n, 2.3) + Vector((0, 0, s * 3.0)) for i in range(n + 1)], rect(0.42, 0.4)))
+        p.add("Red", sweep([point(i / n, 1.15) + Vector((0, 0, s * 3.0)) for i in range(n + 1)], rect(0.24, 0.24)))
     for i in range(9):
         a = point(i / 8)
         for s in (-1, 1):
-            p.add("Red", box(0.4, 2.25, 0.4), T(a.x, a.y + 1.3, s * 3.0))
-        if i % 2 == 0:
-            p.add("Red", box(0.5, 0.4, 5.9), T(a.x, a.y - 0.65, 0))
-        if i == 8:
-            continue
-        b = point((i + 1) / 8)
-        angle = math.degrees(math.atan2(b.y - a.y, b.x - a.x))
+            if i in (0, 8):  # postes de entrada, más gruesos y con remate dorado
+                p.add("Red", box(0.8, 3.3, 0.8), T(a.x, a.y + 1.4, s * 3.0))
+                p.add("Black", box(1.0, 0.2, 1.0), T(a.x, a.y + 3.1, s * 3.0))
+                p.add("Gold", giboshi(1.0), T(a.x, a.y + 3.2, s * 3.0))
+            else:
+                p.add("Red", box(0.42, 2.9, 0.42), T(a.x, a.y + 1.25, s * 3.0))
+                p.add("Black", box(0.56, 0.16, 0.56), T(a.x, a.y + 2.78, s * 3.0))
+    for t in (0.3, 0.7):  # pilas: dos postes y sus travesaños
+        a = point(t)
         for s in (-1, 1):
-            for rise, thick in ((2.35, 0.38), (1.15, 0.2), (-0.55, 0.45)):
-                z = s * (3.0 if rise > 0 else 2.65)
-                p.add("Red", box((b - a).length + 0.12, thick, thick), T((a.x + b.x) / 2, (a.y + b.y) / 2 + rise, z) @ R("Z", angle))
-    for s in (-1, 1):
-        p.add("Gold", sphere(0.36, 8, 4), T(s * 9, 3.05, 3.0))
-        p.add("Gold", sphere(0.36, 8, 4), T(s * 9, 3.05, -3.0))
-        p.add("StoneDark", box(2.4, 1.0, 6.8), T(s * 10.2, 0.4, 0))
+            p.add("Wood", cyl(0.36, a.y + 0.2, 8, 0.3), T(a.x, -0.6, s * 2.4))
+        p.add("Wood", box(0.5, 0.5, 5.9), T(a.x, a.y - 0.75, 0))
+        p.add("Wood", box(0.3, 0.3, 5.2), T(a.x, a.y * 0.45, 0))
 
 
 def shrine(p):
@@ -481,40 +625,199 @@ def komainu(p):
     p.add("Stone", torus(0.55, 0.24, 14, 7), T(0.6, base + 2.0, 1.85) @ R("X", 90))
     p.add("StoneDark", sphere(0.18, 9, 6), T(0.6, base + 2.0, 1.72))
 
-def temple_roof(p):
-    """Tejado octogonal de templo (hakkaku-dō) de dos pisos, con aleros curvos, esquinas levantadas, vigas rojas por
-    debajo, paredes blancas en el piso de arriba y remate dorado de varios anillos. Origen: centro, nivel del alero."""
-    # Vigas y bajo del alero.
-    p.add("Red", lathe([(25.6, -0.5), (25.6, 0.0), (6.0, 0.0), (6.0, -0.6)], 8))
-    for i in range(8):
-        a = 360 / 8 * i + 22.5
-        p.add("Red", box(18.5, 0.7, 0.8), T(0, -0.35, 0) @ R("Y", a) @ T(9.6, 0, 0))
-    p.add("Gold", torus(25.2, 0.18, 8, 4), T(0, -0.1, 0))
-    # Tejado bajo con pendiente cóncava (más tendida al borde) y cresta en cada esquina.
-    p.add("Roof", lathe([(26.0, 0.0), (23.5, 1.0), (19.5, 2.5), (14.5, 4.6), (10.0, 6.8)], 8))
-    for i in range(8):
-        a = 360 / 8 * i
-        p.add("Roof", spike(0.8, 5.2, 5), T(0, 0.2, 0) @ R("Y", -a) @ T(25.5, 0.1, 0) @ R("Z", -62))
-        p.add("Gold", sphere(0.4, 6, 3), T(math.cos(math.radians(a)) * 30.0, 2.6, math.sin(math.radians(a)) * 30.0))
-    # Piso de arriba: pared blanca con zócalo rojo, ventanas y segundo tejado.
-    p.add("White", lathe([(9.5, 6.6), (9.5, 11.0)], 8))
-    p.add("Red", lathe([(9.8, 6.4), (9.8, 7.4)], 8))
-    p.add("Red", lathe([(9.8, 10.2), (9.8, 11.2)], 8))
-    for i in range(8):
-        a = 360 / 8 * i + 22.5
-        p.add("Red", box(0.5, 4.8, 0.5), T(0, 8.8, 0) @ R("Y", -a - 22.5) @ T(9.6, 0, 0))
-        p.add("Black", box(0.1, 2.0, 2.4), T(0, 8.9, 0) @ R("Y", -a) @ T(9.55, 0, 0))
-        p.add("Gold", box(0.05, 2.1, 0.12), T(0, 8.9, 0) @ R("Y", -a) @ T(9.62, 0, 0))
-    p.add("Roof", lathe([(14.5, 11.0), (12.5, 11.9), (9.5, 13.4), (6.0, 15.6), (2.0, 18.0)], 8))
-    for i in range(8):
-        a = 360 / 8 * i
-        p.add("Roof", spike(0.6, 3.6, 5), T(0, 11.2, 0) @ R("Y", -a) @ T(14.2, 0, 0) @ R("Z", -60))
-    # Remate dorado: poste, anillos y gema.
-    p.add("Gold", cyl(0.4, 6.0, 8, 0.25), T(0, 17.6, 0))
-    for k in range(6):
-        p.add("Gold", torus(1.5 - k * 0.17, 0.2, 14, 4), T(0, 18.6 + k * 0.85, 0))
-    p.add("Gold", sphere(0.8, 8, 5), T(0, 23.6, 0) @ S(1, 1.3, 1))
-    p.add("Gold", spike(0.3, 1.2, 6), T(0, 24.6, 0))
+def temple_roof(p, y0, half, top, rise, lift, wall, collar=False):
+    """Un tejado del templo: losa con filas de tejas, limatesas rematadas en dorado con su campanilla, canto dorado en
+    el alero y, por debajo, sofito claro y cabios rojos hasta `wall` (media anchura de lo que lo sostiene). Devuelve
+    la altura a la que acaba arriba."""
+    roof = HipRoof(y0, half, top, rise, lift)
+    n, m = 12, 8
+    under = (half - wall) / (half - top)
+    size = half / 40
+    p.add("Roof", roof.slab(n, m))
+    for shape in roof.rows(2.6, ridge(0.8, 0.45), drop=0.1, steps=6):
+        p.add("StoneDark", shape)
+    p.add("White", roof.slab(n, 4, 0.015, min(1.0, under + 0.04), roof.thick, 0.22))
+    for shape in roof.rows(2.9, rect(0.6, 0.55), 0.03, under, 4, roof.thick + 0.77):
+        p.add("Red", shape)
+    for side in range(4):
+        rot = R("Y", 90 * side)
+        edge = [rot @ (roof.at(-1 + 2 * i / n, 0, roof.thick + 0.12) + Vector((0, 0, -0.14))) for i in range(n + 1)]
+        p.add("Gold", sweep(edge, rect(0.5, roof.thick + 0.34)))
+        hip = [rot @ roof.at(1, j / m, 0.2) for j in range(m + 1)]
+        out = (hip[0] - hip[1]).normalized()
+        tip = hip[0] + out * 1.8 * size + Vector((0, 0.8 * size, 0))
+        p.add("StoneDark", sweep([tip] + hip, rect(1.25, 1.05)))
+        # Remate de la esquina: cuerno dorado hacia arriba y afuera, y una campanilla de viento colgando.
+        aim = (Vector((out.x, 0, out.z)).normalized() + Vector((0, 1.3, 0))).normalized()
+        turn = Vector((0, 1, 0)).rotation_difference(aim).to_matrix().to_4x4()
+        p.add("Gold", spike(0.55 * size + 0.2, 2.6 * size + 0.8, 5), T(*tip) @ turn)
+        p.add("Gold", sphere(0.5 * size + 0.25, 6, 4), T(tip.x, tip.y + 0.5, tip.z))
+        bell = hip[0] - Vector((0, 2.6, 0))
+        p.add("Black", box(0.12, 1.3, 0.12), T(bell.x, bell.y + 1.5, bell.z))
+        p.add("Gold", lathe([(0.6, 0), (0.45, 0.4), (0.3, 0.78), (0, 0.9)], 6), T(*bell))
+    if collar:
+        p.add("StoneDark", frame(top + 1.0, top - 0.4, 0.9), T(0, y0 + rise - 0.35, 0))
+    return y0 + rise
+
+
+def temple_brackets(p, y, half, inner, scale=1.0):
+    """Tres hiladas de ménsulas (roja, clara, roja) que salen cada vez más bajo el alero, con tacos dorados. Devuelve
+    la altura a la que acaban y lo que sobresale la última."""
+    outer = half
+    for index, (step, tall, role) in enumerate(((0.9, 0.7, "Red"), (1.2, 0.8, "White"), (1.2, 0.7, "Red"))):
+        outer += step * scale
+        p.add(role, frame(outer, inner, tall * scale), T(0, y, 0))
+        y += tall * scale
+    count = int((outer - 1.5) / 3.6)
+    for side in range(4):
+        for i in range(-count, count + 1):
+            p.add("Gold", box(0.9, 0.5 * scale, 0.3), R("Y", 90 * side) @ T(i * 3.6, y - 0.35 * scale, -outer - 0.05))
+    return y, outer
+
+
+def temple_body(p, y, half, height, bays, round_window=False):
+    """Un piso del templo: paredes claras, postes y vigas rojas, y ventanas de papel con celosía (una por vano, o una
+    sola redonda en el del centro)."""
+    p.add("White", box(2 * half, height, 2 * half), T(0, y + height / 2, 0))
+    width = 2 * half / bays
+    for side in range(4):
+        rot = R("Y", 90 * side)
+        for i in range(bays):  # el poste de la otra esquina lo pone el lado siguiente
+            thick = 1.1 if i == 0 else 0.8
+            p.add("Red", box(thick, height, thick), rot @ T(-half + width * i, y + height / 2, -half))
+        for level, tall in ((0.5, 1.0), (height - 0.5, 1.0), (height * 0.32, 0.5)):
+            p.add("Red", box(2 * half + 0.3, tall, 0.5), rot @ T(0, y + level, -half - 0.12))
+        for i in range(bays):
+            x = -half + width * (i + 0.5)
+            if round_window:
+                if i != bays // 2:
+                    continue
+                r, cy = height * 0.2, y + height * 0.6
+                p.add("Paper", cyl(r, 0.3, 16), rot @ T(x, cy, -half - 0.34) @ R("X", 90))
+                p.add("Black", torus(r + 0.12, 0.26, 16, 5), rot @ T(x, cy, -half - 0.2) @ R("X", 90))
+                p.add("Black", box(0.18, 2 * r, 0.14), rot @ T(x, cy, -half - 0.36))
+                p.add("Black", box(2 * r, 0.18, 0.14), rot @ T(x, cy, -half - 0.36))
+            else:
+                w, h, cy = width * 0.56, height * 0.4, y + height * 0.64
+                p.add("Black", box(w + 0.5, h + 0.5, 0.3), rot @ T(x, cy, -half - 0.1))
+                p.add("Paper", box(w, h, 0.36), rot @ T(x, cy, -half - 0.1))
+                for k in range(1, 4):
+                    p.add("Black", box(0.16, h, 0.14), rot @ T(x - w / 2 + w * k / 4, cy, -half - 0.3))
+                for k in range(1, 3):
+                    p.add("Black", box(w, 0.16, 0.14), rot @ T(x, cy - h / 2 + h * k / 3, -half - 0.3))
+
+
+def temple_balcony(p, y, half, skirt):
+    """Balcón corrido alrededor de un piso: faldón que lo apoya en el tejado de abajo (de alto `skirt`), suelo de
+    madera y barandilla roja con remates dorados en las esquinas. `y` es la cara de abajo del suelo."""
+    p.add("Red", frame(half - 1.0, half - 3.6, skirt), T(0, y - skirt, 0))
+    p.add("Wood", box(2 * half, 0.5, 2 * half), T(0, y + 0.25, 0))
+    p.add("Red", frame(half + 0.12, half - 0.6, 0.36), T(0, y - 0.1, 0))
+    rail = half - 0.5
+    count = max(2, round(2 * rail / 4.6))
+    floor = y + 0.5
+    for side in range(4):
+        rot = R("Y", 90 * side)
+        for i in range(count):
+            x = -rail + 2 * rail * i / count
+            if i == 0:
+                p.add("Red", box(0.75, 3.2, 0.75), rot @ T(x, floor + 1.6, -rail))
+                p.add("Gold", giboshi(1.1), rot @ T(x, floor + 3.2, -rail))
+            else:
+                p.add("Red", box(0.45, 2.5, 0.45), rot @ T(x, floor + 1.25, -rail))
+        for level, tall in ((2.4, 0.4), (1.3, 0.26), (0.45, 0.26)):
+            p.add("Red", box(2 * rail + 1.8, tall, tall), rot @ T(0, floor + level, -rail))
+
+
+def temple(p):
+    """Templo de tres pisos sobre la boca de las mazmorras, de 82 de ancho y casi 100 de alto. Planta baja abierta:
+    doce columnas rojas con basa de piedra, vigas, friso claro, cuerda sagrada (shimenawa) en la entrada de cada lado
+    y techo de casetones con un sello en el centro. Encima, tres tejados curvos de esquinas levantadas, dos pisos con
+    balcón y ventanas de papel, y un remate dorado de anillos. Sale en tres piezas (TempleA, B y C: una por piso) con
+    el mismo origen, el centro del suelo. La boca, el ascensor y los círculos mágicos quedan debajo, sin tocar."""
+    E, INNER, H = 26.0, 10.0, 24.0  # media anchura de la línea de columnas, columnas del hueco central y su alto
+
+    # --- A: planta baja y primer tejado ---
+    p.group = "A"
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            for a, b in ((E, E), (E, INNER), (INNER, E)):
+                x, z = sx * a, sz * b
+                p.add("Stone", lathe([(3.2, 0), (3.2, 0.5), (2.6, 1.0), (2.2, 1.15)], 12), T(x, 0, z))
+                p.add("Red", lathe([(1.9, 1.1), (1.95, 8.0), (1.85, 16.0), (1.68, H)], 12), T(x, 0, z))
+                p.add("Black", cyl(2.12, 1.6, 12, 2.06), T(x, 1.15, z))
+                p.add("Gold", cyl(2.2, 0.32, 12), T(x, 2.75, z))
+                p.add("Gold", cyl(1.96, 0.5, 12), T(x, 19.3, z))
+                p.add("Black", frustum(3.6, 3.6, 5.0, 5.0, 1.1), T(x, H + 0.55, z))  # capitel
+                p.add("Gold", box(5.2, 0.24, 5.2), T(x, H + 1.22, z))
+    span = INNER - 1.85
+    for side in range(4):
+        rot = R("Y", 90 * side)
+        # Viga entre las cabezas de las columnas (sus puntas asoman en las esquinas) y friso claro con tacos rojos.
+        p.add("Red", box(2 * E + 5.4, 1.6, 1.3), rot @ T(0, 22.0, -E))
+        for s in (-1, 1):
+            p.add("Gold", box(0.2, 1.3, 1.0), rot @ T(s * (E + 2.75), 22.0, -E))
+        p.add("White", box(2 * E, 2.5, 0.5), rot @ T(0, 24.05, -E))
+        for i in range(-4, 5):
+            p.add("Red", box(0.8, 2.5, 0.75), rot @ T(i * 5.2, 24.05, -E))
+        # Shimenawa: cuerda de paja gruesa en el centro, con papeles en zigzag y borlas.
+        rope = [Vector((span * (i / 6 - 1), 21.0 - 2.3 * (1 - (i / 6 - 1) ** 2), -E)) for i in range(13)]
+        p.add("Tan", sweep([rot @ q for q in rope], circle(0.62, 7), [0.8 + 0.5 * (1 - abs(i / 6 - 1)) for i in range(13)]))
+        for x in (-5.4, -1.8, 1.8, 5.4):
+            top = 21.0 - 2.3 * (1 - (x / span) ** 2) - 0.6
+            for k in range(3):
+                p.add("White", box(0.95, 0.85, 0.08), rot @ T(x + (0.3 if k % 2 else -0.3), top - 0.45 - k * 0.8, -E - 0.1))
+        for x in (-3.6, 0.0, 3.6):
+            top = 21.0 - 2.3 * (1 - (x / span) ** 2) - 0.5
+            p.add("Tan", cyl(0.5, 1.9, 6, 0.16), rot @ T(x, top - 1.9, -E))
+    # Techo de casetones: tablero, rejilla de vigas rojas con clavos dorados y un sello redondo en el centro.
+    p.add("Wood", box(2 * E - 2.0, 0.4, 2 * E - 2.0), T(0, 25.6, 0))
+    step = 2 * E / 6
+    for i in range(7):
+        c = -E + i * step
+        p.add("Red", box(2 * E, 0.8, 0.9), T(0, 24.9, c))
+        p.add("Red", box(0.9, 0.78, 2 * E), T(c, 24.9, 0))
+        for j in range(7):
+            if 0 < i < 6 and 0 < j < 6 and (i, j) != (3, 3):
+                p.add("Gold", box(1.4, 0.2, 1.4), T(c, 24.42, -E + j * step))
+    p.add("Black", cyl(7.4, 0.3, 16), T(0, 24.2, 0))
+    p.add("Gold", torus(7.5, 0.32, 16, 5), T(0, 24.2, 0))
+    p.add("Paper", torus(5.7, 0.6, 16, 4), T(0, 24.1, 0) @ S(1, 0.3, 1))
+    p.add("Gold", torus(3.0, 0.25, 12, 4), T(0, 24.15, 0))
+    p.add("Gold", sphere(1.3, 8, 4), T(0, 24.1, 0) @ S(1, 0.6, 1))
+    for k in range(8):
+        p.add("Gold", box(1.5, 0.12, 0.3), R("Y", 45 * k) @ T(4.05, 24.15, 0))
+    p.add("Red", frame(E + 1.3, E - 1.3, 1.0), T(0, 25.3, 0))  # solera sobre los capiteles
+    y, wall = temple_brackets(p, 26.3, E + 1.1, E - 1.3)
+    y = temple_roof(p, y - 1.7, 41.0, 16.5, 13.0, 3.2, wall)
+
+    # --- B: segundo piso con balcón y segundo tejado ---
+    p.group = "B"
+    temple_balcony(p, y - 0.4, 19.4, 2.8)
+    y += 0.1
+    temple_body(p, y, 14.0, 9.3, 3)
+    y, wall = temple_brackets(p, y + 9.3, 14.0, 12.0)
+    y = temple_roof(p, y - 3.0, 27.5, 10.8, 10.5, 2.6, wall)
+
+    # --- C: tercer piso, tejado alto y remate ---
+    p.group = "C"
+    temple_balcony(p, y - 0.4, 13.0, 2.6)
+    y += 0.1
+    temple_body(p, y, 8.6, 7.0, 3, True)
+    y, wall = temple_brackets(p, y + 7.0, 8.6, 7.0, 0.85)
+    y = temple_roof(p, y - 1.95, 19.5, 1.0, 13.5, 2.4, wall, True) - 0.5
+    # Sōrin: base, cuenco, loto, mástil con siete anillos, llama y joya.
+    p.add("Gold", frustum(3.6, 3.6, 2.8, 2.8, 1.3), T(0, y + 0.65, 0))
+    p.add("Gold", sphere(1.7, 10, 5), T(0, y + 1.3, 0) @ S(1, 0.75, 1))
+    p.add("Gold", lathe([(0.5, 0), (1.5, 0.5), (1.9, 0.9), (0.6, 1.0)], 10), T(0, y + 2.3, 0))
+    p.add("Gold", cyl(0.38, 11.5, 8, 0.24), T(0, y + 3.0, 0))
+    for k in range(7):
+        p.add("Gold", torus(1.7 - k * 0.14, 0.26, 14, 5), T(0, y + 4.4 + k * 1.15, 0))
+    y += 12.8
+    for k in range(2):
+        p.add("Gold", spike(0.95, 3.2, 4), T(0, y, 0) @ R("Y", 90 * k) @ S(1, 1, 0.14))
+    p.add("Gold", sphere(0.75, 8, 5), T(0, y + 3.5, 0))
+    p.add("Gold", spike(0.3, 1.3, 6), T(0, y + 4.1, 0))
 
 
 def koinobori(p):
@@ -758,9 +1061,28 @@ PIECES = {
     "Sakura": sakura, "SakuraB": sakura_b, "Maple": maple, "Pine": pine, "Bamboo": bamboo, "Torii": torii,
     "StoneLantern": stone_lantern, "Chochin": chochin, "Pagoda": pagoda, "Bridge": bridge, "Shrine": shrine,
     "Rocks": rocks, "Lotus": lotus, "Bonsai": bonsai, "Fence": fence, "Komainu": komainu,
-    "Koinobori": koinobori, "TempleRoof": temple_roof, "Panda": panda, "RedPanda": red_panda, "Tiger": tiger, "Fox": fox, "Tanuki": tanuki,
+    "Koinobori": koinobori, "Temple": temple, "Panda": panda, "RedPanda": red_panda, "Tiger": tiger, "Fox": fox, "Tanuki": tanuki,
     "Deer": deer, "Crane": crane, "Fuji": fuji,
 }
+
+
+# Vistas de prueba de las piezas grandes: (altura que se mira, ancho en studs, giro, grados por encima).
+VIEWS = {
+    "Temple": [(47.0, 150.0, 28.0, 9.0), (30.0, 100.0, 35.0, -22.0), (22.0, 62.0, 12.0, 4.0)],
+    "Torii": [(9.0, 34.0, 25.0, 8.0)],
+    "Bridge": [(2.5, 34.0, 30.0, 18.0)],
+}
+
+
+def place(name):
+    """Dónde va cada pieza en la escena de Blender (solo para verlas juntas): en fila, de 40 en 40."""
+    if name == "Fuji":
+        return 900.0
+    if name == "Temple":
+        return 1500.0
+    if name in ANIMALS:
+        return 1200.0 + ANIMALS.index(name) * 14.0  # los animales, en otra fila más junta
+    return list(PIECES).index(name) * 40.0
 
 
 # ---------- Pasar a Blender y exportar ----------
@@ -817,6 +1139,34 @@ def render_row(path, center_x, width, angle=0.0):
     bpy.ops.render.render(write_still=True)
 
 
+def render_view(path, target, width, angle=25.0, pitch=10.0):
+    """Vista de una pieza grande: `target` = (x, altura) del punto que se mira, `width` studs de ancho, girada
+    `angle` grados y vista desde `pitch` grados por encima (negativo: desde abajo, para ver los aleros)."""
+    scene = bpy.context.scene
+    scene.render.engine = "BLENDER_WORKBENCH"
+    scene.display.shading.light = "STUDIO"
+    scene.display.shading.color_type = "MATERIAL"
+    scene.display.shading.show_cavity = True
+    scene.display.shading.show_backface_culling = True  # una cara al revés se vería como un agujero
+    scene.render.resolution_x = 1300
+    scene.render.resolution_y = 1000
+    scene.render.filepath = path
+    if not scene.world:
+        scene.world = bpy.data.worlds.new("w")
+    scene.world.color = (0.55, 0.78, 0.95)
+    a, b = math.radians(angle), math.radians(pitch)
+    look = Vector((target[0], 0, target[1]))
+    cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
+    cam.data.type = "ORTHO"
+    cam.data.ortho_scale = width
+    cam.data.clip_end = 2000
+    cam.location = look + Vector((math.sin(a) * math.cos(b), math.cos(a) * math.cos(b), math.sin(b))) * 600
+    cam.rotation_euler = (look - cam.location).to_track_quat("-Z", "Y").to_euler()
+    scene.collection.objects.link(cam)
+    scene.camera = cam
+    bpy.ops.render.render(write_still=True)
+
+
 def render_preview(path, names, scale):
     scene = bpy.context.scene
     scene.render.engine = "BLENDER_WORKBENCH"
@@ -857,20 +1207,18 @@ def main():
     marker("Axis_Up", (-40, 2, 0))
     marker("Axis_Front", (-40, 0, -2))
 
-    for index, (name, build) in enumerate(PIECES.items()):
+    for name, build in PIECES.items():
         if args.only and name not in args.only:
             continue
         p = Piece()
         build(p)
-        if name == "Fuji":
-            offset = (900.0, 0, 0)
-        elif name in ANIMALS:
-            offset = (1200.0 + ANIMALS.index(name) * 14.0, 0, 0)  # los animales, en otra fila más junta
-        else:
-            offset = (index * 40.0, 0, 0)  # en fila, de 40 en 40 (solo para verlas juntas en Blender)
-        marker("%s_Origin" % name, offset)
-        for role, (verts, faces) in p.parts.items():
-            make_object("%s_%s" % (name, role), role, verts, faces, offset)
+        offset = (place(name), 0, 0)
+        for group in sorted({group for group, _ in p.parts}):
+            marker("%s%s_Origin" % (name, group), offset)
+        for (group, role), (verts, faces) in p.parts.items():
+            obj = make_object("%s%s_%s" % (name, group, role), role, verts, faces, offset)
+            if len(obj.data.polygons) > 9000:
+                print("AVISO: %s tiene %d triángulos" % (obj.name, len(obj.data.polygons)))
 
     os.makedirs(output, exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(output, "mapa_japones.blend"))
@@ -887,16 +1235,20 @@ def main():
         return
     if args.only:
         for name in args.only:
-            index = list(PIECES).index(name)
-            render_row(os.path.join(output, name + ".png"), 40.0 * index, 50.0, 25.0)
+            if name in VIEWS:
+                for index, (center, width, angle, pitch) in enumerate(VIEWS[name]):
+                    render_view(os.path.join(output, "%s%d.png" % (name, index + 1)), (place(name), center), width, angle, pitch)
+            else:
+                render_row(os.path.join(output, name + ".png"), place(name), 50.0, 25.0)
         return
     render_preview(os.path.join(output, "mapa_japones1.png"), (1, 6), 1.0)
     render_preview(os.path.join(output, "mapa_japones2.png"), (7, 12), 0.9)
-    render_preview(os.path.join(output, "mapa_japones3.png"), (16, 18), 1.0)
+    render_preview(os.path.join(output, "mapa_japones3.png"), (16, 17), 1.0)
     render_row(os.path.join(output, "mapa_japones4.png"), 1200.0 + 3 * 14.0, 14.0 * 8)
     render_row(os.path.join(output, "mapa_japones5.png"), 1200.0 + 3 * 14.0, 14.0 * 8, 38.0)
-    render_row(os.path.join(output, "mapa_japones6.png"), 40.0 * list(PIECES).index("Komainu"), 28.0, 25.0)
-    render_row(os.path.join(output, "mapa_japones7.png"), 40.0 * list(PIECES).index("TempleRoof"), 75.0, 25.0)
+    render_row(os.path.join(output, "mapa_japones6.png"), place("Komainu"), 28.0, 25.0)
+    for index, (center, width, angle, pitch) in enumerate(VIEWS["Temple"]):
+        render_view(os.path.join(output, "mapa_japones%d.png" % (7 + index)), (place("Temple"), center), width, angle, pitch)
 
 
 if __name__ == "__main__":

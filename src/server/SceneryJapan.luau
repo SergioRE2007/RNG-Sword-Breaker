@@ -23,6 +23,8 @@ local STONE = { Color3.fromRGB(238, 232, 244), Color3.fromRGB(216, 208, 230) }
 local PETALS = { Color3.fromRGB(255, 150, 200), Color3.fromRGB(255, 190, 220), Color3.fromRGB(255, 225, 238), Color3.fromRGB(255, 120, 170) }
 local MIST_MOUNTAINS = { Color3.fromRGB(176, 140, 205), Color3.fromRGB(196, 150, 200), Color3.fromRGB(150, 130, 200) }
 local TREES = { "Sakura", "Sakura", "SakuraB", "SakuraB", "Maple", "Pine" }
+local ISLAND_RADIUS = Config.Plot.RingRadius + Config.Plot.Size * 0.75 + 35
+local TREE_SPACE = 5.2 -- sitio que guarda un árbol por cada punto de escala: los troncos no se pegan y las copas solo se rozan
 
 local function part(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material): Part
 	local item = Instance.new("Part")
@@ -43,6 +45,23 @@ local function decor(item: BasePart): BasePart
 	item.CanQuery = false
 	item.CastShadow = false
 	return item
+end
+
+-- Sitios ya ocupados por algo grande (árboles, bambú, edificios, estanques): lo siguiente se pone a distancia.
+local taken: { { position: Vector3, radius: number } } = {}
+
+local function claim(position: Vector3, radius: number)
+	table.insert(taken, { position = position, radius = radius })
+end
+
+local function isFree(position: Vector3, radius: number): boolean
+	for _, item in taken do
+		local offset = position - item.position
+		if offset.X * offset.X + offset.Z * offset.Z < (radius + item.radius) ^ 2 then
+			return false
+		end
+	end
+	return true
 end
 
 -- Disco tumbado centrado en `center`, entre las alturas bottom y top.
@@ -227,6 +246,19 @@ local function plaza(parent: Instance, radius: number)
 	end
 end
 
+-- Busca sitio para algo de radio radius en position o, si está ocupado, cada vez más lejos en espiral (hasta
+-- reach), sin salirse de la isla y a margin del hub, las parcelas y los caminos. Devuelve nil si no cabe.
+local function findSpot(position: Vector3, radius: number, reach: number, margin: number): Vector3?
+	for attempt = 0, 14 do
+		local angle = attempt * 2.4
+		local spot = position + Vector3.new(math.cos(angle), 0, math.sin(angle)) * (reach * math.sqrt(attempt / 14))
+		if spot.Magnitude < ISLAND_RADIUS - 5 and isFree(spot, radius) and isOpen(spot, margin) then
+			return spot
+		end
+	end
+	return nil
+end
+
 -- Marca invisible donde el cliente (JapanFx) pone luciérnagas o humo de incienso.
 local function spot(parent: Instance, name: string, position: Vector3, size: Vector3, tag: string)
 	local item = decor(part(parent, name, size, CFrame.new(position), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic))
@@ -286,6 +318,7 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 	for distance = from + 50, from + length - 20, 55 do
 		for _, sign in { 1, -1 } do
 			local spot = direction * distance + side * sign * (width / 2 + 17 + rng:NextNumber(0, 5))
+			claim(spot, 12)
 			PropModel.place(parent, TREES[rng:NextInteger(1, #TREES)], CFrame.new(spot) * turn(), rng:NextNumber(0.9, 1.15))
 		end
 	end
@@ -293,6 +326,7 @@ end
 
 -- Estanque con nenúfares y un puente rojo por encima.
 local function pond(parent: Instance, center: Vector3, radius: number)
+	claim(center, radius + 12)
 	disc(parent, "PondEdge", center, radius + 2.2, 0.2, 0.55, Color3.fromRGB(196, 200, 218), Enum.Material.SmoothPlastic)
 	local water = disc(parent, "Pond", center, radius, 0.3, 0.7, Color3.fromRGB(86, 214, 238), Enum.Material.Glass)
 	water.Transparency = Config.Water.Transparency
@@ -305,14 +339,21 @@ local function pond(parent: Instance, center: Vector3, radius: number)
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(-radius * 0.35, 0.7, radius * 0.3)) * turn(), 1.0)
 	local turnBridge = rng:NextNumber(0, math.pi)
 	PropModel.place(parent, "Bridge", CFrame.new(center + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, turnBridge, 0), radius / 10)
+	-- El puente llega al suelo justo fuera del borde: ni rocas ni valla delante de sus dos entradas.
+	local along = Vector3.new(math.cos(turnBridge), 0, -math.sin(turnBridge))
+	local function atBridge(angle: number, width: number): boolean
+		return math.abs(along:Dot(Vector3.new(math.cos(angle), 0, math.sin(angle)))) > math.cos(math.rad(width))
+	end
 	for index = 1, 7 do
 		local angle = index / 7 * math.pi * 2 + 0.3
-		PropModel.place(parent, "Rocks", CFrame.new(center + Vector3.new(math.cos(angle) * (radius + 3), 0.3, math.sin(angle) * (radius + 3))) * turn(), rng:NextNumber(0.4, 0.8))
+		local frame, scale = turn(), rng:NextNumber(0.4, 0.8)
+		if not atBridge(angle, 26) then
+			PropModel.place(parent, "Rocks", CFrame.new(center + Vector3.new(math.cos(angle) * (radius + 3), 0.3, math.sin(angle) * (radius + 3))) * frame, scale)
+		end
 	end
-	-- Valla de bambú alrededor, con un hueco al azar, y luciérnagas sobre el agua.
-	local gap = rng:NextInteger(1, 24)
+	-- Valla de bambú alrededor, abierta en las dos entradas del puente, y luciérnagas sobre el agua.
 	for index = 1, 24 do
-		if index ~= gap then
+		if not atBridge(index / 24 * math.pi * 2, 22) then
 			local angle = index / 24 * math.pi * 2
 			local spotPosition = center + Vector3.new(math.cos(angle) * (radius + 8), 0.3, math.sin(angle) * (radius + 8))
 			PropModel.place(parent, "Fence", CFrame.lookAt(spotPosition, center), 1.0)
@@ -334,23 +375,48 @@ end
 
 local function tree(parent: Instance, position: Vector3)
 	-- Claro entre árboles: se salta una parte para que no sea un muro de copas.
-	if rng:NextNumber() < 0.4 then
+	if rng:NextNumber() < 0.3 then
 		return
 	end
 	local name = TREES[rng:NextInteger(1, #TREES)]
 	local scale = rng:NextNumber(3.0, 4.5)
-	PropModel.place(parent, name, CFrame.new(position) * turn(), scale)
+	-- Cada árbol guarda sitio según su tamaño; si el suyo está cogido se corre a un lado, y si no cabe, no sale.
+	local place = findSpot(position, TREE_SPACE * scale, 34, 10)
+	if not place then
+		return
+	end
+	claim(place, TREE_SPACE * scale)
+	PropModel.place(parent, name, CFrame.new(place) * turn(), scale)
 	if name ~= "Pine" then
-		petals(parent, position, 14, 9)
+		petals(parent, place, 14, 9)
 	end
 end
 
+-- Bosquecillo de bambú: tres macizos en triángulo, lo bastante separados para no meterse uno en otro.
 local function grove(parent: Instance, position: Vector3)
-	if rng:NextNumber() < 0.25 then
-		spot(parent, "Fireflies", position + Vector3.new(0, 3, 0), Vector3.new(24, 5, 24), "FireflySpot")
+	local place = findSpot(position, 10, 26, 6)
+	if not place then
+		return
 	end
-	for _ = 1, 3 do
-		PropModel.place(parent, "Bamboo", CFrame.new(position + Vector3.new(rng:NextNumber(-5, 5), 0, rng:NextNumber(-5, 5))) * turn(), rng:NextNumber(0.9, 1.3))
+	claim(place, 10)
+	if rng:NextNumber() < 0.25 then
+		spot(parent, "Fireflies", place + Vector3.new(0, 3, 0), Vector3.new(24, 5, 24), "FireflySpot")
+	end
+	local phase = rng:NextNumber(0, math.pi * 2)
+	for index = 1, 3 do
+		local angle = phase + index * math.pi * 2 / 3
+		local distance = rng:NextNumber(3.8, 5.4)
+		PropModel.place(parent, "Bamboo", CFrame.new(place + Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)) * turn(), rng:NextNumber(0.9, 1.3))
+	end
+end
+
+-- Rocas de jardín sueltas, donde quepan.
+local function rocks(parent: Instance, position: Vector3)
+	local scale = rng:NextNumber(0.6, 1.2)
+	local place = findSpot(position, 4.5 * scale, 16, 4)
+	if place then
+		claim(place, 4.5 * scale)
+		PropModel.place(parent, "Rocks", CFrame.new(place + Vector3.new(0, 0.2, 0)) * turn(), scale)
 	end
 end
 
@@ -405,7 +471,7 @@ function SceneryJapan.start()
 	folder.Name = "Scenery"
 	folder.Parent = workspace
 
-	local islandRadius = cfg.RingRadius + cfg.Size * 0.75 + 35
+	local islandRadius = ISLAND_RADIUS
 	local beach = 22
 	buildLake(folder, islandRadius + beach)
 	buildIsland(folder, islandRadius, beach)
@@ -424,6 +490,7 @@ function SceneryJapan.start()
 
 	-- Mástiles de koinobori (carpas de tela) en el borde interior de cada hueco entre caminos.
 	ring(cfg.Count, cfg.HubRadius + 22, 0.5, function(position)
+		claim(position, 5)
 		PropModel.place(folder, "Koinobori", CFrame.new(position) * turn(), 0.85)
 	end)
 
@@ -433,6 +500,10 @@ function SceneryJapan.start()
 		if index == 1 or index == 5 then
 			pond(folder, position, 24)
 		elseif index == 3 or index == 7 then
+			claim(position, 16)
+			claim(position - position.Unit * 17, 17) -- el jardín zen de delante
+			claim(position + Vector3.new(-18, 0, 12), 5)
+			claim(position + Vector3.new(18, 0, 12), 5)
 			PropModel.place(folder, "Shrine", CFrame.lookAt(position, Vector3.zero) * CFrame.new(0, 0, 0), 1.25)
 			PropModel.place(folder, "Bonsai", CFrame.new(position + Vector3.new(9, 0.3, 6)), 1.2)
 			PropModel.place(folder, "Bonsai", CFrame.new(position + Vector3.new(-9, 0.3, 6)), 1.2)
@@ -455,6 +526,7 @@ function SceneryJapan.start()
 	end)
 	ring(cfg.Count, cfg.RingRadius + 82, 0.5, function(position, index)
 		if index % 2 == 0 then
+			claim(position, 18)
 			PropModel.place(folder, "Pagoda", CFrame.lookAt(position, Vector3.zero), 1.15)
 		else
 			tree(folder, position)
@@ -467,7 +539,7 @@ function SceneryJapan.start()
 		ring(cfg.Count, distance, 0.5, function(position)
 			tree(folder, position + Vector3.new(rng:NextNumber(-16, 16), 0, rng:NextNumber(-16, 16)))
 			tree(folder, position + Vector3.new(rng:NextNumber(-16, 16), 0, rng:NextNumber(-16, 16)))
-			PropModel.place(folder, "Rocks", CFrame.new(position + Vector3.new(rng:NextNumber(-14, 14), 0.2, rng:NextNumber(-14, 14))) * turn(), rng:NextNumber(0.6, 1.2))
+			rocks(folder, position + Vector3.new(rng:NextNumber(-14, 14), 0, rng:NextNumber(-14, 14)))
 		end)
 	end
 	ring(46, islandRadius - 12, 0.3, function(position)

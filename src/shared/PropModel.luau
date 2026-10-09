@@ -82,9 +82,10 @@ end
 -- Las mallas agrupan piezas separadas por color: su caja cerraría torii y puentes.
 -- Colisiones sencillas solo para los cuerpos sólidos; hojas, flores y animales siguen sin colisión.
 local function collisions(model: Model, name: string, origin: CFrame, scale: number)
-	local function box(size: Vector3, offset: CFrame)
+	local function box(size: Vector3, offset: CFrame, shape: Enum.PartType?)
 		local part = Instance.new("Part")
 		part.Name = "MapCollision"
+		part.Shape = shape or Enum.PartType.Block
 		part.Size = size * scale
 		part.CFrame = origin * CFrame.new(offset.Position * scale) * offset.Rotation
 		part.Anchored = true
@@ -96,12 +97,26 @@ local function collisions(model: Model, name: string, origin: CFrame, scale: num
 	end
 	if name == "Sakura" or name == "SakuraB" or name == "Maple" or name == "Pine" then
 		box(Vector3.new(2.6, 10, 2.6), CFrame.new(0, 5, 0))
+	elseif name == "Bamboo" then
+		-- Un cilindro de pie para todo el macizo: entre caña y caña no cabe un jugador.
+		box(Vector3.new(13, 6, 6), CFrame.new(0, 6.5, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
 	elseif name == "Torii" then
 		for _, sign in { -1, 1 } do
-			box(Vector3.new(1.9, 14, 1.9), CFrame.new(sign * 6.4, 7, 0))
+			box(Vector3.new(2, 14.2, 2), CFrame.new(sign * 6.4, 7.1, 0))
 		end
-		box(Vector3.new(15.4, 0.9, 0.9), CFrame.new(0, 9.6, 0))
-		box(Vector3.new(18, 2, 2.1), CFrame.new(0, 14.7, 0))
+		box(Vector3.new(18, 1.1, 0.95), CFrame.new(0, 9.7, 0))
+		box(Vector3.new(20.6, 2.8, 2.6), CFrame.new(0, 15.6, 0))
+	elseif name == "TempleA" then
+		-- Las doce columnas del templo y sus basas de piedra (las medidas de temple() en Blender).
+		local upright = CFrame.Angles(0, 0, math.rad(90))
+		for _, sx in { -1, 1 } do
+			for _, sz in { -1, 1 } do
+				for _, spot in { { 26, 26 }, { 26, 10 }, { 10, 26 } } do
+					box(Vector3.new(24, 4, 4), CFrame.new(sx * spot[1], 12, sz * spot[2]) * upright, Enum.PartType.Cylinder)
+					box(Vector3.new(1.1, 6.2, 6.2), CFrame.new(sx * spot[1], 0.55, sz * spot[2]) * upright, Enum.PartType.Cylinder)
+				end
+			end
+		end
 	elseif name == "StoneLantern" then
 		box(Vector3.new(1.5, 6, 1.5), CFrame.new(0, 3, 0))
 	elseif name == "Shrine" then
@@ -119,17 +134,15 @@ local function collisions(model: Model, name: string, origin: CFrame, scale: num
 	elseif name == "Fence" then
 		box(Vector3.new(8.6, 3.4, 0.6), CFrame.new(0, 1.7, 0))
 	elseif name == "Bridge" then
+		-- La misma curva que en Blender (bridge()): la cubierta nace a ras de suelo en los dos extremos, sin escalón.
 		local function point(t: number): Vector3
-			return Vector3.new(-9 + 18 * t, 3.2 * math.sin(math.pi * t) + 0.5, 0)
+			return Vector3.new(-11.5 + 23 * t, 3.3 * math.sin(math.pi * t), 0)
 		end
 		for i = 0, 23 do
 			local a, b = point(i / 24), point((i + 1) / 24)
 			local slope = math.atan2(b.Y - a.Y, b.X - a.X)
 			-- El borde superior coincide con la cubierta; el resto queda oculto debajo.
-			box(Vector3.new((b - a).Magnitude + 0.02, 0.4, 6.2), CFrame.new((a + b) / 2) * CFrame.Angles(0, 0, slope))
-		end
-		for _, side in { -1, 1 } do
-			box(Vector3.new(2.4, 1, 6.8), CFrame.new(side * 10.2, 0.4, 0))
+			box(Vector3.new((b - a).Magnitude + 0.02, 0.5, 6.2), CFrame.new((a + b) / 2) * CFrame.Angles(0, 0, slope) * CFrame.new(0, -0.17, 0))
 		end
 		-- Barandilla continua a cada lado: un tramo entre cada par de postes, de la cubierta al pasamanos.
 		for i = 0, 7 do
