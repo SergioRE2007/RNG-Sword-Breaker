@@ -34,6 +34,12 @@ for (const folder of process.argv.slice(2)) {
 			}
 		}
 		const start = Math.max(0, onset / sampleRate - PREROLL);
+		// Cruces por cero por segundo: un siseo (ruido) da unos 18.000; un sonido de verdad, muchos menos.
+		let crossings = 0;
+		for (let i = 1; i < samplesDecoded; i++) {
+			if (channelData[0][i] >= 0 !== channelData[0][i - 1] >= 0) crossings++;
+		}
+		const hiss = crossings / (samplesDecoded / sampleRate);
 		// Hasta dónde suena de verdad: la última muestra por encima del umbral.
 		let last = samplesDecoded - 1;
 		tail: for (; last > onset; last--) {
@@ -41,13 +47,13 @@ for (const folder of process.argv.slice(2)) {
 				if (Math.abs(channel[last]) > Math.max(peak * THRESHOLD, 0.003)) break tail;
 			}
 		}
-		rows.push({ batch: path.basename(folder), name, id: ids[name], start, length: (last - onset) / sampleRate, peak });
+		rows.push({ batch: path.basename(folder), name, id: ids[name], start, length: (last - onset) / sampleRate, peak, hiss });
 	}
 }
 decoder.free();
 
 for (const row of rows) {
-	console.log(`${row.batch}/${row.name}  empieza ${row.start.toFixed(3)} s de ${row.length.toFixed(2)} s  pico ${row.peak.toFixed(2)}${row.id ? "" : "  (sin subir)"}`);
+	console.log(`${row.batch}/${row.name}  empieza ${row.start.toFixed(3)} s de ${row.length.toFixed(2)} s  pico ${row.peak.toFixed(2)}${row.peak < 0.05 ? "  CASI MUDO: no subirlo de volumen" : ""}${row.hiss > 14000 ? "  SISEO" : ""}${row.id ? "" : "  (sin subir)"}`);
 }
 // Cuánto hay que subir cada grabación para que su pico llegue a 1: la tabla GAIN de client/Sfx.
 console.log("\nlocal GAIN = {");

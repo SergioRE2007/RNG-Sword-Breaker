@@ -18,7 +18,9 @@ local DUCK = 0.35 -- lo que queda del ambiente de la superficie mientras hay un 
 -- diez veces más flojo que los demás).
 local AMBIENTS = {
 	day = { 124805672014218, 2.3 },
-	night = { 97005451053323, 0.32 },
+	-- La noche está compuesta con tools/sonidos/componer.mjs (grillos, agua, bambú y búho sueltos sobre una brisa
+	-- hecha por código): el ambiente pedido de una vez le sonaba saturado al usuario. Muy bajo, pedido por él.
+	night = { 137642913626647, 0.3 },
 	lobby = { 103233526142547, 0.4 },
 	dungeon = { 116580300543207, 0.31 },
 }

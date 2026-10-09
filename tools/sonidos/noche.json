@@ -1,0 +1,19 @@
+{
+	"seconds": 24,
+	"cutoff": 9000,
+	"bed": { "level": 0.02, "cutoff": 450, "depth": 0.6, "seed": 7 },
+	"events": [
+		{ "file": "grillo_1.mp3", "at": 1.0, "gain": 0.18, "pan": -0.5, "cutoff": 6500 },
+		{ "file": "agua_2.mp3", "at": 2.6, "gain": 0.22, "pan": 0.3 },
+		{ "file": "grillo_3.mp3", "at": 4.4, "gain": 0.12, "pan": 0.6, "cutoff": 5000 },
+		{ "file": "bambu_1.mp3", "at": 6.9, "gain": 0.24, "pan": -0.3, "cutoff": 4000 },
+		{ "file": "grillo_2.mp3", "at": 8.7, "gain": 0.18, "pan": -0.6, "cutoff": 6500 },
+		{ "file": "buho_1.mp3", "at": 10.2, "gain": 0.2, "pan": 0.5, "cutoff": 3000 },
+		{ "file": "agua_1.mp3", "at": 13.4, "gain": 0.2, "pan": -0.2 },
+		{ "file": "grillo_1.mp3", "at": 14.6, "gain": 0.1, "pan": 0.4, "cutoff": 5000 },
+		{ "file": "bambu_2.mp3", "at": 16.8, "gain": 0.18, "pan": 0.2, "cutoff": 4000 },
+		{ "file": "grillo_3.mp3", "at": 18.3, "gain": 0.18, "pan": -0.4, "cutoff": 6500 },
+		{ "file": "agua_2.mp3", "at": 20.4, "gain": 0.18, "pan": 0.5 },
+		{ "file": "grillo_2.mp3", "at": 22.1, "gain": 0.12, "pan": 0.6, "cutoff": 5000 }
+	]
+}
