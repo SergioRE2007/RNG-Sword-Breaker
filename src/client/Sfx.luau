@@ -48,6 +48,11 @@ local EVENTS = {
 	forge_hit = { { 97714408632464, 119769094792609, 107416494139217 }, 0.55, 0.95, 1.06 },
 	forge_super = { 111948543913240, 0.8, 1, 1 },
 
+	-- Detalles del mundo: el golpe épico contra el suelo (client/SwingAnim) y sacar o guardar el arma.
+	slam = { { 113634930919938, 83038622346332, 116286832741715 }, 0.6, 0.92, 1.06 },
+	unsheath = { 115027930187513, 0.35, 1, 1 },
+	sheath = { 114581278401856, 0.35, 1, 1 },
+
 	-- Mazmorras.
 	wave = { 83996363538018, 0.6, 1, 1 },
 	hurt = { { 70585973993176, 120343530004655, 76034653417857 }, 0.5, 0.94, 1.08 },
@@ -211,11 +216,16 @@ function Sfx.play(name: string, quiet: number?, pitch: number?, at: (Vector3 | I
 	end)
 end
 
--- El silbido de un espadazo, que sale del personaje que lo da. Cuanto más rápido se golpea, más flojo (con la
--- velocidad al máximo salen varios por segundo).
+-- Cuánto se baja lo que suena en cada espadazo según lo rápido que se golpea (con la velocidad al máximo salen
+-- varios por segundo).
+function Sfx.cadence(cooldown: number): number
+	return math.clamp((cooldown / SWING_QUIET) ^ 0.5, 0.4, 1)
+end
+
+-- El silbido de un espadazo, que sale del personaje que lo da.
 function Sfx.swing(kind: string, cooldown: number, character: Model?, quiet: number?)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	Sfx.play("swing_" .. kind, math.clamp((cooldown / SWING_QUIET) ^ 0.5, 0.4, 1) * (quiet or 1), nil, root)
+	Sfx.play("swing_" .. kind, Sfx.cadence(cooldown) * (quiet or 1), nil, root)
 end
 
 function Sfx.start()

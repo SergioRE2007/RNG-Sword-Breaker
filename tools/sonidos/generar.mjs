@@ -103,6 +103,18 @@ const BATCHES = {
 		s("dungeon_win", 3.0, "Mazmorra superada", "Dungeon cleared victory fanfare, short triumphant orchestral brass with a final cymbal, heroic game sound", 2),
 		s("dungeon_lose", 2.0, "Mazmorra perdida", "Defeat sound, short descending sad brass notes with a low drum, game over sting", 2),
 	],
+	// Ambiente de fondo de cada zona y de las estaciones del hub (client/Soundscape), y detalles del mundo.
+	ambiente: [
+		s("amb_day", 20, "Superficie, de día", `Peaceful japanese garden daytime ambience, gentle breeze through trees, soft birdsong, distant trickling water, calm, ${LOOP}`, 1, true),
+		s("amb_night", 20, "Superficie, de noche", `Calm night ambience in a japanese garden, crickets chirping, soft night breeze, peaceful, ${LOOP}`, 1, true),
+		s("amb_lobby", 20, "Lobby de las mazmorras", `Underground cavern ambience, deep airy echoing space, slow water drips, faint low wind, mysterious, ${LOOP}`, 1, true),
+		s("amb_dungeon", 20, "Dentro de una mazmorra", `Dark dungeon ambience, low ominous drone, distant rumbles and faint echoes, tense, ${LOOP}`, 1, true),
+		s("st_forge", 10, "Forja de grados", `Blacksmith forge ambience, crackling fire and soft roaring bellows, warm, ${LOOP}`, 1, true),
+		s("st_enchant", 10, "Mesa de encantamiento", `Magical enchanting table ambience, soft mystical hum with gentle twinkling chimes, ${LOOP}`, 1, true),
+		s("slam", 0.9, "Golpe épico contra el suelo", "Massive weapon slamming into the ground, deep heavy boom with a burst of debris, powerful, short", 3),
+		s("unsheath", 0.6, "Sacar el arma", "Sword being drawn from its scabbard, quick metallic blade slide with a ring, short, dry", 2),
+		s("sheath", 0.6, "Guardar el arma", "Sword sliding back into its scabbard, quick blade slide ending in a soft click, short, dry", 2),
+	],
 	clima: [
 		s("w_rain", 10, "Lluvia", `Steady gentle rain falling on leaves and ground, soft and calm, ${LOOP}`, 1, true),
 		s("w_petals", 10, "Pétalos", `Gentle warm spring breeze through cherry trees, soft rustling leaves, calm, ${LOOP}`, 1, true),

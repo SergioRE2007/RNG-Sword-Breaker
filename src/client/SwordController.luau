@@ -41,11 +41,16 @@ function SwordController.toggle()
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return end
 	equipmentRevision += 1
+	local root = character:FindFirstChild("HumanoidRootPart")
 	if swordIn(character) then
 		humanoid:UnequipTools()
+		Sfx.play("sheath", nil, nil, root)
 	else
 		local tool = swordIn(player:FindFirstChildOfClass("Backpack"))
-		if tool then humanoid:EquipTool(tool) end
+		if tool then
+			humanoid:EquipTool(tool)
+			Sfx.play("unsheath", nil, nil, root)
+		end
 	end
 end
 
