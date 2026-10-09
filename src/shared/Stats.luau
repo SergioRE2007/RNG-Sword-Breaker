@@ -121,10 +121,11 @@ function Stats.weapon(player: Player)
 	return key, Config.WeaponKinds[key]
 end
 
--- Segundos entre golpes: la mejora de velocidad por lo rápida o lenta que sea el arma.
+-- Segundos entre golpes: el tiempo base por lo rápida o lenta que sea el arma, entre la poción de velocidad de golpe
+-- si hay una activa. No hay mejora que lo baje (la hubo, "speed": el usuario la mandó quitar).
 function Stats.cooldown(player: Player): number
 	local _, kind = Stats.weapon(player)
-	return math.max(upgrade(player, "speed") * kind.cooldown, Config.MinCooldown)
+	return math.max(Config.BaseCooldown * kind.cooldown / Stats.potion(player, "attackSpeed"), Config.MinCooldown)
 end
 
 -- Renacimientos que lleva el jugador (el servidor los publica en el atributo "Rebirths").
@@ -137,8 +138,13 @@ function Stats.rebirthBonus(player: Player, stat: string): number
 	return Config.Rebirth[stat] ^ Stats.rebirths(player)
 end
 
--- Precio en monedas del siguiente renacimiento.
+-- Precio en monedas del siguiente renacimiento: el de la lista Config.Rebirth.costs (uno por renacimiento) o, si no
+-- la hay, cost * growth ^ renacimientos.
 function Stats.rebirthCost(player: Player): number
+	local costs = Config.Rebirth.costs
+	if costs then
+		return costs[math.clamp(Stats.rebirths(player) + 1, 1, #costs)]
+	end
 	return math.floor(Config.Rebirth.cost * Config.Rebirth.growth ^ Stats.rebirths(player))
 end
 

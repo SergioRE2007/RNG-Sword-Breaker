@@ -86,6 +86,24 @@ local STYLES = {
 			})
 		end,
 	},
+	-- Velocidad de golpe: rachas finas que suben muy rápido pegadas al cuerpo, como si cortara el aire.
+	gale = {
+		at = Vector3.new(0, -1, 0),
+		build = function(att, color, rate, size)
+			emitter(att, SPARKLE, glow(color), rate * 1.2, {
+				Lifetime = NumberRange.new(0.45, 0.7),
+				Speed = NumberRange.new(0.5, 1),
+				Shape = SHAPE.Cylinder,
+				ShapeStyle = STYLE.Surface,
+				ShapeInOut = IN_OUT.Outward,
+				Acceleration = Vector3.new(0, 22, 0),
+				Orientation = Enum.ParticleOrientation.VelocityParallel,
+				Squash = NumberSequence.new(2.5), -- alargadas en el sentido en que suben
+				Size = sizeCurve(0.45 * size, 0.05),
+				Transparency = fade(0.15),
+			})
+		end,
+	},
 	-- Vida: destellos verdes que suben despacio por todo el cuerpo.
 	vitality = {
 		at = Vector3.new(0, 0, 0),

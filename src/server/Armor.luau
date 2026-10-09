@@ -22,9 +22,9 @@ local CRYSTAL = "gradeCrystal"
 local random = Random.new()
 
 -- La vida se redondea a enteros y los porcentajes a décimas de punto.
-local function rolled(stat: string, base: number, quality, power: number): number
+local function rolled(stat: string, base: number, quality, level: number): number
 	local info = cfg.Stats[stat]
-	local value = base * random:NextNumber(cfg.Roll.min, cfg.Roll.max) * quality.mult * (if info.scales == false then 1 else power)
+	local value = base * random:NextNumber(cfg.Roll.min, cfg.Roll.max) * quality.mult * ArmorStats.scaling(stat, level)
 	return if info.flat then math.max(1, math.round(value)) else math.round(value * 1000) / 1000
 end
 
@@ -34,17 +34,16 @@ function Armor.roll(level: number, luck: number, forcedSlot: string?, forcedQual
 	local slot = forcedSlot or cfg.SlotOrder[random:NextInteger(1, #cfg.SlotOrder)]
 	local qualityIndex = forcedQuality or math.max(Permanent.roll(cfg.Qualities, luck), 1)
 	local quality = cfg.Qualities[qualityIndex]
-	local power = Config.Dungeons[level].power
 	local stats = {}
 	for _, stat in cfg.StatOrder do
 		local base = cfg.Slots[slot].stats[stat]
 		if base then
-			table.insert(stats, { stat = stat, value = rolled(stat, base, quality, power) })
+			table.insert(stats, { stat = stat, value = rolled(stat, base, quality, level) })
 		end
 	end
 	for _ = 1, quality.mods do
 		local mod = cfg.Mods[Modifiers.roll("armorMods", random)]
-		table.insert(stats, { stat = mod.stat, value = rolled(mod.stat, mod.value, quality, power), bonus = true })
+		table.insert(stats, { stat = mod.stat, value = rolled(mod.stat, mod.value, quality, level), bonus = true })
 	end
 	return { slot = slot, quality = qualityIndex, level = level, stats = stats }
 end
@@ -184,7 +183,8 @@ local function giveAll(player: Player)
 end
 
 local function onPlayer(player: Player)
-	if RunService:IsStudio() and Config.Test.AllGear then
+	-- (Con Config.Test.Progress no: ese modo ya pone la armadura que tocaría a esa hora, ver PlayerData.)
+	if RunService:IsStudio() and Config.Test.AllGear and (Config.Test.Progress or 0) <= 0 then
 		task.spawn(giveAll, player)
 	end
 	player.CharacterAdded:Connect(function(character)

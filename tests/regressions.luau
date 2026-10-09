@@ -112,6 +112,7 @@ local function fixture(saved)
 	local overrides = {
 		["src/shared/Remotes"] = remotes,
 		["src/server/Missions"] = { add = function() end },
+		["src/server/BestRoll"] = { submit = function() end }, -- el pedestal construye modelos (SwordModel, AssetService)
 		["src/server/StallSkin"] = {},
 		["src/server/Stations"] = {
 			enchanter = function()
@@ -458,5 +459,49 @@ near(stats.spawnLuck(f.player) / spawnBefore, events.rain.luck, "la lluvia da su
 near(stats.gachaLuck(f.player) / gachaBefore, 1, "la lluvia no da suerte de armas")
 f.workspace:SetAttribute("Weather", "")
 near(stats.spawnLuck(f.player) / spawnBefore, 1, "despejado: la suerte vuelve a ser la de antes")
+
+-- Equilibrio de progresión (tools/equilibrio): lo que no debe romperse al tocar Config.
+local upgrades = f.load("src/shared/Upgrades")
+local objectSpec = f.load("src/shared/ObjectSpec")
+local armorStats = f.load("src/shared/ArmorStats")
+for name, upgrade in f.config.Upgrades do
+	equal(upgrade.costs ~= nil and #upgrade.costs, upgrade.maxLevel, "un precio por nivel de " .. name)
+	for level = 1, upgrade.maxLevel - 1 do
+		equal(upgrades.cost(name, level) > upgrades.cost(name, level - 1), true, `precio creciente de {name} {level}`)
+	end
+end
+equal(f.config.Upgrades.speed, nil, "sin mejora de velocidad de golpe")
+equal(#f.config.Rebirth.costs, f.config.Rebirth.max, "un precio por renacimiento")
+-- Presupuesto de suerte: la mejora al máximo con todos los renacimientos no agota los tipos de objeto.
+local rarest = f.config.Destructibles[#f.config.Destructibles]
+local luckMax = upgrades.value("luck", f.config.Upgrades.luck.maxLevel) * f.config.Rebirth.luck ^ f.config.Rebirth.max
+equal(luckMax < rarest.rarity, true, "la mejora de suerte y los renacimientos no agotan los tipos de objeto")
+-- El arma más rara sigue siéndolo con toda la suerte al máximo, y ni el mejor objeto posible la garantiza.
+local top = 0
+for _, sword in f.config.Swords do
+	top = math.max(top, sword.rarity or 0)
+end
+local gachaMax = f.config.Rebirth.gachaLuck ^ f.config.Rebirth.max
+local _, highest = objectSpec.scaleLimits(rarest)
+equal(objectSpec.luck(rarest, 1, 1) * gachaMax / top < 1e-4, true, "el arma más rara es rara con la suerte al máximo")
+equal(objectSpec.luck(rarest, #f.config.ObjectRarities, highest) * gachaMax / top < 0.05, true, "ni el mejor objeto la garantiza")
+-- El tamaño y la rareza del objeto pesan de verdad en la suerte de armas.
+equal(objectSpec.luck(rarest, 1, 2) / objectSpec.luck(rarest, 1, 1) >= 8, true, "el tamaño pesa en la suerte de armas")
+equal(objectSpec.luck(rarest, #f.config.ObjectRarities, 1) / objectSpec.luck(rarest, 1, 1) >= 20, true, "la rareza pesa en la suerte de armas")
+-- Velocidad de golpe: tiempo base por el tipo de arma, y solo su poción lo baja.
+local swingBefore = stats.cooldown(f.player)
+local _, weaponKind = stats.weapon(f.player)
+near(swingBefore, f.config.BaseCooldown * weaponKind.cooldown, "tiempo base entre golpes")
+f.player:SetAttribute("Potion_attackSpeed", 3)
+near(stats.cooldown(f.player), swingBefore / f.config.Potions.Families.attackSpeed.values[3], "la poción acelera el golpe")
+f.player:SetAttribute("Potion_attackSpeed", nil)
+-- Armadura: la vida escala con el power de la zona, los porcentajes con su bonus, y lo guardado de antes se recorta.
+local lastZone = #f.config.Dungeons
+equal(armorStats.scaling("health", lastZone), f.config.Dungeons[lastZone].power, "la vida de la armadura escala con el power")
+equal(armorStats.scaling("luck", lastZone), f.config.Dungeons[lastZone].bonus, "los porcentajes escalan con el bonus")
+equal(armorStats.scaling("rollSpeed", lastZone), 1, "la aparición no escala")
+equal(armorStats.cap("luck", #f.config.Armor.Qualities, lastZone) < 20, true, "tope de suerte de una pieza")
+local oldArmor = fixture({ armor = { { id = 1, slot = "helmet", quality = 1, level = lastZone, stats = { { stat = "luck", value = 1e6 } } } } })
+equal(oldArmor.data.read(oldArmor.player).armor[1].stats[1].value <= armorStats.cap("luck", 1, lastZone), true, "armadura guardada recortada")
 
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)

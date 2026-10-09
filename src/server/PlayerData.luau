@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
+local BalanceSnapshots = require(ReplicatedStorage.Shared.BalanceSnapshots)
 local Config = require(ReplicatedStorage.Shared.Config)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
@@ -174,21 +175,85 @@ local function loadArmor(data, saved)
 			break
 		end
 		if type(piece) == "table" and Config.Armor.Slots[piece.slot] and Config.Armor.Qualities[piece.quality] and type(piece.stats) == "table" then
+			local level = if Config.Dungeons[piece.level] then piece.level else 1
 			local stats = {}
 			for _, entry in piece.stats do
-				-- value == value descarta NaN.
+				-- value == value descarta NaN. El tope recorta las piezas guardadas cuando los porcentajes escalaban con el
+				-- "power" de la zona (ahora con su "bonus", ver ArmorStats.scaling).
 				if type(entry) == "table" and Config.Armor.Stats[entry.stat] and type(entry.value) == "number" and entry.value == entry.value and entry.value >= 0 then
-					table.insert(stats, { stat = entry.stat, value = entry.value, bonus = if entry.bonus == true then true else nil })
+					local value = math.min(entry.value, ArmorStats.cap(entry.stat, piece.quality, level))
+					table.insert(stats, { stat = entry.stat, value = value, bonus = if entry.bonus == true then true else nil })
 				end
 			end
 			local id = #data.armor + 1
-			table.insert(data.armor, { id = id, slot = piece.slot, quality = piece.quality, level = if Config.Dungeons[piece.level] then piece.level else 1, stats = stats })
+			table.insert(data.armor, { id = id, slot = piece.slot, quality = piece.quality, level = level, stats = stats })
 			if piece.id ~= nil and worn[piece.slot] == piece.id then
 				data.armorWorn[piece.slot] = id
 			end
 		end
 	end
 	data.nextArmorId = #data.armor + 1
+end
+
+-- Modo de pruebas Config.Test.Progress: deja `data` como estaría el jugador tipo del calendario de progreso a esa
+-- hora de juego (shared/BalanceSnapshots, generado por tools/equilibrio): mejoras, renacimientos, su arma equipada con
+-- rasgo y grado, accesorios y una armadura puesta que suma lo que llevaría. Con menos horas que el primer estado
+-- guardado, es una partida nueva.
+local function applyProgress(data, hours: number)
+	local snapshot = nil
+	for _, entry in BalanceSnapshots do
+		if entry.hours <= hours and (not snapshot or entry.hours > snapshot.hours) then
+			snapshot = entry
+		end
+	end
+	if not snapshot then
+		return
+	end
+	for name, upgrade in Config.Upgrades do
+		data.upgrades[name] = math.clamp(snapshot.upgrades[name] or 0, 0, upgrade.maxLevel)
+	end
+	data.rebirths = math.clamp(snapshot.rebirths, 0, Config.Rebirth.max)
+	if Config.Swords[snapshot.sword] then
+		local id = data.nextSwordId
+		data.nextSwordId += 1
+		table.insert(data.swords, {
+			id = id,
+			sword = snapshot.sword,
+			metal = if snapshot.metal > 0 then snapshot.metal else nil,
+			size = if snapshot.size > 0 then snapshot.size else nil,
+			trait = if snapshot.trait > 0 then snapshot.trait else nil,
+			grade = if snapshot.grade > 0 then snapshot.grade else nil,
+		})
+		data.equipped = id
+	end
+	data.artifacts, data.gear = {}, {}
+	for _, index in snapshot.artifacts do
+		if Config.Artifacts[index] then
+			table.insert(data.artifacts, index)
+		end
+	end
+	table.sort(data.artifacts)
+	for _, index in snapshot.gear do
+		if table.find(data.artifacts, index) and #data.gear < Config.GearSlots then
+			table.insert(data.gear, index)
+		end
+	end
+	-- Armadura: una pieza Rara por hueco de la mazmorra que le toca, con la vida de siempre y los porcentajes que
+	-- sumaría la suya (suerte en el casco, ataque en las botas y aparición en las grebas).
+	local level = math.clamp(snapshot.dungeon, 1, #Config.Dungeons)
+	local quality = math.min(3, #Config.Armor.Qualities)
+	local extra = { helmet = { "luck", snapshot.armor[1] }, boots = { "damage", snapshot.armor[2] }, legs = { "rollSpeed", snapshot.armor[3] } }
+	for _, slot in Config.Armor.SlotOrder do
+		local health = Config.Armor.Slots[slot].stats.health * Config.Armor.Qualities[quality].mult * Config.Dungeons[level].power
+		local stats = { { stat = "health", value = math.round(health) } }
+		if extra[slot] and extra[slot][2] > 0 then
+			table.insert(stats, { stat = extra[slot][1], value = extra[slot][2] })
+		end
+		local id = data.nextArmorId
+		data.nextArmorId += 1
+		table.insert(data.armor, { id = id, slot = slot, quality = quality, level = level, stats = stats })
+		data.armorWorn[slot] = id
+	end
 end
 
 local function load(player: Player)
@@ -289,9 +354,18 @@ local function load(player: Player)
 		return
 	end
 
+	-- Modo de pruebas (solo en Studio): empezar en una hora del calendario de progreso, sin guardar. Manda sobre los
+	-- demás modos de prueba de esta función (dinero infinito, todas las armas...), que con él no actúan: lo que se
+	-- quiere ver es cómo va un jugador de verdad a esas alturas.
+	local progress = RunService:IsStudio() and (Config.Test.Progress or 0) > 0
+	if progress then
+		applyProgress(data, Config.Test.Progress)
+		canSave = false
+	end
+
 	-- Modo de pruebas (solo en Studio): dinero y objetos infinitos (cristales para la tienda de
 	-- Rasgos) y sin guardar, para no pisar el progreso real.
-	if RunService:IsStudio() and Config.Test.InfiniteMoney then
+	if RunService:IsStudio() and Config.Test.InfiniteMoney and not progress then
 		data.coins = math.huge
 		data.gems = math.huge
 		for name in data.items do
@@ -304,7 +378,7 @@ local function load(player: Player)
 	end
 
 	-- Modo de pruebas (solo en Studio): AllPotions copias de cada poción, también sin guardar.
-	if RunService:IsStudio() and (Config.Test.AllPotions or 0) > 0 then
+	if RunService:IsStudio() and (Config.Test.AllPotions or 0) > 0 and not progress then
 		for _, key in Config.Potions.ItemKeys do
 			data.items[key] = math.max(data.items[key], Config.Test.AllPotions)
 		end
@@ -312,7 +386,7 @@ local function load(player: Player)
 	end
 
 	-- Modo de pruebas (solo en Studio): una copia de cada arma que aún no tenga, también sin guardar.
-	if RunService:IsStudio() and Config.Test.AllWeapons then
+	if RunService:IsStudio() and Config.Test.AllWeapons and not progress then
 		local owned = {}
 		for _, copy in data.swords do
 			owned[copy.sword] = true
@@ -328,7 +402,7 @@ local function load(player: Player)
 
 	-- Modo de pruebas (solo en Studio): todos los accesorios, también sin guardar. La armadura de pruebas la da
 	-- server/Armor (con el mismo interruptor), que es quien sabe tirar piezas.
-	if RunService:IsStudio() and Config.Test.AllGear then
+	if RunService:IsStudio() and Config.Test.AllGear and not progress then
 		for index in Config.Artifacts do
 			if not table.find(data.artifacts, index) then
 				table.insert(data.artifacts, index)
