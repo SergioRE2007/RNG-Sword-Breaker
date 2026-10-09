@@ -1338,6 +1338,11 @@ local POTION_GLYPHS = {
 		mark(UDim2.fromScale(0.18, 0.86), UDim2.fromScale(0.5, 0.46), 3).Rotation = 45
 		mark(UDim2.fromScale(0.58, 0.16), UDim2.fromScale(0.5, 0.64), 3).Rotation = -45
 	end,
+	bolt = function(mark) -- rayo: dos trazos inclinados unidos por uno corto
+		mark(UDim2.fromScale(0.2, 0.56), UDim2.fromScale(0.58, 0.3), 3).Rotation = 28
+		mark(UDim2.fromScale(0.5, 0.18), UDim2.fromScale(0.5, 0.5), 3)
+		mark(UDim2.fromScale(0.2, 0.56), UDim2.fromScale(0.42, 0.7), 3).Rotation = 28
+	end,
 	heart = function(mark) -- cruz de vida
 		mark(UDim2.fromScale(0.7, 0.24), UDim2.fromScale(0.5, 0.5), 4)
 		mark(UDim2.fromScale(0.24, 0.7), UDim2.fromScale(0.5, 0.5), 4)
@@ -1362,7 +1367,7 @@ local POTION_GLYPHS = {
 }
 
 -- Poción: frasco de cristal con corcho, el líquido del color de la familia y un símbolo encima (`glyph`: sword = daño,
--- heart = vida, box = suerte de cajas, star = suerte de armas, chevron = grado, spark = rasgo; sin él, solo el frasco).
+-- bolt = velocidad de golpe, heart = vida, box = suerte de cajas, star = suerte de armas, chevron = grado, spark = rasgo; sin él, solo el frasco).
 function Ui.potionIcon(parent: Instance, color: Color3, glyph: string?)
 	-- El frasco ocupa todo su hueco y siempre es cuadrado (si el hueco no lo es, se ajusta al lado menor).
 	local holder = iconHolder(parent, 0)

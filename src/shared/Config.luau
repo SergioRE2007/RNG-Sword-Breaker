@@ -18,12 +18,14 @@ Config.Test = {
 	AllPotions = 2, -- copias de cada poción (Config.Potions) en la mochila al entrar; 0 = ninguna. InfiniteMoney no las hace infinitas, para poder probar que se gastan
 	RevealSlow = 1, -- por cuánto se alargan los tiempos de la presentación de las tiradas (client/RollReveal): con 4 se ve a cámara lenta para revisarla en capturas
 	PartyBots = 0, -- compañeros "fantasma" que se unen a tu grupo de mazmorra (cuentan para el tamaño y el escalado, no pelean): para probar con un solo jugador
+	Progress = 0, -- horas de juego con las que se empieza (0 = partida nueva): deja al jugador como estaría a esa hora según el calendario de tools/equilibrio (mejoras, renacimientos, arma, accesorios y armadura de shared/BalanceSnapshots), para probar cada etapa sin jugarla entera. Mientras vale más de 0 los demás modos de arriba que dan cosas (dinero, armas, accesorios, pociones) no actúan; con 0.01 es una partida nueva de verdad
 	Weather = "", -- id de un clima de Config.Weather.Events para tenerlo puesto al entrar ("" = el que toque por la hora)
 }
 -- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
 -- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
 Config.Admins = { 4490621018 }
 Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
+Config.BaseCooldown = 0.35 -- segundos entre golpes de una espada (cada tipo de arma lo multiplica por su "cooldown"). No hay mejora que lo baje: solo la poción de velocidad de golpe (Config.Potions)
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
 Config.SwingWindow = 1.15 -- cuánto sigue vivo el espadazo, en veces el tiempo entre golpes: mientras dura golpea a lo que entre en su alcance, cada cosa una sola vez (1.15 = lo que dura la animación; 0 = solo el instante del clic)
 Config.SwingLag = 0.15 -- segundos de más que el servidor mantiene vivo el espadazo, por el retraso con que ve moverse al jugador
@@ -47,8 +49,8 @@ Config.WeaponKinds = {
 -- Las armas del gacha van en una escalera que se va abriendo (curva de
 -- dificultad pedida: muy rápida al principio para enganchar y cada vez más cuesta): la primera es solo ~x1.6 más
 -- rara que la anterior (una nueva cada pocas tiradas) y la última ~x4.9. Va de 3 a 6e17, sin saltos grandes.
--- Los objetos (Config.Destructibles) tienen la vida
--- reescalada a esta curva (vida = vida anterior ^ 0.47). Al añadir un arma, calcula su daño con la regla.
+-- La vida de los objetos (Config.Destructibles) sale del daño que van dando estas armas (tools/equilibrio). Al añadir
+-- un arma, su daño lo calcula la regla; si es más rara que todas, regenera el equilibrio (cambia TypeLuckPower).
 -- La primera es la inicial y no sale en el gacha.
 -- "rarity" = 1 entre N de que salga en cada tirada (se prueba de la más rara a la más común).
 -- "bladeLength" = largo del arma: en la lanza es el asta entera y en el hacha el mango.
@@ -227,24 +229,28 @@ Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grad
 
 -- Renacimiento: solo cuesta monedas y no quita nada (ni monedas ganadas, ni espadas, ni mejoras). Cada uno
 -- multiplica para siempre (por cada renacimiento, ese número elevado a los renacimientos que lleve).
--- El precio del siguiente = cost * growth ^ renacimientos. Números puestos a ojo, sin equilibrar.
-Config.Rebirth = { max = 5, cost = 2e5, growth = 12, coins = 2, damage = 2, luck = 1.5, gachaLuck = 1.5 }
+-- "costs" = precio de cada renacimiento. NÚMEROS GENERADOS por tools/equilibrio/generar.luau para que caigan hacia las
+-- 2, 6,5, 20, 55 y 120 h de juego (objetivo.luau): no los retoques a mano.
+Config.Rebirth = { max = 5, costs = { 2.1e8, 5.4e11, 8.6e15, 1.3e20, 2.5e24 }, coins = 2, damage = 2, luck = 1.5, gachaLuck = 1.5 }
 
 -- Artefactos (equipo). Pueden caer al romper cualquier objeto ("rarity" = 1 entre N, la
 -- suerte de destructibles multiplica la probabilidad). "stat": damage, luck (suerte de destructibles),
 -- coins o gems. No cambies el orden: el guardado usa la posición en la lista.
+-- Los "mult" van con presupuesto (los de suerte, x1,5 / x3 / x6: sumados a la mejora, el rasgo, la armadura y renacer
+-- no deben pasar de la rareza del objeto más raro; antes llegaban a x1000 y x1e6 y lo rompían todo). Las "rarity" son
+-- NÚMEROS GENERADOS por tools/equilibrio para que cada uno caiga a su hora (de los 5 min a las 155 h): no los retoques.
 Config.GearSlots = 3
 Config.Artifacts = {
-	{ name = "Amuleto de cobre", stat = "coins", mult = 1.5, rarity = 150, color = Color3.fromRGB(200, 120, 70) },
-	{ name = "Anillo afilado", stat = "damage", mult = 2, rarity = 400, color = Color3.fromRGB(200, 205, 210) },
-	{ name = "Trébol", stat = "luck", mult = 2, rarity = 1000, color = Color3.fromRGB(90, 200, 100) },
-	{ name = "Colgante de gemas", stat = "gems", mult = 2, rarity = 3000, color = Color3.fromRGB(190, 110, 255) },
-	{ name = "Guantelete", stat = "damage", mult = 5, rarity = 2e4, color = Color3.fromRGB(120, 160, 200) },
-	{ name = "Corona dorada", stat = "coins", mult = 10, rarity = 2e5, color = Color3.fromRGB(255, 200, 50) },
-	{ name = "Ojo de la fortuna", stat = "luck", mult = 10, rarity = 5e6, color = Color3.fromRGB(60, 255, 170) },
-	{ name = "Corazón estelar", stat = "damage", mult = 100, rarity = 1e9, color = Color3.fromRGB(255, 240, 150) },
-	{ name = "Reliquia del vacío", stat = "luck", mult = 1000, rarity = 1e13, color = Color3.fromRGB(130, 50, 255) },
-	{ name = "Núcleo del infinito", stat = "damage", mult = 1e6, rarity = 1e18, color = Color3.fromRGB(255, 40, 60) },
+	{ name = "Amuleto de cobre", stat = "coins", mult = 1.5, rarity = 4300, color = Color3.fromRGB(200, 120, 70) },
+	{ name = "Anillo afilado", stat = "damage", mult = 2, rarity = 160000, color = Color3.fromRGB(200, 205, 210) },
+	{ name = "Trébol", stat = "luck", mult = 1.5, rarity = 6.6e6, color = Color3.fromRGB(90, 200, 100) },
+	{ name = "Colgante de gemas", stat = "gems", mult = 2, rarity = 6e8, color = Color3.fromRGB(190, 110, 255) },
+	{ name = "Guantelete", stat = "damage", mult = 4, rarity = 1.9e11, color = Color3.fromRGB(120, 160, 200) },
+	{ name = "Corona dorada", stat = "coins", mult = 4, rarity = 1.6e14, color = Color3.fromRGB(255, 200, 50) },
+	{ name = "Ojo de la fortuna", stat = "luck", mult = 3, rarity = 7.2e17, color = Color3.fromRGB(60, 255, 170) },
+	{ name = "Corazón estelar", stat = "damage", mult = 10, rarity = 2e21, color = Color3.fromRGB(255, 240, 150) },
+	{ name = "Reliquia del vacío", stat = "luck", mult = 6, rarity = 3.2e24, color = Color3.fromRGB(130, 50, 255) },
+	{ name = "Núcleo del infinito", stat = "damage", mult = 25, rarity = 2.6e27, color = Color3.fromRGB(255, 40, 60) },
 }
 Config.StatNames = { damage = "daño", luck = "suerte", coins = "monedas", gems = "gemas" }
 
@@ -304,23 +310,26 @@ Config.Plot = {
 -- la suerte del jugador multiplica esa probabilidad. El primero es el de relleno.
 -- "gems" = gemas que suelta (solo los raros). Todos dan tiradas de arma al romperse (Config.ObjectRolls, debajo,
 -- que explica también lo que puede llevar de más un objeto especial: luck, rolls, minScale...).
+-- "hp" y "reward" son NÚMEROS GENERADOS por tools/equilibrio/generar.luau (no los retoques a mano): el premio es
+-- 2 * rareza ^ 0,75 (con una potencia de 1 o más, un objeto raro pagaba de golpe varios niveles de suerte) y la vida,
+-- lo que pega el jugador tipo cuando ese tipo empieza a salirle 1 de cada 10 veces, por 1 a 3 golpes.
 Config.Destructibles = {
 	{ name = "Caja", rarity = 1, hp = 2, reward = 2, gems = 0, size = Vector3.new(3, 3, 3), color = Color3.fromRGB(170, 125, 75), material = Enum.Material.WoodPlanks },
-	{ name = "Barril", rarity = 4, hp = 3, reward = 10, gems = 0, size = Vector3.new(3, 4.5, 3), color = Color3.fromRGB(120, 75, 45), material = Enum.Material.Wood },
-	{ name = "Roca", rarity = 20, hp = 7, reward = 60, gems = 1, size = Vector3.new(5, 4, 5), color = Color3.fromRGB(110, 110, 115), material = Enum.Material.Slate },
-	{ name = "Pilar", rarity = 120, hp = 17, reward = 500, gems = 8, size = Vector3.new(4, 12, 4), color = Color3.fromRGB(225, 220, 205), material = Enum.Material.Marble },
-	{ name = "Cristal", rarity = 800, hp = 43, reward = 5000, gems = 60, size = Vector3.new(7, 11, 7), color = Color3.fromRGB(110, 220, 255), material = Enum.Material.Glass },
-	{ name = "Roca de armas", rarity = 2000, hp = 23, reward = 0, gems = 0, luck = 3, rolls = 1, size = Vector3.new(6, 6, 6), color = Color3.fromRGB(255, 120, 40), material = Enum.Material.Neon },
-	{ name = "Monolito", rarity = 5000, hp = 130, reward = 60000, gems = 500, size = Vector3.new(11, 20, 11), color = Color3.fromRGB(45, 40, 60), material = Enum.Material.Basalt },
-	{ name = "Obelisco", rarity = 5e4, hp = 430, reward = 8e5, gems = 4000, size = Vector3.new(6, 22, 6), color = Color3.fromRGB(230, 190, 70), material = Enum.Material.Foil },
-	{ name = "Meteorito", rarity = 1e6, hp = 1800, reward = 2e7, gems = 5e4, size = Vector3.new(12, 10, 12), color = Color3.fromRGB(200, 70, 30), material = Enum.Material.CrackedLava },
-	{ name = "Núcleo", rarity = 5e7, hp = 11000, reward = 1e9, gems = 1.5e6, size = Vector3.new(9, 9, 9), color = Color3.fromRGB(60, 255, 140), material = Enum.Material.Neon },
-	{ name = "Estrella", rarity = 5e9, hp = 96000, reward = 1e11, gems = 1e8, size = Vector3.new(12, 12, 12), color = Color3.fromRGB(255, 240, 150), material = Enum.Material.Neon },
-	{ name = "Agujero negro", rarity = 1e12, hp = 1.3e6, reward = 2.5e13, gems = 1e10, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(5, 5, 10), material = Enum.Material.Glass, sound = "energy" },
-	{ name = "Fragmento del vacío", rarity = 1e15, hp = 3.3e7, reward = 3e16, gems = 5e12, size = Vector3.new(8, 24, 8), color = Color3.fromRGB(130, 50, 255), material = Enum.Material.ForceField },
-	{ name = "Singularidad", rarity = 1e18, hp = 8.5e8, reward = 4e19, gems = 3e15, size = Vector3.new(10, 10, 10), color = Color3.fromRGB(255, 60, 200), material = Enum.Material.Neon },
-	{ name = "Origen", rarity = 1e21, hp = 2.2e10, reward = 5e22, gems = 1e18, size = Vector3.new(14, 18, 14), color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
-	{ name = "Infinito", rarity = 1e24, hp = 5.6e11, reward = 6e25, gems = 5e20, size = Vector3.new(14, 26, 14), color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
+	{ name = "Barril", rarity = 4, hp = 2.4, reward = 5.7, gems = 0, size = Vector3.new(3, 4.5, 3), color = Color3.fromRGB(120, 75, 45), material = Enum.Material.Wood },
+	{ name = "Roca", rarity = 20, hp = 18, reward = 19, gems = 1, size = Vector3.new(5, 4, 5), color = Color3.fromRGB(110, 110, 115), material = Enum.Material.Slate },
+	{ name = "Pilar", rarity = 120, hp = 160, reward = 73, gems = 8, size = Vector3.new(4, 12, 4), color = Color3.fromRGB(225, 220, 205), material = Enum.Material.Marble },
+	{ name = "Cristal", rarity = 800, hp = 260, reward = 300, gems = 60, size = Vector3.new(7, 11, 7), color = Color3.fromRGB(110, 220, 255), material = Enum.Material.Glass },
+	{ name = "Roca de armas", rarity = 2000, hp = 890, reward = 0, gems = 0, luck = 3, rolls = 1, size = Vector3.new(6, 6, 6), color = Color3.fromRGB(255, 120, 40), material = Enum.Material.Neon },
+	{ name = "Monolito", rarity = 5000, hp = 2200, reward = 1200, gems = 500, size = Vector3.new(11, 20, 11), color = Color3.fromRGB(45, 40, 60), material = Enum.Material.Basalt },
+	{ name = "Obelisco", rarity = 5e4, hp = 9200, reward = 6700, gems = 4000, size = Vector3.new(6, 22, 6), color = Color3.fromRGB(230, 190, 70), material = Enum.Material.Foil },
+	{ name = "Meteorito", rarity = 1e6, hp = 29000, reward = 63000, gems = 5e4, size = Vector3.new(12, 10, 12), color = Color3.fromRGB(200, 70, 30), material = Enum.Material.CrackedLava },
+	{ name = "Núcleo", rarity = 5e7, hp = 280000, reward = 1.2e6, gems = 1.5e6, size = Vector3.new(9, 9, 9), color = Color3.fromRGB(60, 255, 140), material = Enum.Material.Neon },
+	{ name = "Estrella", rarity = 5e9, hp = 1.5e7, reward = 3.8e7, gems = 1e8, size = Vector3.new(12, 12, 12), color = Color3.fromRGB(255, 240, 150), material = Enum.Material.Neon },
+	{ name = "Agujero negro", rarity = 1e12, hp = 3.5e8, reward = 2e9, gems = 1e10, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(5, 5, 10), material = Enum.Material.Glass, sound = "energy" },
+	{ name = "Fragmento del vacío", rarity = 1e15, hp = 1.3e10, reward = 3.6e11, gems = 5e12, size = Vector3.new(8, 24, 8), color = Color3.fromRGB(130, 50, 255), material = Enum.Material.ForceField },
+	{ name = "Singularidad", rarity = 1e18, hp = 3.4e11, reward = 6.3e13, gems = 3e15, size = Vector3.new(10, 10, 10), color = Color3.fromRGB(255, 60, 200), material = Enum.Material.Neon },
+	{ name = "Origen", rarity = 1e21, hp = 2.7e13, reward = 1.1e16, gems = 1e18, size = Vector3.new(14, 18, 14), color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
+	{ name = "Infinito", rarity = 1e24, hp = 3.6e15, reward = 2e18, gems = 5e20, size = Vector3.new(14, 26, 14), color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
 }
 
 -- Gemas de los objetos de la parcela: cada objeto con "gems" las suelta con probabilidad "gemChance" (1 si no
@@ -332,8 +341,8 @@ Config.GemDrop = { min = 0.7, max = 1.3 }
 -- arma (server/Gacha) con la SUERTE DEL OBJETO, que sale de las tres cosas que lo hacen especial:
 --   suerte del objeto = suerte del tipo * "luck" de su rareza * escala ^ SizeLuckPower      (como mucho MaxLuck)
 --   suerte del tipo = lo raro que es de ver ("rarity" de Config.Destructibles) ^ TypeLuckPower
--- (por el "luck" propio de los objetos especiales: la Roca de armas da el triple de lo que le toca por su rareza,
--- x476; era x10 cuando los demás tipos daban x1). Una Caja común de tamaño normal da x1:
+-- (por el "luck" propio de los objetos especiales: la Roca de armas da el triple de lo que le toca por su rareza).
+-- Una Caja común de tamaño normal da x1:
 -- el "1 entre N" de cada arma es su probabilidad con ella. La suerte de armas no se compra: sale del objeto que se
 -- rompe, y la mejora "Suerte de destructibles" solo trae tipos más raros (decidido por el usuario: esa mejora es
 -- solo para los destructibles). Lo único que multiplica además es Stats.gachaLuck (renacimientos y, cuando existan,
@@ -348,15 +357,16 @@ Config.GemDrop = { min = 0.7, max = 1.3 }
 -- sus rarezas y de sus tamaños grandes) y "minRarity" (rareza mínima, posición en ObjectRarities). Con eso se hace
 -- un objeto nuevo sin tocar código. Las cuentas están en shared/ObjectSpec.
 Config.ObjectRolls = {
-	-- Suerte del tipo = lo raro que es ^ 2/3: Barril (1 entre 4) x2.5, Roca (20) x7.4, Pilar (120) x24, Cristal (800)
-	-- x86, Monolito (5000) x292, Meteorito (1e6) x10K... Infinito (1e24) x1e16. El arma es lo único que mejora con la
-	-- suerte, así que de esto depende que el daño siga el ritmo de la vida de los objetos: medido, con 0.5 un Infinito
-	-- pide miles de golpes y con 2/3 una docena; con 0.8 o más sobra, pero las armas raras salen antes al principio.
-	TypeLuckPower = 2 / 3,
-	SizeLuckPower = 1.5, -- al 70 % x0.59, al 150 % x1.84, al 200 % x2.83, al 250 % x3.95
+	-- Suerte del tipo = lo raro que es ^ TypeLuckPower: Barril (1 entre 4) x1.8, Roca (20) x3.5, Pilar (120) x7.4,
+	-- Monolito (5000) x35, Meteorito (1e6) x330, Agujero negro (1e12) x110K... Infinito (1e24) x11B.
+	-- NÚMERO GENERADO por tools/equilibrio/generar.luau: es el que hace que el arma más rara de Config.Swords salga de
+	-- media 1 vez cada 500 h (objetivo.horasArmaTope, decidido por el usuario) con TODA la suerte al máximo. Con 2/3,
+	-- que es lo que hubo, un Infinito daba x1e16 y el Colmillo astral salía cada 12 s.
+	TypeLuckPower = 0.419,
+	SizeLuckPower = 4, -- el tamaño cuenta de verdad: al 70 % x0.24, al 115 % x1.75, al 150 % x5, al 200 % x16, al 250 % x39
 	SizeHpPower = 2,
 	SizeRewardPower = 2,
-	MaxLuck = 1e19, -- tope de la suerte de un objeto (un Infinito mítico y colosal llega a x7.9e17)
+	MaxLuck = 1e16, -- tope de seguridad de la suerte de un objeto (un Infinito mítico y colosal no llega a x1e14)
 	MaxRolls = 5, -- tope de tiradas de arma de un solo objeto
 	MaxWidth = 30, -- studs: ningún objeto se agranda más que esto de ancho...
 	MaxHeight = 56, -- ...ni de alto (los tipos más grandes llegan a menos escala que los pequeños)
@@ -371,11 +381,11 @@ Config.ObjectRolls = {
 -- vida y sus monedas y gemas, "sizeLuck" = multiplica la probabilidad de que además salga grande.
 Config.ObjectRarities = {
 	{ name = "Común", odds = 1, luck = 1, rolls = 1, hp = 1, reward = 1, sizeLuck = 1, color = Config.RarityTiers[1].color },
-	{ name = "Poco común", odds = 4, luck = 1.5, rolls = 1, hp = 1.5, reward = 2, sizeLuck = 1, color = Config.RarityTiers[2].color },
-	{ name = "Rara", odds = 15, luck = 2.5, rolls = 1, hp = 2.5, reward = 4, sizeLuck = 1.2, color = Config.RarityTiers[3].color },
-	{ name = "Épica", odds = 60, luck = 4, rolls = 1.5, hp = 4, reward = 8, sizeLuck = 1.5, color = Config.RarityTiers[4].color },
-	{ name = "Legendaria", odds = 300, luck = 8, rolls = 2, hp = 7, reward = 20, sizeLuck = 2, color = Config.RarityTiers[5].color },
-	{ name = "Mítica", odds = 2000, luck = 20, rolls = 3, hp = 12, reward = 60, sizeLuck = 3, color = Config.RarityTiers[6].color },
+	{ name = "Poco común", odds = 4, luck = 2, rolls = 1, hp = 1.5, reward = 2, sizeLuck = 1, color = Config.RarityTiers[2].color },
+	{ name = "Rara", odds = 15, luck = 4, rolls = 1, hp = 2.5, reward = 4, sizeLuck = 1.2, color = Config.RarityTiers[3].color },
+	{ name = "Épica", odds = 60, luck = 9, rolls = 1.5, hp = 4, reward = 8, sizeLuck = 1.5, color = Config.RarityTiers[4].color },
+	{ name = "Legendaria", odds = 300, luck = 22, rolls = 2, hp = 7, reward = 20, sizeLuck = 2, color = Config.RarityTiers[5].color },
+	{ name = "Mítica", odds = 2000, luck = 60, rolls = 3, hp = 12, reward = 60, sizeLuck = 3, color = Config.RarityTiers[6].color },
 }
 
 -- Tamaños de los objetos: el primero es el normal y los demás salen 1 entre "odds" (como las rarezas). La escala
@@ -390,30 +400,34 @@ Config.ObjectSizes = {
 }
 
 -- Mejoras. Valor: "add" = base + perLevel * nivel; "mul" = base * perLevel ^ nivel (exponencial).
--- Precio: cost * growth ^ nivel, en monedas o en gemas (currency = "gems").
+-- Precio: "costs" = el de cada nivel (o cost * growth ^ nivel si no la trae), en monedas o en gemas (currency = "gems").
+-- Los "costs" son NÚMEROS GENERADOS por tools/equilibrio/generar.luau a partir del calendario de progreso
+-- (tools/equilibrio/objetivo.luau: a qué hora de juego se compra cada nivel). No los retoques a mano: se pisan.
 -- Los cálculos están en shared/Upgrades.
 -- En el árbol de mejoras cada mejora es una rama y cada nivel un nodo: "short" es el nombre
 -- del nodo, "icon" su dibujo (box, orb, sword, gem) y "color" el de la rama; "desc" (opcional) explica lo que hace.
 -- No hay mejora de suerte de armas (la hubo, "gachaLuck", pagada con gemas): esa suerte sale de los objetos.
-Config.UpgradeOrder = { "capacity", "luck", "speed", "rollSpeed" }
+-- Tampoco de velocidad de golpe (la hubo, "speed": el usuario la mandó quitar): el golpe solo se acelera con su poción.
+Config.UpgradeOrder = { "capacity", "luck", "rollSpeed" }
 Config.Upgrades = {
-	-- Menos niveles y cada uno da más (pedido por el usuario: el árbol era demasiado largo). Llegan al mismo
-	-- tope que antes: la suerte a ~x7e23 (antes 150 niveles de x1.5) y el golpe a 0,14 s.
-	capacity = { name = "Más objetos", short = "Objetos", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, cost = 25, growth = 2.6, display = "%d" },
-	-- Suerte de destructibles (misma clave de siempre, "luck": lo comprado se conserva): multiplica la probabilidad
+	-- Pocos niveles y cada uno da mucho (pedido por el usuario: el árbol era demasiado largo).
+	capacity = { name = "Más objetos", short = "Objetos", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, costs = { 78, 270, 1800, 19000, 110000, 320000, 7.5e6, 4.7e7 }, display = "%d" },
+	-- Suerte de destructibles (misma clave de siempre, "luck": lo comprado se conserva). x2,5 por nivel, x79Qi al máximo:
+	-- lo que falta hasta la rareza del objeto más raro (1e24) lo ponen renacer, el rasgo, los accesorios y la armadura
+	-- (con x3 por nivel la mejora sola ya los agotaba y todo lo demás sobraba). Multiplica la probabilidad
 	-- de los tipos raros de Config.Destructibles, que son los que dan más monedas, gemas y suerte de armas.
-	luck = { name = "Suerte de destructibles", short = "Suerte", desc = "Aumenta la probabilidad de encontrar destructibles raros, que dan mejores armas.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 3, maxLevel = 50, cost = 40, growth = 3.7, display = "x%s" },
-	speed = { name = "Velocidad de golpe", short = "Velocidad", icon = "sword", color = Color3.fromRGB(60, 170, 255), mode = "mul", base = 0.35, perLevel = 0.912, maxLevel = 10, cost = 200, growth = 3.3, display = "%.2fs" },
+	luck = { name = "Suerte de destructibles", short = "Suerte", desc = "Aumenta la probabilidad de encontrar destructibles raros, que dan mejores armas.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 2.5, maxLevel = 50, costs = { 17, 62, 340, 1600, 6400, 34000, 90000, 160000, 720000, 4.7e6, 1.2e7, 3.3e7, 8.8e7, 3.8e8, 2.5e9, 4.8e9, 1.5e10, 8.7e10, 5.1e11, 3e12, 1.2e13, 3.6e13, 1.2e14, 3.2e14, 7.3e14, 2.5e15, 1.4e16, 8.1e16, 1.8e17, 5.2e17, 1.9e18, 6.3e18, 1.5e19, 2.5e19, 5.4e19, 1.5e20, 1.3e21, 8.2e21, 2e22, 6.5e22, 1.4e23, 2.3e23, 5.3e23, 1.3e24, 4.6e24, 2.2e25, 5e25, 2e26, 9.7e26, 1.8e27 }, display = "x%s" },
 	-- Segundos entre apariciones de objetos en la parcela (lo lee Stats.spawnTime): cada objeto trae tiradas de arma, así
 	-- que es la antigua "Velocidad de tirada" (misma clave, para no perder lo comprado). 1,5 s al principio, -12 % por
 	-- nivel, ~0,42 s al final. Con Config.Gacha.FreeRoll también acorta la tirada gratis (Stats.rollTime).
-	rollSpeed = { name = "Velocidad de aparición", short = "Aparición", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, cost = 300, growth = 3.4, display = "%.2fs" },
+	rollSpeed = { name = "Velocidad de aparición", short = "Aparición", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, costs = { 2600, 73000, 380000, 5.7e7, 6.1e9, 5.7e12, 5.4e14, 2.1e17, 2e19, 5.8e21 }, display = "%.2fs" },
 }
 
 -- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Números a ojo, sin equilibrar.
--- Cada pieza guarda sus valores ya tirados, así que cambiar esto no toca las piezas que ya tiene la gente.
--- Valor de un stat = base del hueco * azar (Roll) * mult de la calidad * power de la dificultad (Config.Dungeons)
--- (los stats con scales = false no se multiplican por power). "health" es vida que se suma; el resto son
+-- Cada pieza guarda sus valores ya tirados (PlayerData recorta al cargar los porcentajes de las guardadas con la regla
+-- antigua, cuando escalaban con el power). Valor de un stat = base del hueco * azar (Roll) * mult de la calidad * lo
+-- que escala con la zona (shared/ArmorStats.scaling): la vida, su "power"; los porcentajes, su "bonus", mucho más
+-- suave; los de scales = false, nada. "health" es vida que se suma; el resto son
 -- porcentajes (0.05 = +5 %) que se suman entre piezas y luego multiplican el stat final (ver shared/Stats).
 Config.Armor = {
 	MaxPieces = 60, -- con el inventario lleno, las piezas nuevas se desmontan solas
@@ -528,28 +542,29 @@ Config.DungeonLobby = {
 
 -- Mazmorras (zonas), de menor a mayor. El jugador solo ve "name" (la zona) y "tagline"; "difficulty" es la etiqueta
 -- interna del equilibrio (Fácil … Infinito) y no se enseña. "id" = clave estable (la usa Config.DungeonThemes).
--- "hp" = daño por golpe recomendado: la vida de un enemigo es su hp (en golpes) por
--- este número. "power" multiplica el daño de los enemigos Y los stats de la armadura que cae: cada dificultad pide
--- la armadura de la anterior. "count" = más enemigos, "loot" = más cristales, "qualityLuck" = mejor calidad de armadura.
+-- "hp" = daño por golpe recomendado: la vida de un enemigo es su hp (en golpes) por este número. NÚMERO GENERADO por
+-- tools/equilibrio: lo que pega el jugador tipo a la hora en que le toca cada zona (de los 5 min a las 175 h).
+-- "power" multiplica el daño de los enemigos Y la vida de la armadura que cae: cada dificultad pide la armadura de la
+-- anterior. "bonus" multiplica los porcentajes de esa armadura (suerte, ataque): crece mucho más despacio que el
+-- power para que la armadura no tape al resto de fuentes de suerte y de daño.
+-- "count" = más enemigos, "loot" = más cristales, "qualityLuck" = mejor calidad de armadura.
 -- "set", "armorColor" y "armorMaterial" = nombre y aspecto de la armadura que cae ahí ("Casco de cuero").
 -- "color" = acento de la zona. "minDamage" (opcional) = daño mínimo para entrar (si no llega, la sala sale cerrada).
 -- No cambies el orden: las piezas de armadura guardan la posición. Lo nuevo, al final.
 Config.Dungeons = {
-	{ id = "forest", name = "Bosque de los Susurros", difficulty = "Fácil", tagline = "Raíces viejas que murmuran tu nombre.", hp = 10, power = 1, count = 1, loot = 1, qualityLuck = 1, color = Color3.fromRGB(90, 210, 110), set = "de cuero", armorColor = Color3.fromRGB(150, 105, 65), armorMaterial = Enum.Material.Leather },
-	{ id = "mines", name = "Minas Abandonadas", difficulty = "Normal", tagline = "Galerías olvidadas donde algo sigue picando.", hp = 1e3, power = 4, count = 1.25, loot = 2, qualityLuck = 3, color = Color3.fromRGB(240, 170, 70), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
-	{ id = "crypt", name = "Cripta del Rey Caído", difficulty = "Difícil", tagline = "Un rey sin descanso y su corte de huesos.", hp = 1e5, power = 16, count = 1.5, loot = 4, qualityLuck = 10, color = Color3.fromRGB(160, 125, 225), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
-	{ id = "temple", name = "Templo de las Cenizas", difficulty = "Pesadilla", tagline = "Brasas, incienso y fieles que no se rinden.", hp = 1e7, power = 64, count = 1.75, loot = 8, qualityLuck = 30, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
-	{ id = "abyss", name = "Abismo Sumergido", difficulty = "Abismo", tagline = "Aguas hundidas donde la luz ya no llega.", hp = 1e9, power = 256, count = 2, loot = 16, qualityLuck = 100, color = Color3.fromRGB(50, 200, 210), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
-	-- Endgame. La mejor arma posible sin renacer pega ~7e30 por golpe: Espada del infinito (1,6e10) x Paradoja (57,5)
-	-- x Etherio (~2,2e3) x Universal (~7e6) x los tres mejores artefactos de daño (5e8); renacer y la armadura suben más.
-	-- Por eso la escalera sigue de 1e12 a 1e30, de 1000 en 1000.
-	{ id = "inferno", name = "Caldera del Infierno", difficulty = "Infierno", tagline = "Una caldera viva: todo arde, todo golpea.", hp = 1e12, power = 1024, count = 2, loot = 32, qualityLuck = 200, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
-	{ id = "void", name = "Páramo del Vacío", difficulty = "Vacío", tagline = "El suelo se acaba. El silencio, no.", hp = 1e15, power = 4096, count = 2, loot = 64, qualityLuck = 400, color = Color3.fromRGB(130, 70, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
-	{ id = "nebula", name = "Jardín de la Nebulosa", difficulty = "Nebulosa", tagline = "Un jardín de polvo de estrellas… con dientes.", hp = 1e18, power = 16384, count = 2.25, loot = 128, qualityLuck = 800, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
-	{ id = "galaxy", name = "Observatorio Galáctico", difficulty = "Galaxia", tagline = "Mira las estrellas. Ellas te miran a ti.", hp = 1e21, power = 65536, count = 2.25, loot = 256, qualityLuck = 1500, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
-	{ id = "cosmos", name = "Bastión del Cosmos", difficulty = "Cosmos", tagline = "Torres de cristal que giran con el cosmos.", hp = 1e24, power = 262144, count = 2.5, loot = 512, qualityLuck = 3000, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
-	{ id = "origin", name = "Santuario del Origen", difficulty = "Origen", tagline = "Donde todo empezó, y donde todo se mide.", hp = 1e27, power = 1048576, count = 2.5, loot = 1024, qualityLuck = 6000, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
-	{ id = "infinity", name = "Trono del Infinito", difficulty = "Infinito", tagline = "El último trono. Nadie ha vuelto a sentarse.", hp = 1e30, power = 4194304, count = 3, loot = 2048, qualityLuck = 12000, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
+	{ id = "forest", name = "Bosque de los Susurros", difficulty = "Fácil", tagline = "Raíces viejas que murmuran tu nombre.", hp = 200, power = 1, bonus = 1, count = 1, loot = 1, qualityLuck = 1, color = Color3.fromRGB(90, 210, 110), set = "de cuero", armorColor = Color3.fromRGB(150, 105, 65), armorMaterial = Enum.Material.Leather },
+	{ id = "mines", name = "Minas Abandonadas", difficulty = "Normal", tagline = "Galerías olvidadas donde algo sigue picando.", hp = 10000, power = 4, bonus = 1.3, count = 1.25, loot = 2, qualityLuck = 3, color = Color3.fromRGB(240, 170, 70), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
+	{ id = "crypt", name = "Cripta del Rey Caído", difficulty = "Difícil", tagline = "Un rey sin descanso y su corte de huesos.", hp = 200000, power = 16, bonus = 1.7, count = 1.5, loot = 4, qualityLuck = 10, color = Color3.fromRGB(160, 125, 225), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
+	{ id = "temple", name = "Templo de las Cenizas", difficulty = "Pesadilla", tagline = "Brasas, incienso y fieles que no se rinden.", hp = 3e6, power = 64, bonus = 2.2, count = 1.75, loot = 8, qualityLuck = 30, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
+	{ id = "abyss", name = "Abismo Sumergido", difficulty = "Abismo", tagline = "Aguas hundidas donde la luz ya no llega.", hp = 7e7, power = 256, bonus = 2.8, count = 2, loot = 16, qualityLuck = 100, color = Color3.fromRGB(50, 200, 210), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
+	-- Endgame.
+	{ id = "inferno", name = "Caldera del Infierno", difficulty = "Infierno", tagline = "Una caldera viva: todo arde, todo golpea.", hp = 2e9, power = 1024, bonus = 3.5, count = 2, loot = 32, qualityLuck = 200, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
+	{ id = "void", name = "Páramo del Vacío", difficulty = "Vacío", tagline = "El suelo se acaba. El silencio, no.", hp = 9e9, power = 4096, bonus = 4.5, count = 2, loot = 64, qualityLuck = 400, color = Color3.fromRGB(130, 70, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
+	{ id = "nebula", name = "Jardín de la Nebulosa", difficulty = "Nebulosa", tagline = "Un jardín de polvo de estrellas… con dientes.", hp = 4e10, power = 16384, bonus = 5.5, count = 2.25, loot = 128, qualityLuck = 800, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
+	{ id = "galaxy", name = "Observatorio Galáctico", difficulty = "Galaxia", tagline = "Mira las estrellas. Ellas te miran a ti.", hp = 8e12, power = 65536, bonus = 7, count = 2.25, loot = 256, qualityLuck = 1500, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
+	{ id = "cosmos", name = "Bastión del Cosmos", difficulty = "Cosmos", tagline = "Torres de cristal que giran con el cosmos.", hp = 1.6e13, power = 262144, bonus = 8.5, count = 2.5, loot = 512, qualityLuck = 3000, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
+	{ id = "origin", name = "Santuario del Origen", difficulty = "Origen", tagline = "Donde todo empezó, y donde todo se mide.", hp = 2e14, power = 1048576, bonus = 10, count = 2.5, loot = 1024, qualityLuck = 6000, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
+	{ id = "infinity", name = "Trono del Infinito", difficulty = "Infinito", tagline = "El último trono. Nadie ha vuelto a sentarse.", hp = 2e15, power = 4194304, bonus = 12, count = 3, loot = 2048, qualityLuck = 12000, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
 }
 
 -- Aspecto de cada zona de Config.Dungeons, por su "id" (lo construye server/DungeonThemes y lo viste client/DungeonFx):
@@ -795,11 +810,12 @@ Config.Gamepasses = {
 }
 
 -- POCIONES (server/Potions, client/Potions y client/PotionFx; los textos salen de shared/PotionInfo). Aceleradores
--- temporales: no sustituyen a mejores armas, rasgos, grados, armadura ni mejoras. Seis familias, cada una con su valor
+-- temporales: no sustituyen a mejores armas, rasgos, grados, armadura ni mejoras. Siete familias, cada una con su valor
 -- por tier en "values" (lo que multiplica, o lo que suma si es "additive": 0.15 = +15 %). Los tiers son 1-6 (I a VI) y,
 -- solo en las familias con más valores (suerte de grado y de rasgo), 7 (Exclusiva) y 8 (Divina). Para cambiar "Daño VI de
 -- x3 a x2,75" basta con tocar su valor aquí. Números a ojo, sin equilibrar.
 --   damage: multiplica el daño (Stats.damage).    health: suma un % a la vida máxima (Stats.maxHealth).
+--   attackSpeed: divide el tiempo entre golpes (Stats.cooldown). Es lo único que acelera el golpe: no hay mejora que lo haga.
 --   boxLuck: suerte de APARICIÓN de los objetos de la parcela (su tipo, su rareza y su tamaño: Stats.spawnLuck). No es la
 --     de las armas: las armas solo mejoran de rebote, porque salen mejores objetos.
 --   weaponLuck: suerte de las tiradas de arma al romper objetos (Stats.gachaLuck, la misma casilla que los renacimientos).
@@ -807,7 +823,7 @@ Config.Gamepasses = {
 --     que el de lo común (shared/Modifiers), así que lo rarísimo sigue siéndolo.
 -- "fx" = estilo del efecto en el personaje (client/PotionFx), "glyph" = símbolo del icono (Ui.potionIcon).
 Config.Potions = {
-	Order = { "damage", "health", "boxLuck", "weaponLuck", "rankLuck", "traitLuck" },
+	Order = { "damage", "attackSpeed", "health", "boxLuck", "weaponLuck", "rankLuck", "traitLuck" },
 	Tiers = { "I", "II", "III", "IV", "V", "VI", "Exclusiva", "Divina" },
 	-- Color de cada tier: el de la rareza que ocupa su posición en Config.RarityTiers (Exclusiva = Secreta, Divina = Divina).
 	-- Duración de cada tier en segundos de juego: 10, 15, 20, 25, 30, 45, 60 y 90 min. Solo corre con el jugador conectado
@@ -822,6 +838,11 @@ Config.Potions = {
 			name = "Poción de daño", effect = "Daño", desc = "Multiplica el daño de tus golpes.",
 			color = Color3.fromRGB(255, 90, 80), glyph = "sword", fx = "embers",
 			values = { 1.15, 1.30, 1.55, 1.90, 2.40, 3.00 },
+		},
+		attackSpeed = {
+			name = "Poción de velocidad de golpe", effect = "Velocidad de golpe", desc = "Golpeas más rápido con cualquier arma.",
+			color = Color3.fromRGB(255, 170, 60), glyph = "bolt", fx = "gale",
+			values = { 1.10, 1.20, 1.30, 1.45, 1.60, 1.80 },
 		},
 		health = {
 			name = "Poción de vida", effect = "Vida máxima", desc = "Sube tu vida máxima, la de la armadura incluida.",
@@ -880,6 +901,7 @@ Config.Potions = {
 			{ -- 1: bajo (Caja, Barril). Casi todo es suerte de cajas y de tier I; lo demás, casi nunca.
 				boxLuck = { weight = 56, tiers = { 100 } },
 				damage = { weight = 20, tiers = { 100 } },
+				attackSpeed = { weight = 20, tiers = { 100 } },
 				health = { weight = 20, tiers = { 100 } },
 				weaponLuck = { weight = 0.3, tiers = { 100 } },
 				rankLuck = { weight = 0.5, tiers = { 96, 4 } },
@@ -888,6 +910,7 @@ Config.Potions = {
 			{ -- 2: medio (Roca, Pilar, Cristal, Roca de armas)
 				boxLuck = { weight = 46, tiers = { 55, 30, 15 } },
 				damage = { weight = 18, tiers = { 55, 30, 15 } },
+				attackSpeed = { weight = 18, tiers = { 55, 30, 15 } },
 				health = { weight = 18, tiers = { 55, 30, 15 } },
 				weaponLuck = { weight = 4, tiers = { 70, 30 } },
 				rankLuck = { weight = 5, tiers = { 70, 25, 5 } },
@@ -896,6 +919,7 @@ Config.Potions = {
 			{ -- 3: bueno (Monolito, Obelisco, Meteorito)
 				boxLuck = { weight = 32, tiers = { 0, 50, 33, 17 } },
 				damage = { weight = 15, tiers = { 0, 50, 33, 17 } },
+				attackSpeed = { weight = 15, tiers = { 0, 50, 33, 17 } },
 				health = { weight = 15, tiers = { 0, 50, 33, 17 } },
 				weaponLuck = { weight = 7, tiers = { 0, 50, 33, 17 } },
 				rankLuck = { weight = 12, tiers = { 25, 40, 23, 10, 2 } },
@@ -904,6 +928,7 @@ Config.Potions = {
 			{ -- 4: alto (Núcleo, Estrella, Agujero negro). Exclusiva y Divina, casi imposibles.
 				boxLuck = { weight = 24, tiers = { 0, 0, 45, 35, 20 } },
 				damage = { weight = 12, tiers = { 0, 0, 45, 35, 20 } },
+				attackSpeed = { weight = 12, tiers = { 0, 0, 45, 35, 20 } },
 				health = { weight = 12, tiers = { 0, 0, 45, 35, 20 } },
 				weaponLuck = { weight = 6, tiers = { 0, 0, 45, 35, 20 } },
 				rankLuck = { weight = 17, tiers = { 0, 10, 30, 30, 20, 9.5, 0.4, 0.1 } },
@@ -912,6 +937,7 @@ Config.Potions = {
 			{ -- 5: excepcional (Fragmento del vacío, Singularidad, Origen, Infinito). Aquí está el premio gordo de las cajas.
 				boxLuck = { weight = 20, tiers = { 0, 0, 0, 40, 35, 25 } },
 				damage = { weight = 10, tiers = { 0, 0, 0, 40, 35, 25 } },
+				attackSpeed = { weight = 10, tiers = { 0, 0, 0, 40, 35, 25 } },
 				health = { weight = 10, tiers = { 0, 0, 0, 40, 35, 25 } },
 				weaponLuck = { weight = 5, tiers = { 0, 0, 0, 40, 35, 25 } },
 				rankLuck = { weight = 20, tiers = { 0, 0, 4, 18, 29, 29, 14, 6 } },
@@ -922,6 +948,7 @@ Config.Potions = {
 			{ -- 1: bajo (Bosque, Minas)
 				boxLuck = { weight = 40, tiers = { 70, 30 } },
 				damage = { weight = 22, tiers = { 70, 30 } },
+				attackSpeed = { weight = 22, tiers = { 70, 30 } },
 				health = { weight = 22, tiers = { 70, 30 } },
 				weaponLuck = { weight = 1.5, tiers = { 80, 20 } },
 				rankLuck = { weight = 5, tiers = { 85, 15 } },
@@ -930,6 +957,7 @@ Config.Potions = {
 			{ -- 2: medio (Cripta, Templo)
 				boxLuck = { weight = 30, tiers = { 30, 40, 30 } },
 				damage = { weight = 18, tiers = { 30, 40, 30 } },
+				attackSpeed = { weight = 18, tiers = { 30, 40, 30 } },
 				health = { weight = 18, tiers = { 30, 40, 30 } },
 				weaponLuck = { weight = 4, tiers = { 50, 35, 15 } },
 				rankLuck = { weight = 11, tiers = { 45, 35, 15, 5 } },
@@ -938,6 +966,7 @@ Config.Potions = {
 			{ -- 3: bueno (Abismo, Infierno)
 				boxLuck = { weight = 24, tiers = { 0, 30, 40, 30 } },
 				damage = { weight = 14, tiers = { 0, 30, 40, 30 } },
+				attackSpeed = { weight = 14, tiers = { 0, 30, 40, 30 } },
 				health = { weight = 14, tiers = { 0, 30, 40, 30 } },
 				weaponLuck = { weight = 6, tiers = { 0, 35, 40, 25 } },
 				rankLuck = { weight = 17, tiers = { 10, 30, 30, 20, 8, 2 } },
@@ -946,6 +975,7 @@ Config.Potions = {
 			{ -- 4: alto (Vacío, Nebulosa, Galaxia)
 				boxLuck = { weight = 24, tiers = { 0, 0, 30, 40, 30 } },
 				damage = { weight = 10, tiers = { 0, 0, 30, 40, 30 } },
+				attackSpeed = { weight = 10, tiers = { 0, 0, 30, 40, 30 } },
 				health = { weight = 10, tiers = { 0, 0, 30, 40, 30 } },
 				weaponLuck = { weight = 7, tiers = { 0, 0, 30, 40, 30 } },
 				rankLuck = { weight = 26, tiers = { 0, 8, 22, 30, 24, 12, 3, 1 } },
@@ -954,6 +984,7 @@ Config.Potions = {
 			{ -- 5: endgame (Cosmos, Origen, Infinito). La mejor fuente de Exclusivas y Divinas.
 				boxLuck = { weight = 24, tiers = { 0, 0, 0, 30, 40, 30 } },
 				damage = { weight = 8, tiers = { 0, 0, 0, 30, 40, 30 } },
+				attackSpeed = { weight = 8, tiers = { 0, 0, 0, 30, 40, 30 } },
 				health = { weight = 8, tiers = { 0, 0, 0, 30, 40, 30 } },
 				weaponLuck = { weight = 8, tiers = { 0, 0, 0, 30, 40, 30 } },
 				rankLuck = { weight = 29, tiers = { 0, 0, 0, 10, 25, 35, 22, 8 } },

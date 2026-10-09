@@ -12,9 +12,13 @@ function Upgrades.value(name: string, level: number): number
 	return upgrade.base * upgrade.perLevel ^ level
 end
 
--- Precio de pasar de `level` a `level + 1`.
+-- Precio de pasar de `level` a `level + 1`: el de su lista `costs` (un precio por nivel, sacado del calendario de
+-- progreso por tools/equilibrio) o, si la mejora no la trae, cost * growth ^ nivel.
 function Upgrades.cost(name: string, level: number): number
 	local upgrade = Config.Upgrades[name]
+	if upgrade.costs then
+		return upgrade.costs[math.clamp(level + 1, 1, #upgrade.costs)]
+	end
 	return math.floor(upgrade.cost * upgrade.growth ^ level)
 end
 
