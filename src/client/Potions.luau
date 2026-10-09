@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
+local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
 
@@ -211,12 +212,20 @@ function Potions.start()
 		paint(tile, workspace:GetServerTimeNow())
 	end
 
+	local ends: { [string]: number } = {}
+	local started = os.clock()
 	player.AttributeChanged:Connect(function(name: string)
 		if string.sub(name, 1, 6) ~= "Potion" then
 			return
 		end
 		local family = string.match(name, "^PotionEnd_(.+)$") or string.match(name, "^Potion_(.+)$")
 		if family and cfg.Families[family] then
+			-- Si su final se aleja es que se acaba de beber una (al entrar no suena: son las que ya traía).
+			local finish = player:GetAttribute("PotionEnd_" .. family) or 0
+			if finish > (ends[family] or 0) and os.clock() - started > 5 then
+				Sfx.play("potion")
+			end
+			ends[family] = finish
 			sync(family)
 		end
 	end)

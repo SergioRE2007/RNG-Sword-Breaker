@@ -15,19 +15,43 @@ local DEFAULT_VOLUME = 0.7
 
 -- nombre = { sonido, volumen, tono mínimo, tono máximo }
 local EVENTS = {
-	click = { "clickfast.wav", 0.45, 0.95, 1.1 },
-	hit = { "snap.mp3", 0.5, 0.85, 1.15 },
-	coin = { "electronicpingshort.wav", 0.28, 1.5, 1.9 },
-	gem = { "electronicpingshort.wav", 0.35, 2.1, 2.4 },
-	buy = { "switch.wav", 0.7, 0.95, 1.05 },
-	buyPing = { "electronicpingshort.wav", 0.4, 1.3, 1.3 },
-	toast = { "electronicpingshort.wav", 0.35, 1.1, 1.2 },
-	error = { "bass.wav", 0.55, 0.7, 0.7 },
-	tick = { "clickfast.wav", 0.3, 1.5, 1.8 },
-	roll = { "button.wav", 0.5, 1.0, 1.0 },
-	rare = { "bass.wav", 0.8, 1.0, 1.0 },
-	win = { "victory.wav", 0.8, 1.0, 1.0 },
-	open = { "switch.wav", 0.4, 1.2, 1.2 },
+	-- Interfaz. Una sola grabación cada uno: un botón tiene que sonar siempre igual.
+	click = { 127498863959231, 0.45, 0.97, 1.05 },
+	hover = { 112336389213652, 0.15, 0.97, 1.05 },
+	tick = { 109272899066209, 0.35, 0.98, 1.04 },
+	open = { 104050042655641, 0.3, 0.97, 1.03 },
+	close = { 93262936570566, 0.25, 0.97, 1.03 },
+	toast = { 116871010533956, 0.4, 1, 1 },
+	error = { 81277813295867, 0.5, 1, 1 },
+	buy = { 121614318104194, 0.55, 0.98, 1.03 },
+	buyPing = { 100075584075241, 0.4, 1, 1.04 },
+	equip = { 91947373481346, 0.45, 0.96, 1.05 },
+	sell = { 89376802223171, 0.55, 0.98, 1.03 },
+	teleport = { 114142918150751, 0.5, 0.98, 1.03 },
+	potion = { 126924859318135, 0.5, 0.98, 1.03 },
+	rebirth = { 101551001530213, 0.8, 1, 1 },
+	coin = { 122751732815655, 0.35, 1.15, 1.25 }, -- la misma grabación que coin_break
+
+	-- Tiradas: las de arma (client/RollReveal: orbe, carga y un sonido por nivel) y las de rasgo y grado.
+	orb = { 125342078017629, 0.4, 0.96, 1.06 },
+	charge = { 93541821621705, 0.4, 1, 1 },
+	reveal_1 = { 96883121683271, 0.4, 0.95, 1.08 },
+	reveal_2 = { 123562546673300, 0.5, 0.98, 1.04 },
+	reveal_3 = { 126095692231161, 0.6, 1, 1 },
+	reveal_4 = { 109717760520982, 0.7, 1, 1 },
+	reveal_5 = { 118337535145235, 0.8, 1, 1 },
+	collect = { 126460414904264, 0.45, 0.97, 1.06 },
+	roll = { 108088062003601, 0.5, 0.98, 1.03 },
+	rare = { 113476440126433, 0.7, 1, 1 },
+	win = { 107352736766334, 0.7, 1, 1 },
+	forge_hit = { { 97714408632464, 119769094792609, 107416494139217 }, 0.6, 0.95, 1.06 },
+	forge_super = { 111948543913240, 0.8, 1, 1 },
+
+	-- Mazmorras.
+	wave = { 83996363538018, 0.6, 1, 1 },
+	hurt = { { 70585973993176, 120343530004655, 76034653417857 }, 0.5, 0.94, 1.08 },
+	dungeon_win = { 79069116956574, 0.75, 1, 1 },
+	dungeon_lose = { 82008894062568, 0.7, 1, 1 },
 
 	-- Espadazo: uno por tipo de arma (`swing_<tipo>` de Config.WeaponKinds; un tipo nuevo necesita el suyo).
 	swing_sword = { { 107217231038027, 105099989032268, 101117762404360 }, 0.5, 0.94, 1.06 },
@@ -112,7 +136,7 @@ function Sfx.play(name: string, quiet: number?, pitch: number?)
 	end)
 	sound:Play()
 	-- Por si no llega a terminar (la cargaron mal).
-	task.delay(4, function()
+	task.delay(8, function()
 		if sound.Parent then
 			sound:Destroy()
 		end

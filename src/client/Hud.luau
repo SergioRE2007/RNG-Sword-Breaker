@@ -105,9 +105,6 @@ local function counter(gui: Instance, name: string, row: number, color: Color3, 
 			return
 		end
 		pending += delta
-		if delta > 0 then
-			Sfx.play(if name == "Gems" then "gem" else "coin")
-		end
 		pulse.Scale = 1.1
 		TweenService:Create(pulse, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	end
@@ -177,6 +174,7 @@ function Hud.start()
 	flash.ZIndex = 50
 	flash.Parent = gui
 	Remotes.Teleported.OnClientEvent:Connect(function()
+		Sfx.play("teleport")
 		ForgeScene.exit()
 		Ui.closeAll()
 		flash.BackgroundTransparency = 0.2

@@ -17,6 +17,7 @@ local Performance = require(script.Parent.Performance)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 local ArmorPane = require(script.Parent.ArmorPane)
 local Potions = require(script.Parent.Potions)
+local Sfx = require(script.Parent.Sfx)
 
 local Backpack = {}
 local SellMenu = require(script.Parent.SellMenu)
@@ -358,6 +359,7 @@ function Backpack.start()
 
 	equipButton.Activated:Connect(function()
 		if selected then
+			Sfx.play("equip")
 			Remotes.EquipSword:FireServer(selected)
 		end
 	end)
@@ -374,6 +376,7 @@ function Backpack.start()
 		end
 		if best then
 			selected = best.id
+			Sfx.play("equip")
 			Remotes.EquipSword:FireServer(best.id)
 		end
 	end)
@@ -618,6 +621,7 @@ function Backpack.start()
 		end)
 		cell.Activated:Connect(function()
 			if slots[slot].index then
+				Sfx.play("equip")
 				Remotes.ToggleGear:FireServer(slots[slot].index)
 			end
 		end)
@@ -687,6 +691,7 @@ function Backpack.start()
 			return artifactTip(index)
 		end)
 		cell.Activated:Connect(function()
+			Sfx.play("equip")
 			Remotes.ToggleGear:FireServer(index)
 		end)
 		gearCells[index] = cell

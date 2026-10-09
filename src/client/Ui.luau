@@ -391,7 +391,7 @@ function Ui.pressable(item: GuiButton, grow: number?)
 		lit(true)
 		-- Solo los botones (los que tienen labio): en una rejilla de casillas sería un repiqueteo.
 		if base then
-			Sfx.play("tick", 0.3)
+			Sfx.play("hover")
 		end
 	end)
 	item.MouseLeave:Connect(function()
@@ -626,6 +626,7 @@ function Ui.open(frame: GuiObject)
 	if m.state == "open" or m.state == "opening" then
 		return
 	end
+	Sfx.play("open")
 	if m.state == "closed" then
 		m.home = frame.Position
 		m.travel = travelOf(m)
@@ -663,6 +664,9 @@ function Ui.close(frame: GuiObject)
 	end
 	if m.state == "closed" or m.state == "closing" then
 		return
+	end
+	if frame.Visible then
+		Sfx.play("close")
 	end
 	if Performance.get() or not frame.Visible then
 		stopMotion(m)

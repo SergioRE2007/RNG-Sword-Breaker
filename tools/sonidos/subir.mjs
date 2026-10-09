@@ -1,5 +1,6 @@
 // Sube a Roblox los mp3 de una carpeta (Open Cloud, API de recursos) y apunta el id de cada uno en ids.json.
-// Uso: node subir.mjs <carpeta> <userId> <archivo con la clave de API> [solo este archivo sin .mp3]
+// Uso: node tools/sonidos/subir.mjs <carpeta> <userId> <archivo con la clave de API> [expresión regular]
+// Con la expresión solo sube los archivos cuyo nombre (sin .mp3) encaja: "_1$" sube la primera versión de cada uno.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -13,7 +14,7 @@ let made = 0;
 let failed = 0;
 for (const file of fs.readdirSync(folder).filter((name) => name.endsWith(".mp3")).sort()) {
 	const name = path.basename(file, ".mp3");
-	if (ids[name] || (only && only !== name)) continue;
+	if (ids[name] || (only && !new RegExp(only).test(name))) continue;
 
 	const form = new FormData();
 	form.append("request", JSON.stringify({
