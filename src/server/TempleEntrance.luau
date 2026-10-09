@@ -1,8 +1,10 @@
--- Entrada de las mazmorras como un santuario místico (Config.Theme = "japan"): un templo abierto de dos tejados,
--- centrado justo encima de la boca del pozo y de su ascensor de luz (LightLift), igual por los cuatro lados, con
--- columnas rojas, tejados escalonados, farolillos y magia: dos círculos de runas que giran. Se
+-- Entrada de las mazmorras como un templo místico (Config.Theme = "japan"): tres pisos, 82 de ancho y casi 100 de alto,
+-- centrado justo encima de la boca del pozo y de su ascensor de luz (LightLift) e igual por los cuatro lados. El
+-- edificio entero es un modelo de Blender (PropModel "TempleA", "TempleB" y "TempleC", uno por piso: doce columnas
+-- rojas, techo de casetones, cuerdas sagradas y tres tejados curvos). Aquí se le ponen los colores, los farolillos
+-- violeta, una placa con el nombre en cada lado y la magia: dos círculos de runas que giran sobre la boca. Se
 -- construye después de DungeonLobby, que es quien abre el pozo y pone el borde de piedra y el cartel. El cliente
--- (JapanFx) mueve los círculos con la etiqueta MagicCircle. Casi todo es decoración: solo las columnas tienen colisión.
+-- (JapanFx) mueve los círculos con la etiqueta MagicCircle. Solo las columnas tienen colisión (la pone PropModel).
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -15,14 +17,23 @@ local VIOLET = Color3.fromRGB(176, 124, 255)
 local CYAN = Color3.fromRGB(110, 232, 255)
 local PINK = Color3.fromRGB(255, 140, 222)
 local GOLD = Color3.fromRGB(255, 208, 64)
-local LACQUER = Color3.fromRGB(226, 48, 62)
 local BLACK = Color3.fromRGB(44, 36, 54)
-local STONE = Color3.fromRGB(170, 166, 190)
-local PLASTER = Color3.fromRGB(240, 228, 214)
-local WOOD = Color3.fromRGB(122, 78, 62)
 
-local SIDE = 46 -- lado de la planta cuadrada del templo, centrada sobre la boca
-local COLUMN_HEIGHT = 15
+-- Medidas del modelo (tools/blender/crear_mapa_japones.py, temple): media anchura de la línea de columnas y altura
+-- de la cara de abajo de la viga que une sus cabezas.
+local EDGE = 26
+local BEAM = 21.2
+
+-- Colores del templo: tejados añil con las filas de tejas algo más oscuras, madera oscura y ventanas de papel. El
+-- único papel de la planta baja es el sello del techo, que va en violeta como los farolillos.
+local TINT = {
+	Roof = Color3.fromRGB(74, 62, 138),
+	StoneDark = Color3.fromRGB(52, 44, 104),
+	Wood = Color3.fromRGB(70, 48, 62),
+	Paper = Color3.fromRGB(255, 222, 150),
+}
+local TINT_GROUND = table.clone(TINT)
+TINT_GROUND.Paper = VIOLET
 
 local function part(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material): Part
 	local item = Instance.new("Part")
@@ -53,20 +64,6 @@ local function polar(angle: number, radius: number, y: number): Vector3
 	return Vector3.new(math.cos(angle) * radius, y, math.sin(angle) * radius)
 end
 
--- Columna laqueada: base de piedra, fuste rojo, bandas doradas y capitel negro.
-local function pillar(parent: Instance, position: Vector3, height: number)
-	local base = CFrame.new(position)
-	local stone = part(parent, "PillarBase", Vector3.new(0.9, 3.6, 3.6), base * CFrame.new(0, 0.45, 0) * CFrame.Angles(0, 0, math.rad(90)), STONE, Enum.Material.Slate)
-	stone.Shape = Enum.PartType.Cylinder
-	local shaft = part(parent, "Pillar", Vector3.new(height - 1.2, 2.2, 2.2), base * CFrame.new(0, 0.9 + (height - 1.2) / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), LACQUER, Enum.Material.SmoothPlastic)
-	shaft.Shape = Enum.PartType.Cylinder
-	for _, y in { 1.8, height - 1.6 } do
-		local band = decor(part(parent, "PillarBand", Vector3.new(0.5, 2.6, 2.6), base * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), GOLD, Enum.Material.Metal))
-		band.Shape = Enum.PartType.Cylinder
-	end
-	part(parent, "PillarCap", Vector3.new(3.4, 0.8, 3.4), base * CFrame.new(0, height - 0.4, 0), BLACK, Enum.Material.SmoothPlastic)
-end
-
 -- Farolillo del templo: pone una luz violeta en su papel y lo marca para que el cliente la encienda de noche.
 local function lampLight(model: Model?)
 	local paper = model and model:FindFirstChild("Paper")
@@ -83,18 +80,48 @@ local function lampLight(model: Model?)
 	end
 end
 
--- Tejado escalonado de planta cuadrada, igual por los cuatro lados: `count` losas que se estrechan de `from` a `to` de
--- lado, cada una con un canto dorado. Devuelve la altura de la cara superior de la última.
-local function roofTiers(parent: Instance, y0: number, from: number, to: number, count: number): number
-	local rise = 1.4
-	for tier = 0, count - 1 do
-		local side = from + (to - from) * tier / math.max(count - 1, 1)
-		local y = y0 + tier * rise
-		decor(part(parent, "RoofTier", Vector3.new(side, 1.2, side), CFrame.new(0, y + 0.6, 0), BLACK, Enum.Material.SmoothPlastic))
-		-- El canto dorado sobresale por abajo (0,1) para que su cara no coincida con la de la losa y parpadee.
-		decor(part(parent, "RoofTrim", Vector3.new(side + 0.5, 0.3, side + 0.5), CFrame.new(0, y + 0.05, 0), GOLD, Enum.Material.Metal))
+-- El papel de las ventanas y del sello se enciende solo de noche, como el de los farolillos (client/MapLights).
+local function lightPaper(model: Model?)
+	local paper = model and model:FindFirstChild("Paper")
+	if paper then
+		CollectionService:AddTag(paper, "LanternGlow")
 	end
-	return y0 + (count - 1) * rise + 1.2
+end
+
+-- Placa con el nombre colgada sobre la entrada de un lado: tabla negra con marco dorado y el texto en su cara.
+local function plaque(parent: Instance, cframe: CFrame)
+	local board = decor(part(parent, "Plaque", Vector3.new(15, 4.2, 0.5), cframe, BLACK, Enum.Material.SmoothPlastic))
+	for _, edge in { { 0, 2.3, 16, 0.5 }, { 0, -2.3, 16, 0.5 }, { 7.75, 0, 0.5, 5.1 }, { -7.75, 0, 0.5, 5.1 } } do
+		decor(part(parent, "PlaqueFrame", Vector3.new(edge[3], edge[4], 0.8), cframe * CFrame.new(edge[1], edge[2], 0), GOLD, Enum.Material.Metal))
+	end
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0
+	gui.Parent = board
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Text = "MAZMORRAS"
+	label.Parent = gui
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0.12, 0)
+	padding.PaddingBottom = UDim.new(0.12, 0)
+	padding.PaddingLeft = UDim.new(0.04, 0)
+	padding.PaddingRight = UDim.new(0.04, 0)
+	padding.Parent = label
+	local outline = Instance.new("UIStroke")
+	outline.Color = Color3.new(0, 0, 0)
+	outline.Thickness = 5
+	outline.Parent = label
+	local gradient = Instance.new("UIGradient")
+	gradient.Rotation = 90
+	gradient.Color = ColorSequence.new(Color3.fromRGB(255, 236, 150), Color3.fromRGB(255, 176, 48))
+	gradient.Parent = label
 end
 
 -- Círculo mágico que gira: anillo de runas, runas sueltas y una estrella de seis puntas hecha con dos triángulos.
@@ -128,45 +155,34 @@ local function magicCircle(parent: Instance, name: string, y: number, radius: nu
 	CollectionService:AddTag(model, "MagicCircle")
 end
 
--- El templo: abierto y centrado sobre la boca (y su ascensor), igual por los cuatro lados: columnas en el perímetro
--- (con un hueco libre en medio de cada lado), vigas, farolillos y dos tejados escalonados. Sin suelo ni muros: se
--- pisa el del hub.
-local function shrine(folder: Folder, top: number)
-	local edge = SIDE / 2 - 2 -- las columnas están a esta distancia del centro
-	local height = COLUMN_HEIGHT
+-- El templo, centrado sobre la boca (y su ascensor): el modelo de los tres pisos y, en cada uno de sus cuatro lados,
+-- cuatro farolillos colgando de la viga (dos por vano lateral) y la placa sobre la entrada del centro. Sin suelo ni
+-- muros: se pisa el del hub.
+local function temple(folder: Folder, top: number)
+	local origin = CFrame.new(0, top, 0)
+	lightPaper(PropModel.place(folder, "TempleA", origin, 1, TINT_GROUND))
+	lightPaper(PropModel.place(folder, "TempleB", origin, 1, TINT))
+	lightPaper(PropModel.place(folder, "TempleC", origin, 1, TINT))
 
-	-- Columnas: solo dos por esquina, una a cada lado de la esquina.
-	for _, sx in { -1, 1 } do
-		for _, sz in { -1, 1 } do
-			pillar(folder, Vector3.new(sx * edge, top, sz * (edge - 5)), height)
-			pillar(folder, Vector3.new(sx * (edge - 5), top, sz * edge), height)
+	for side = 0, 3 do
+		local frame = origin * CFrame.Angles(0, side * math.pi / 2, 0)
+		for _, x in { -21, -15, 15, 21 } do
+			lampLight(PropModel.place(folder, "Chochin", frame * CFrame.new(x, BEAM - 2.95, -EDGE), 1.4, { Red = VIOLET }))
 		end
-	end
-	-- Vigas negras con friso dorado en los cuatro lados.
-	for _, sign in { -1, 1 } do
-		part(folder, "Beam", Vector3.new(SIDE, 1.2, 1.6), CFrame.new(0, top + height + 0.4, sign * edge), BLACK, Enum.Material.SmoothPlastic)
-		decor(part(folder, "BeamTrim", Vector3.new(SIDE, 0.25, 1.9), CFrame.new(0, top + height - 0.4, sign * edge), GOLD, Enum.Material.Metal))
-		part(folder, "Beam", Vector3.new(1.6, 1.2, SIDE), CFrame.new(sign * edge, top + height + 0.4, 0), BLACK, Enum.Material.SmoothPlastic)
-		decor(part(folder, "BeamTrim", Vector3.new(1.9, 0.25, SIDE), CFrame.new(sign * edge, top + height - 0.4, 0), GOLD, Enum.Material.Metal))
+		plaque(folder, frame * CFrame.new(0, 24, -(EDGE + 1.5)) * CFrame.Angles(math.rad(-10), 0, 0))
 	end
 
-	-- Tejado bajo (el alero sobresale de las columnas), un cuerpo alto encima y el tejado alto con su remate.
-	local lowTop = roofTiers(folder, top + height + 1, SIDE + 12, SIDE - 16, 5)
-	local bodySide = SIDE - 22
-	part(folder, "UpperBody", Vector3.new(bodySide, 7, bodySide), CFrame.new(0, lowTop + 3, 0), PLASTER, Enum.Material.SmoothPlastic)
-	decor(part(folder, "UpperBeam", Vector3.new(bodySide + 0.8, 0.8, bodySide + 0.8), CFrame.new(0, lowTop + 6.6, 0), WOOD, Enum.Material.Wood))
-	local highTop = roofTiers(folder, lowTop + 7, bodySide + 10, 5, 6)
-	local spire = decor(part(folder, "Finial", Vector3.one * 3, CFrame.new(0, highTop + 1.2, 0), GOLD, Enum.Material.Metal))
-	spire.Shape = Enum.PartType.Ball
-	decor(part(folder, "FinialRod", Vector3.new(0.6, 5, 0.6), CFrame.new(0, highTop + 3, 0), GOLD, Enum.Material.Metal))
-
-	-- Farolillos violeta colgando del alero, por los cuatro lados.
-	for _, i in { -edge * 5 / 6, -edge / 2, -edge / 6, edge / 6, edge / 2, edge * 5 / 6 } do
-		for _, sign in { -1, 1 } do
-			lampLight(PropModel.place(folder, "Chochin", CFrame.new(i, top + height - 4.2, sign * (edge + 1.6)), 1.3, { Red = VIOLET }))
-			lampLight(PropModel.place(folder, "Chochin", CFrame.new(sign * (edge + 1.6), top + height - 4.2, i), 1.3, { Red = VIOLET }))
-		end
-	end
+	-- Luz violeta bajo el techo, solo de noche (client/MapLights).
+	local holder = decor(part(folder, "CeilingLight", Vector3.one, origin * CFrame.new(0, 22, 0), VIOLET, Enum.Material.SmoothPlastic))
+	holder.Transparency = 1
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(214, 176, 255)
+	light.Brightness = 0
+	light.Enabled = false
+	light.Range = 46
+	light:SetAttribute("Base", 0.7)
+	light.Parent = holder
+	CollectionService:AddTag(light, "NightLight")
 end
 
 function TempleEntrance.start()
@@ -187,7 +203,7 @@ function TempleEntrance.start()
 		end
 		local sign = entrance:FindFirstChild("Sign")
 		if sign and sign:IsA("BasePart") then
-			sign.CFrame = CFrame.new(0, top + 40, 0) -- el remate del templo llega a top + 43; el texto sale 13 más arriba
+			sign.CFrame = CFrame.new(0, top, 0) -- el texto sale 13 más arriba: flota sobre la boca, bajo el techo del templo
 		end
 	end
 
@@ -195,7 +211,7 @@ function TempleEntrance.start()
 	folder.Name = "TemploMazmorras"
 	folder.Parent = workspace
 
-	shrine(folder, top)
+	temple(folder, top)
 
 	-- Magia sobre la boca: dos círculos de runas que giran en sentidos contrarios (sin rayo, fuegos fatuos ni niebla,
 	-- quitados porque se veían rotos).
