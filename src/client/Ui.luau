@@ -1658,20 +1658,20 @@ end
 
 local toasts: Frame? = nil
 local MAX_TOASTS = 3
--- Medidas de los avisos, en unidades del HUD. Son pastillas pequeñas que salen del hueco entre los contadores
--- (monedas y gemas) y la casilla del arma, pegadas a la casilla y creciendo hacia la izquierda (pedido por el
--- usuario: grandes y en el centro tapaban el juego).
+local placeToasts: (() -> ())? = nil
+-- Medidas de los avisos, en unidades del HUD. Son pastillas pequeñas pegadas al borde derecho, abajo, por encima de
+-- las pociones activas (pedido por el usuario: grandes y en el centro tapaban el juego, y a los lados de la casilla
+-- del arma van a ir botones).
 local TOAST = {
-	width = 330, -- ancho máximo de un aviso
-	gap = 170, -- hueco mínimo para ponerlos junto a la casilla; con menos (pantalla en vertical) van encima de los contadores
+	width = 640, -- ancho máximo de un aviso: hasta los más largos (los de pociones) caben en una línea
+	narrow = 220, -- lo mínimo a lo que baja ese máximo en pantallas estrechas
+	reserve = 200, -- lo que se deja libre desde el centro: media casilla del arma, el botón de al lado y márgenes
 	height = 34,
 	text = 17,
 	icon = 22,
 	pad = 10,
-	counters = 296, -- donde acaban los contadores (14 + 270) más un margen
-	slot = 66, -- media casilla del arma (54) más un margen
-	bottom = 16, -- a la altura del pie de la casilla
-	stacked = 142, -- encima de los dos contadores
+	margin = 14, -- al borde derecho y al de abajo
+	above = 8, -- separación con lo que tengan debajo
 }
 
 -- Transparencias de todo lo que se ve en `root` (él incluido): fondos, textos, imágenes y bordes.
@@ -1752,28 +1752,42 @@ function Ui.toast(text: string, color: Color3)
 		layout.Padding = UDim.new(0, 6)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+		layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 		layout.Parent = list
-		-- El ancho de la capa del HUD ya va en sus unidades (pantalla / escala).
+		-- Debajo pueden tener la tira de pociones activas (crece hacia arriba) y, en pantallas táctiles, el botón de
+		-- salto de Roblox: la lista se pone por encima de lo que haya. Se recoloca con cada aviso, al cambiar la
+		-- pantalla y al cambiar las pociones. El ancho de la capa del HUD ya va en sus unidades (pantalla / escala).
+		local hudScale = root:FindFirstChildOfClass("UIScale") :: UIScale
+		local watched: GuiObject? = nil
 		local function place()
-			local width = root.Size.X.Offset
-			local gap = width / 2 - TOAST.slot - TOAST.counters
-			if gap >= TOAST.gap then
-				list.AnchorPoint = Vector2.new(1, 1)
-				list.Position = UDim2.new(0.5, -TOAST.slot, 1, -TOAST.bottom)
-				list.Size = UDim2.fromOffset(math.min(gap, TOAST.width), 0)
-				layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-			else
-				list.AnchorPoint = Vector2.new(0, 1)
-				list.Position = UDim2.new(0, 14, 1, -TOAST.stacked)
-				list.Size = UDim2.fromOffset(math.min(width - 28, 290), 0)
-				layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+			local floor = root.AbsolutePosition.Y + root.AbsoluteSize.Y
+			local bottom = TOAST.margin
+			local function clear(below: Instance?)
+				if below and below:IsA("GuiObject") and below.Visible and below.AbsoluteSize.Y > 0 then
+					bottom = math.max(bottom, (floor - below.AbsolutePosition.Y) / hudScale.Scale + TOAST.above)
+				end
 			end
+			local potions = root:FindFirstChild("Potions")
+			clear(potions)
+			if potions and potions:IsA("GuiObject") and watched ~= potions then
+				watched = potions
+				potions:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+			end
+			local touch = player.PlayerGui:FindFirstChild("TouchGui")
+			if touch and touch:IsA("ScreenGui") and touch.Enabled then
+				local controls = touch:FindFirstChild("TouchControlFrame")
+				clear(controls and controls:FindFirstChild("JumpButton"))
+			end
+			list.AnchorPoint = Vector2.new(1, 1)
+			list.Position = UDim2.new(1, -TOAST.margin, 1, -bottom)
+			list.Size = UDim2.fromOffset(math.clamp(root.Size.X.Offset / 2 - TOAST.reserve, TOAST.narrow, TOAST.width), 0)
 		end
 		root:GetPropertyChangedSignal("Size"):Connect(place)
-		place()
+		placeToasts = place
 		toasts = list
 	end
-	local list = toasts :: Frame
+	local list = toasts :: Frame;
+	(placeToasts :: () -> ())()
 	Sfx.play(if color.R > 0.7 and color.G < 0.5 and color.B < 0.5 then "error" else "toast")
 	local existing = {}
 	for _, child in list:GetChildren() do
