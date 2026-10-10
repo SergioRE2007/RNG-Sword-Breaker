@@ -1,7 +1,9 @@
 -- Cuentas y textos del clima (Config.Weather) para servidor y cliente: qué clima hay, por cuánto multiplica cada
 -- suerte, cuál toca en cada tramo y lo raro que es. El clima en curso lo publica server/Weather en atributos de
 -- workspace: "Weather" (id, o "" si está despejado), "WeatherStart", "WeatherEnds" (cuándo empezó y cuándo acaba; con
--- el cielo despejado, desde y hasta cuándo) y "WeatherNext" (cuándo empieza el siguiente), en hora de GetServerTimeNow.
+-- el cielo despejado, desde y hasta cuándo) y "WeatherSoon" (cuándo empieza el siguiente, solo cuando faltan menos de
+-- Config.Weather.Warning segundos), en hora de GetServerTimeNow. "WeatherNext" (cuándo empieza el siguiente, siempre)
+-- solo existe en el cliente de los administradores, que lo reciben por el remote WeatherSchedule.
 local Chance = require(script.Parent.Chance)
 local Config = require(script.Parent.Config)
 local Format = require(script.Parent.Format)
@@ -30,8 +32,8 @@ function WeatherInfo.duration(id: string): number
 	return math.min(cfg.Events[id].duration or cfg.Duration, cfg.Interval)
 end
 
--- Clima del tramo número `slot` (la hora entre Config.Weather.Interval). Sale siempre el mismo para el mismo tramo y
--- la misma `salt`, que es como todos los servidores tienen el mismo clima a la vez; la sal la guarda el servidor.
+-- Clima del tramo número `slot` (los cuenta cada servidor desde que arrancó). Sale siempre el mismo para el mismo
+-- tramo y la misma `salt`, que es la semilla que cada servidor saca al arrancar y no comparte con nadie.
 -- Se prueba del más raro al más común y el primero de `Order` es el de relleno.
 function WeatherInfo.pick(slot: number, salt: number): string
 	local order = Config.Weather.Order

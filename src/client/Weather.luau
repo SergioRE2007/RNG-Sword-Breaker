@@ -204,8 +204,17 @@ function Weather.start()
 		end)
 	end
 
-	-- HUD: tarjeta con el reloj (unas pocas veces por segundo basta) y cartel al empezar un clima.
+	-- La hora del siguiente clima solo les llega a los administradores. Se apunta en un atributo de workspace que solo
+	-- existe en este cliente, y de ahí la leen la tarjeta y el menú de admin.
+	Remotes.WeatherSchedule.OnClientEvent:Connect(function(at: number)
+		workspace:SetAttribute("WeatherNext", at)
+	end)
+
+	-- HUD: tarjeta con el reloj (unas pocas veces por segundo basta) y cartel al empezar un clima. Con el cielo despejado
+	-- la tarjeta solo sale cuando el siguiente clima está al caer ("WeatherSoon", para todos) o, a los administradores,
+	-- siempre ("WeatherNext"): los demás no ven cuánto falta (pedido por el usuario).
 	local hudId: string? = nil
+	local hudMode = ""
 	local first = true
 	local elapsed = 1
 	RunService.Heartbeat:Connect(function(dt: number)
@@ -215,18 +224,21 @@ function Weather.start()
 		end
 		elapsed = 0
 		local id = (WeatherInfo.current())
-		if id ~= hudId or first then
-			hudId, first = id, false
-			WeatherHud.show(id)
-			if id then
+		local soon = type(workspace:GetAttribute("WeatherSoon")) == "number"
+		local goal = workspace:GetAttribute(if id then "WeatherEnds" elseif soon then "WeatherSoon" else "WeatherNext")
+		local mode = if id then "weather" elseif soon then "soon" elseif type(goal) == "number" then "next" else "none"
+		if id ~= hudId or mode ~= hudMode or first then
+			local started = id ~= nil and (id ~= hudId or first)
+			hudId, hudMode, first = id, mode, false
+			WeatherHud.show(id, mode == "soon")
+			if id and started then
 				WeatherHud.announce(id)
 			end
 		end
 		local now = workspace:GetServerTimeNow()
-		local goal = workspace:GetAttribute(if id then "WeatherEnds" else "WeatherNext")
 		WeatherHud.tick(if type(goal) == "number" then goal - now else 0, now)
 		local dungeon = player:GetAttribute("Dungeon")
-		WeatherHud.setHidden((type(dungeon) == "number" and dungeon > 0) or ForgeScene.isActive())
+		WeatherHud.setHidden(mode == "none" or (type(dungeon) == "number" and dungeon > 0) or ForgeScene.isActive())
 	end)
 
 	if RunService:IsStudio() and Config.Test.Admin then

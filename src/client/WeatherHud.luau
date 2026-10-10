@@ -49,6 +49,7 @@ local clock: TextLabel
 local clockPulse: UIScale
 local accent: Frame
 local shownId: string? = nil
+local shownSoon = false -- con el cielo despejado: se enseña el aviso de que el siguiente clima está al caer
 local shownSeconds = -1
 
 local function hex(color: Color3): string
@@ -303,8 +304,7 @@ function WeatherHud.build()
 	Ui.tip(card, function()
 		local id, def = WeatherInfo.current()
 		if not (id and def) then
-			local every = math.floor(cfg.Interval / 60 + 0.5)
-			return `<b>Cielo despejado</b>\n<font color="{Ui.SOFT}">Cada {every} min llega un clima distinto.\nTodos dan suerte de destructibles;\nlos más raros, también suerte de armas.</font>`, CLEAR
+			return `<b>Cielo despejado</b>\n<font color="{Ui.SOFT}">Cada cierto tiempo llega un clima distinto.\nTodos dan suerte de destructibles;\nlos más raros, también suerte de armas.</font>`, CLEAR
 		end
 		local tier = WeatherInfo.tier(def)
 		local lines = {
@@ -319,12 +319,14 @@ function WeatherHud.build()
 	WeatherHud.show(nil)
 end
 
--- Pone en la tarjeta ese clima (nil = despejado: cuenta atrás del siguiente).
-function WeatherHud.show(id: string?)
+-- Pone en la tarjeta ese clima (nil = despejado: cuenta atrás del siguiente). `soon` = el siguiente está al caer: es
+-- el aviso que ven todos; sin él, con el cielo despejado, la tarjeta solo la ven los administradores.
+function WeatherHud.show(id: string?, soon: boolean?)
 	if not outer then
 		return
 	end
 	shownId = id
+	shownSoon = id == nil and soon == true
 	shownSeconds = -1
 	local def = if id then cfg.Events[id] else nil
 	local color = if def then def.color else CLEAR
@@ -333,6 +335,10 @@ function WeatherHud.show(id: string?)
 	if def then
 		title.Text = `<font color="{hex(def.color:Lerp(WHITE, 0.45))}">{def.name}</font>`
 		detail.Text = buffLine(def)
+	elseif shownSoon then
+		title.Text = "¡Se acerca un clima!"
+		detail.Text = `<font color="{Ui.SOFT}">Suerte para todos</font>`
+		Sfx.play("toast")
 	else
 		title.Text = "Próximo clima"
 		detail.Text = `<font color="{Ui.SOFT}">Cielo despejado</font>`
@@ -361,7 +367,7 @@ function WeatherHud.tick(seconds: number, now: number)
 		shownSeconds = whole
 		clock.Text = PotionInfo.clock(whole)
 	end
-	local low = shownId ~= nil and seconds <= cfg.LowTime
+	local low = (shownId ~= nil or shownSoon) and seconds <= cfg.LowTime
 	clock.TextColor3 = if low then LOW else WHITE
 	clockPulse.Scale = if low and not Performance.get() then 1 + 0.1 * (0.5 + 0.5 * math.sin(now * 6)) else 1
 end

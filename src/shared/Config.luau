@@ -283,6 +283,7 @@ Config.Weather = {
 	Duration = 600,
 	Fade = 8, -- segundos que tardan la luz y las partículas en entrar y en irse
 	LowTime = 60, -- el reloj del HUD se pone rojo y late cuando quedan menos segundos
+	Warning = 90, -- segundos antes de un clima en que todos ven el aviso "se acerca un clima" con su cuenta; antes, la cuenta solo la ven los administradores
 	Order = { "rain", "petals", "fog", "snow", "storm", "goldenRain", "volcanic", "aurora", "bloodMoon", "eclipse", "cosmic", "starfall" },
 	Events = {
 		rain = { name = "Lluvia", desc = "Llueve sobre toda la isla.", rarity = 1, tier = 1, luck = 2, color = Color3.fromRGB(90, 150, 235) },
