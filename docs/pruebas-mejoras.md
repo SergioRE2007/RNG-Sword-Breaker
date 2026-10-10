@@ -64,6 +64,7 @@ Probado en Studio el 11-10-2026, con un jugador: las armas giran y no hay arma e
 - [ ] **Grupo de mazmorra**: dos jugadores atacando al mismo enemigo; al morir por el golpe del otro, las armas de cada uno saltan al siguiente.
 - [ ] **Móvil**: tocar un objeto lo elige (con la ayuda de puntería: vale tocar cerca) y tocar el mando de movimiento o un botón no; la fila de cuatro casillas con los botones CLICK y AUTO no pisa las monedas ni las pociones, también en vertical.
 - [ ] **Mando**: el gatillo derecho (R2) elige lo más cercano que la cámara tenga delante.
-- [ ] **De vista**: los tajos de cada tipo de arma (espada, dobles, hacha, martillo, lanza), el aro del círculo y el del objetivo, y las armas grandes (Universal) volviéndose translúcidas al pasar junto a la cámara.
+- [ ] **De vista**: las pasadas de cada tipo de arma (espada, dobles y lanza de punta con su estela; hacha y martillo dando vueltas), el aro del círculo y el del objetivo, y las armas grandes (Universal) volviéndose translúcidas al pasar junto a la cámara. Medido en Studio el 11-10-2026: cada arma cruza el objetivo a ±0,05 s de su golpe; con ping alto el golpe puede llegar algo después de la pasada.
+- [ ] **Automáticos**: con el autoclicker las armas saltan solas de objeto en objeto (medido: uno cada 0,17 s, sin pararse); sin automático, un clic rompe uno y vuelven.
 - [ ] **Colmillo astral**: varias copias girando a la vez (dos jugadores con él) siguen dibujándose con su malla.
 - [ ] **Ritmo**: espadas y dobles ya solo pegan a un objetivo y hay 0,25 s de vuelo por objeto; medir objetos por minuto y duración de mazmorra para la parte 3.

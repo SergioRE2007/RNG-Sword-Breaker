@@ -1,7 +1,8 @@
 -- Combate: las armas equipadas del jugador (hasta Config.Loadout.Slots) vuelan al objetivo que elige con un clic y le
 -- pegan, cada una a su ritmo, hasta romperlo. El cliente solo pide el objetivo (Attack); aquí se valida (un objeto de su
 -- parcela o un enemigo de su partida, vivo y dentro de su círculo), se lleva el reloj de cada arma y se reparte el daño.
---   · Objeto roto: fin del ataque. Enemigo muerto: las armas saltan al más cercano del círculo.
+--   · Objeto roto: fin del ataque (con el autoclicker o el Auto encendidos, saltan al siguiente objeto del círculo).
+--     Enemigo muerto: las armas saltan al más cercano del círculo.
 --   · Hachas y martillos salpican alrededor del objetivo y las lanzas atraviesan lo que hay detrás (Hitbox.spread).
 --   · El objetivo se publica en el ObjectValue "AttackTarget" del jugador, para que todos vean adónde vuelan sus armas
 --     (client/OrbitWeapons); cada golpe avisa con Hit y el hueco del arma que lo ha dado.
@@ -135,14 +136,19 @@ local function alive(player: Player, attack): boolean
 	return Destructibles.owns(player, attack.target)
 end
 
--- El objetivo ya no vale (roto, muerto o demasiado lejos): un objeto acaba el ataque; de un enemigo se salta al más
--- cercano del círculo, si queda alguno.
+-- El objetivo ya no vale (roto, muerto o demasiado lejos). De un enemigo se salta al más cercano del círculo, si queda
+-- alguno. Un objeto acaba el ataque, salvo con el autoclicker o el Auto encendidos (los decide server/AutoPlay): entonces
+-- las armas siguen solas con el objeto más cercano del círculo, sin esperar a que el cliente lo pida (pedido por el
+-- usuario: se quedaban un momento paradas entre objeto y objeto).
 local function release(player: Player, attack, root: BasePart)
+	local radius = Config.Loadout.Radius
+	local nextTarget: BasePart? = nil
 	if attack.enemy then
-		setTarget(player, Dungeons.nearest(player, attack.at, root.Position, Config.Loadout.Radius), true, Config.Loadout.Chain)
-	else
-		setTarget(player, nil)
+		nextTarget = Dungeons.nearest(player, attack.at, root.Position, radius)
+	elseif player:GetAttribute("AutoClick") == true or player:GetAttribute("AutoFarm") == true then
+		nextTarget = Destructibles.nearest(player, attack.at, root.Position, radius)
 	end
+	setTarget(player, nextTarget, attack.enemy, Config.Loadout.Chain)
 end
 
 local function onAttack(player: Player, part: unknown)

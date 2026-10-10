@@ -1,7 +1,13 @@
 -- Las armas equipadas de cada jugador, a la vista: giran a su alrededor y, cuando el servidor le pone objetivo (el
--- ObjectValue "AttackTarget" del jugador, server/Combat), vuelan hasta él, dan un tajo con cada golpe de su hueco
--- (aviso Hit) y al acabar vuelven. Todo es local: cada cliente construye con SwordModel y mueve las de los jugadores
--- que tiene cerca (lejos de la cámara no existen, y en modo Rendimiento solo las propias y sin efectos).
+-- ObjectValue "AttackTarget" del jugador, server/Combat), se lanzan contra él: lo atraviesan justo cuando pegan, salen
+-- por el otro lado, lo rondan y vuelven a lanzarse, cada una a su ritmo (pedido por el usuario: antes se quedaban
+-- quietas a su lado y giraban para dar el toque). Al quedarse sin objetivo vuelven a girar alrededor del jugador.
+-- Todo es local: cada cliente construye con SwordModel y mueve las de los jugadores que tiene cerca (lejos de la cámara
+-- no existen, y en modo Rendimiento solo las propias y sin efectos).
+--   · Cada pasada se adelanta al golpe: el cliente sabe cuándo llegan las armas (Config.Loadout.Travel, o Chain si
+--     saltan solas) y cada cuánto pega cada una (Stats.weaponCooldown), así que el arma cruza el objetivo a la vez que
+--     llega su aviso Hit. El aviso confirma la pasada y pone en hora la siguiente: un arma solo se adelanta mientras
+--     sus golpes van llegando; si uno no llega, se queda rondando hasta el siguiente aviso.
 --   · workspace.OrbitWeapons.<jugador>.Weapon<hueco>: el arma de cada hueco (atributos Owner y Lead: la principal, la
 --     más rara, es la que lleva el aura del jugador de client/WeaponAura).
 --   · Circle: el aro del círculo del jugador local (Config.Loadout.Radius), a la vista cuando hay algo que atacar cerca;
@@ -35,16 +41,21 @@ local ORBIT_LIFT = 0.4 -- altura del centro del arma sobre el del personaje
 local GROUND_GAP = 0.8 -- lo que se separa del suelo la punta de abajo de un arma larga
 local BOB = 0.3 -- cuánto suben y bajan al flotar
 local FOLLOW = 11 -- lo pegada que va el arma a su sitio en la órbita (más = más pegada)
-local STRIKE_FOLLOW = 20 -- y al volar al objetivo: con 20 llega en Config.Loadout.Travel
 local AIM_HOLD = 0.6 -- segundos que vale el objetivo que el jugador acaba de pedir mientras el servidor contesta
 local FADE_FROM, FADE_FULL = 8, 3 -- studs de la cámara entre los que un arma propia se va volviendo translúcida
 local FADE_MOST = 0.85 -- lo translúcida que llega a quedar
-local SPREAD = 0.8 -- radianes entre dos armas alrededor del objetivo (hasta SPREAD_MAX de la primera a la última)
-local SPREAD_MAX = 2.4
-local AIM_LOW, AIM_HIGH = 1.5, 6 -- altura sobre el suelo a la que pegan, entre estas dos (el centro del objetivo si cabe)
-local HIT_POINT = 0.3 -- parte del tajo en la que el arma baja; el resto es volver a la guardia
-local SAME_BLOW = 0.05 -- segundos: los avisos de un mismo golpe que da a varios (salpica) cuentan como un solo tajo
-local DUAL_GAP = 0.45 -- lo que tarda la segunda hoja de las dobles, en veces la duración del tajo
+local AIM_LOW, AIM_HIGH = 1.5, 6 -- altura sobre el suelo por la que atraviesan, entre estas dos (el centro del objetivo si cabe)
+local STANDOFF = 3.5 -- studs del borde del objetivo a los que esperan las armas entre dos pasadas
+local LIFT = 1.5 -- y lo que suben allí sobre la altura por la que atraviesan
+local PROWL = 2.2 -- radianes por segundo a los que rondan al objetivo mientras esperan
+local LAG = 0.04 -- segundos que tarda de más en llegar el aviso de un golpe (la vuelta del servidor)
+local STAGGER = 0.025 -- segundos entre las armas de una misma andanada, para que no crucen todas en el mismo instante
+local FAST = 0.12 -- segundos del final de un lanzamiento en los que el arma ya va lanzada: estela y giro
+local SNAP = 0.03 -- si el aviso llega antes que el arma, lo que tarda esta en acabar de cruzar
+local QUICK = 0.07 -- duración de una pasada que no estaba prevista (llega un golpe sin haberla empezado)
+local CONFIRM = 0.3 -- segundos tras cruzar en los que un aviso aún cuenta como el golpe de esa pasada
+local TURN_FAST, TURN_SLOW = 45, 12 -- lo deprisa que el arma se encara: lanzada y rondando
+local SAME_BLOW = 0.05 -- segundos: los avisos de un mismo golpe que da a varios (salpica) cuentan como uno
 local CHECK = 0.25 -- cada cuántos segundos se mira si hay algo que atacar cerca (para enseñar el aro)
 local CIRCLE_NEAR = 30 -- studs más allá del círculo desde los que ya se enseña el aro
 local CIRCLE_COLOR = Color3.fromRGB(255, 255, 255)
@@ -54,23 +65,25 @@ local DENIED_TIME = 0.4 -- segundos que se queda rojo
 local MARKER_COLOR = Color3.fromRGB(255, 225, 100)
 local FLAT = CFrame.Angles(math.rad(90), 0, 0) -- pone de pie el eje de un cilindro: aros tumbados en el suelo
 
--- Cómo golpea cada tipo de arma (ángulos en grados alrededor de su eje X: positivo = echada hacia atrás, negativo =
--- hacia el objetivo): `time` = segundos del tajo, `ready` = guardia, `strike` = golpe dado, `roll` = lo ladeado que
--- va el corte (alterna de lado en cada golpe) y `lunge` = cuánto avanza, en veces su largo. `thrust` = estocada.
+-- Cómo vuela cada tipo de arma al atacar: `out` = segundos que tarda en salir por el otro lado del objetivo, `back` =
+-- los que tarda en volver a lanzarse desde donde lo ronda, `turns` = vueltas que da en cada pasada (con `tumble`, de
+-- cabeza, como un hacha lanzada; si no, sobre su eje, de punta) y `far` = lo lejos que sale, en veces la distancia a
+-- la que esperan (la lanza, que atraviesa, sale más lejos).
 local MOVES = {
-	sword = { time = 0.24, ready = 30, strike = -105, roll = 40, lunge = 0.25 },
-	dual = { time = 0.2, ready = 30, strike = -100, roll = 50, lunge = 0.2 },
-	axe = { time = 0.34, ready = 60, strike = -110, roll = 12, lunge = 0.3 },
-	hammer = { time = 0.4, ready = 70, strike = -100, roll = 0, lunge = 0.35 },
-	spear = { time = 0.26, thrust = true },
+	sword = { out = 0.1, back = 0.09, turns = 1, far = 1 },
+	dual = { out = 0.07, back = 0.06, turns = 1, far = 0.9 },
+	axe = { out = 0.13, back = 0.12, turns = 2, tumble = true, far = 1 },
+	hammer = { out = 0.15, back = 0.14, turns = 1, tumble = true, far = 1 },
+	spear = { out = 0.12, back = 0.09, turns = 0, far = 1.6 },
 }
-local THRUST_GAP = 1.2 -- lo que le falta a la punta de la lanza para tocar al objetivo, en guardia
 
 local folder: Folder
--- [Player] = { key, holder, phase, fresh, weapons = { arma } }. Cada arma: { copy, key (tipo), kind, move, model, handle,
--- off (segunda hoja de las dobles), reach (de la empuñadura a la punta), height, length (Config), color, orbitMain y
--- orbitOff (colocación en la órbita), frame (dónde va ahora), mix (0 = órbita, 1 = atacando), slashAt, slashTime,
--- side, girth (radio del objetivo), trails, trailOn }
+-- [Player] = { key, holder, phase, fresh, target, weapons = { arma } }. Cada arma lleva sus medidas (reach: de la
+-- empuñadura a la punta; low; height; wide; length: la de Config), dónde va (frame: su centro, con la punta en +Y) y su
+-- vuelo: mode ("orbit" girando, "in" lanzándose, "out" saliendo por el otro lado, "wait" rondando), from e inAt (de
+-- dónde y cuándo se lanzó), cross (cuándo cruza), crossed (cuándo cruzó), dir (hacia dónde sale), angle y dist
+-- (rondando), confirmed (ha llegado el golpe de esta pasada), planned (cuándo le toca la siguiente) y ready (cuándo
+-- puede volver a pegar).
 local rigs = {}
 local dirty = {} -- [Player] = true: han cambiado sus armas y hay que mirar si se rehacen
 local aimed: BasePart? = nil -- objetivo que el jugador local acaba de pedir
@@ -102,6 +115,32 @@ local function extents(handle: BasePart, model: Model): (Vector3, Vector3)
 	return low, high
 end
 
+-- Estela del arma lanzada: una raya de su color que siempre mira a la cámara (la del tajo de SwordModel va de la
+-- base a la punta y, con el arma volando de punta, no dibuja nada).
+local function streak(root: BasePart, center: Vector3, half: number, color: Color3): Trail
+	local ends = {}
+	for index, side in { 1, -1 } do
+		local point = Instance.new("Attachment")
+		point.Name = "Dash" .. index
+		point.Position = center + Vector3.new(0, 0, half * side)
+		point.Parent = root
+		ends[index] = point
+	end
+	local trail = Instance.new("Trail")
+	trail.Name = "DashTrail"
+	trail.Attachment0 = ends[1]
+	trail.Attachment1 = ends[2]
+	trail.FaceCamera = true
+	trail.Color = ColorSequence.new(color:Lerp(WHITE, 0.6), color)
+	trail.Transparency = NumberSequence.new(0.2, 1)
+	trail.WidthScale = NumberSequence.new(1, 0.15)
+	trail.Lifetime = 0.16
+	trail.LightEmission = 0.6
+	trail.Enabled = false
+	trail.Parent = root
+	return trail
+end
+
 local function buildWeapon(owner: Player, slot: number, copy, parent: Instance, lead: boolean)
 	local model = Instance.new("Model")
 	model.Name = "Weapon" .. slot
@@ -120,55 +159,73 @@ local function buildWeapon(owner: Player, slot: number, copy, parent: Instance, 
 
 	local low, high = extents(handle, model)
 	local center = (low + high) / 2
+	local wide = math.max(high.X - low.X, high.Z - low.Z) / 2
 	local key, kind = Stats.kind(copy)
 	local metal = Permanent.metal(copy)
+	local color = if metal then metal.color else Config.Swords[copy.sword].color
 	local toHandle = CFrame.new(-center)
-	local orbitMain, orbitOff
-	if off then
-		-- Las dobles giran cruzadas, en aspa.
-		orbitMain = CFrame.new(-0.18, 0, 0) * CFrame.Angles(math.rad(24), 0, 0) * toHandle
-		orbitOff = CFrame.new(0.18, 0, 0) * CFrame.Angles(math.rad(-24), 0, 0) * toHandle
-	else
-		-- Las demás, de pie: algo vencidas hacia donde giran y hacia fuera (la lanza, más tumbada).
-		orbitMain = CFrame.Angles(math.rad(if key == "spear" then -20 else -8), 0, math.rad(10)) * toHandle
-	end
 
-	-- La estela del tajo, más corta y tenue que en la mano: aquí el arma entera da la vuelta y, en las grandes,
-	-- dibujaba una sábana blanca (visto en Studio).
+	-- La estela del tajo (de la base a la punta) solo se ve en las que vuelan dando vueltas de cabeza, y más corta y
+	-- tenue que en la mano; en las que van de punta barría una sábana blanca al girarse (visto en Studio), así que
+	-- va invisible: se sigue encendiendo porque con ella suelta su ráfaga el aura (client/WeaponAura). Y, en cada
+	-- hoja, la estela de ir lanzada.
+	local move = MOVES[key] or MOVES.sword
 	local trails = {}
 	for _, item in model:GetDescendants() do
 		if item:IsA("Trail") and item.Name == "SwingTrail" then
 			item.Lifetime = 0.1
-			item.Transparency = NumberSequence.new(0.55, 1)
+			item.Transparency = NumberSequence.new(if move.tumble then 0.55 else 1, 1)
 			table.insert(trails, item)
 		end
+	end
+	for _, root in { handle, off } do
+		table.insert(trails, streak(root, center, math.clamp(wide, 0.4, 1.1), color))
 	end
 	model.Parent = parent
 	return {
 		copy = copy,
 		key = key,
 		kind = kind,
-		move = MOVES[key] or MOVES.sword,
+		move = move,
 		model = model,
 		handle = handle,
 		off = off,
 		reach = math.max(high.Y, 1),
 		low = low.Y,
 		height = high.Y - low.Y,
-		faded = 0,
-		wide = math.max(high.X - low.X, high.Z - low.Z) / 2,
+		wide = wide,
 		length = Config.Swords[copy.sword].bladeLength,
-		color = if metal then metal.color else Config.Swords[copy.sword].color,
-		orbitMain = orbitMain,
-		orbitOff = orbitOff,
+		color = color,
+		toHandle = toHandle,
+		-- En la órbita van de pie, algo vencidas hacia donde giran y hacia fuera (la lanza, más tumbada); las dobles,
+		-- cruzadas en aspa. Atacando, las dobles van una a cada lado.
+		lean = if off then CFrame.identity else CFrame.Angles(math.rad(if key == "spear" then -20 else -8), 0, math.rad(10)),
+		orbitMain = CFrame.new(-0.18, 0, 0) * CFrame.Angles(math.rad(24), 0, 0) * toHandle,
+		orbitOff = CFrame.new(0.18, 0, 0) * CFrame.Angles(math.rad(-24), 0, 0) * toHandle,
+		gap = 0.9 * wide + 0.6,
 		frame = CFrame.identity,
 		mix = 0,
-		slashAt = 0,
-		slashTime = 0.2,
+		spin = 0,
+		heading = Vector3.yAxis,
+		right = Vector3.xAxis,
+		mode = "orbit",
+		from = Vector3.zero,
+		inAt = 0,
+		cross = 0,
+		crossed = 0,
+		dir = Vector3.xAxis,
+		angle = 0,
+		dist = 0,
+		confirmed = false,
+		planned = nil :: number?,
+		ready = 0,
+		outTime = move.out,
+		backTime = move.back,
 		side = if slot % 2 == 0 then 1 else -1,
-		girth = 2,
+		lastHit = 0,
 		trails = trails,
-		trailOn = false,
+		dashing = false,
+		faded = 0,
 	}
 end
 
@@ -215,16 +272,16 @@ local function build(owner: Player)
 		weapons[slot] = buildWeapon(owner, slot, copy, holder, slot == lead)
 	end
 	holder.Parent = folder
-	rigs[owner] = { key = key, holder = holder, weapons = weapons, phase = (owner.UserId % 628) / 100, fresh = true }
+	rigs[owner] = { key = key, holder = holder, weapons = weapons, phase = (owner.UserId % 628) / 100, fresh = true, target = nil :: BasePart? }
 end
 
--- Objetivo al que van las armas de ese jugador. El jugador local adelanta el suyo mientras el servidor contesta.
+-- Objetivo al que van las armas de ese jugador. El jugador local adelanta el que acaba de pedir mientras el servidor
+-- contesta.
 local function targetOf(owner: Player, now: number): BasePart?
-	local target = Targeting.current(owner)
-	if not target and owner == player and aimed and now < aimedUntil and aimed:IsDescendantOf(workspace) then
-		target = aimed
+	if owner == player and aimed and now < aimedUntil and aimed:IsDescendantOf(workspace) then
+		return aimed
 	end
-	return target
+	return Targeting.current(owner)
 end
 
 -- Sitio del arma en la órbita: su centro, mirando hacia donde gira.
@@ -234,76 +291,151 @@ local function orbitFrame(rig, weapon, index: number, count: number, root: BaseP
 	local along = Vector3.new(-out.Z, 0, out.X)
 	local y = math.max(root.Position.Y + ORBIT_LIFT, ground + weapon.height / 2 + GROUND_GAP) + math.sin(now * 2.1 + index * 1.7) * BOB
 	local center = Vector3.new(root.Position.X, y, root.Position.Z) + out * (ORBIT_RADIUS + weapon.wide)
-	return CFrame.lookAt(center, center + along)
+	return CFrame.lookAt(center, center + along) * weapon.lean
 end
 
--- Sitio del arma junto al objetivo: su empuñadura, mirándolo. Se reparten por el lado del jugador.
-local function strikeFrame(weapon, index: number, count: number, root: BasePart, ground: number, target: BasePart): CFrame
+-- Ataque -------------------------------------------------------------------------------------
+
+-- Dónde va el arma con la punta (su +Y) hacia donde vuela y el filo de canto. Guarda hacia dónde tenía el costado
+-- para no girar de golpe sobre sí misma al pasar por la vertical (al darse la vuelta por arriba).
+local function facing(weapon, position: Vector3): CFrame
+	local heading = weapon.heading
+	local right = heading:Cross(Vector3.yAxis)
+	if right.Magnitude > 0.05 then
+		weapon.right = if right:Dot(weapon.right) < 0 then -right.Unit else right.Unit
+	end
+	local back = weapon.right:Cross(heading)
+	back = if back.Magnitude > 1e-3 then back.Unit else Vector3.zAxis
+	return CFrame.fromMatrix(position, heading:Cross(back), heading, back)
+end
+
+-- Encara el arma hacia `toward`, poco a poco.
+local function turn(weapon, toward: Vector3, rate: number, dt: number)
+	if toward.Magnitude < 1e-3 then
+		return
+	end
+	local goal = toward.Unit
+	if weapon.heading:Dot(goal) < -0.9 then
+		-- Justo de espaldas no hay camino por el medio: da la vuelta por arriba.
+		goal = (goal + Vector3.yAxis).Unit
+	end
+	local blended = weapon.heading:Lerp(goal, 1 - math.exp(-rate * dt))
+	weapon.heading = if blended.Magnitude > 1e-3 then blended.Unit else goal
+end
+
+-- El arma se lanza desde donde está para cruzar el objetivo en el instante `cross`.
+local function launch(weapon, now: number, cross: number)
+	weapon.mode = "in"
+	weapon.from = weapon.frame.Position
+	weapon.inAt = now
+	weapon.cross = math.max(cross, now + SNAP)
+	weapon.confirmed = false
+	weapon.planned = nil
+end
+
+-- El objetivo de las armas ha cambiado: se lanzan todas a por el nuevo, o vuelven a girar si no hay.
+local function retarget(rig, owner: Player, target: BasePart?, previous: BasePart?, now: number)
+	local arrive = now
+	if target then
+		-- Lo que tardan en llegar: lo de un clic o, si han saltado solas porque el anterior ha caído, lo de un salto.
+		local asked = owner == player and aimed == target
+		local chained = not asked and previous ~= nil and not previous:IsDescendantOf(workspace)
+		arrive += if chained then Config.Loadout.Chain else Config.Loadout.Travel
+		if asked then
+			arrive += math.min(player:GetNetworkPing() * 2, 0.2) -- la petición aún tiene que llegar al servidor
+		end
+	end
+	for slot, weapon in rig.weapons do
+		if target then
+			if weapon.mode == "orbit" then
+				weapon.heading, weapon.right = weapon.frame.UpVector, weapon.frame.RightVector
+			end
+			-- La que aún no puede pegar se lanza más tarde, cuando le toque.
+			launch(weapon, now, math.max(arrive, weapon.ready) + LAG + (slot - 1) * STAGGER)
+		else
+			weapon.mode = "orbit"
+			weapon.planned = nil
+		end
+	end
+end
+
+-- Mueve el arma en su ataque: deja en weapon.frame dónde va y en weapon.spin la vuelta que lleva dada (0 a 1).
+-- Devuelve true mientras va lanzada.
+local function fly(weapon, target: BasePart, ground: number, now: number, dt: number): boolean
 	local center = target.Position
-	local toPlayer = Vector3.new(root.Position.X - center.X, 0, root.Position.Z - center.Z)
-	toPlayer = if toPlayer.Magnitude > 0.2 then toPlayer.Unit else Vector3.zAxis
-	local turn = if count > 1 then ((index - 1) / (count - 1) - 0.5) * math.min(SPREAD_MAX, SPREAD * (count - 1)) else 0
-	local side = CFrame.Angles(0, turn, 0):VectorToWorldSpace(toPlayer)
-	local girth = math.max(target.Size.X, target.Size.Z) / 2
-	weapon.girth = girth
-	local aim = math.clamp(center.Y, ground + AIM_LOW, ground + AIM_HIGH)
-	local distance, height
-	if weapon.move.thrust then
-		distance, height = girth + weapon.reach + THRUST_GAP, aim + 0.3
+	local aim = Vector3.new(center.X, math.clamp(center.Y, ground + AIM_LOW, ground + AIM_HIGH), center.Z)
+	local radius = math.max(target.Size.X, target.Size.Z) / 2 + STANDOFF + weapon.reach * 0.2
+	local far = radius * weapon.move.far
+
+	-- Le toca otra pasada: sale desde donde esté.
+	if weapon.mode ~= "in" and weapon.planned and now >= weapon.planned - weapon.backTime then
+		launch(weapon, now, weapon.planned)
+	end
+	if weapon.mode == "in" and now >= weapon.cross then
+		local through = Vector3.new(aim.X - weapon.from.X, 0, aim.Z - weapon.from.Z)
+		if through.Magnitude > 0.5 then
+			weapon.dir = through.Unit
+		end
+		weapon.crossed = weapon.cross
+		weapon.mode = "out"
+	end
+	if weapon.mode == "out" and now >= weapon.crossed + weapon.outTime then
+		weapon.mode = "wait"
+		weapon.angle = math.atan2(weapon.dir.Z, weapon.dir.X)
+		weapon.dist = far
+	end
+
+	local position: Vector3
+	if weapon.mode == "in" then
+		-- Coge carrerilla despacio y sale disparada.
+		local span = weapon.cross - weapon.inAt
+		position = weapon.from:Lerp(aim, math.clamp((now - weapon.inAt) / span, 0, 1) ^ 3)
+		turn(weapon, aim - weapon.from, TURN_FAST, dt)
+		weapon.spin = 0.5 * math.clamp(1 - (weapon.cross - now) / math.min(span, FAST), 0, 1)
+	elseif weapon.mode == "out" then
+		-- Sale por el otro lado frenando.
+		local t = (now - weapon.crossed) / weapon.outTime
+		local eased = 1 - (1 - t) ^ 2
+		position = aim + weapon.dir * (far * eased) + Vector3.new(0, LIFT * eased, 0)
+		turn(weapon, weapon.dir, TURN_FAST, dt)
+		weapon.spin = 0.5 + 0.5 * t
 	else
-		distance, height = girth + weapon.reach * 0.55, aim + weapon.reach * 0.35
+		-- Ronda al objetivo, encarada a él, hasta la siguiente pasada.
+		weapon.angle += weapon.side * PROWL * dt
+		weapon.dist += (radius - weapon.dist) * (1 - math.exp(-6 * dt))
+		local out = Vector3.new(math.cos(weapon.angle), 0, math.sin(weapon.angle))
+		position = aim + out * weapon.dist + Vector3.new(0, LIFT + math.sin(now * 3 + weapon.angle) * 0.25, 0)
+		turn(weapon, aim - position, TURN_SLOW, dt)
+		weapon.spin = 0
 	end
-	local at = Vector3.new(center.X, height, center.Z)
-	return CFrame.lookAt(at + side * distance, at)
+	weapon.frame = facing(weapon, position)
+	return weapon.mode == "out" or (weapon.mode == "in" and weapon.cross - now < FAST)
 end
 
--- Cuánto del golpe lleva dado (0 = en guardia, 1 = golpe dado) a `t` de 0 a 1 de su duración: baja deprisa y vuelve.
-local function swing(t: number): number
-	if t <= 0 or t >= 1 then
-		return 0
-	elseif t < HIT_POINT then
-		return 1 - (1 - t / HIT_POINT) ^ 2
+-- Enciende o apaga las estelas del arma lanzada (en Rendimiento no se encienden).
+local function setDash(weapon, on: boolean, lite: boolean)
+	if weapon.dashing == on then
+		return
 	end
-	return 0.5 + 0.5 * math.cos((t - HIT_POINT) / (1 - HIT_POINT) * math.pi)
-end
-
--- Postura de una hoja junto al objetivo, respecto a su sitio (strikeFrame).
-local function strikePose(weapon, now: number, delay: number, side: number, shift: number): CFrame
-	local move = weapon.move
-	local done = swing((now - weapon.slashAt) / weapon.slashTime - delay)
-	if move.thrust then
-		local advance = (THRUST_GAP + math.min(weapon.girth, 3) + 1) * done
-		return CFrame.new(shift, 0, -advance) * CFrame.Angles(math.rad(-94), 0, 0)
+	weapon.dashing = on
+	if on and lite then
+		return
 	end
-	local sway = if done == 0 then math.sin(now * 2.5 + shift + weapon.side) * 4 else 0
-	local angle = move.ready + (move.strike - move.ready) * done + sway
-	return CFrame.new(shift, 0, -move.lunge * weapon.reach * done) * CFrame.Angles(0, 0, math.rad(move.roll) * side) * CFrame.Angles(math.rad(angle), 0, 0)
-end
-
-local function setTrail(weapon, on: boolean)
-	weapon.trailOn = on
 	for _, trail in weapon.trails do
 		trail.Enabled = on
 	end
 end
 
-local function place(weapon, now: number)
-	local mix = weapon.mix
-	if mix < 0.002 then
-		weapon.handle.CFrame = weapon.frame * weapon.orbitMain
-		if weapon.off then
-			weapon.off.CFrame = weapon.frame * weapon.orbitOff
-		end
-	elseif weapon.off then
-		-- Dobles: una hoja a cada lado, y la segunda golpea un poco después y por el otro lado.
-		local gap = 0.9 * weapon.wide + 0.6
-		weapon.handle.CFrame = weapon.frame * weapon.orbitMain:Lerp(strikePose(weapon, now, 0, weapon.side, -gap), mix)
-		weapon.off.CFrame = weapon.frame * weapon.orbitOff:Lerp(strikePose(weapon, now, DUAL_GAP, -weapon.side, gap), mix)
+local function place(weapon)
+	local angle = TAU * weapon.move.turns * weapon.spin
+	local spin = if weapon.move.tumble then CFrame.Angles(angle, 0, 0) else CFrame.Angles(0, angle, 0)
+	if weapon.off then
+		local main = CFrame.new(-weapon.gap, 0, 0) * spin * weapon.toHandle
+		local off = CFrame.new(weapon.gap, 0, 0) * spin:Inverse() * weapon.toHandle
+		weapon.handle.CFrame = weapon.frame * weapon.orbitMain:Lerp(main, weapon.mix)
+		weapon.off.CFrame = weapon.frame * weapon.orbitOff:Lerp(off, weapon.mix)
 	else
-		weapon.handle.CFrame = weapon.frame * weapon.orbitMain:Lerp(strikePose(weapon, now, 0, weapon.side, 0), mix)
-	end
-	if weapon.trailOn and now - weapon.slashAt > weapon.slashTime * (if weapon.off then 1 + DUAL_GAP else 1) then
-		setTrail(weapon, false)
+		weapon.handle.CFrame = weapon.frame * spin * weapon.toHandle
 	end
 end
 
@@ -351,19 +483,27 @@ local function stepRig(owner: Player, now: number, dt: number, eye: Vector3, lit
 	end
 	local rig = rigs[owner]
 	local ground = root.Position.Y - standing(humanoid, root)
-	local target = targetOf(owner, now)
+	-- Recién hechas van primero a su sitio en la órbita; el objetivo, en la vuelta siguiente.
+	local target = if rig.fresh then nil else targetOf(owner, now)
+	if target ~= rig.target then
+		retarget(rig, owner, target, rig.target, now)
+		rig.target = target
+	end
 	local count = #rig.weapons
-	local alpha = 1 - math.exp(-(if target then STRIKE_FOLLOW else FOLLOW) * dt)
-	local goalMix = if target then 1 else 0
+	local follow = 1 - math.exp(-FOLLOW * dt)
+	local blend = 1 - math.exp(-20 * dt)
 	for index, weapon in rig.weapons do
-		local goal = if target then strikeFrame(weapon, index, count, root, ground, target) else orbitFrame(rig, weapon, index, count, root, ground, now)
-		if rig.fresh then
-			weapon.frame, weapon.mix = goal, goalMix
+		if target and weapon.mode ~= "orbit" then
+			setDash(weapon, fly(weapon, target, ground, now, dt), lite)
+			weapon.mix += (1 - weapon.mix) * blend
 		else
-			weapon.frame = weapon.frame:Lerp(goal, alpha)
-			weapon.mix += (goalMix - weapon.mix) * alpha
+			local goal = orbitFrame(rig, weapon, index, count, root, ground, now)
+			weapon.frame = if rig.fresh then goal else weapon.frame:Lerp(goal, follow)
+			weapon.mix = if rig.fresh then 0 else weapon.mix * (1 - blend)
+			weapon.spin = 0
+			setDash(weapon, false, lite)
 		end
-		place(weapon, now)
+		place(weapon)
 		if mine then
 			fade(weapon, eye)
 		end
@@ -459,7 +599,8 @@ end
 
 -- Avisos -------------------------------------------------------------------------------------
 
--- Golpe del arma de ese hueco: da el tajo, suena y, si salpica o atraviesa, enseña hasta dónde.
+-- Golpe del arma de ese hueco: confirma su pasada (o la da ya, si no la había empezado), deja prevista la siguiente,
+-- suena y, si salpica o atraviesa, enseña hasta dónde.
 local function onHit(hitter: Player, _part: BasePart?, position: Vector3, _damage: number, slot: number?)
 	local rig = rigs[hitter]
 	local weapon = rig and slot and rig.weapons[slot]
@@ -467,21 +608,29 @@ local function onHit(hitter: Player, _part: BasePart?, position: Vector3, _damag
 		return
 	end
 	local now = os.clock()
-	if now - weapon.slashAt < SAME_BLOW then
+	if now - weapon.lastHit < SAME_BLOW then
 		return
 	end
+	weapon.lastHit = now
 	local cooldown = Stats.weaponCooldown(hitter, weapon.copy)
-	weapon.slashAt = now
-	weapon.slashTime = math.min(weapon.move.time, cooldown * 0.9)
-	weapon.side = -weapon.side
-	local lite = Performance.get()
-	if not lite then
-		setTrail(weapon, true)
+	weapon.ready = now + cooldown
+	-- Con un arma muy rápida las pasadas se encogen para caber entre dos golpes.
+	local squeeze = math.min(1, cooldown * 0.9 / (weapon.move.out + weapon.move.back))
+	weapon.outTime, weapon.backTime = weapon.move.out * squeeze, weapon.move.back * squeeze
+	if weapon.mode ~= "orbit" then
+		if weapon.mode == "in" then
+			weapon.cross = math.min(weapon.cross, now + SNAP)
+		elseif weapon.confirmed or now - weapon.crossed > CONFIRM then
+			launch(weapon, now, now + QUICK * squeeze)
+		end
+		weapon.confirmed = true
+		weapon.planned = now + cooldown
 	end
+
 	-- Sale del arma; los de los demás, más flojos.
 	Sfx.swing(weapon.key, cooldown, weapon.handle.Position, if hitter == player then 0.8 else 0.5)
 	local root = hitter.Character and hitter.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if lite or not root then
+	if Performance.get() or not root then
 		return
 	end
 	local origin, range = Hitbox.spread(weapon.kind, weapon.length, root.Position, position)

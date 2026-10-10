@@ -70,7 +70,13 @@ local function run()
 		-- Dentro de una mazmorra manda su propio Auto (client/Dungeons).
 		local farm = on("AutoFarm") and (player:GetAttribute("Dungeon") or 0) == 0
 		if farm then
-			if not target or not Targeting.valid(target) then
+			-- Si las armas ya tienen objetivo (el servidor las pasa solas al siguiente del círculo), ese es el suyo:
+			-- pedir otro las haría dar la vuelta.
+			local current = Targeting.current()
+			if current and current ~= target then
+				target = current
+				since = os.clock()
+			elseif not target or not Targeting.valid(target) then
 				target = Targeting.nearest(nil, skip)
 				since = os.clock()
 			end
