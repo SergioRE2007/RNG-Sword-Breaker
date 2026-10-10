@@ -73,8 +73,29 @@ local function ease(target: Instance, time: number, style: Enum.EasingStyle, goa
 	TweenService:Create(target, TweenInfo.new(time, style, Enum.EasingDirection.Out), goal):Play()
 end
 
--- `logo` es un nombre de Ui.IMAGES. Con `wide`, el botón alargado de la barra de transporte.
-function MenuTile.new(parent: Instance, text: string, color: Color3, logo: string, wide: boolean?): TextButton
+-- Arcoíris de los rayos del botón de la Tienda: una vuelta entera al color, para que al girar no se note el corte.
+local RAINBOW_STEPS = 12
+local RAINBOW_SPIN = -140 -- grados por segundo a los que el arcoíris recorre los rayos (al revés que ellos)
+local RAINBOW_HUE = 0.35 -- vueltas de color por segundo de los destellos
+local function rainbow(): ColorSequence
+	local points = {}
+	for step = 0, RAINBOW_STEPS do
+		local at = step / RAINBOW_STEPS
+		points[step + 1] = ColorSequenceKeypoint.new(at, Color3.fromHSV(at % 1, 0.85, 1))
+	end
+	return ColorSequence.new(points)
+end
+
+-- `logo` es un nombre de Ui.IMAGES. Con `wide`, el botón alargado de la barra de transporte. Con `exotic`
+-- (el de la Tienda), los rayos y los destellos que salen al pasar el ratón van en arcoíris.
+function MenuTile.new(
+	parent: Instance,
+	text: string,
+	color: Color3,
+	logo: string,
+	wide: boolean?,
+	exotic: boolean?
+): TextButton
 	local layout = if wide then WIDE else SQUARE
 	local item = Instance.new("TextButton")
 	item.Text = ""
@@ -115,6 +136,17 @@ function MenuTile.new(parent: Instance, text: string, color: Color3, logo: strin
 	rays.ImageColor3 = color:Lerp(WHITE, 0.75)
 	rays.ImageTransparency = 1
 	rays.Parent = item
+	local raysShown = 0.38 -- transparencia de los rayos con el ratón encima
+	local rayColors: UIGradient? = nil
+	if exotic then
+		-- El degradado tiñe la imagen (blanca) y gira con ella; además da vueltas por su cuenta.
+		rays.ImageColor3 = WHITE
+		raysShown = 0.08
+		local colors = Instance.new("UIGradient")
+		colors.Color = rainbow()
+		colors.Parent = rays
+		rayColors = colors
+	end
 
 	-- Canto claro por dentro del borde negro, más luminoso arriba que abajo.
 	local rim = Instance.new("Frame")
@@ -196,7 +228,7 @@ function MenuTile.new(parent: Instance, text: string, color: Color3, logo: strin
 		end
 		ease(iconScale, 0.25, Enum.EasingStyle.Back, { Scale = 1.12 })
 		ease(labelScale, 0.25, Enum.EasingStyle.Back, { Scale = 1.06 })
-		ease(rays, 0.25, Enum.EasingStyle.Quad, { ImageTransparency = 0.38 })
+		ease(rays, 0.25, Enum.EasingStyle.Quad, { ImageTransparency = raysShown })
 		ease(pattern, 0.25, Enum.EasingStyle.Quad, { ImageTransparency = 0.52 })
 		local time = 0
 		loop = RunService.RenderStepped:Connect(function(dt)
@@ -211,6 +243,9 @@ function MenuTile.new(parent: Instance, text: string, color: Color3, logo: strin
 			icon.Rotation = shake + math.sin(time * 3.2) * 3.5 * settled
 			icon.Position = iconRest + UDim2.fromOffset(0, -math.abs(math.sin(time * 3.2)) * 3 * settled)
 			rays.Rotation = time * 55
+			if rayColors then
+				rayColors.Rotation = (time * RAINBOW_SPIN) % 360
+			end
 			scroll = (scroll + dt * PATTERN_SPEED) % PATTERN_TILE
 			pattern.Position = UDim2.fromOffset(-scroll, -scroll)
 			for index, star in twinkles do
@@ -218,6 +253,9 @@ function MenuTile.new(parent: Instance, text: string, color: Color3, logo: strin
 				local size = math.max(math.sin(time * 5 + spot.phase), 0) * spot.size
 				star.Size = UDim2.fromOffset(size, size)
 				star.Rotation = time * 60 + spot.phase * 40
+				if exotic then
+					star.ImageColor3 = Color3.fromHSV((time * RAINBOW_HUE + index / #twinkles) % 1, 0.45, 1)
+				end
 			end
 		end)
 	end

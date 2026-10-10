@@ -716,6 +716,13 @@ end
 
 -- Brillos que cruzan los títulos de las ventanas (los mueve un solo bucle).
 local shines = {}
+-- Fondo de las ventanas (Ui.window), que se mueve muy despacio (pedido por el usuario: rápido, cansa).
+local ambients = {}
+local HEADER_CELL = 14 -- lado de los cuadros de la cabecera
+local HEADER_SWAY = 20-- segundos que tarda el degradado de la cabecera en ir y volver
+local HEADER_SPEED = 5 -- píxeles por segundo a los que bajan los cuadros de la cabecera
+local BODY_TILE = 44 -- periodo de los rombos del cuerpo (el de Ui.pattern)
+local BODY_SPEED = 7 -- píxeles por segundo a los que bajan
 local glintsHidden = false
 RunService.RenderStepped:Connect(function()
 	-- Modo rendimiento: ni brillos en los títulos ni destellos en los botones (se esconden y se devuelven al apagarlo).
@@ -738,6 +745,15 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 	local now = os.clock()
+	-- Fondo vivo de las ventanas abiertas: el degradado de la cabecera va y viene y los cuadros y rombos bajan.
+	for _, ambient in ambients do
+		if ambient.frame.Visible then
+			ambient.colors.Offset = Vector2.new(math.sin(now * math.pi * 2 / HEADER_SWAY) * 0.3, 0)
+			local period = HEADER_CELL * 2
+			ambient.tiles.Position = UDim2.fromOffset(0, (now * HEADER_SPEED) % period - period)
+			ambient.pattern.Position = UDim2.fromOffset(0, (now * BODY_SPEED) % BODY_TILE - BODY_TILE)
+		end
+	end
 	for gradient, phase in shines do
 		if gradient.Parent then
 			-- Pasa de izquierda a derecha cada 3 s y espera un poco fuera.
@@ -819,7 +835,14 @@ local function checker(parent: GuiObject, size: Vector2, cell: number, inset: nu
 	holder.BackgroundTransparency = 1
 	holder.ClipsDescendants = true
 	holder.Parent = parent
-	for row = 0, math.ceil(size.Y / cell) - 1 do
+	-- Los cuadros van en un marco de dentro, con dos filas de más (un periodo), que es el que baja despacio.
+	local tiles = Instance.new("Frame")
+	tiles.Name = "Tiles"
+	tiles.Position = UDim2.fromOffset(0, -cell * 2)
+	tiles.Size = UDim2.new(1, 0, 1, cell * 2)
+	tiles.BackgroundTransparency = 1
+	tiles.Parent = holder
+	for row = 0, math.ceil(size.Y / cell) + 1 do
 		for column = 0, math.ceil((size.X - inset * 2) / cell) - 1 do
 			if (row + column) % 2 == 0 then
 				local square = Instance.new("Frame")
@@ -828,10 +851,11 @@ local function checker(parent: GuiObject, size: Vector2, cell: number, inset: nu
 				square.BackgroundColor3 = WHITE
 				square.BackgroundTransparency = 0.93
 				square.BorderSizePixel = 0
-				square.Parent = holder
+				square.Parent = tiles
 			end
 		end
 	end
+	return tiles
 end
 
 -- Ventana centrada con sombra, cabecera degradada a cuadros con brillo y título que destella,
@@ -896,7 +920,7 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(235, 100, 215)),
 	})
 	headerColors.Parent = header
-	checker(header, Vector2.new(size.X, 58), 14, 14)
+	local headerTiles = checker(header, Vector2.new(size.X, 58), HEADER_CELL, 14)
 	local gloss = Instance.new("Frame")
 	gloss.Name = "Gloss"
 	gloss.Position = UDim2.fromOffset(8, 3)
@@ -960,7 +984,19 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	Ui.round(body, 12)
 	Ui.stroke(body, BLACK, 4)
 	Ui.gradient(body, Color3.fromRGB(66, 74, 124), Color3.fromRGB(30, 33, 64), 90)
-	Ui.pattern(body)
+	-- Los rombos bajan despacio: la imagen sobresale un periodo por arriba dentro de un recorte, que es un
+	-- rectángulo metido lo justo para no asomar por las esquinas redondas del cuerpo.
+	local bodyClip = Instance.new("Frame")
+	bodyClip.Name = "PatternClip"
+	bodyClip.Position = UDim2.fromOffset(4, 4)
+	bodyClip.Size = UDim2.new(1, -8, 1, -8)
+	bodyClip.BackgroundTransparency = 1
+	bodyClip.ClipsDescendants = true
+	bodyClip.Parent = body
+	local bodyTiles = Ui.pattern(bodyClip)
+	bodyTiles.Position = UDim2.fromOffset(0, -BODY_TILE)
+	bodyTiles.Size = UDim2.new(1, 0, 1, BODY_TILE)
+	table.insert(ambients, { frame = frame, colors = headerColors, tiles = headerTiles, pattern = bodyTiles })
 	windows[name] = frame
 	return frame, body
 end
