@@ -208,16 +208,46 @@ local function buildPlot(index: number, parent: Instance)
 	signAnchor.CanQuery = false
 	signAnchor.Transparency = 1
 	signAnchor.Size = Vector3.one
-	signAnchor.CFrame = cframe * CFrame.new(0, 9, -cfg.Size / 2)
+	signAnchor.CFrame = cframe * CFrame.new(0, 21, -cfg.Size / 2)
 	signAnchor.Parent = model
 
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(320, 50)
+	gui.Size = UDim2.fromOffset(320, 140)
 	gui.MaxDistance = 250
 	gui.Parent = signAnchor
 
+	-- Círculo con la cara del dueño, encima del nombre (escondido si está libre).
+	local avatar = Instance.new("Frame")
+	avatar.Name = "Avatar"
+	avatar.AnchorPoint = Vector2.new(0.5, 0)
+	avatar.Position = UDim2.fromScale(0.5, 0)
+	avatar.Size = UDim2.fromOffset(84, 84)
+	avatar.BackgroundColor3 = Color3.new(0, 0, 0)
+	avatar.Visible = false
+	avatar.Parent = gui
+	local avatarCorner = Instance.new("UICorner")
+	avatarCorner.CornerRadius = UDim.new(1, 0)
+	avatarCorner.Parent = avatar
+
+	local face = Instance.new("ImageLabel")
+	face.Name = "Face"
+	face.AnchorPoint = Vector2.new(0.5, 0.5)
+	face.Position = UDim2.fromScale(0.5, 0.5)
+	face.Size = UDim2.new(1, -8, 1, -8)
+	face.BackgroundColor3 = plotColor(index, 1)
+	face.Parent = avatar
+	local faceCorner = Instance.new("UICorner")
+	faceCorner.CornerRadius = UDim.new(1, 0)
+	faceCorner.Parent = face
+	local faceStroke = Instance.new("UIStroke")
+	faceStroke.Thickness = 3
+	faceStroke.Color = plotColor(index, 1)
+	faceStroke.Parent = face
+
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
+	label.AnchorPoint = Vector2.new(0, 1)
+	label.Position = UDim2.fromScale(0, 1)
+	label.Size = UDim2.new(1, 0, 0, 50)
 	label.BackgroundTransparency = 1
 	label.TextColor3 = plotColor(index, 1)
 	label.TextStrokeTransparency = 0
@@ -227,7 +257,7 @@ local function buildPlot(index: number, parent: Instance)
 	label.Parent = gui
 
 	model.Parent = parent
-	plots[index] = { index = index, cframe = cframe, spawnOffset = spawnOffset, owner = nil, tiles = tiles, spawn = spawn, label = label }
+	plots[index] = { index = index, cframe = cframe, spawnOffset = spawnOffset, owner = nil, tiles = tiles, spawn = spawn, label = label, avatar = avatar, face = face }
 end
 
 local function moveToPlot(character: Model, plot)
@@ -241,6 +271,8 @@ local function assign(player: Player)
 			byPlayer[player] = plot
 			paint(plot, true)
 			plot.label.Text = "Parcela de " .. player.DisplayName
+			plot.face.Image = `rbxthumb://type=AvatarHeadShot&id={math.max(player.UserId, 1)}&w=150&h=150`
+			plot.avatar.Visible = true
 			player.RespawnLocation = plot.spawn
 
 			-- Por si el personaje aparece antes de que RespawnLocation haga efecto.
@@ -272,6 +304,7 @@ local function release(player: Player)
 	plot.owner = nil
 	paint(plot, false)
 	plot.label.Text = "Parcela libre"
+	plot.avatar.Visible = false
 end
 
 function Plots.get(player: Player)
