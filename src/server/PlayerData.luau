@@ -9,6 +9,7 @@ local HttpService = game:GetService("HttpService")
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local BalanceSnapshots = require(ReplicatedStorage.Shared.BalanceSnapshots)
 local Config = require(ReplicatedStorage.Shared.Config)
+local IndexInfo = require(ReplicatedStorage.Shared.IndexInfo)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 
@@ -263,6 +264,7 @@ local function load(player: Player)
 	-- items = { [nombre] = cantidad } (las pociones también son objetos); artifacts = índices de Config.Artifacts que tiene; gear = los equipados.
 	-- armor = piezas de armadura (ver shared/ArmorStats); armorWorn = { [hueco] = id de la pieza equipada }.
 	-- potions = pociones activas { [familia de Config.Potions.Families] = { tier, seconds = tiempo de juego que queda } }.
+	-- index = Índice de armas: códigos de shared/IndexInfo de lo que le ha salido (nil hasta que server/Index lo estrena).
 	local data = {
 		coins = Config.StartCoins,
 		gems = 0,
@@ -316,6 +318,7 @@ local function load(player: Player)
 					data.traitPriority = saved.traitPriority
 				end
 				loadSwords(data, saved)
+				data.index = IndexInfo.sanitize(saved.index)
 				if type(saved.items) == "table" then
 					for name in Config.Items do
 						data.items[name] = math.max(0, tonumber(saved.items[name]) or 0)

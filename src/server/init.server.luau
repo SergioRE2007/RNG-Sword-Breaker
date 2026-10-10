@@ -16,6 +16,7 @@ require(script.LightLift).start() -- después de DungeonLobby: el ascensor de lu
 require(script.Destructibles).start()
 require(script.Movement).start()
 require(script.Swords).start()
+require(script.Index).start() -- Índice de armas: antes de Gacha, que le apunta cada tirada
 require(script.Gacha).start()
 require(script.Traits).start()
 require(script.ModifierShops).start()

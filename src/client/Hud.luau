@@ -326,6 +326,10 @@ function Hud.start()
 		{ "TradeList", "Trades", Color3.fromRGB(40, 170, 200), function(parent)
 			Ui.image(parent, "trade")
 		end },
+		-- Índice de armas (client/Index). Logo provisional: el usuario pondrá el suyo.
+		{ "Index", "Índice", Ui.COLORS.purple, function(parent)
+			Ui.image(parent, "espada")
+		end },
 	}
 	for order, entry in menuItems do
 		local item = Ui.button(menu, "", entry[3])
