@@ -4,6 +4,7 @@
 -- hay luz dorada y rosa, bloom y niebla rosada. Las piezas con forma salen de shared/PropModel (modelos de
 -- Blender); sin ese archivo se queda el suelo, la luz y el agua. Todo es decoración: no afecta al juego.
 local CollectionService = game:GetService("CollectionService")
+local GeometryService = game:GetService("GeometryService")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -24,6 +25,7 @@ local PETALS = { Color3.fromRGB(255, 150, 200), Color3.fromRGB(255, 190, 220), C
 local MIST_MOUNTAINS = { Color3.fromRGB(176, 140, 205), Color3.fromRGB(196, 150, 200), Color3.fromRGB(150, 130, 200) }
 local TREES = { "Sakura", "Sakura", "SakuraB", "SakuraB", "Maple", "Pine" }
 local ISLAND_RADIUS = Config.Plot.RingRadius + Config.Plot.Size * 0.75 + 35
+local POND_RADIUS = 24
 local TREE_SPACE = 5.2 -- sitio que guarda un árbol por cada punto de escala: los troncos no se pegan y las copas solo se rozan
 
 local function part(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material): Part
@@ -69,6 +71,44 @@ local function disc(parent: Instance, name: string, center: Vector3, radius: num
 	local item = part(parent, name, Vector3.new(top - bottom, radius * 2, radius * 2), CFrame.new(center.X, (top + bottom) / 2, center.Z) * CFrame.Angles(0, 0, math.rad(90)), color, material)
 	item.Shape = Enum.PartType.Cylinder
 	return item
+end
+
+-- Abre en un disco del suelo un agujero redondo por cada estanque (resta de sólidos en el servidor, todos de una vez).
+-- Devuelve el disco nuevo, o el mismo si la resta falla.
+local function cutHoles(target: Part, holes: { { position: Vector3, radius: number } }): (Part, boolean)
+	local cutters = {}
+	for _, hole in holes do
+		local cutter = Instance.new("Part")
+		cutter.Shape = Enum.PartType.Cylinder
+		cutter.Anchored = true
+		cutter.CanCollide = false
+		cutter.Size = Vector3.new(target.Size.X + 2, hole.radius * 2, hole.radius * 2)
+		cutter.CFrame = CFrame.new(hole.position.X, target.Position.Y, hole.position.Z) * CFrame.Angles(0, 0, math.rad(90))
+		cutter.Parent = workspace
+		table.insert(cutters, cutter)
+	end
+	local ok, result = pcall(function()
+		return GeometryService:SubtractAsync(target, cutters, { CollisionFidelity = Enum.CollisionFidelity.PreciseConvexDecomposition, RenderFidelity = Enum.RenderFidelity.Automatic })
+	end)
+	for _, cutter in cutters do
+		cutter:Destroy()
+	end
+	local piece = if ok and type(result) == "table" then result[1] else nil
+	if not piece then
+		warn(`SceneryJapan: no se pudo abrir el hueco de los estanques en {target.Name}: {tostring(result)}`)
+		return target, false
+	end
+	piece.Name = target.Name
+	piece.Anchored = true
+	piece.UsePartColor = true
+	piece.Color = target.Color
+	piece.Material = target.Material
+	piece.CastShadow = target.CastShadow
+	piece.CanCollide = target.CanCollide
+	piece.CanQuery = target.CanQuery
+	piece.Parent = target.Parent
+	target:Destroy()
+	return piece, true
 end
 
 local function ring(count: number, radius: number, phase: number, callback: (Vector3, number) -> ())
@@ -183,25 +223,38 @@ local function buildLake(parent: Instance, islandRadius: number)
 		end
 	end
 	-- Fondo oscuro separado de la superficie transl?cida.
-	decor(part(parent, "Seabed", Vector3.new(1920, 0.5, 1920), CFrame.new(0, -Config.Water.Depth, 0), LAKE[1]:Lerp(Color3.new(0, 0, 0), 0.65), Enum.Material.SmoothPlastic))
-	local cell = 80
-	for row = -12, 11 do
-		for column = -12, 11 do
-			local center = Vector3.new((column + 0.5) * cell, 0, (row + 0.5) * cell)
-			if center.Magnitude > islandRadius - cell * 0.4 then
-				local tile = decor(part(parent, "Sea", Vector3.new(cell, Config.Water.Depth, cell), CFrame.new(center + Vector3.new(0, 0.03 - Config.Water.Depth / 2, 0)), LAKE[(row + column) % 2 + 1], Enum.Material.Glass))
-				tile.Transparency = Config.Water.Transparency
-				tile.Reflectance = 0.08
-				tile:SetAttribute("Phase", row * 0.7 + column * 1.1)
-				CollectionService:AddTag(tile, "SeaTile")
-			end
-		end
+	-- Mar de Terrain: una sola capa de agua (olas y reflejo del motor, nada que animar a mano). Alrededor de la isla se
+	-- vacía un círculo para no inundar el pozo de las mazmorras; el centro lo tapan las piezas de la isla.
+	local sea = Config.Water.Sea
+	local terrain = workspace.Terrain
+	terrain:Clear()
+	terrain.WaterColor = sea.Color
+	terrain.WaterTransparency = sea.Transparency
+	terrain.WaterReflectance = sea.Reflectance
+	terrain.WaterWaveSize = sea.WaveSize
+	terrain.WaterWaveSpeed = sea.WaveSpeed
+	local width = sea.Radius * 2
+	terrain:FillBlock(CFrame.new(0, -2, 0), Vector3.new(width, 4, width), Enum.Material.Water)
+	terrain:FillCylinder(CFrame.new(0, -2, 0), 8, islandRadius, Enum.Material.Air)
+
+	-- Fondo oscuro bajo el agua y, más allá del Terrain, cuatro franjas planas del color del agua hasta el horizonte.
+	local deep = sea.Color:Lerp(Color3.new(0, 0, 0), 0.6)
+	decor(part(parent, "Seabed", Vector3.new(width, 0.5, width), CFrame.new(0, -4.25, 0), deep, Enum.Material.SmoothPlastic))
+	local far, strip = sea.FarSize, (sea.FarSize - width) / 2
+	for _, side in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+		local alongX = side[1] ~= 0
+		local size = if alongX then Vector3.new(strip, 0.5, width) else Vector3.new(far, 0.5, strip)
+		local offset = Vector3.new(side[1] * (sea.Radius + strip / 2), -0.55, side[2] * (sea.Radius + strip / 2))
+		local horizon = decor(part(parent, "Horizon", size, CFrame.new(offset), sea.FarColor, Enum.Material.SmoothPlastic))
+		horizon.Reflectance = sea.Reflectance * 0.2
 	end
 end
 
 -- Isla: orilla de gravilla rosada y, encima, césped menta a cuadros.
-local function buildIsland(parent: Instance, radius: number, beach: number)
-	decor(disc(parent, "Shallows", Vector3.zero, radius + beach + 26, 0, 0.12, SHALLOWS, Enum.Material.SmoothPlastic))
+local pondsOpen = false -- true si el suelo tiene los huecos de los estanques (si no, el agua es una pieza fina encima)
+
+local function buildIsland(parent: Instance, radius: number, beach: number, holes: { { position: Vector3, radius: number } })
+	local shallows = decor(disc(parent, "Shallows", Vector3.zero, radius + beach + 26, 0, 0.12, SHALLOWS, Enum.Material.SmoothPlastic))
 	local shore = radius + beach
 	local pieces = 110
 	for index = 1, pieces do
@@ -212,14 +265,25 @@ local function buildIsland(parent: Instance, radius: number, beach: number)
 		foam:SetAttribute("Phase", angle * 3)
 		CollectionService:AddTag(foam, "Foam")
 	end
-	disc(parent, "Beach", Vector3.zero, radius + beach, 0, 0.2, GRAVEL, Enum.Material.Sand)
-	disc(parent, "Grass", Vector3.zero, radius, 0, 0.3, GRASS[1], Enum.Material.Grass)
+	local beachDisc = disc(parent, "Beach", Vector3.zero, radius + beach, 0, 0.2, GRAVEL, Enum.Material.Sand)
+	local grassDisc = disc(parent, "Grass", Vector3.zero, radius, 0, 0.3, GRASS[1], Enum.Material.Grass)
+	local okShallows, okBeach, okGrass
+	_, okShallows = cutHoles(shallows :: Part, holes)
+	_, okBeach = cutHoles(beachDisc, holes)
+	_, okGrass = cutHoles(grassDisc, holes)
+	pondsOpen = okShallows and okBeach and okGrass
 	local cell = 24
 	local reach = math.ceil(radius / cell)
 	for row = -reach, reach do
 		for column = -reach, reach do
 			local offset = Vector3.new((column + 0.5) * cell, 0, (row + 0.5) * cell)
-			if (row + column) % 2 == 0 and offset.Magnitude + cell * 0.71 < radius then
+			local inPond = false
+			for _, hole in holes do
+				if (offset - hole.position).Magnitude < hole.radius + cell * 0.71 then
+					inPond = true
+				end
+			end
+			if (row + column) % 2 == 0 and offset.Magnitude + cell * 0.71 < radius and not inPond then
 				decor(part(parent, "GrassTile", Vector3.new(cell, 0.06, cell), CFrame.new(offset + Vector3.new(0, 0.3, 0)), GRASS[2], Enum.Material.Grass))
 			end
 		end
@@ -330,16 +394,46 @@ end
 -- Estanque con nenúfares y un puente rojo por encima.
 local function pond(parent: Instance, center: Vector3, radius: number)
 	claim(center, radius + 12)
-	disc(parent, "PondEdge", center, radius + 2.2, 0.2, 0.55, Color3.fromRGB(196, 200, 218), Enum.Material.SmoothPlastic)
-	local water = disc(parent, "Pond", center, radius, 0.3, 0.7, Color3.fromRGB(86, 214, 238), Enum.Material.Glass)
-	water.Transparency = Config.Water.Transparency
-	water.CanCollide = false
-	water.CanQuery = false
-	water:SetAttribute("Phase", center.X * 0.07 + center.Z * 0.11)
-	CollectionService:AddTag(water, "SeaTile")
-	decor(disc(parent, "PondBed", center, radius, 0.31, 0.35, Color3.fromRGB(26, 82, 98), Enum.Material.SmoothPlastic))
-	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(radius * 0.25, 0.7, -radius * 0.2)) * turn(), 1.2)
-	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(-radius * 0.35, 0.7, radius * 0.3)) * turn(), 1.0)
+	local surface = 0.7
+	local sea = Config.Water.Sea
+	if pondsOpen then
+		-- Hueco real en el suelo: cuenca con paredes y fondo oscuro y, llenándola hasta el borde, una lámina de agua plana
+		-- (el agua de Terrain va por celdas de 4 studs: sale combada y no llega a la orilla).
+		surface = 0.12
+		local depth = 3.2
+		local wallRadius, walls = radius + 0.6, 48
+		ring(walls, wallRadius, 0, function(offset)
+			local angle = math.atan2(offset.Z, offset.X)
+			local arc = 2 * math.pi * wallRadius / walls + 0.3
+			decor(part(parent, "PondWall", Vector3.new(1.2, depth + 0.3, arc), CFrame.new(center + offset + Vector3.new(0, (0.3 - depth) / 2, 0)) * CFrame.Angles(0, -angle, 0), Color3.fromRGB(34, 104, 122), Enum.Material.SmoothPlastic))
+		end)
+		decor(disc(parent, "PondBed", center, radius + 1, -depth - 0.2, -depth, Color3.fromRGB(14, 62, 86), Enum.Material.SmoothPlastic))
+		decor(disc(parent, "PondDeep", center, radius * 0.6, -depth, -depth + 0.02, Color3.fromRGB(8, 40, 66), Enum.Material.SmoothPlastic))
+		local water = disc(parent, "Pond", center, radius, 0.02, surface, sea.Color, Enum.Material.Glass)
+		water.Transparency = 0.3
+		water.Reflectance = 0.2
+		water.CanCollide = false
+		water.CanQuery = false
+	else
+		-- Sin hueco: pieza fina encima del suelo con el aspecto del mar.
+		local water = disc(parent, "Pond", center, radius, 0.3, 0.7, sea.Color, Enum.Material.Glass)
+		water.Transparency = sea.Transparency
+		water.Reflectance = sea.Reflectance * 0.5
+		water.CanCollide = false
+		water.CanQuery = false
+		water:SetAttribute("Phase", center.X * 0.07 + center.Z * 0.11)
+		CollectionService:AddTag(water, "SeaTile")
+		decor(disc(parent, "PondBed", center, radius, 0.31, 0.35, Color3.fromRGB(34, 104, 122), Enum.Material.SmoothPlastic))
+	end
+	-- Bordillo de piedra bajo alrededor del agua (con el hueco, un disco entero taparía el agua).
+	local rimRadius, count = radius + 1.1, 40
+	ring(count, rimRadius, 0, function(offset)
+		local angle = math.atan2(offset.Z, offset.X)
+		local arc = 2 * math.pi * rimRadius / count + 0.3
+		part(parent, "PondEdge", Vector3.new(2.2, 0.45, arc), CFrame.new(center + offset + Vector3.new(0, 0.425, 0)) * CFrame.Angles(0, -angle, 0), Color3.fromRGB(196, 200, 218), Enum.Material.SmoothPlastic)
+	end)
+	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(radius * 0.25, surface, -radius * 0.2)) * turn(), 1.2)
+	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(-radius * 0.35, surface, radius * 0.3)) * turn(), 1.0)
 	local turnBridge = rng:NextNumber(0, math.pi)
 	PropModel.place(parent, "Bridge", CFrame.new(center + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, turnBridge, 0), radius / 10)
 	-- El puente llega al suelo justo fuera del borde: ni rocas ni valla delante de sus dos entradas.
@@ -477,7 +571,15 @@ function SceneryJapan.start()
 	local islandRadius = ISLAND_RADIUS
 	local beach = 22
 	buildLake(folder, islandRadius + beach)
-	buildIsland(folder, islandRadius, beach)
+	-- Los estanques (huecos 1 y 5 entre parcelas) se calculan antes para abrirles el hueco en el suelo.
+	local middle = (cfg.HubRadius + cfg.RingRadius) / 2 + 5
+	local pondHoles = {}
+	ring(cfg.Count, middle, 0.5, function(position, index)
+		if index == 1 or index == 5 then
+			table.insert(pondHoles, { position = position, radius = POND_RADIUS })
+		end
+	end)
+	buildIsland(folder, islandRadius, beach, pondHoles)
 	plaza(folder, cfg.HubRadius)
 
 	-- Caminos con torii y linternas, con el farolillo del color de cada parcela.
@@ -498,10 +600,9 @@ function SceneryJapan.start()
 	end)
 
 	-- Estanques con puente en dos huecos entre parcelas, santuarios y pagodas en otros.
-	local middle = (cfg.HubRadius + cfg.RingRadius) / 2 + 5
 	ring(cfg.Count, middle, 0.5, function(position, index)
 		if index == 1 or index == 5 then
-			pond(folder, position, 24)
+			pond(folder, position, POND_RADIUS)
 		elseif index == 3 or index == 7 then
 			claim(position, 16)
 			claim(position - position.Unit * 17, 17) -- el jardín zen de delante
