@@ -43,6 +43,9 @@ local TIER_FX = {
 	{ glow = 0.25, rays = 8, sparkles = 9, shake = 4 }, -- Mítica
 	{ glow = 0.2, rays = 10, sparkles = 12, shake = 5, rainbow = true }, -- Secreta
 	{ glow = 0.1, rays = 12, sparkles = 16, shake = 7, rainbow = true }, -- Divina
+	{ glow = 0.08, rays = 13, sparkles = 19, shake = 8, rainbow = true }, -- Eterna
+	{ glow = 0.06, rays = 14, sparkles = 22, shake = 9, rainbow = true }, -- Primordial
+	{ glow = 0.04, rays = 16, sparkles = 26, shake = 10, rainbow = true }, -- Absoluta
 }
 
 -- Frase de la pantalla grande según lo rara que era la tirada para el jugador (misma posición).
@@ -55,6 +58,9 @@ local EPIC_LINES = {
 	"¡Los cielos se abren ante ti!",
 	"¡Nadie debía encontrar esto!",
 	"¡Los dioses se inclinan ante ti!",
+	"¡Esto durará más que las estrellas!",
+	"¡Así empezó el universo!",
+	"¡No existe nada por encima de esto!",
 }
 
 local overlay: ScreenGui
