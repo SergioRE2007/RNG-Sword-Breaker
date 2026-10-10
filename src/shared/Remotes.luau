@@ -5,7 +5,7 @@ local RunService = game:GetService("RunService")
 local NAMES = {
 	"Swing", -- cliente -> servidor: he dado un espadazo
 	"RollGacha", -- cliente -> servidor: tirada gratis del gacha (una cada Stats.rollTime); solo con Config.Gacha.FreeRoll, si no el servidor la ignora
-	"EquipSword", -- cliente -> servidor: (id) equipar una copia de espada del inventario
+	"EquipSword", -- cliente -> servidor: (id) equipar una copia de espada del inventario, o quitarla si ya lo estaba (hasta Config.Loadout.Slots a la vez; sin huecos sustituye a la de menos daño); ("best") equipar las de más daño
 	"SellSword", -- cliente -> servidor: (id) vender una copia que no esté equipada
 	"SellSwords", -- cliente -> servidor: ({ ids }) venta múltiple validada por el servidor
 	"SetAutoSell", -- cliente -> servidor: (rarity) vender solas las espadas de rareza menor; 0 = no

@@ -244,7 +244,7 @@ local f = fixture(nil)
 local config, player, data = f.config, f.player, f.data
 local permanent = f.load("src/shared/Permanent")
 local modifiers = f.load("src/shared/Modifiers")
-equal(data.read(player).equipped, 1, "espada inicial equipada")
+equal(table.concat(data.read(player).loadout, ","), "1", "espada inicial equipada")
 equal(#data.read(player).gear, 0, "accesorios iniciales sin equipar")
 for index, sword in config.Swords do
 	near(sword.damage, 1.5 ^ math.max(math.log((sword.rarity or 2) / 2, 2), 0), "daño de arma " .. index)
@@ -311,7 +311,7 @@ f.remotes.EquipSword.OnServerEvent:fire(player, 3)
 f.remotes.SellSwords.OnServerEvent:fire(player, { 3 })
 equal(#data.read(player).swords, 2, "equipada después de seleccionar protegida")
 gacha.give(player, 1e6, "object", 1)
-equal(data.read(player).equipped, 3, "arma nueva no se equipa")
+equal(table.concat(data.read(player).loadout, ","), "1,3", "arma nueva no se equipa")
 local rolled = f.remotes.GachaRolled.sent[#f.remotes.GachaRolled.sent]
 equal(rolled[8].baseOdds, config.Swords[rolled[2]].rarity, "resultado expone rareza base")
 
@@ -386,7 +386,8 @@ state.pity.traits[2] = 1
 local saved = f.save()
 local restored = fixture(saved)
 equal(restored.data.read(restored.player).pity.traits[2], 1, "pity persiste")
-equal(restored.data.read(restored.player).swords[restored.data.read(restored.player).equipped].sword, 5, "elección persiste al renumerar ids")
+equal(#restored.data.read(restored.player).loadout, 2, "las equipadas persisten")
+equal(restored.data.read(restored.player).swords[restored.data.read(restored.player).loadout[2]].sword, 5, "elección persiste al renumerar ids")
 for _, value in { -2, 3.9, 99, 0 / 0, "4" } do
 	local migrated = fixture({ rebirths = value })
 	local expected = if value ~= value then 0 else math.clamp(math.floor(tonumber(value)), 0, 5)
@@ -665,8 +666,111 @@ for _, currency in { "coins", "gems" } do
 end
 tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "items", "gradeCrystal", 2)
 equal(tradeState().you.items.gradeCrystal, 2, "los cristales sí se ofrecen")
+-- Las equipadas no se ofrecen, estén en el hueco que estén.
+tf.data.edit(tf.player, function(d)
+	d.swords[2] = { id = 2, sword = 4 }
+	d.swords[3] = { id = 3, sword = 5 }
+	d.nextSwordId = 4
+	d.loadout = { 1, 2 }
+end)
+tf.advance(1)
+tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "swords", 2, 1)
+equal(next(tradeState().you.swords), nil, "una equipada en el segundo hueco no se ofrece")
+tf.advance(1)
+tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "swords", 3, 1)
+equal(next(tradeState().you.swords) ~= nil, true, "una sin equipar sí se ofrece")
 tf.remotes.TradeCancel.OnServerEvent:fire(tf.player)
 equal(tf.data.read(tf.player).coins, 1e6, "el trato cancelado no toca las monedas")
+
+-- Varias armas equipadas (Config.Loadout.Slots): poner, quitar, sustituir a la de menos daño y "best"; y las cuentas de
+-- Stats: el daño se suma, la suerte y las monedas de los rasgos se multiplican y el grado va al daño, no a las monedas.
+do
+	local ef = fixture(nil)
+	ef.load("src/server/Gacha").start()
+	local cfg = ef.config
+	local eStats = ef.load("src/shared/Stats")
+	local slots = cfg.Loadout.Slots
+	equal(slots, 4, "huecos de arma")
+	-- Config.Swords no va por daño: la copia k lleva la k-ésima arma de menos daño, así su daño crece con el id.
+	local byDamage = {}
+	for index in cfg.Swords do table.insert(byDamage, index) end
+	table.sort(byDamage, function(a, b) return cfg.Swords[a].damage < cfg.Swords[b].damage end)
+	ef.data.edit(ef.player, function(d)
+		d.swords = {}
+		for id = 1, slots + 2 do d.swords[id] = { id = id, sword = byDamage[id] } end
+		d.nextSwordId = slots + 3
+		d.loadout = { 1 }
+	end)
+	local function equip(id) ef.remotes.EquipSword.OnServerEvent:fire(ef.player, id) end
+	local function worn() return table.concat(ef.data.read(ef.player).loadout, ",") end
+	equip(1)
+	equal(worn(), "1", "la última equipada no se quita")
+	for id = 2, slots do equip(id) end
+	equal(worn(), "1,2,3,4", "se equipan hasta llenar los huecos")
+	equal(ef.player:GetAttribute("Loadout"), "1,2,3,4", "huecos publicados")
+	equip(2)
+	equal(worn(), "1,3,4", "pulsar una equipada la quita")
+	equip(2)
+	equal(worn(), "1,3,4,2", "y vuelve al primer hueco libre")
+	equip(slots + 2)
+	equal(worn(), "6,3,4,2", "sin huecos sustituye a la de menos daño")
+	for _, bad in { 999, "x", 0 / 0, {}, true, -1, 1.5 } do
+		equip(bad)
+		equal(worn(), "6,3,4,2", "equipar algo que no existe no cambia nada")
+	end
+	equip("best")
+	equal(worn(), "6,5,4,3", "las mejores: las de más daño, de mayor a menor")
+	ef.remotes.SellSwords.OnServerEvent:fire(ef.player, { 1, 2, 3, 4, 5, 6 })
+	equal(#ef.data.read(ef.player).swords, slots, "la venta respeta todas las equipadas")
+	equal(worn(), "6,5,4,3", "vender no toca los huecos")
+
+	local function sum()
+		local total = 0
+		for _, copy in eStats.loadout(ef.player) do total += eStats.swordDamage(copy) end
+		return total
+	end
+	equal(#eStats.loadout(ef.player), slots, "Stats lee las equipadas")
+	equal(eStats.loadout(ef.player)[1].id, 6, "Stats respeta el orden de los huecos")
+	equal(eStats.isEquipped(ef.player, 3), true, "Stats: equipada")
+	equal(eStats.isEquipped(ef.player, 2), false, "Stats: vendida, no equipada")
+	near(eStats.damage(ef.player), sum(), "el daño es la suma de las equipadas")
+	near(eStats.weaponDamage(ef.player, eStats.loadout(ef.player)[2]), cfg.Swords[byDamage[5]].damage, "cada arma pega con su daño")
+	local luck, coins, damage = eStats.luck(ef.player), eStats.coins(ef.player), eStats.damage(ef.player)
+	local top = cfg.Traits[#cfg.Traits]
+	ef.data.edit(ef.player, function(d)
+		ef.data.findSword(d, 6).trait = #cfg.Traits
+		ef.data.findSword(d, 5).trait = #cfg.Traits
+	end)
+	near(eStats.luck(ef.player) / luck, top.luck ^ 2, "la suerte de los rasgos se multiplica entre armas")
+	near(eStats.coins(ef.player) / coins, top.coins ^ 2, "las monedas de los rasgos se multiplican entre armas")
+	near(eStats.damage(ef.player) - damage, (cfg.Swords[byDamage[6]].damage + cfg.Swords[byDamage[5]].damage) * (top.damage - 1), "el daño del rasgo solo sube el de su arma")
+	equal(top.luck <= 2 and top.coins <= 2, true, "rasgos: suerte y monedas bajas (se multiplican entre las equipadas)")
+	coins, damage = eStats.coins(ef.player), eStats.damage(ef.player)
+	local best = cfg.Grades[#cfg.Grades]
+	ef.data.edit(ef.player, function(d) ef.data.findSword(d, 3).grade = #cfg.Grades end)
+	near(eStats.coins(ef.player), coins, "los grados ya no dan monedas")
+	near(eStats.damage(ef.player) - damage, cfg.Swords[byDamage[3]].damage * (best.damage - 1), "el grado multiplica el daño de su arma")
+	for _, grade in cfg.Grades do
+		equal(grade.coins == nil and grade.damage > 1, true, "grado " .. grade.name .. ": daño y no monedas")
+	end
+	-- Una sin equipar no cuenta para nada.
+	ef.data.edit(ef.player, function(d)
+		table.insert(d.swords, { id = d.nextSwordId, sword = byDamage[#byDamage], trait = #cfg.Traits, grade = #cfg.Grades })
+		d.nextSwordId += 1
+	end)
+	near(eStats.coins(ef.player), coins, "un arma sin equipar no da monedas")
+	near(eStats.damage(ef.player) - damage, cfg.Swords[byDamage[3]].damage * (best.damage - 1), "un arma sin equipar no da daño")
+
+	-- Lo guardado: sin repetidos, sin ids que no existan y como mucho los huecos que hay.
+	local six = {}
+	for id = 1, 6 do six[id] = { id = id * 10, sword = 3 + id } end
+	local function loaded(saved) local g = fixture(saved); return table.concat(g.data.read(g.player).loadout, ",") end
+	equal(loaded({ swords = six, loadout = { 30, 30, 990, "x", 20, 0 / 0, 50, 60, 10 } }), "3,2,5,6", "equipadas guardadas: limpias y hasta el tope")
+	equal(loaded({ swords = six, loadout = "x", equipped = 20 }), "2", "lista rota: vale la antigua")
+	equal(loaded({ swords = six, loadout = {} }), "1", "lista vacía: la primera")
+	equal(loaded({ swords = six, loadout = { 990 }, equipped = 20 }), "1", "lista sin ninguna válida: la primera")
+	equal(loaded({ swords = six, equipped = 40 }), "4", "guardado antiguo: su única equipada")
+end
 
 -- Guardado: lo que se guarda vuelve igual, lo antiguo se completa con valores por defecto y lo roto se limpia sin dar
 -- error ni llevarse por delante lo válido. (El DataStore es un doble: lo que pase en Roblox de verdad solo se ve publicado.)
@@ -694,7 +798,10 @@ do
 	local function sane(d, label: string)
 		local ok = d.coins >= 0 and d.gems >= 0 and d.playTime >= 0 and d.totalCoins >= 0 and d.robuxSpent >= 0 and d.autoSell >= 0
 		ok = ok and d.rebirths >= 0 and d.rebirths <= cfg.Rebirth.max and d.rebirths % 1 == 0
-		ok = ok and #d.swords >= 1 and #d.swords <= cfg.MaxSwords and d.nextSwordId == #d.swords + 1 and d.swords[d.equipped] ~= nil
+		ok = ok and #d.swords >= 1 and #d.swords <= cfg.MaxSwords and d.nextSwordId == #d.swords + 1 and #d.loadout >= 1 and #d.loadout <= cfg.Loadout.Slots
+		for position, id in d.loadout do
+			ok = ok and d.swords[id] ~= nil and table.find(d.loadout, id) == position
+		end
 		for position, copy in d.swords do
 			ok = ok and copy.id == position and cfg.Swords[copy.sword] ~= nil
 			ok = ok and (copy.trait == nil or cfg.Traits[copy.trait] ~= nil) and (copy.grade == nil or cfg.Grades[copy.grade] ~= nil)
@@ -770,7 +877,7 @@ do
 			{ id = 30, sword = 4, trait = 1 },
 			{ id = 40, sword = 5, metal = 1, size = 1 },
 		},
-		equipped = 20,
+		loadout = { 20, 40 },
 		index = { code(4, 1, 1), code(lastSword, lastMetal, lastSize) },
 		items = { traitCrystal = 1e30, gradeCrystal = 7, [potionKey] = 3 },
 		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
@@ -795,7 +902,7 @@ do
 			{ id = 3, sword = 4, trait = 1 },
 			{ id = 4, sword = 5, metal = 1, size = 1 },
 		},
-		nextSwordId = 5, equipped = 2,
+		nextSwordId = 5, loadout = { 2, 4 },
 		index = full.index, items = items,
 		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
 		armor = {
@@ -809,7 +916,8 @@ do
 	local loaded, lf = stable(stored(full), "partida completa")
 	same(loaded, expected, "partida completa: se carga todo lo guardado")
 	equal(lf.player:GetAttribute("Coins"), 1e30, "monedas enormes publicadas")
-	equal(lf.player:GetAttribute("Equipped"), 2, "equipada publicada")
+	equal(lf.player:GetAttribute("Equipped"), 2, "primera equipada publicada")
+	equal(lf.player:GetAttribute("Loadout"), "2,4", "equipadas publicadas")
 	equal(lf.player:GetAttribute("SwordLevel"), lastSword, "tipo de la equipada publicado")
 	equal(lf.player:GetAttribute("SwordMetal"), lastMetal, "metal de la equipada publicado")
 	equal(lf.player:GetAttribute("Item_traitCrystal"), 1e30, "objetos enormes publicados")
@@ -834,7 +942,7 @@ do
 	near(big.totalCoins, 1e305, "1e305 sobrevive")
 	near(big.items.traitCrystal, 1e30, "1e30 cristales sobreviven")
 	near(big.autoSell, 1e24, "autoventa de 1e24 sobrevive")
-	equal(big.equipped, 2, "la equipada sobrevive al JSON")
+	equal(table.concat(big.loadout, ","), "2,4", "las equipadas sobreviven al JSON")
 	equal(big.pity.traits[2], pity.traits[2], "el pity sobrevive al JSON")
 	equal(big.armorWorn.helmet, 1, "la armadura puesta sobrevive al JSON")
 	equal(big.potions.damage.seconds, 120, "las pociones sobreviven al JSON")
@@ -849,7 +957,7 @@ do
 	equal(before.coins, 50, "anterior al gacha: monedas")
 	equal(before.gems, 3, "anterior al gacha: gemas")
 	equal(#before.swords, 3, "anterior al gacha: una espada por nivel comprado")
-	equal(before.swords[before.equipped].sword, 3, "anterior al gacha: equipada la última")
+	equal(before.swords[before.loadout[1]].sword, 3, "anterior al gacha: equipada la última")
 	equal(before.index, nil, "sin índice guardado: sin estrenar")
 	equal(next(before.potions), nil, "sin pociones guardadas")
 	equal(#before.armor, 0, "sin armadura guardada")
@@ -860,13 +968,13 @@ do
 	equal(before.items.traitCrystal, 0, "sin objetos guardados")
 	local firstGacha = stable({ swords = { 1, 4, 5, 999 }, traits = { ["4"] = 2, ["5"] = 999 }, swordLevel = 4 }, "primer gacha")
 	same(firstGacha.swords, { { id = 1, sword = 1 }, { id = 2, sword = 4, trait = 2 }, { id = 3, sword = 5 } }, "primer gacha: tipos y rasgos aparte")
-	equal(firstGacha.equipped, 2, "primer gacha: equipada por tipo")
+	equal(table.concat(firstGacha.loadout, ","), "2", "primer gacha: equipada por tipo")
 	local older = stable({
 		coins = 9, swords = { { id = 1, sword = 1 }, { id = 2, sword = 4, trait = 1 } }, equipped = 2,
 		items = { traitCrystal = 5 }, upgrades = { luck = 2 }, artifacts = { 2 }, gear = { 2 },
 	}, "guardado sin lo añadido después")
 	same(older.swords, { { id = 1, sword = 1 }, { id = 2, sword = 4, trait = 1 } }, "copias sin grado, metal ni tamaño")
-	equal(older.equipped, 2, "antiguo: equipada")
+	equal(table.concat(older.loadout, ","), "2", "antiguo: la única equipada pasa a la lista")
 	equal(older.items.traitCrystal, 5, "antiguo: objetos que había")
 	equal(older.items.gradeCrystal, 0, "antiguo: objeto añadido después")
 	equal(older.items[potionKey], 0, "antiguo: pociones añadidas después")
@@ -886,7 +994,7 @@ do
 		equal(d.gems, 0, "gemas rotas")
 		equal(d.rebirths, 0, "renacimientos rotos")
 		equal(d.playTime + d.totalCoins + d.robuxSpent + d.autoSell, 0, "contadores rotos")
-		equal(d.swords[d.equipped].sword, 4, "equipada rota: la primera")
+		equal(d.swords[d.loadout[1]].sword, 4, "equipada rota: la primera")
 		equal(table.concat(modifiers.priority(d.traitPriority), ","), table.concat(modifiers.PRIORITY, ","), "prioridad de rasgos rota")
 		equal(next(d.missions), nil, "misiones rotas")
 		local g2 = fixture({ coins = bad, gems = bad })
@@ -921,20 +1029,20 @@ do
 		},
 	}, "espadas rotas")
 	same(swords.swords, { { id = 1, sword = 4 }, { id = 2, sword = 5, grade = 1 } }, "espadas rotas: solo las válidas")
-	equal(swords.equipped, 1, "equipada que no existe: la primera")
+	equal(table.concat(swords.loadout, ","), "1", "equipada que no existe: la primera")
 	equal(swords.gems, 4, "espadas rotas: lo demás se queda")
 	local twins = stable({ swords = { { id = 7, sword = 4 }, { id = 7, sword = 5 }, { id = 7, sword = 6 } }, equipped = 7 }, "ids repetidos")
 	equal(#twins.swords, 3, "ids repetidos: no se pierde ninguna copia")
 	for _, bad in { { { sword = 999 }, "x" }, {}, "x", { "x", "y" } } do
 		local d = stable({ swords = bad, coins = 3 }, "sin espadas válidas")
 		same(d.swords, { { id = 1, sword = 1 } }, "sin espadas válidas: la inicial")
-		equal(d.equipped, 1, "sin espadas válidas: equipada la inicial")
+		equal(table.concat(d.loadout, ","), "1", "sin espadas válidas: equipada la inicial")
 	end
 	local many = {}
 	for id = 1, 5000 do many[id] = { id = id, sword = 4 + id % 3, trait = 1 } end
 	local crowded = stable({ swords = many, equipped = 150 }, "mochila enorme")
 	equal(#crowded.swords, cfg.MaxSwords, "mochila enorme recortada al tope")
-	equal(crowded.equipped, 150, "mochila enorme: la equipada sigue")
+	equal(table.concat(crowded.loadout, ","), "150", "mochila enorme: la equipada sigue")
 	equal(crowded.swords[150].sword, 4 + 150 % 3, "mochila enorme: mismas copias")
 	stable({ swords = many, equipped = 4000 }, "equipada fuera del tope")
 
