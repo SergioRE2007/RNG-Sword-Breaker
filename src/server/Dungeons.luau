@@ -20,6 +20,7 @@ local Destructibles = require(script.Parent.Destructibles)
 local DungeonLobby = require(script.Parent.DungeonLobby)
 local DungeonThemes = require(script.Parent.DungeonThemes)
 local Loot = require(script.Parent.Loot)
+local DropMenu = require(script.Parent.DropMenu)
 
 local Dungeons = {}
 
@@ -250,7 +251,17 @@ end
 local function result(run, member, won: boolean, reason: string)
 	local player = member.player
 	if player and player.Parent then
-		Remotes.DungeonEvent:FireClient(player, "result", { won = won, reason = reason, level = run.index, loot = member.summary })
+		-- El botín retenido se ofrece en el menú (server/DropMenu); con Repetir o Auto entra solo (`granted`).
+		local menu, granted = DropMenu.offer(player, member.summary)
+		Remotes.DungeonEvent:FireClient(player, "result", {
+			won = won,
+			reason = reason,
+			level = run.index,
+			drops = if menu then menu.drops else nil,
+			armorFree = if menu then menu.armorFree else nil,
+			expires = if menu then menu.expires else nil,
+			granted = granted,
+		})
 	end
 end
 
@@ -624,7 +635,7 @@ function launch(players: { Player }, index: number, opts: { ghosts: number?, onE
 	}
 	run.playerCount = #players
 	for number, player in players do
-		local member = { player = player, name = player.DisplayName, summary = Loot.summary(), slot = number }
+		local member = { player = player, name = player.DisplayName, summary = Loot.summary(true), slot = number }
 		run.members[player] = member
 		table.insert(run.order, member)
 		runOf[player] = run
@@ -739,6 +750,7 @@ function Dungeons.start()
 		local run = runOf[player]
 		local member = run and run.members[player]
 		if run and member then
+			DropMenu.keepAll(player, member.summary)
 			detach(run, member, false)
 		end
 		looping[player] = nil

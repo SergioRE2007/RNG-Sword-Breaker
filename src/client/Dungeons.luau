@@ -14,6 +14,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Stats = require(ReplicatedStorage.Shared.Stats)
+local DropMenu = require(script.Parent.DropMenu)
 local Party = require(script.Parent.Party)
 local Performance = require(script.Parent.Performance)
 local SwordController = require(script.Parent.SwordController)
@@ -456,24 +457,16 @@ local function buildFeedback()
 			title.Text = reason[1]
 			title.TextColor3 = reason[2]
 			subtitle.Text = if level then `<font color="{Ui.SOFT}">Mazmorra</font> <font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>` else ""
-			local lines = {}
-			local summary = if type(data.loot) == "table" then data.loot else {}
-			for _, list in { Config.ItemOrder, Config.Potions.ItemKeys } do
-				for _, name in list do
-					local amount = summary.items and summary.items[name]
-					if amount then
-						table.insert(lines, `<font color="{hex(Config.Items[name].color)}">+{Format.short(amount)} {Config.Items[name].name}</font>`)
-					end
-				end
-			end
-			for _, piece in summary.armor or {} do
-				local quality = Config.Armor.Qualities[piece.quality]
-				if quality then
-					table.insert(lines, `<font color="{hex(quality.color)}">{piece.name} · {quality.name}</font>{if piece.kept then "" else ` <font color="{Ui.SOFT}">(desmontada)</font>`}`)
-				end
-			end
-			loot.Text = if #lines > 0 then table.concat(lines, "\n") else `<font color="{Ui.SOFT}">Sin premios esta vez.</font>`
 			Sfx.play(if data.won then "dungeon_win" else "dungeon_lose")
+			-- Con botín, lo enseña el menú de botín (client/DropMenu); este cartel solo dice cómo acabó.
+			if type(data.drops) == "table" and #data.drops > 0 then
+				card.Visible = false
+				DropMenu.show(data, reason[1], reason[2], if level then level.name else nil)
+				return
+			end
+			loot.Text = if (tonumber(data.granted) or 0) > 0
+				then `<font color="{Ui.SOFT}">Botín añadido a tu inventario (Repetir o Auto).</font>`
+				else `<font color="{Ui.SOFT}">Sin premios esta vez.</font>`
 			card.Visible = true
 			if not Performance.get() then
 				cardScale.Scale = 0.6

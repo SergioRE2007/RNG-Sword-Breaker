@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Chance = require(ReplicatedStorage.Shared.Chance)
+local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -44,6 +45,20 @@ local function times(bonus: number): number
 	return math.max(1, whole)
 end
 
+-- Con `summary.held` (las partidas de mazmorra) el botín no se entrega: se apunta ahí, en orden, y server/DropMenu lo
+-- ofrece al acabar la partida. Los objetos iguales se juntan en una sola entrada.
+local function hold(summary, entry)
+	if entry.kind ~= "armor" then
+		for _, other in summary.held do
+			if other.kind == entry.kind and other.key == entry.key then
+				other.amount += entry.amount
+				return
+			end
+		end
+	end
+	table.insert(summary.held, entry)
+end
+
 -- Objeto de Config.Items.
 function handlers.item(player: Player, drop, context, summary, bonus: number)
 	local item = Config.Items[drop.item]
@@ -51,6 +66,10 @@ function handlers.item(player: Player, drop, context, summary, bonus: number)
 		return
 	end
 	local amount = Loot.amount(drop, (context.loot or 1) * bonus)
+	if summary and summary.held then
+		hold(summary, { kind = "item", key = drop.item, amount = amount })
+		return
+	end
 	PlayerData.edit(player, function(data)
 		data.items[drop.item] += amount
 	end)
@@ -63,6 +82,13 @@ end
 -- Pieza de armadura de la dificultad; "luck" del drop multiplica la suerte de calidad.
 function handlers.armor(player: Player, drop, context, summary, bonus: number)
 	for _ = 1, times(bonus) do
+		if summary and summary.held then
+			local luck = (context.qualityLuck or 1) * (drop.luck or 1)
+			if Config.Dungeons[context.level] then
+				hold(summary, { kind = "armor", piece = Armor.roll(context.level, luck), luck = luck })
+			end
+			continue
+		end
 		local piece, kept = Armor.give(player, context.level, (context.qualityLuck or 1) * (drop.luck or 1))
 		if piece and summary then
 			table.insert(summary.armor, { name = ArmorStats.name(piece), quality = piece.quality, kept = kept })
@@ -74,7 +100,15 @@ end
 function handlers.potion(player: Player, _drop, context, summary, bonus: number)
 	local cfg = Config.Potions
 	for _ = 1, times(bonus) do
-		local key = Potions.drop(player, "dungeon", cfg.DungeonLevel[context.level] or #cfg.Pools.dungeon)
+		local level = cfg.DungeonLevel[context.level] or #cfg.Pools.dungeon
+		if summary and summary.held then
+			local family, tier = Potions.choose("dungeon", level)
+			if family and tier and PotionInfo.valid(family, tier) then
+				hold(summary, { kind = "potion", key = PotionInfo.key(family, tier), family = family, tier = tier, amount = 1 })
+			end
+			continue
+		end
+		local key = Potions.drop(player, "dungeon", level)
 		if key and summary then
 			summary.items[key] = (summary.items[key] or 0) + 1
 		end
@@ -85,8 +119,9 @@ function Loot.register(kind: string, handler)
 	handlers[kind] = handler
 end
 
-function Loot.summary()
-	return { items = {}, armor = {} }
+-- Con `held = true` el botín se retiene en `summary.held` en vez de entregarse (ver `hold`).
+function Loot.summary(held: boolean?)
+	return { items = {}, armor = {}, held = if held then {} else nil }
 end
 
 function Loot.roll(player: Player, drops, context, summary)

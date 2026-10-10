@@ -494,6 +494,13 @@ Config.Dungeon = {
 	TimeLimit = 300, -- segundos para terminar la mazmorra
 	WaveDelay = 2, -- pausa entre oleadas
 	ExitDelay = 4, -- segundos en la arena tras ganar, antes de volver al hub
+	-- Menú de botín al acabar la partida (server/DropMenu, client/DropMenu): el botín se retiene mientras dura la
+	-- partida y el jugador marca lo que tira. Sin respuesta en `Timeout` s, o con Repetir / Auto de pelea, se queda todo.
+	DropMenu = {
+		Timeout = 60,
+		ConfirmQuality = 5, -- calidad de armadura desde la que pide confirmación para tirarla (5 = Legendaria)
+		ConfirmTier = 6, -- tier de poción desde el que la pide (6 = VI)
+	},
 	Origin = Vector3.new(0, 200, 3000), -- centro de la primera arena, lejos de la isla
 	Spacing = 400, -- separación entre las arenas de cada partida
 	MaxRuns = 10, -- partidas a la vez (cada una ocupa un hueco de arena; con "repetir" se necesita uno de sobra un momento)
@@ -507,9 +514,9 @@ Config.Dungeon = {
 	},
 	-- Premio por terminar la última oleada (mismo formato que los drops de los enemigos).
 	ClearDrops = {
-		{ kind = "item", item = "traitCrystal", chance = 0.15 },
-		{ kind = "item", item = "gradeCrystal", chance = 0.08 },
-		{ kind = "potion", chance = 0.06 },
+		{ kind = "item", item = "traitCrystal", chance = 0.105 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.04 },
+		{ kind = "potion", chance = 0.018 },
 	},
 }
 
@@ -788,22 +795,22 @@ Config.DungeonThemes = {
 -- pasar `lune run tools/equilibrio/informe.luau`, que juega las mazmorras y lo compara con el calendario.
 Config.Enemies = {
 	grunt = { name = "Esbirro", hp = 6, damage = 3, speed = 17, attackRange = 3.5, attackTime = 1.2, size = Vector3.new(4, 4, 4), color = Color3.fromRGB(120, 200, 90), drops = {
-		{ kind = "item", item = "traitCrystal", chance = 0.004 },
-		{ kind = "item", item = "gradeCrystal", chance = 0.002 },
-		{ kind = "armor", chance = 0.015 },
-		{ kind = "potion", chance = 0.0006 },
+		{ kind = "item", item = "traitCrystal", chance = 0.0028 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.001 },
+		{ kind = "armor", chance = 0.0075 },
+		{ kind = "potion", chance = 0.00018 },
 	} },
 	brute = { name = "Bruto", hp = 20, damage = 7, speed = 11, attackRange = 4, attackTime = 1.8, look = "horns", size = Vector3.new(6.5, 6.5, 6.5), color = Color3.fromRGB(200, 110, 70), drops = {
-		{ kind = "item", item = "traitCrystal", chance = 0.02 },
-		{ kind = "item", item = "gradeCrystal", chance = 0.01 },
-		{ kind = "armor", chance = 0.05, luck = 2 },
-		{ kind = "potion", chance = 0.003 },
+		{ kind = "item", item = "traitCrystal", chance = 0.014 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.005 },
+		{ kind = "armor", chance = 0.025, luck = 2 },
+		{ kind = "potion", chance = 0.0009 },
 	} },
 	boss = { name = "Guardián", hp = 120, damage = 12, speed = 13, attackRange = 5, attackTime = 2, scaleCount = false, look = "crown", size = Vector3.new(11, 11, 11), color = Color3.fromRGB(150, 80, 220), drops = {
-		{ kind = "item", item = "traitCrystal", chance = 0.15 },
-		{ kind = "item", item = "gradeCrystal", chance = 0.08 },
-		{ kind = "armor", chance = 0.3, luck = 5 },
-		{ kind = "potion", chance = 0.02 },
+		{ kind = "item", item = "traitCrystal", chance = 0.105 },
+		{ kind = "item", item = "gradeCrystal", chance = 0.04 },
+		{ kind = "armor", chance = 0.15, luck = 5 },
+		{ kind = "potion", chance = 0.006 },
 	} },
 }
 

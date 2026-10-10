@@ -23,6 +23,7 @@ require(script.ModifierShops).start()
 require(script.Gear).start()
 require(script.Armor).start()
 require(script.Potions).start()
+require(script.DropMenu).start() -- antes de Dungeons: le ofrece el botín retenido al acabar la partida
 require(script.Dungeons).start()
 require(script.Party).start()
 require(script.Combat).start()

@@ -51,11 +51,20 @@ end
 -- Tira una pieza y la guarda sin equiparla. Con el inventario lleno
 -- se desmonta sola. Devuelve la pieza y si se la ha quedado.
 function Armor.give(player: Player, level: number, luck: number)
-	local data = PlayerData.read(player)
-	if not data or not Config.Dungeons[level] then
+	if not PlayerData.read(player) or not Config.Dungeons[level] then
 		return nil, false
 	end
 	local piece = Armor.roll(level, luck)
+	return piece, Armor.store(player, piece, luck)
+end
+
+-- Guarda una pieza ya tirada (sin equiparla): con el inventario lleno se desmonta sola. Devuelve si se la ha quedado.
+-- `luck` es la suerte con la que se tiró (para el aviso a todo el servidor de las muy raras).
+function Armor.store(player: Player, piece, luck: number): boolean
+	local data = PlayerData.read(player)
+	if not data then
+		return false
+	end
 	local quality = cfg.Qualities[piece.quality]
 	local kept = #data.armor < cfg.MaxPieces
 	if kept then
@@ -77,7 +86,7 @@ function Armor.give(player: Player, level: number, luck: number)
 	if odds >= Config.AnnounceOdds then
 		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {ArmorStats.name(piece)} de calidad {quality.name} (1 entre {Format.short(odds)})!`, quality.color)
 	end
-	return piece, kept
+	return kept
 end
 
 local function find(data, id: unknown)

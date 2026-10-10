@@ -13,6 +13,7 @@ require(script.PassShop).start()
 require(script.ChatTags).start() -- etiqueta de los pases (VIP) delante del nombre en el chat
 require(script.Trade).start()
 require(script.ModifierShops).start()
+require(script.DropMenu).start() -- menú de botín de mazmorra: después de Potions (usa sus iconos), antes de Dungeons
 require(script.Dungeons).start()
 require(script.Party).start()
 require(script.DayCycle).start() -- antes de DungeonFx, que lo enciende y apaga según la zona

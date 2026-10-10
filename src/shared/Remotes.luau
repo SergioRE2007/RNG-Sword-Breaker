@@ -41,7 +41,8 @@ local NAMES = {
 	"TradeSuggestRespond", -- cliente -> servidor: (true o false) aceptar o ignorar la sugerencia del otro
 	"SetDungeonLoop", -- cliente -> servidor: (true o false) repetir la mazmorra sola cada vez que la supere (si lideras el grupo)
 	"LeaveDungeon", -- cliente -> servidor: salir de la mazmorra en la que está
-	"DungeonEvent", -- servidor -> cliente: (tipo, datos) "hurt" (daño recibido) o "result" ({ won, level, loot })
+	"DungeonEvent", -- servidor -> cliente: (tipo, datos) "hurt" (daño recibido) o "result" ({ won, reason, level, drops?, armorFree?, expires?, granted? }); `drops` = el botín retenido para el menú
+	"DropDecision", -- cliente -> servidor: ({ ids }) los drops del menú de botín que tira (descarta); el resto entra al inventario
 	"EquipArmor", -- cliente -> servidor: (id) poner o quitar una pieza de armadura
 	"SalvageArmor", -- cliente -> servidor: (id) desmontar una pieza de armadura a cambio de Cristales de grado
 	"PartyRequest", -- cliente -> servidor: (acción, a, b) sala de grupo de las mazmorras: "open" (zona) y "close" miran o dejan de mirar una sala; "create" (zona), "join" (id del grupo), "leave", "ready" (true o false), "start", "solo" (zona), "dungeon" (zona nueva), "option" (nombre, true o false), "kick" (userId), "invite" (userId), "respond" (userId del líder, true o false)
