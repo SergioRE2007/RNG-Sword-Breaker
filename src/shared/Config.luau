@@ -274,7 +274,14 @@ Config.Theme = "japan"
 Config.DayCycle = { Length = 720, DayShare = 2 / 3 }
 
 Config.PlotLighting = { Height = 18, Offset = 0.18, Brightness = 1, Range = 55 }
-Config.Water = { Depth = 6, Transparency = 0.35, WaveHeight = 0.12, WaveSpeed = 0.9 }
+Config.Water = {
+	Depth = 6, Transparency = 0.35, WaveHeight = 0.12, WaveSpeed = 0.9,
+	-- Mar del mapa japonés (agua de Terrain hasta `Radius`, y franjas planas del color `FarColor` hasta `FarSize`).
+	Sea = {
+		Radius = 1600, FarSize = 12000, Color = Color3.fromRGB(58, 160, 190), FarColor = Color3.fromRGB(68, 150, 178),
+		Transparency = 0.45, Reflectance = 0.55, WaveSize = 0.3, WaveSpeed = 10,
+	},
+}
 
 -- CLIMA (server/Weather y client/Weather). Cada `Interval` segundos empieza un evento de clima, el mismo en todos los
 -- servidores (sale de la hora), que dura `Duration` (o el "duration" del evento); el resto del tramo está despejado.
