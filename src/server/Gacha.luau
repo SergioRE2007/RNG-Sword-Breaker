@@ -270,8 +270,9 @@ local function onSell(player: Player, id: unknown)
 end
 
 local function onSetAutoSell(player: Player, rarity: unknown)
-	-- rarity ~= rarity descarta NaN.
-	if type(rarity) ~= "number" or rarity ~= rarity or rarity < 0 then
+	-- rarity ~= rarity descarta NaN. Infinito tampoco: acabaría en los datos guardados, y un guardado que falla
+	-- deja al jugador con lo que tenía antes (cosas ya cambiadas en un trato incluidas).
+	if type(rarity) ~= "number" or rarity ~= rarity or rarity < 0 or rarity == math.huge then
 		return
 	end
 	PlayerData.edit(player, function(edited)

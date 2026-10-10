@@ -27,6 +27,27 @@ local invites = {} -- [invitado] = { [quien invita] = os.clock() en que caduca }
 local lastRequest = {} -- [Player] = os.clock() de su última invitación
 local lastSuggest = {} -- [Player] = os.clock() de su última sugerencia
 
+-- Tope de peticiones de trato por jugador y segundo: cada una reenvía el estado entero a los dos, así que un cliente
+-- con trampas podía inundar al servidor y al otro jugador. A mano no se llega ni de lejos.
+local RATE_LIMIT = 30
+local calls = {} -- [Player] = { since = os.clock() en que empezó la cuenta, count }
+
+local function limited(handler)
+	return function(player: Player, ...)
+		local now = os.clock()
+		local bucket = calls[player]
+		if not bucket or now - bucket.since >= 1 then
+			calls[player] = { since = now, count = 1 }
+		else
+			bucket.count += 1
+			if bucket.count > RATE_LIMIT then
+				return
+			end
+		end
+		handler(player, ...)
+	end
+end
+
 local function botAllowed(): boolean
 	return RunService:IsStudio() and Config.Test.TradeBot == true
 end
@@ -305,6 +326,13 @@ local function complete(session)
 	local fromA, fromB = take(a), take(b)
 	give(a, fromB)
 	give(b, fromA)
+	-- Se guardan los dos ya: si solo se guardara el primero que se va (y el servidor se cerrara mal antes de guardar al
+	-- otro), lo cambiado quedaría en los dos lados.
+	for _, side in session.sides do
+		if side.player then
+			task.spawn(PlayerData.save, side.player)
+		end
+	end
 	close(session, "¡Intercambio completado!", GOOD)
 end
 
@@ -693,12 +721,12 @@ end
 function Trade.start()
 	Remotes.TradeRequest.OnServerEvent:Connect(onRequest)
 	Remotes.TradeRespond.OnServerEvent:Connect(onRespond)
-	Remotes.TradeOffer.OnServerEvent:Connect(onOffer)
-	Remotes.TradeAccept.OnServerEvent:Connect(onAccept)
-	Remotes.TradeConfirm.OnServerEvent:Connect(onConfirm)
+	Remotes.TradeOffer.OnServerEvent:Connect(limited(onOffer))
+	Remotes.TradeAccept.OnServerEvent:Connect(limited(onAccept))
+	Remotes.TradeConfirm.OnServerEvent:Connect(limited(onConfirm))
 	Remotes.TradeCancel.OnServerEvent:Connect(onCancel)
-	Remotes.TradeSuggest.OnServerEvent:Connect(onSuggest)
-	Remotes.TradeSuggestRespond.OnServerEvent:Connect(onSuggestRespond)
+	Remotes.TradeSuggest.OnServerEvent:Connect(limited(onSuggest))
+	Remotes.TradeSuggestRespond.OnServerEvent:Connect(limited(onSuggestRespond))
 
 	local function onPlayer(player: Player)
 		player:SetAttribute("TradeBot", botAllowed())
@@ -718,6 +746,7 @@ function Trade.start()
 		end
 		lastRequest[player] = nil
 		lastSuggest[player] = nil
+		calls[player] = nil
 	end)
 end
 

@@ -51,7 +51,8 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 	end
 	-- De golpe se pueden tirar 1 o 3 rasgos, o los que dé el pase de juego (traitCount).
 	local tries = 1
-	if kind == "traits" and (count == 3 or (count ~= 1 and count == Stats.perk(player, "traitCount"))) then
+	-- (Tiene que ser un número: sin el pase, un `count` vacío era "igual" a la ventaja que no tiene y rompía la cuenta.)
+	if kind == "traits" and type(count) == "number" and (count == 3 or (count ~= 1 and count == Stats.perk(player, "traitCount"))) then
 		tries = count :: number
 	end
 	local data = PlayerData.read(player)
@@ -66,7 +67,7 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 	end
 
 	local order = Modifiers.priority(data.traitPriority)
-	if kind == "traits" and type(priority) == "string" then
+	if kind == "traits" and type(priority) == "string" and #priority <= 200 then -- el orden de verdad son unas pocas palabras
 		order = Modifiers.priority(priority)
 		local text = table.concat(order, ",")
 		if text ~= data.traitPriority then

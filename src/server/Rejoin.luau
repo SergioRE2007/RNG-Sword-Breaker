@@ -39,7 +39,8 @@ local function capture(player: Player, hint: unknown)
 	if type(hint) == "table" then
 		data.fight = hint.fight == true
 		-- Entre dos partidas con Repetir el servidor lo ve fuera un instante: vale la zona que dice el cliente.
-		if zone == 0 and type(hint.dungeon) == "number" then
+		-- (Solo una zona que exista: lo que mande el cliente va a los datos del viaje.)
+		if zone == 0 and type(hint.dungeon) == "number" and Config.Dungeons[hint.dungeon] then
 			zone = hint.dungeon
 		end
 	end
