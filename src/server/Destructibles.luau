@@ -191,7 +191,13 @@ function Destructibles.reaches(part: BasePart, origin: CFrame, range: number, ar
 	return Hitbox.reaches(part, origin, range, arc)
 end
 
--- Objetos de la parcela del jugador que están a su alcance y delante de él.
+-- Si esa pieza es un objeto vivo de la parcela del jugador (lo único de aquí que puede atacar).
+function Destructibles.owns(player: Player, part: Instance): boolean
+	local object = objects[part]
+	return object ~= nil and object.plot == Plots.get(player)
+end
+
+-- Objetos de la parcela del jugador a los que llega un golpe dado desde `origin` (ver Hitbox.reaches).
 function Destructibles.getInRange(player: Player, origin: CFrame, range: number, arc: number): { BasePart }
 	local found = {}
 	local plot = Plots.get(player)

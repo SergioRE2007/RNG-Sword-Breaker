@@ -4,6 +4,7 @@
 -- El servidor solo marca la hoja con la etiqueta "WeaponAura" y los atributos Level y Scale (lo hace SwordModel);
 -- los efectos se crean en cada cliente, dentro de la hoja: al desaparecer el arma se van con ella.
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -514,8 +515,12 @@ local function build(blade: BasePart)
 		flash = 0,
 	}
 
-	-- Lo del jugador solo con el arma en la mano, y una vez (en las dobles lo pone la hoja principal).
+	-- Lo del jugador, una sola vez: en las dobles lo pone la hoja principal y, de las armas que giran alrededor de un
+	-- jugador (client/OrbitWeapons, modelo con el atributo Owner), solo la principal (Lead).
 	local worn = not blade.Anchored and not (blade.Parent and blade.Parent.Name == "OffHand")
+	if worn and model and model:GetAttribute("Owner") then
+		worn = model:GetAttribute("Lead") == true
+	end
 	for _, layer in spec.layers do
 		local onPlayer = PLAYER_SPOTS[layer.at] == true
 		if onPlayer and not worn then
@@ -555,14 +560,17 @@ local function build(blade: BasePart)
 	end
 end
 
--- Centro del personaje que lleva el arma y lo que hay de él al suelo.
+-- Centro del personaje que lleva el arma y lo que hay de él al suelo. El arma cuelga del personaje o, si es de las
+-- que giran a su alrededor (client/OrbitWeapons), su modelo dice de quién es en el atributo Owner.
 local function wearer(blade: BasePart): (BasePart?, number)
 	local model = blade.Parent
 	for _ = 1, 3 do
 		if not model then
 			break
 		end
-		local humanoid = model:FindFirstChildOfClass("Humanoid")
+		local owner = model:GetAttribute("Owner")
+		local player = owner and Players:GetPlayerByUserId(owner)
+		local humanoid = if player then player.Character and player.Character:FindFirstChildOfClass("Humanoid") else model:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			local root = humanoid.RootPart
 			return root, if root then humanoid.HipHeight + root.Size.Y / 2 else 0

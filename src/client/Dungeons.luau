@@ -3,8 +3,7 @@
 -- Todo lo decide el servidor (server/Dungeons): aquí solo se pide salir y se pinta lo que publica en los atributos
 -- Dungeon, DungeonRun (los del mismo grupo comparten partida), DungeonWave, DungeonWaves, DungeonLeft y DungeonEnds.
 -- Para dejarlo solo (AFK): "Repetir" (DungeonLoop, lo lleva el servidor si lideras: al superarla empieza otra igual) y
--- "Auto" (aquí: el personaje anda hacia el enemigo más cercano y le pega, con los mismos espadazos que un clic).
-local CollectionService = game:GetService("CollectionService")
+-- "Auto" (aquí: el personaje anda hacia el enemigo más cercano y le manda las armas, igual que un clic).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -12,12 +11,11 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Permanent = require(ReplicatedStorage.Shared.Permanent)
-local Stats = require(ReplicatedStorage.Shared.Stats)
 local Party = require(script.Parent.Party)
 local Performance = require(script.Parent.Performance)
 local SwordController = require(script.Parent.SwordController)
 local Sfx = require(script.Parent.Sfx)
+local Targeting = require(script.Parent.Targeting)
 local Ui = require(script.Parent.Ui)
 
 local Dungeons = {}
@@ -54,52 +52,38 @@ local function autoFight(): boolean
 	return player:GetAttribute("AutoFight") == true
 end
 
--- Mientras está encendido y hay partida: va hacia el enemigo más cercano, lo encara y le pega. Es el mismo
--- espadazo que un clic (SwordController.swing), así que el servidor lo valida igual.
+-- Mientras está encendido y hay partida: si no hay ningún enemigo a mano va hacia el más cercano, y en cuanto lo
+-- tiene dentro del círculo le manda las armas, como un clic (SwordController.attack: el servidor lo valida igual). Al
+-- morir, el servidor las pasa solas al siguiente del círculo.
+local AUTO_CLOSE = 0.6 -- se acerca hasta tener al enemigo a esta parte del radio del círculo
 local function runAutoFight()
 	local moving = false
 	while true do
 		task.wait(0.1)
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local root = Targeting.root()
+		local humanoid = root and (root.Parent :: Model):FindFirstChildOfClass("Humanoid")
 		local active = autoFight() and (player:GetAttribute("Dungeon") or 0) > 0
-		if not active or not root or not humanoid or humanoid.Health <= 0 then
+		if not active or not root or not humanoid then
 			if moving and root and humanoid then
 				humanoid:MoveTo(root.Position)
 			end
 			moving = false
 			continue
 		end
-		local nearest: BasePart? = nil
-		local best = math.huge
-		for _, enemy in CollectionService:GetTagged("Enemy") do
-			if enemy:IsA("BasePart") and enemy.Parent then
-				local distance = (enemy.Position - root.Position).Magnitude - enemy.Size.X / 2
-				if distance < best then
-					nearest, best = enemy, distance
-				end
-			end
-		end
+		local nearest = Targeting.nearest()
 		if not nearest then
 			continue
 		end
-		local copy = Stats.equipped(player)
-		local reach = Config.BaseRange + Config.Swords[copy.sword].bladeLength * Permanent.scale(copy)
-		local target = Vector3.new(nearest.Position.X, root.Position.Y, nearest.Position.Z)
-		if best > reach * 0.7 then
+		if not Targeting.inCircle(nearest, Config.Loadout.Radius * AUTO_CLOSE) then
 			moving = true
-			humanoid:MoveTo(target)
+			humanoid:MoveTo(Vector3.new(nearest.Position.X, root.Position.Y, nearest.Position.Z))
 		elseif moving then
 			moving = false
 			humanoid:MoveTo(root.Position)
 		end
-		if best <= reach then
-			-- Quieto no gira solo: se le encara al enemigo para que el golpe le dé.
-			if (target - root.Position).Magnitude > 0.5 then
-				root.CFrame = CFrame.lookAt(root.Position, target)
-			end
-			SwordController.swing()
+		-- Con margen: el servidor ve al personaje con algo de retraso.
+		if not Targeting.current() and Targeting.inCircle(nearest, Config.Loadout.Radius - 2) then
+			SwordController.attack(nearest)
 		end
 	end
 end

@@ -1,3 +1,6 @@
+-- YA NO SE ARRANCA (client/init): desde que las armas equipadas giran y atacan solas (client/OrbitWeapons) el personaje
+-- no da espadazos, y el remote SwingFx que escuchaba ya no existe. Se guarda, con sus golpes de Blender, hasta que el
+-- sistema nuevo se dé por bueno.
 -- Animación del golpe (no hay animaciones subidas): reproduce sobre las articulaciones del personaje los golpes
 -- hechos en Blender (SwingClips, generado desde tools/blender) y enciende la estela del arma. Cada tipo de arma
 -- tiene sus golpes normales, que se van alternando en combo; las armas Míticas, Secretas y Divinas hacen siempre

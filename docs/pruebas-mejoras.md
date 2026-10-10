@@ -55,3 +55,15 @@ Lo cubren las pruebas de Lune (poner, quitar, sustituir, "best", venta y comerci
 
 - [ ] **Juego publicado**: equipar cuatro, salir y volver a entrar: siguen las cuatro y en el mismo orden.
 - [ ] **Ritmo**: hasta regenerar el equilibrio (parte 3) el daño es la suma de cuatro armas y los grados ya no dan monedas; vidas y precios siguen siendo los de un arma.
+
+## Armas volando y ataque con clic (parte 2)
+
+Probado en Studio el 11-10-2026, con un jugador: las armas giran y no hay arma en la mano; clic de verdad y `Attack` sobre un objeto del círculo (golpe a los 0,26 s, rotura y fin) y sobre uno de fuera (no hace nada); cada arma a su ritmo (cuatro espadas de madera: una andanada cada 0,35 s); 20 clics alternando dos objetos cada 0,1 s no dan ni un golpe, y repetir el mismo objetivo no reinicia nada; el martillo salpica y la lanza atraviesa justo a lo que calcula el cliente; mazmorra en solitario con un solo clic (las armas encadenan cada 0,16 s hasta vaciar el círculo) y con Auto (zona 1 superada en 18 s); autoclicker (rompe sin andar) y Auto de parcela; modo Rendimiento (sin estelas ni partículas). La geometría del círculo, la salpicadura y la lanza la cubre también Lune.
+
+- [ ] **Dos jugadores**: cada uno ve las armas del otro girar, volar a su objetivo y dar los tajos; las de quien está lejos de la cámara (150 studs) no se dibujan, y en Rendimiento solo las propias.
+- [ ] **Grupo de mazmorra**: dos jugadores atacando al mismo enemigo; al morir por el golpe del otro, las armas de cada uno saltan al siguiente.
+- [ ] **Móvil**: tocar un objeto lo elige (con la ayuda de puntería: vale tocar cerca) y tocar el mando de movimiento o un botón no; la fila de cuatro casillas con los botones CLICK y AUTO no pisa las monedas ni las pociones, también en vertical.
+- [ ] **Mando**: el gatillo derecho (R2) elige lo más cercano que la cámara tenga delante.
+- [ ] **De vista**: los tajos de cada tipo de arma (espada, dobles, hacha, martillo, lanza), el aro del círculo y el del objetivo, y las armas grandes (Universal) volviéndose translúcidas al pasar junto a la cámara.
+- [ ] **Colmillo astral**: varias copias girando a la vez (dos jugadores con él) siguen dibujándose con su malla.
+- [ ] **Ritmo**: espadas y dobles ya solo pegan a un objetivo y hay 0,25 s de vuelo por objeto; medir objetos por minuto y duración de mazmorra para la parte 3.

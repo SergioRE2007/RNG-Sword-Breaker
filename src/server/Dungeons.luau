@@ -435,9 +435,44 @@ local function kill(run, body: BasePart, killer: Player)
 	publish(run)
 end
 
--- Espadazo del jugador (lo llama Combat con el daño y el alcance ya calculados en el servidor). `already` son los
--- enemigos que ese mismo espadazo ya ha golpeado: no repiten, y aquí se apuntan los nuevos.
-function Dungeons.strike(player: Player, origin: CFrame, range: number, arc: number, damage: number, already: { [BasePart]: boolean }?)
+-- Si esa pieza es un enemigo vivo de la partida en la que pelea el jugador (lo único de aquí que puede atacar).
+function Dungeons.isEnemy(player: Player, body: Instance): boolean
+	local run = runOf[player]
+	return run ~= nil and run.state == "fighting" and run.enemies[body] ~= nil
+end
+
+-- Golpe de un arma del jugador a un enemigo de su partida (lo llama Combat con el daño ya calculado en el servidor).
+-- `from` = de dónde viene el golpe (lo empuja hacia el otro lado) y `slot` = hueco del arma, para que el cliente sepa
+-- cuál da el tajo. Devuelve true si lo mata.
+function Dungeons.hit(player: Player, body: BasePart, damage: number, from: Vector3, slot: number?): boolean
+	local run = runOf[player]
+	local enemy = run and run.state == "fighting" and run.enemies[body]
+	if not enemy then
+		return false
+	end
+	for _, member in run.order do
+		if member.player and member.player.Parent then
+			Remotes.Hit:FireClient(member.player, player, body, body.Position, damage, slot)
+		end
+	end
+	enemy.hp -= damage
+	if enemy.hp <= 0 then
+		kill(run, body, player)
+		return true
+	end
+	body:SetAttribute("HP", enemy.hp)
+	-- Empujón hacia atrás.
+	local away = body.Position - from
+	away = Vector3.new(away.X, 0, away.Z)
+	if away.Magnitude > 0.1 then
+		body:ApplyImpulse(away.Unit * enemy.mass * 28)
+	end
+	return false
+end
+
+-- Golpe en zona (las armas que salpican o atraviesan): pega a los enemigos de su partida a los que llega desde `origin`
+-- (ver Hitbox.reaches), menos a los de `already`.
+function Dungeons.strike(player: Player, origin: CFrame, range: number, arc: number, damage: number, already: { [BasePart]: boolean }?, slot: number?)
 	local run = runOf[player]
 	if not run or run.state ~= "fighting" then
 		return
@@ -449,31 +484,25 @@ function Dungeons.strike(player: Player, origin: CFrame, range: number, arc: num
 		end
 	end
 	for _, body in hit do
-		if already then
-			already[body] = true
-		end
-		local enemy = run.enemies[body]
-		if not enemy then
-			continue
-		end
-		for _, member in run.order do
-			if member.player and member.player.Parent then
-				Remotes.Hit:FireClient(member.player, player, body, body.Position, damage)
-			end
-		end
-		enemy.hp -= damage
-		if enemy.hp <= 0 then
-			kill(run, body, player)
-		else
-			body:SetAttribute("HP", enemy.hp)
-			-- Empujón hacia atrás.
-			local away = body.Position - origin.Position
-			away = Vector3.new(away.X, 0, away.Z)
-			if away.Magnitude > 0.1 then
-				body:ApplyImpulse(away.Unit * enemy.mass * 28)
-			end
+		Dungeons.hit(player, body, damage, origin.Position, slot)
+	end
+end
+
+-- Enemigo vivo de su partida más cercano a `from`, de entre los que están a `radius` de `center` (el círculo del
+-- jugador); nil si no hay ninguno. Para encadenar: al morir el objetivo, las armas saltan a este.
+function Dungeons.nearest(player: Player, from: Vector3, center: Vector3, radius: number): BasePart?
+	local run = runOf[player]
+	if not run or run.state ~= "fighting" then
+		return nil
+	end
+	local best, bestDistance = nil, math.huge
+	for body in run.enemies do
+		local distance = (body.Position - from).Magnitude
+		if distance < bestDistance and Destructibles.reaches(body, CFrame.new(center), radius, -1) then
+			best, bestDistance = body, distance
 		end
 	end
+	return best
 end
 
 local function step()

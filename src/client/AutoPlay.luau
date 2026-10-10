@@ -1,26 +1,25 @@
--- Los dos botones de los lados de la casilla del arma (Hud.HudRoot.WeaponSlot):
---   AutoClick, a la izquierda: da espadazos solo con el arma en la mano. Gratis para quien esté en el grupo del
---     juego; si no, sale el cartel Hud.AutoUnlock (dale like y únete al grupo) con el botón de unirse.
+-- Los dos botones de los lados de las casillas de las armas (Hud.HudRoot.WeaponSlot):
+--   AutoClick, a la izquierda: manda solo las armas a lo más cercano de tu círculo, sin andar. Gratis para quien
+--     esté en el grupo del juego; si no, sale el cartel Hud.AutoUnlock (dale like y únete al grupo) con el botón de unirse.
 --   AutoFarm, a la derecha: pase de juego (ventaja "autoFarm"). En tu parcela, el personaje va al objeto más
 --     cercano y lo rompe; sin el pase, abre la Tienda.
--- El servidor (server/AutoPlay) decide si se pueden encender y lo publica en "AutoClick" y "AutoFarm". Los golpes
--- son los de un clic (SwordController.swing), así que el servidor los valida igual. Un solo bucle, que solo vive
+-- El servidor (server/AutoPlay) decide si se pueden encender y lo publica en "AutoClick" y "AutoFarm". Los ataques
+-- son los de un clic (SwordController.attack), así que el servidor los valida igual. Un solo bucle, que solo vive
 -- mientras hay alguno encendido.
-local CollectionService = game:GetService("CollectionService")
 local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Hitbox = require(ReplicatedStorage.Shared.Hitbox)
-local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local SwordController = require(script.Parent.SwordController)
+local Targeting = require(script.Parent.Targeting)
 local Ui = require(script.Parent.Ui)
+local WeaponSlot = require(script.Parent.WeaponSlot)
 
 local AutoPlay = {}
 
@@ -36,29 +35,16 @@ local ON_COLOR = Color3.fromRGB(80, 215, 100)
 local LAYER = { button = 0, popup = 70 }
 local BUTTON = 70 -- lado de cada botón, en unidades del HUD
 local GAP = 14 -- separación con la casilla del arma
-local SLOT = 108 -- lado de la casilla del arma (SLOT_SIZE de WeaponSlot)
+local SLOT = WeaponSlot.SIZE -- lado de las casillas de las armas
 local STEP = 0.1 -- segundos entre dos vueltas del bucle
 local GIVE_UP = 6 -- segundos intentando llegar a un objeto antes de probar con otro
+local FARM_CLOSE = 0.6 -- el Auto se acerca hasta tener el objeto a esta parte del radio del círculo
+local MARGIN = 2 -- studs por dentro del círculo desde los que ya se piden objetivos (por el retraso con el servidor)
 
 -- Bucle -----------------------------------------------------------------------------------
 
 local function on(mode: string): boolean
 	return player:GetAttribute(mode) == true
-end
-
--- Objeto de tu parcela más cercano, sin contar los que se han dado por imposibles.
-local function nearest(position: Vector3, skip: { [BasePart]: number }): BasePart?
-	local best, bestDistance = nil, math.huge
-	local now = os.clock()
-	for _, part in CollectionService:GetTagged("Destructible") do
-		if part:IsA("BasePart") and part:GetAttribute("Owner") == player.UserId and (skip[part] or 0) < now then
-			local distance = (part.Position - position).Magnitude - part.Size.X / 2
-			if distance < bestDistance then
-				best, bestDistance = part, distance
-			end
-		end
-	end
-	return best
 end
 
 local running = false
@@ -67,33 +53,30 @@ local function run()
 		return
 	end
 	running = true
+	local radius = Config.Loadout.Radius
 	local target: BasePart? = nil
 	local since = 0
 	local moving = false
+	-- Objetos que se han dado por imposibles, hasta la hora que llevan apuntada.
 	local skip: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
 	while on("AutoClick") or on("AutoFarm") do
 		task.wait(STEP)
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if not root or not humanoid or humanoid.Health <= 0 then
+		local root = Targeting.root()
+		local humanoid = root and (root.Parent :: Model):FindFirstChildOfClass("Humanoid")
+		if not root or not humanoid then
 			moving = false
 			continue
 		end
 		-- Dentro de una mazmorra manda su propio Auto (client/Dungeons).
 		local farm = on("AutoFarm") and (player:GetAttribute("Dungeon") or 0) == 0
 		if farm then
-			if not target or not target.Parent then
-				target = nearest(root.Position, skip)
+			if not target or not Targeting.valid(target) then
+				target = Targeting.nearest(nil, skip)
 				since = os.clock()
 			end
 			if target then
-				local copy = Stats.equipped(player)
-				local _, kind = Stats.weapon(player)
-				local range = Config.BaseRange + Config.Swords[copy.sword].bladeLength * Permanent.scale(copy)
-				local goal = Vector3.new(target.Position.X, root.Position.Y, target.Position.Z)
-				-- Se acerca hasta tenerlo bien dentro del alcance (el servidor ve al personaje con algo de retraso).
-				if Hitbox.reaches(target, root.CFrame, range * 0.75, -1) then
+				-- Se acerca hasta tenerlo bien dentro del círculo (el servidor ve al personaje con algo de retraso).
+				if Targeting.inCircle(target, radius * FARM_CLOSE) then
 					if moving then
 						moving = false
 						humanoid:MoveTo(root.Position)
@@ -101,7 +84,7 @@ local function run()
 					since = os.clock()
 				else
 					moving = true
-					humanoid:MoveTo(goal)
+					humanoid:MoveTo(Vector3.new(target.Position.X, root.Position.Y, target.Position.Z))
 					if os.clock() - since > GIVE_UP then
 						-- No llega (algo en medio): se deja un rato y se va a por otro.
 						skip[target] = os.clock() + GIVE_UP
@@ -109,12 +92,8 @@ local function run()
 						continue
 					end
 				end
-				if Hitbox.reaches(target, root.CFrame, range, -1) then
-					-- Quieto no gira solo: se le encara al objeto para que el golpe le dé.
-					if not Hitbox.reaches(target, root.CFrame, range, kind.arc) and (goal - root.Position).Magnitude > 0.5 then
-						root.CFrame = CFrame.lookAt(root.Position, goal)
-					end
-					SwordController.swing()
+				if Targeting.inCircle(target, radius - MARGIN) then
+					SwordController.attack(target)
 				end
 			elseif moving then
 				moving = false
@@ -126,9 +105,9 @@ local function run()
 				humanoid:MoveTo(root.Position)
 			end
 			target = nil
-			-- El autoclicker solo pega con el arma en la mano: guardarla sigue sirviendo para parar.
-			if on("AutoClick") and SwordController.isDrawn() then
-				SwordController.swing()
+			-- El autoclicker no anda: manda las armas a lo más cercano del círculo cuando se quedan sin objetivo.
+			if on("AutoClick") and not Targeting.current() then
+				SwordController.attack(Targeting.nearest(radius - MARGIN))
 			end
 		end
 	end
@@ -371,7 +350,7 @@ function AutoPlay.start()
 		end
 		Ui.tip(button, function()
 			if mode == "click" then
-				return "<b>Autoclicker</b>\nDa espadazos solo mientras llevas el arma en la mano.\nGratis: dale me gusta al juego y únete al grupo.", CLICK_COLOR
+				return "<b>Autoclicker</b>\nTus armas atacan solas a lo más cercano de tu círculo.\nGratis: dale me gusta al juego y únete al grupo.", CLICK_COLOR
 			end
 			return "<b>Auto</b>\nEn tu parcela, tu personaje va solo a por los objetos y los rompe.\nPase de juego.", FARM_COLOR
 		end, true)
