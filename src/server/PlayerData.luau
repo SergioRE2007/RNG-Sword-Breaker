@@ -124,7 +124,16 @@ local function loadSwords(data, saved)
 
 	local oldLevel = math.clamp(math.floor(tonumber(saved.swordLevel) or 1), 1, #Config.Swords)
 	local equipped = nil
-	local first = type(saved.swords) == "table" and saved.swords[1]
+	-- El formato lo dice la primera entrada que sea una copia o un tipo: con una entrada rota delante no se pierde el resto.
+	local first = nil
+	if type(saved.swords) == "table" then
+		for _, entry in saved.swords do
+			if type(entry) == "table" or type(entry) == "number" then
+				first = entry
+				break
+			end
+		end
+	end
 
 	if type(first) == "table" then
 		-- Formato actual: copias { id, sword, trait, grade }. Los ids se renumeran.
@@ -163,6 +172,36 @@ local function loadSwords(data, saved)
 	data.swords = swords
 	data.nextSwordId = #swords + 1
 	data.equipped = equipped or swords[1].id
+end
+
+-- Cantidad guardada (monedas, gemas): ni NaN ni negativa. Con NaN toda comparación falla y trySpend dejaría comprar gratis.
+local function amount(value: unknown, default: number): number
+	local number = tonumber(value)
+	return if number and number == number then math.max(0, number) else default
+end
+
+-- Misiones guardadas: solo el progreso que sea un número de verdad y los premios marcados como recogidos (del periodo
+-- que toca se encarga server/Missions). Un progreso que no fuera un número daba error al sumarle.
+local function loadMissions(saved)
+	local missions = {}
+	for _, period in { "daily", "weekly" } do
+		local state = saved[period]
+		if type(state) == "table" and type(state.progress) == "table" and type(state.claimed) == "table" then
+			local progress, claimed = {}, {}
+			for id, value in state.progress do
+				if type(id) == "string" and type(value) == "number" and value == value and value >= 0 then
+					progress[id] = value
+				end
+			end
+			for id, value in state.claimed do
+				if type(id) == "string" and value == true then
+					claimed[id] = true
+				end
+			end
+			missions[period] = { id = state.id, progress = progress, claimed = claimed }
+		end
+	end
+	return missions
 end
 
 -- Armadura guardada: se revisa cada pieza (hueco, calidad y stats que existan) y los ids se renumeran.
@@ -302,15 +341,15 @@ local function load(player: Player)
 		if ok then
 			canSave = true
 			if type(saved) == "table" then
-				data.coins = tonumber(saved.coins) or data.coins
-				data.gems = tonumber(saved.gems) or 0
+				data.coins = amount(saved.coins, data.coins)
+				data.gems = amount(saved.gems, 0)
 				local rebirths = tonumber(saved.rebirths) or 0
 				data.rebirths = if rebirths == rebirths then math.clamp(math.floor(rebirths), 0, Config.Rebirth.max) else 0
 				data.playTime = math.max(0, tonumber(saved.playTime) or 0)
 				data.totalCoins = math.max(0, tonumber(saved.totalCoins) or 0)
 				data.robuxSpent = math.max(0, math.floor(tonumber(saved.robuxSpent) or 0))
 				if type(saved.missions) == "table" then
-					data.missions = saved.missions
+					data.missions = loadMissions(saved.missions)
 				end
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
 				data.pity = Modifiers.newPity(saved.pity)
@@ -343,7 +382,8 @@ local function load(player: Player)
 				data.potions = PotionInfo.sanitize(saved.potions)
 				if type(saved.upgrades) == "table" then
 					for name, upgrade in Config.Upgrades do
-						data.upgrades[name] = math.clamp(tonumber(saved.upgrades[name]) or 0, 0, upgrade.maxLevel)
+						local level = tonumber(saved.upgrades[name]) or 0 -- entero y sin NaN (math.clamp deja pasar el NaN)
+						data.upgrades[name] = if level == level then math.clamp(math.floor(level), 0, upgrade.maxLevel) else 0
 					end
 				end
 			end
