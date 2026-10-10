@@ -87,19 +87,22 @@ local function setFarm(player: Player)
 	end
 end
 
+-- Enciende (si puede) o apaga el autoclicker ("click") o el Auto ("farm"). También lo usa server/Rejoin al volver.
+function AutoPlay.set(player: Player, mode: unknown, on: unknown)
+	if mode ~= "click" and mode ~= "farm" then
+		return
+	end
+	if on ~= true then
+		player:SetAttribute(if mode == "click" then "AutoClick" else "AutoFarm", false)
+	elseif mode == "click" then
+		setClick(player)
+	else
+		setFarm(player)
+	end
+end
+
 function AutoPlay.start()
-	Remotes.SetAuto.OnServerEvent:Connect(function(player, mode, on)
-		if mode ~= "click" and mode ~= "farm" then
-			return
-		end
-		if on ~= true then
-			player:SetAttribute(if mode == "click" then "AutoClick" else "AutoFarm", false)
-		elseif mode == "click" then
-			setClick(player)
-		else
-			setFarm(player)
-		end
-	end)
+	Remotes.SetAuto.OnServerEvent:Connect(AutoPlay.set)
 	Players.PlayerRemoving:Connect(function(player)
 		member[player] = nil
 		lastCheck[player] = nil

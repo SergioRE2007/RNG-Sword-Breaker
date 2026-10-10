@@ -849,6 +849,13 @@ Config.Gamepasses = {
 -- El "me gusta" se pide en el cartel, pero Roblox no deja comprobarlo.
 Config.AutoClicker = { group = 0 }
 
+-- RECONEXIÓN (server/Rejoin y client/Rejoin): Roblox expulsa a los 20 min sin tocar nada. Antes de eso el juego saca al
+-- jugador y lo vuelve a meter él mismo, donde estaba y haciendo lo que hacía. After = segundos sin tocar nada a los que
+-- se reconecta; Countdown = segundos de aviso (tocar algo lo cancela); DungeonWait = cuánto se espera, como mucho, a que
+-- acabe la partida de mazmorra en curso para no perder sus premios (After + DungeonWait tiene que quedar por debajo de
+-- 1200); MinSession = segundos mínimos en el servidor antes de poder pedirlo.
+Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 300 }
+
 -- POCIONES (server/Potions, client/Potions y client/PotionFx; los textos salen de shared/PotionInfo). Aceleradores
 -- temporales: no sustituyen a mejores armas, rasgos, grados, armadura ni mejoras. Siete familias, cada una con su valor
 -- por tier en "values" (lo que multiplica, o lo que suma si es "additive": 0.15 = +15 %). Los tiers son 1-6 (I a VI) y,

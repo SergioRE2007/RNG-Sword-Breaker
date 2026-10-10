@@ -441,6 +441,11 @@ local function save(player: Player)
 	end
 end
 
+-- Guarda ya los datos del jugador (server/Rejoin, justo antes de reconectarlo: que el servidor al que va los lea al día).
+function PlayerData.save(player: Player)
+	save(player)
+end
+
 -- Avisa con callback(player) cuando los datos de un jugador ya están cargados (y ahora mismo, de los que ya lo estén).
 function PlayerData.onLoad(callback: (Player) -> ())
 	table.insert(loadHooks, callback)

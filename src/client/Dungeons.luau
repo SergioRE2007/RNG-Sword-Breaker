@@ -172,7 +172,15 @@ local function buildRunPanel()
 		Remotes.SetDungeonLoop:FireServer(player:GetAttribute("DungeonLoop") ~= true)
 	end)
 	player:GetAttributeChangedSignal("DungeonLoop"):Connect(paintToggles)
-	paintToggles()
+	-- Al volver de una reconexión (server/Rejoin), quien peleaba en Auto sigue en Auto.
+	local function resume()
+		if player:GetAttribute("ResumeFight") == true then
+			autoFight = true
+		end
+		paintToggles()
+	end
+	player:GetAttributeChangedSignal("ResumeFight"):Connect(resume)
+	resume()
 
 	-- Tu vida.
 	local track = Instance.new("Frame")
@@ -484,6 +492,11 @@ local function buildFeedback()
 			end)
 		end
 	end)
+end
+
+-- ¿Tiene puesta la pelea automática? (client/Rejoin lo manda al reconectar, para seguir igual al volver)
+function Dungeons.autoFight(): boolean
+	return autoFight
 end
 
 function Dungeons.start()
