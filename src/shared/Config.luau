@@ -32,6 +32,12 @@ Config.SwingLag = 0.15 -- segundos de más que el servidor mantiene vivo el espa
 Config.StartCoins = 0
 Config.AutosaveInterval = 60
 Config.DataStoreName = "PlayerData_v1"
+-- Candado de sesión del guardado (server/PlayerData): mientras un servidor tiene abierta la partida de un jugador, otro no la
+-- carga (así no se lee lo de antes del último guardado al cambiar de servidor deprisa, que duplicaría lo de un trato).
+-- Retry = segundos entre intentos de cargar una partida cogida; Wait = cuánto se espera antes de echar al jugador con un aviso;
+-- Expire = segundos sin renovarse tras los que el candado se da por muerto (servidor caído; tiene que ser bastante más que
+-- AutosaveInterval, que es cada cuánto se renueva); SaveTries = intentos del guardado al salir.
+Config.SessionLock = { Retry = 3, Wait = 30, Expire = 180, SaveTries = 3 }
 
 -- Tipos de arma. Cada arma de Config.Swords lleva "kind" (sin él es "sword").
 -- cooldown = multiplica el tiempo entre golpes; arc = cuánto de frente tiene que estar el objeto

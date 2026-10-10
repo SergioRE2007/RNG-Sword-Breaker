@@ -66,6 +66,42 @@ local function stored(value, path: string?)
 	return copy
 end
 
+-- Copia tal cual (lo que devuelve un DataStore al leer): sin comprobar nada, que lo guardado puede venir roto.
+local function copied(value)
+	if type(value) ~= "table" then return value end
+	local copy = {}
+	for key, item in value do copy[key] = copied(item) end
+	return copy
+end
+
+-- Un DataStore de una sola clave, como el de verdad: UpdateAsync lee y escribe de una vez, y devolver nil no escribe.
+-- Varios "servidores" (fixtures) pueden compartir el mismo. `fail` = "read" o "write" para simular que no hay red.
+local function dataStore(initial)
+	local store = { value = initial, writes = 0, fail = nil }
+	function store.GetAsync()
+		assert(store.fail ~= "read" and store.fail ~= "all", "sin red")
+		return copied(store.value)
+	end
+	function store.UpdateAsync(_, _, transform)
+		assert(store.fail ~= "read" and store.fail ~= "all", "sin red")
+		local current = copied(store.value)
+		local out = transform(current)
+		if out == nil then return nil end
+		assert(store.fail ~= "write", "sin red")
+		-- Lo que escribe la partida tiene que poder guardarse; lo que ya estaba (candado puesto o quitado) pasa tal cual.
+		store.value = if out == current then copied(out) else stored(out)
+		store.writes += 1
+		return store.value
+	end
+	return store
+end
+
+-- Echar a un jugador solo deja apuntado el mensaje (atributo "Kicked").
+roblox.implementMethod("Player", "Kick", function(self, message)
+	self:SetAttribute("Kicked", message or "")
+end)
+local guids = 0
+
 local function fixture(saved, customStore)
 	local now = 100
 	local jobs = {}
@@ -82,12 +118,13 @@ local function fixture(saved, customStore)
 	local http = {
 		JSONEncode = function(_, value) return serde.encode("json", value) end,
 		JSONDecode = function(_, value) return serde.decode("json", value) end,
+		GenerateGUID = function()
+			guids += 1
+			return "sesion-" .. guids
+		end,
 	}
 	local warnings = {}
-	local store = customStore or {
-		GetAsync = function() return saved end,
-		SetAsync = function(_, _, data) saved = stored(data) end,
-	}
+	local store = customStore or dataStore(saved)
 	local services = {
 		ReplicatedStorage = { Shared = node("src/shared") },
 		Players = { PlayerAdded = signal(), PlayerRemoving = signal(), GetPlayers = function() return players end },
@@ -164,6 +201,7 @@ local function fixture(saved, customStore)
 		env.warn = function(message) table.insert(warnings, message) end
 		env.os = table.clone(os)
 		env.os.clock = function() return now end
+		env.os.time = function() return 1e9 + now end -- el reloj de pared avanza con el del servidor
 		cache[path] = luau.load(fs.readFile(path .. ".luau"), { debugName = path, environment = env, injectGlobals = true })()
 		return cache[path]
 	end
@@ -178,7 +216,12 @@ local function fixture(saved, customStore)
 			now += seconds
 			for _, job in table.clone(jobs) do if coroutine.status(job) == "suspended" then resume(job) end end
 		end,
-		save = function() services.Players.PlayerRemoving:fire(player); return saved end,
+		-- Sale el jugador: guardado de salida (en su hilo, que puede esperar para reintentar) y lo que queda guardado.
+		save = function()
+			fakeTask.spawn(function() services.Players.PlayerRemoving:fire(player) end)
+			return store.value
+		end,
+		store = store, spawn = fakeTask.spawn,
 	}
 end
 
@@ -972,17 +1015,224 @@ do
 	equal(closet.armorWorn.chest, 30, "armadura enorme: la puesta sigue")
 
 	-- Sin DataStore: si la carga falla se juega con una partida nueva y no se guarda encima; si falla el guardado, no revienta.
-	local writes = 0
-	local offline = fixture(nil, { GetAsync = function() error("sin red") end, SetAsync = function() writes += 1 end })
+	local down = dataStore({ coins = 7 })
+	down.fail = "read"
+	local offline = fixture(nil, down)
 	same(offline.data.read(offline.player), fresh, "carga fallida: partida nueva")
 	offline.data.addCoins(offline.player, 5)
+	down.fail = nil
 	offline.save()
-	equal(writes, 0, "carga fallida: no se pisa lo guardado")
+	equal(down.writes, 0, "carga fallida: no se pisa lo guardado")
+	equal(down.value.coins, 7, "carga fallida: lo guardado sigue igual")
 	equal(#offline.warnings, 1, "carga fallida avisada")
-	local readOnly = fixture(nil, { GetAsync = function() return { coins = 5 } end, SetAsync = function() error("sin red") end })
+	local readOnlyStore = dataStore({ coins = 5 })
+	local readOnly = fixture(nil, readOnlyStore)
+	readOnlyStore.fail = "write"
 	readOnly.save()
+	for _ = 1, cfg.SessionLock.SaveTries do readOnly.step(cfg.SessionLock.Retry) end
 	equal(readOnly.data.read(readOnly.player), nil, "guardado fallido: la sesión se cierra igual")
-	equal(#readOnly.warnings, 1, "guardado fallido avisado")
+	equal(#readOnly.warnings, cfg.SessionLock.SaveTries, "guardado fallido: un aviso por intento")
+	equal(readOnlyStore.value.coins, 5, "guardado fallido: lo guardado sigue igual")
+end
+
+-- Candado de sesión del guardado: dos servidores (dos fixtures) con el mismo DataStore y el mismo jugador.
+do
+	local lockCfg = f.config.SessionLock
+	local tries = lockCfg.Wait / lockCfg.Retry
+	local function swordIds(server, player)
+		local ids = {}
+		for _, copy in server.data.read(player).swords do table.insert(ids, copy.id) end
+		return table.concat(ids, ",")
+	end
+	-- Entra un jugador nuevo en un servidor que ya está en marcha.
+	local function join(server, userId: number?)
+		local player = Instance.new("Player")
+		player.Name, player.DisplayName, player.UserId, player.Parent = "Otro", "Otro", userId or 1, server.workspace.Parent
+		table.insert(server.players, player)
+		server.spawn(function() server.services.Players.PlayerAdded:fire(player) end)
+		return player
+	end
+	local function leave(server, player)
+		table.remove(server.players, table.find(server.players, player))
+		server.spawn(function() server.services.Players.PlayerRemoving:fire(player) end)
+		player.Parent = nil
+	end
+	local twoSwords = { coins = 10, swords = { { id = 1, sword = 1 }, { id = 2, sword = 3 } }, nextSwordId = 3, equipped = 1 }
+
+	-- Una sesión sola: el candado se pone al cargar, se renueva al guardar y se quita al salir.
+	local solo = dataStore({ coins = 10 })
+	local one = fixture(nil, solo)
+	equal(type(solo.value.lock), "table", "cargar pone el candado")
+	equal(solo.value.coins, 10, "poner el candado no toca lo guardado")
+	local firstLock = solo.value.lock
+	one.data.addCoins(one.player, 5)
+	one.advance(60)
+	one.data.save(one.player)
+	equal(solo.value.coins, 15, "guardado normal: escribe la partida")
+	equal(solo.value.lock.id, firstLock.id, "guardado normal: el candado sigue siendo el mismo")
+	equal(solo.value.lock.time, firstLock.time + 60, "guardado normal: renueva la hora del candado")
+	equal(one.data.read(one.player).lock, nil, "el candado no entra en los datos de la partida")
+	one.step(60) -- el guardado automático
+	equal(solo.value.lock.time, firstLock.time + 120, "guardado automático: renueva el candado")
+	one.save()
+	equal(solo.value.lock, nil, "salir suelta el candado")
+	equal(solo.value.coins, 15, "salir guarda la partida")
+	equal(one.player:GetAttribute("Kicked"), nil, "una sesión normal no echa a nadie")
+	equal(#one.warnings, 0, "una sesión normal no avisa de nada")
+
+	-- El truco del trato: sale del servidor A y entra en el B antes de que A guarde. B espera y carga lo último.
+	local shared = dataStore(copied(twoSwords))
+	local a = fixture(nil, shared)
+	equal(swordIds(a, a.player), "1,2", "servidor A: carga las dos espadas")
+	a.data.edit(a.player, function(data) table.remove(data.swords, 2) end) -- la da en un trato
+	local b = fixture(nil, shared) -- entra en B con la partida aún abierta en A
+	equal(b.data.read(b.player), nil, "servidor B: no carga una partida abierta en otro servidor")
+	b.step(lockCfg.Retry)
+	equal(b.data.read(b.player), nil, "servidor B: sigue esperando mientras A no guarde")
+	equal(#shared.value.swords, 2, "servidor B: esperar no toca lo guardado")
+	a.save() -- A termina de guardar y suelta
+	b.step(lockCfg.Retry)
+	equal(swordIds(b, b.player), "1", "servidor B: carga la partida ya sin la espada del trato")
+	equal(b.player:GetAttribute("Kicked"), nil, "servidor B: no echa a quien solo tuvo que esperar")
+	b.data.addCoins(b.player, 1)
+	b.save()
+	equal(shared.value.coins, 11, "servidor B: guarda con normalidad")
+	equal(shared.value.lock, nil, "servidor B: suelta al salir")
+
+	-- La partida sigue abierta y viva en otro servidor pasado el tiempo de espera: se echa al jugador sin tocar nada.
+	local held = dataStore(copied(twoSwords))
+	local owner = fixture(nil, held)
+	local ownerLock = held.value.lock.id
+	local late = fixture(nil, held)
+	for _ = 1, tries + 2 do late.step(lockCfg.Retry) end
+	equal(late.data.read(late.player), nil, "candado vivo: no hay partida")
+	equal(type(late.player:GetAttribute("Kicked")), "string", "candado vivo: se echa al jugador con un aviso")
+	equal(held.value.lock.id, ownerLock, "candado vivo: sigue siendo del primer servidor")
+	owner.data.addCoins(owner.player, 3)
+	owner.save()
+	equal(held.value.coins, 13, "candado vivo: el primer servidor sigue guardando")
+	equal(owner.player:GetAttribute("Kicked"), nil, "candado vivo: al dueño no se le echa")
+
+	-- Quien se va mientras espera no coge nada ni recibe aviso.
+	local gone = dataStore(copied(twoSwords))
+	local keeper = fixture(nil, gone)
+	local keeperLock = gone.value.lock.id
+	local impatient = fixture(nil, gone)
+	impatient.player.Parent = nil
+	impatient.step(lockCfg.Retry)
+	equal(impatient.data.read(impatient.player), nil, "se va esperando: sin partida")
+	equal(impatient.player:GetAttribute("Kicked"), nil, "se va esperando: sin aviso")
+	equal(gone.value.lock.id, keeperLock, "se va esperando: el candado sigue siendo del primero")
+	keeper.save()
+
+	-- Servidor caído: nunca suelta. Antes de caducar no se entra; al caducar el candado, otro servidor se queda la partida.
+	local crashed = dataStore(copied(twoSwords))
+	local dead = fixture(nil, crashed)
+	dead.data.addCoins(dead.player, 100) -- lo que no llegó a guardar se pierde
+	local early = fixture(nil, crashed)
+	early.advance(lockCfg.Expire - lockCfg.Wait - lockCfg.Retry * 3)
+	for _ = 1, tries + 2 do early.step(lockCfg.Retry) end
+	equal(type(early.player:GetAttribute("Kicked")), "string", "servidor caído: antes de caducar no se entra")
+	local heir = fixture(nil, crashed)
+	equal(heir.data.read(heir.player), nil, "servidor caído: el candado sigue puesto")
+	heir.advance(lockCfg.Expire)
+	heir.step(lockCfg.Retry)
+	equal(heir.data.read(heir.player).coins, 10, "servidor caído: al caducar se carga lo último guardado")
+	equal(heir.player:GetAttribute("Kicked"), nil, "servidor caído: quien hereda la partida no es echado")
+	heir.data.addCoins(heir.player, 1)
+	heir.data.save(heir.player)
+	equal(crashed.value.coins, 11, "servidor caído: el nuevo servidor guarda")
+	-- El servidor "caído" vuelve a dar señales: su partida está vieja y no puede pisar la nueva.
+	local writes = crashed.writes
+	dead.step(60) -- su guardado automático
+	equal(crashed.writes, writes, "candado robado: el servidor viejo no escribe")
+	equal(crashed.value.coins, 11, "candado robado: lo guardado es lo del servidor nuevo")
+	equal(type(dead.player:GetAttribute("Kicked")), "string", "candado robado: el servidor viejo echa al jugador")
+	dead.data.addCoins(dead.player, 1)
+	dead.data.save(dead.player)
+	dead.save()
+	equal(crashed.writes, writes, "candado robado: tampoco escribe al salir")
+	heir.save()
+	equal(crashed.value.coins, 11, "candado robado: el servidor nuevo cierra bien")
+	equal(crashed.value.lock, nil, "candado robado: y suelta")
+	-- También si el servidor nuevo ya soltó: el viejo sigue sin poder escribir.
+	local staleStore = dataStore({ coins = 1 })
+	local stale = fixture(nil, staleStore)
+	staleStore.value = { coins = 50 } -- otro servidor se la quedó, jugó y salió
+	stale.data.addCoins(stale.player, 5)
+	stale.save()
+	equal(staleStore.value.coins, 50, "partida ya cerrada en otro servidor: no se pisa")
+
+	-- Mismo servidor: sale, el guardado tarda (falla el primer intento) y vuelve a entrar antes de que acabe.
+	local slow = dataStore(copied(twoSwords))
+	local same1 = fixture(nil, slow)
+	same1.data.addCoins(same1.player, 7)
+	slow.fail = "write"
+	leave(same1, same1.player) -- el primer intento falla y queda esperando para reintentar
+	slow.fail = nil
+	local back = join(same1)
+	equal(same1.data.read(back), nil, "mismo servidor: la vuelta espera al guardado de la salida")
+	same1.step(lockCfg.Retry) -- reintenta el guardado; la carga, que va detrás, puede necesitar otro intento
+	same1.step(lockCfg.Retry)
+	equal(same1.data.read(back).coins, 17, "mismo servidor: la vuelta carga lo que guardó la salida")
+	equal(back:GetAttribute("Kicked"), nil, "mismo servidor: sin aviso")
+
+	-- Se va justo mientras se carga: se suelta el candado recién cogido y no queda sesión.
+	local quick = dataStore({ coins = 4 })
+	local quickServer = fixture(nil, quick)
+	quickServer.save()
+	local inner, leaver = quick.UpdateAsync, nil
+	local first = true
+	quick.UpdateAsync = function(...)
+		local result = inner(...)
+		if first then
+			first = false
+			leaver.Parent = nil
+		end
+		return result
+	end
+	leaver = Instance.new("Player")
+	leaver.Name, leaver.DisplayName, leaver.UserId, leaver.Parent = "Fugaz", "Fugaz", 1, quickServer.workspace.Parent
+	quickServer.spawn(function() quickServer.services.Players.PlayerAdded:fire(leaver) end)
+	equal(quickServer.data.read(leaver), nil, "se va cargando: sin sesión")
+	equal(quick.value.lock, nil, "se va cargando: el candado se suelta")
+	equal(quick.value.coins, 4, "se va cargando: lo guardado sigue igual")
+
+	-- Guardados raros: solo el candado (servidor caído antes del primer guardado) y candados mal formados.
+	local onlyLock = fixture(nil, dataStore({ lock = { id = "viejo", time = 5 } }))
+	equal(onlyLock.data.read(onlyLock.player).coins, f.config.StartCoins, "solo el candado: partida nueva")
+	equal(swordIds(onlyLock, onlyLock.player), "1", "solo el candado: con la espada inicial")
+	for label, bad in { texto = "x", numero = 5, sinHora = { id = "x" }, sinId = { time = 1e12 }, idNumero = { id = 7, time = 1e12 } } do
+		local odd = fixture(nil, dataStore({ coins = 9, lock = bad }))
+		equal(odd.data.read(odd.player).coins, 9, "candado mal formado (" .. label .. "): se carga igual")
+		odd.save()
+		equal(odd.store.value.lock, nil, "candado mal formado (" .. label .. "): se limpia al salir")
+	end
+
+	-- Fallo de red al cargar: no se guarda después y no queda ningún candado puesto.
+	local flaky = dataStore({ coins = 3 })
+	flaky.fail = "read"
+	local blind = fixture(nil, flaky)
+	flaky.fail = nil
+	blind.save()
+	equal(flaky.value.lock, nil, "carga fallida: no deja candado")
+	equal(flaky.writes, 0, "carga fallida: no escribe")
+
+	-- Modos de prueba de Studio que no guardan: ni cogen el candado ni esperan al de otro.
+	local studio = dataStore(copied(twoSwords))
+	local live = fixture(nil, studio)
+	local liveLock = studio.value.lock.id
+	local tester = fixture(nil, dataStore(nil))
+	tester.services.RunService.IsStudio = function() return true end
+	tester.services.DataStoreService.GetDataStore = function() return studio end
+	tester.config.Test.InfiniteMoney = true
+	local testWrites = studio.writes
+	local testPlayer = join(tester, 1)
+	equal(tester.data.read(testPlayer) ~= nil, true, "modo de pruebas: carga sin esperar al candado")
+	leave(tester, testPlayer)
+	equal(studio.writes, testWrites, "modo de pruebas: no escribe")
+	equal(studio.value.lock.id, liveLock, "modo de pruebas: no toca el candado de la partida de verdad")
+	live.save()
 end
 
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)

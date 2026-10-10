@@ -39,3 +39,12 @@ Rojo debe estar conectado a `localhost:34872`. Parar y volver a iniciar la parti
 - [ ] **Mapa**: ambos temas, día, atardecer y noche; centro de parcela visible de noche y luces realmente apagadas de día. Activar/desactivar Rendimiento y alejarse/regresar con streaming. Revisar fondo y oleaje del agua desde arriba y desde la orilla; armas y mazmorras conservan sus luces.
 
 La curva de daño cambia el ritmo de combate entre tipos de arma. El ajuste económico posterior requiere una partida real; no se han alterado precios, vidas ni probabilidades para compensarlo.
+
+## Candado de sesión del guardado
+
+Lo cubren las pruebas de Lune con dos servidores simulados (esperar a que el otro guarde, echar si sigue abierto, servidor caído, servidor viejo que no puede pisar, salir y volver al mismo servidor, irse a medio cargar, modos de prueba). Con DataStore de verdad queda:
+
+- [x] **Studio con acceso a los servicios de API** (Ajustes del juego → Seguridad) y los modos de `Config.Test` que dan cosas apagados: jugar y parar deja la partida guardada y sin `lock`; con un `lock` de otro id y hora reciente puesto a mano en la clave `p_<UserId>`, entrar espera 30 s y echa con el aviso; con la hora vieja (más de 180 s), entra.
+  - Probado el 10-10-2026 con un DataStore de pruebas: jugar y parar guarda la partida (monedas, espadas, Índice) y quita el `lock`; con un candado ajeno reciente espera 30 s, echa con el aviso y no toca lo guardado; con uno de 200 s entra y carga lo último; con el candado cambiado a mitad de partida, el guardado automático no escribe, avisa en la consola y echa al jugador, y parar la partida tampoco pisa lo guardado.
+- [ ] **Juego publicado**: salir y entrar seguido varias veces (también con el botón de reconexión y tras un trato) carga siempre lo último; la consola del servidor no enseña avisos de `[PlayerData]`.
+- [ ] **Cierre del servidor** con varios jugadores (apagar servidores desde la web): todos vuelven a entrar con lo último y sin esperar.

@@ -38,6 +38,105 @@ local function getStore()
 	return store or nil
 end
 
+-- Candado de sesión (Config.SessionLock). Va dentro de lo guardado, en `lock = { id, time }`: id de la sesión que tiene
+-- abierta la partida (uno por cada vez que se carga) y hora en que lo renovó. Se pone al cargar, se renueva en cada
+-- guardado y se quita en el guardado de salida; todo con UpdateAsync, que lee y escribe de una vez. Sin él, quien sale y
+-- entra deprisa en otro servidor podía cargar lo de antes del último guardado (por ejemplo, de antes de un trato).
+local LOCK = Config.SessionLock
+local BUSY_MESSAGE = "Tu partida todavía se está guardando en otro servidor. Vuelve a entrar en un par de minutos."
+local STOLEN_MESSAGE = "Tu partida se ha abierto en otro servidor."
+local closing = 0 -- guardados de salida en marcha (BindToClose espera a que acaben)
+
+local function lockOf(saved)
+	local lock = type(saved) == "table" and saved.lock
+	if type(lock) == "table" and type(lock.id) == "string" and type(lock.time) == "number" then
+		return lock
+	end
+	return nil
+end
+
+-- Los modos de prueba que dan cosas no guardan (ver load): tampoco cogen el candado.
+local function testNoSave(): boolean
+	local test = Config.Test
+	if not RunService:IsStudio() then
+		return false
+	end
+	return (test.Progress or 0) > 0 or (test.AllPotions or 0) > 0 or (test.InfiniteMoney or test.AllWeapons or test.AllGear) and true or false
+end
+
+-- Lee lo guardado y deja puesto el candado de esta sesión. Devuelve si fue bien, lo guardado (nil = partida nueva) y si
+-- está cogido por otra sesión viva (entonces no se ha tocado nada).
+local function claim(ds, key: string, lockId: string)
+	local saved, blocked = nil, false
+	local ok, err = pcall(ds.UpdateAsync, ds, key, function(current)
+		local lock = lockOf(current)
+		if lock and lock.id ~= lockId and os.time() - lock.time < LOCK.Expire then
+			blocked = true
+			return nil
+		end
+		blocked = false
+		-- Un guardado que solo trae el candado es el de alguien cuyo servidor se cayó antes de su primer guardado.
+		saved = nil
+		if type(current) == "table" then
+			for field in current do
+				if field ~= "lock" then
+					saved = current
+					break
+				end
+			end
+		end
+		local out = if type(current) == "table" then current else {}
+		out.lock = { id = lockId, time = os.time() }
+		return out
+	end)
+	if not ok then
+		return false, err, false
+	end
+	return true, saved, blocked
+end
+
+-- Suelta el candado sin tocar lo demás (el jugador se fue mientras cargaba, o la partida al final no se guarda).
+local function release(ds, key: string, lockId: string)
+	pcall(ds.UpdateAsync, ds, key, function(current)
+		local lock = lockOf(current)
+		if not lock or lock.id ~= lockId then
+			return nil
+		end
+		current.lock = nil
+		return current
+	end)
+end
+
+-- Lo guardado del jugador, con su candado puesto. Devuelve ok (nil = sigue cogido y se le ha echado: no hay partida),
+-- lo guardado o el error, y el id del candado (nil si no se ha cogido).
+local function fetch(player: Player, ds)
+	local key = "p_" .. player.UserId
+	if testNoSave() then
+		local ok, saved = pcall(ds.GetAsync, ds, key)
+		return ok, saved, nil
+	end
+	local lockId = HttpService:GenerateGUID(false)
+	local waited = 0
+	while true do
+		local ok, saved, blocked = claim(ds, key, lockId)
+		if not ok then
+			return false, saved, nil
+		end
+		if not blocked then
+			return true, saved, lockId
+		end
+		if waited >= LOCK.Wait or not player.Parent then
+			if player.Parent then
+				warn(`[PlayerData] La partida de {player.Name} sigue abierta en otro servidor: no se carga.`)
+				player:Kick(BUSY_MESSAGE)
+			end
+			return nil, nil, nil
+		end
+		task.wait(LOCK.Retry)
+		waited += LOCK.Retry
+	end
+end
+
 local function publish(player: Player)
 	local session = sessions[player]
 	local data = session.data
@@ -334,10 +433,15 @@ local function load(player: Player)
 		data.items[name] = 0
 	end
 	local canSave = false
+	local lockId = nil -- candado de sesión que tiene cogido esta carga (nil = ninguno)
 
 	local ds = getStore()
 	if ds then
-		local ok, saved = pcall(ds.GetAsync, ds, "p_" .. player.UserId)
+		local ok, saved, lock = fetch(player, ds)
+		if ok == nil then
+			return -- su partida sigue abierta en otro servidor: se le ha echado
+		end
+		lockId = lock
 		if ok then
 			canSave = true
 			if type(saved) == "table" then
@@ -394,6 +498,9 @@ local function load(player: Player)
 	end
 
 	if not player.Parent then
+		if lockId then
+			release(ds, "p_" .. player.UserId, lockId)
+		end
 		return
 	end
 
@@ -462,22 +569,71 @@ local function load(player: Player)
 	coins.Parent = leaderstats
 	leaderstats.Parent = player
 
-	sessions[player] = { data = data, canSave = canSave, armorDirty = true, itemsSent = {} }
+	-- Una partida que no se va a guardar no retiene el candado.
+	if lockId and not canSave then
+		task.spawn(release, ds, "p_" .. player.UserId, lockId)
+		lockId = nil
+	end
+	sessions[player] = { data = data, canSave = canSave, lockId = lockId, armorDirty = true, itemsSent = {} }
 	publish(player)
 	for _, hook in loadHooks do
 		task.spawn(hook, player)
 	end
 end
 
-local function save(player: Player)
-	local session = sessions[player]
+-- Escribe la partida si el candado sigue siendo de esta sesión. Devuelve si se escribió, si hubo un error y si el
+-- candado ya no es suyo (otro servidor ha abierto la partida: lo de aquí está viejo y no se guarda).
+local function write(session, key: string, final: boolean)
 	local ds = getStore()
-	if not session or not session.canSave or not ds then
+	local lost = false
+	local ok, err = pcall(ds.UpdateAsync, ds, key, function(current)
+		local lock = lockOf(current)
+		if not lock or lock.id ~= session.lockId then
+			lost = true
+			return nil
+		end
+		lost = false
+		local out = table.clone(session.data)
+		out.lock = if final then nil else { id = session.lockId, time = os.time() }
+		return out
+	end)
+	return ok and not lost, if ok then nil else err, lost
+end
+
+-- final = guardado de salida: suelta el candado, reintenta si falla y deja la sesión cerrada (ya no se guarda más).
+local function save(player: Player, final: boolean?)
+	local session = sessions[player]
+	if not session or session.closing or not session.canSave or not getStore() then
 		return
 	end
-	local ok, err = pcall(ds.SetAsync, ds, "p_" .. player.UserId, session.data)
-	if not ok then
+	local key = "p_" .. player.UserId
+	if final then
+		session.closing = true
+		closing += 1
+	end
+	for try = 1, if final then LOCK.SaveTries else 1 do
+		local done, err, lost = write(session, key, final == true)
+		if done then
+			break
+		end
+		if lost then
+			-- Un guardado normal que llega cuando el de salida ya ha soltado el candado no es un robo: se ignora.
+			if not session.closing or final then
+				session.canSave = false
+				warn(`[PlayerData] La partida de {player.Name} se abrió en otro servidor: no se guarda la de este.`)
+				if player.Parent then
+					player:Kick(STOLEN_MESSAGE)
+				end
+			end
+			break
+		end
 		warn(`[PlayerData] No se pudo guardar a {player.Name}: {err}`)
+		if final and try < LOCK.SaveTries then
+			task.wait(LOCK.Retry)
+		end
+	end
+	if final then
+		closing -= 1
 	end
 end
 
@@ -622,13 +778,18 @@ function PlayerData.start()
 	end
 
 	Players.PlayerRemoving:Connect(function(player)
-		save(player)
+		save(player, true)
 		sessions[player] = nil
 	end)
 
+	-- Al cerrarse el servidor: todos a la vez (uno detrás de otro no daría tiempo) y esperar también a los guardados de
+	-- salida que ya estuvieran en marcha.
 	game:BindToClose(function()
-		for _, player in Players:GetPlayers() do
-			save(player)
+		for player in sessions do
+			task.spawn(save, player, true)
+		end
+		while closing > 0 do
+			task.wait()
 		end
 	end)
 
