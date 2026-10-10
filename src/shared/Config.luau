@@ -853,7 +853,7 @@ Config.Gamepasses = {
 -- AUTOCLICKER (botón a la izquierda del arma: da espadazos solo). Gratis para quien esté en el grupo del juego:
 -- "group" = id del grupo de Roblox (0 = el grupo dueño del juego; si el juego no es de un grupo, no se pide nada).
 -- El "me gusta" se pide en el cartel, pero Roblox no deja comprobarlo.
-Config.AutoClicker = { group = 0 }
+Config.AutoClicker = { group = 1002188803 }
 
 -- RECONEXIÓN (server/Rejoin y client/Rejoin): Roblox expulsa a los 20 min sin tocar nada. Antes de eso el juego saca al
 -- jugador y lo vuelve a meter él mismo, donde estaba y haciendo lo que hacía. After = segundos sin tocar nada a los que
