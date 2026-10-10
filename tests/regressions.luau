@@ -45,7 +45,28 @@ roblox.implementMethod("Instance", "WaitForChild", function(self, name)
 	return assert(self:FindFirstChild(name), "Falta " .. name)
 end)
 
-local function fixture(saved)
+-- Lo que devuelve un DataStore de lo que se le da: una copia sin nada compartido con la partida. De paso comprueba que
+-- se puede guardar (solo números, textos, booleanos y tablas que sean lista o diccionario de textos, nunca mezcla).
+local function stored(value, path: string?)
+	local where = path or "datos"
+	if type(value) ~= "table" then
+		assert(type(value) == "number" or type(value) == "string" or type(value) == "boolean", `no se puede guardar {where}: {type(value)}`)
+		return value
+	end
+	local copy, count = {}, 0
+	for key, item in value do
+		count += 1
+		copy[key] = stored(item, where .. "." .. tostring(key))
+	end
+	if count ~= #value then
+		for key in value do
+			assert(type(key) == "string", `no se puede guardar {where}: clave {tostring(key)} en un diccionario`)
+		end
+	end
+	return copy
+end
+
+local function fixture(saved, customStore)
 	local now = 100
 	local jobs = {}
 	local root = Instance.new("Folder")
@@ -62,9 +83,10 @@ local function fixture(saved)
 		JSONEncode = function(_, value) return serde.encode("json", value) end,
 		JSONDecode = function(_, value) return serde.decode("json", value) end,
 	}
-	local store = {
+	local warnings = {}
+	local store = customStore or {
 		GetAsync = function() return saved end,
-		SetAsync = function(_, _, data) saved = data end,
+		SetAsync = function(_, _, data) saved = stored(data) end,
 	}
 	local services = {
 		ReplicatedStorage = { Shared = node("src/shared") },
@@ -139,6 +161,7 @@ local function fixture(saved)
 		env.require = function(ref) return loadModule(ref.path) end
 		env.Random = { new = function() return random end }
 		env.task = fakeTask
+		env.warn = function(message) table.insert(warnings, message) end
 		env.os = table.clone(os)
 		env.os.clock = function() return now end
 		cache[path] = luau.load(fs.readFile(path .. ".luau"), { debugName = path, environment = env, injectGlobals = true })()
@@ -149,7 +172,7 @@ local function fixture(saved)
 	data.start()
 	return {
 		load = loadModule, config = config, data = data, player = player, remotes = remotes, services = services,
-		overrides = overrides, workspace = workspace, players = players, random = random, tags = tags,
+		overrides = overrides, warnings = warnings, workspace = workspace, players = players, random = random, tags = tags,
 		advance = function(seconds) now += seconds end,
 		step = function(seconds)
 			now += seconds
@@ -601,5 +624,365 @@ tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "items", "gradeCrystal", 2)
 equal(tradeState().you.items.gradeCrystal, 2, "los cristales sí se ofrecen")
 tf.remotes.TradeCancel.OnServerEvent:fire(tf.player)
 equal(tf.data.read(tf.player).coins, 1e6, "el trato cancelado no toca las monedas")
+
+-- Guardado: lo que se guarda vuelve igual, lo antiguo se completa con valores por defecto y lo roto se limpia sin dar
+-- error ni llevarse por delante lo válido. (El DataStore es un doble: lo que pase en Roblox de verdad solo se ve publicado.)
+do
+	local cfg = f.config
+	local potionInfo = f.load("src/shared/PotionInfo")
+	local nan, huge = 0 / 0, math.huge
+	local function same(actual, expected, label: string)
+		local function walk(a, b, path)
+			if type(a) == "table" and type(b) == "table" then
+				for key, value in b do walk(a[key], value, path .. "." .. tostring(key)) end
+				for key in a do assert(b[key] ~= nil, `{label}: sobra {path}.{tostring(key)}`) end
+			else
+				assert(a == b, `{label}: {path} esperado {tostring(b)}, recibido {tostring(a)}`)
+			end
+		end
+		walk(actual, expected, "datos")
+		checks += 1
+	end
+	local function loadSaved(saved)
+		local g = fixture(saved)
+		return g.data.read(g.player), g
+	end
+	-- Lo que tiene que cumplir cualquier partida cargada, venga de donde venga.
+	local function sane(d, label: string)
+		local ok = d.coins >= 0 and d.gems >= 0 and d.playTime >= 0 and d.totalCoins >= 0 and d.robuxSpent >= 0 and d.autoSell >= 0
+		ok = ok and d.rebirths >= 0 and d.rebirths <= cfg.Rebirth.max and d.rebirths % 1 == 0
+		ok = ok and #d.swords >= 1 and #d.swords <= cfg.MaxSwords and d.nextSwordId == #d.swords + 1 and d.swords[d.equipped] ~= nil
+		for position, copy in d.swords do
+			ok = ok and copy.id == position and cfg.Swords[copy.sword] ~= nil
+			ok = ok and (copy.trait == nil or cfg.Traits[copy.trait] ~= nil) and (copy.grade == nil or cfg.Grades[copy.grade] ~= nil)
+			ok = ok and (copy.metal == nil or cfg.Metals[copy.metal] ~= nil) and (copy.size == nil or cfg.Sizes[copy.size] ~= nil)
+		end
+		for name in cfg.Items do
+			ok = ok and type(d.items[name]) == "number" and d.items[name] >= 0
+		end
+		for name, upgrade in cfg.Upgrades do
+			local level = d.upgrades[name]
+			ok = ok and type(level) == "number" and level >= 0 and level <= upgrade.maxLevel and level % 1 == 0
+		end
+		for position, index in d.artifacts do
+			ok = ok and cfg.Artifacts[index] ~= nil and table.find(d.artifacts, index) == position
+		end
+		ok = ok and #d.gear <= cfg.GearSlots
+		for position, index in d.gear do
+			ok = ok and table.find(d.artifacts, index) ~= nil and table.find(d.gear, index) == position
+		end
+		ok = ok and #d.armor <= cfg.Armor.MaxPieces and d.nextArmorId == #d.armor + 1
+		for position, piece in d.armor do
+			ok = ok and piece.id == position and cfg.Armor.Slots[piece.slot] ~= nil and cfg.Armor.Qualities[piece.quality] ~= nil and cfg.Dungeons[piece.level] ~= nil
+			for _, entry in piece.stats do
+				ok = ok and cfg.Armor.Stats[entry.stat] ~= nil and entry.value >= 0 and entry.value <= armorStats.cap(entry.stat, piece.quality, piece.level)
+			end
+		end
+		for slot, id in d.armorWorn do
+			ok = ok and d.armor[id] ~= nil and d.armor[id].slot == slot
+		end
+		for family, potion in d.potions do
+			ok = ok and cfg.Potions.Families[family].values[potion.tier] ~= nil and potion.seconds > 0 and potion.seconds <= potionInfo.cap(potion.tier)
+		end
+		for _, kind in { "traits", "grades" } do
+			equal(#d.pity[kind], #modifiers.KINDS[kind].list, label .. ": un contador de pity por " .. kind)
+			for index, count in d.pity[kind] do
+				ok = ok and count >= 0 and count <= modifiers.pityLimit(kind, index) and count % 1 == 0
+			end
+		end
+		equal(ok, true, label .. ": partida cargada coherente")
+	end
+	-- Cargar, guardar y volver a cargar: lo cargado es coherente, se puede guardar y vuelve igual.
+	local function stable(saved, label: string)
+		local first, g = loadSaved(saved)
+		sane(first, label)
+		local kept = stored(first)
+		same(loadSaved(g.save()), kept, label .. ": guardar y volver a cargar")
+		return first, g
+	end
+
+	-- Ida y vuelta de una partida con de todo (ids sin renumerar, números enormes, lo último de cada lista de Config).
+	local lastSword, lastTrait, lastGrade, lastMetal, lastSize = #cfg.Swords, #cfg.Traits, #cfg.Grades, #cfg.Metals, #cfg.Sizes
+	local lastArtifact, lastQuality = #cfg.Artifacts, #cfg.Armor.Qualities
+	local potionKey = cfg.Potions.ItemKeys[#cfg.Potions.ItemKeys]
+	local topTier = #cfg.Potions.Families.rankLuck.values
+	local pity = { traits = {}, grades = {} }
+	for kind, counters in pity do
+		for index in modifiers.KINDS[kind].list do counters[index] = math.min(index, modifiers.pityLimit(kind, index)) end
+	end
+	local levels = {}
+	for name, upgrade in cfg.Upgrades do levels[name] = if name == "luck" then upgrade.maxLevel else 1 end
+	local missions = { daily = { id = 20000, progress = { romper = 3 }, claimed = {} }, weekly = { id = 2800, progress = { tirar = 50 }, claimed = { tirar = true } } }
+	local helmetStats = {
+		{ stat = "health", value = armorStats.cap("health", lastQuality, lastZone) / 2 },
+		{ stat = "luck", value = armorStats.cap("luck", lastQuality, lastZone) / 2, bonus = true },
+	}
+	local bootStats = { { stat = "health", value = armorStats.cap("health", 1, 1) / 2 } }
+	local full = {
+		coins = 1e30, gems = 2.5e33, rebirths = 3, playTime = 12345.5, totalCoins = 1e40, robuxSpent = 499,
+		missions = missions, autoSell = 1e24, traitPriority = "damage,coins,luck", pity = pity,
+		swords = {
+			{ id = 10, sword = 1 },
+			{ id = 20, sword = lastSword, trait = lastTrait, grade = lastGrade, metal = lastMetal, size = lastSize },
+			{ id = 30, sword = 4, trait = 1 },
+			{ id = 40, sword = 5, metal = 1, size = 1 },
+		},
+		equipped = 20,
+		index = { code(4, 1, 1), code(lastSword, lastMetal, lastSize) },
+		items = { traitCrystal = 1e30, gradeCrystal = 7, [potionKey] = 3 },
+		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
+		armor = {
+			{ id = 11, slot = "helmet", quality = lastQuality, level = lastZone, stats = helmetStats },
+			{ id = 12, slot = "boots", quality = 1, level = 1, stats = bootStats },
+			{ id = 13, slot = "helmet", quality = 1, level = 1, stats = {} },
+		},
+		armorWorn = { helmet = 11, boots = 12 },
+		potions = { damage = { tier = 3, seconds = 120 }, rankLuck = { tier = topTier, seconds = 1.5 } },
+		upgrades = levels,
+	}
+	local items = {}
+	for name in cfg.Items do items[name] = 0 end
+	items.traitCrystal, items.gradeCrystal, items[potionKey] = 1e30, 7, 3
+	local expected = {
+		coins = 1e30, gems = 2.5e33, rebirths = 3, playTime = 12345.5, totalCoins = 1e40, robuxSpent = 499,
+		missions = missions, autoSell = 1e24, traitPriority = "damage,coins,luck", pity = pity,
+		swords = {
+			{ id = 1, sword = 1 },
+			{ id = 2, sword = lastSword, trait = lastTrait, grade = lastGrade, metal = lastMetal, size = lastSize },
+			{ id = 3, sword = 4, trait = 1 },
+			{ id = 4, sword = 5, metal = 1, size = 1 },
+		},
+		nextSwordId = 5, equipped = 2,
+		index = full.index, items = items,
+		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
+		armor = {
+			{ id = 1, slot = "helmet", quality = lastQuality, level = lastZone, stats = helmetStats },
+			{ id = 2, slot = "boots", quality = 1, level = 1, stats = bootStats },
+			{ id = 3, slot = "helmet", quality = 1, level = 1, stats = {} },
+		},
+		nextArmorId = 4, armorWorn = { helmet = 1, boots = 2 },
+		potions = full.potions, upgrades = levels,
+	}
+	local loaded, lf = stable(stored(full), "partida completa")
+	same(loaded, expected, "partida completa: se carga todo lo guardado")
+	equal(lf.player:GetAttribute("Coins"), 1e30, "monedas enormes publicadas")
+	equal(lf.player:GetAttribute("Equipped"), 2, "equipada publicada")
+	equal(lf.player:GetAttribute("SwordLevel"), lastSword, "tipo de la equipada publicado")
+	equal(lf.player:GetAttribute("SwordMetal"), lastMetal, "metal de la equipada publicado")
+	equal(lf.player:GetAttribute("Item_traitCrystal"), 1e30, "objetos enormes publicados")
+	equal(lf.player:GetAttribute("Upgrade_luck"), cfg.Upgrades.luck.maxLevel, "mejora publicada")
+	equal(lf.player:GetAttribute("Gear"), `{lastArtifact},1`, "accesorios equipados publicados")
+	-- Lo ganado durante la partida también se guarda, y dos vueltas seguidas no cambian nada.
+	local played = fixture(stored(full))
+	played.data.addCoins(played.player, 1e35)
+	played.data.addGems(played.player, 1e36)
+	played.data.setUpgrade(played.player, "capacity", 2)
+	local second = loadSaved(played.save())
+	equal(second.coins, 1e30 + 1e35, "monedas ganadas guardadas")
+	equal(second.totalCoins, 1e40 + 1e35, "total de monedas guardado")
+	equal(second.gems, 2.5e33 + 1e36, "gemas ganadas guardadas")
+	equal(second.upgrades.capacity, 2, "mejora comprada guardada")
+	-- Números enormes pasados por JSON de verdad (el de Lune redondea el último decimal: de ahí el `near`).
+	local json = serde.decode("json", serde.encode("json", stored(loaded)))
+	json.coins, json.gems, json.totalCoins, json.items.traitCrystal = 1e300, 1e33, 1e305, 1e30
+	local big = loadSaved(json)
+	near(big.coins, 1e300, "1e300 monedas sobreviven")
+	near(big.gems, 1e33, "1e33 gemas sobreviven")
+	near(big.totalCoins, 1e305, "1e305 sobrevive")
+	near(big.items.traitCrystal, 1e30, "1e30 cristales sobreviven")
+	near(big.autoSell, 1e24, "autoventa de 1e24 sobrevive")
+	equal(big.equipped, 2, "la equipada sobrevive al JSON")
+	equal(big.pity.traits[2], pity.traits[2], "el pity sobrevive al JSON")
+	equal(big.armorWorn.helmet, 1, "la armadura puesta sobrevive al JSON")
+	equal(big.potions.damage.seconds, 120, "las pociones sobreviven al JSON")
+	sane(big, "partida pasada por JSON")
+
+	-- Datos antiguos: lo que falta entra con su valor por defecto y lo que había se queda.
+	local fresh = stored((loadSaved(nil)))
+	for _, empty in { {}, "roto", 5, true } do
+		same(stable(empty, "guardado vacío"), fresh, "guardado vacío o que no es una tabla: partida nueva")
+	end
+	local before = stable({ coins = 50, gems = 3, swordLevel = 3 }, "guardado anterior al gacha")
+	equal(before.coins, 50, "anterior al gacha: monedas")
+	equal(before.gems, 3, "anterior al gacha: gemas")
+	equal(#before.swords, 3, "anterior al gacha: una espada por nivel comprado")
+	equal(before.swords[before.equipped].sword, 3, "anterior al gacha: equipada la última")
+	equal(before.index, nil, "sin índice guardado: sin estrenar")
+	equal(next(before.potions), nil, "sin pociones guardadas")
+	equal(#before.armor, 0, "sin armadura guardada")
+	equal(next(before.armorWorn), nil, "sin armadura puesta")
+	equal(before.autoSell, 0, "sin autoventa guardada")
+	equal(before.traitPriority, fresh.traitPriority, "sin prioridad de rasgos guardada")
+	equal(before.upgrades.luck, 0, "sin mejoras guardadas")
+	equal(before.items.traitCrystal, 0, "sin objetos guardados")
+	local firstGacha = stable({ swords = { 1, 4, 5, 999 }, traits = { ["4"] = 2, ["5"] = 999 }, swordLevel = 4 }, "primer gacha")
+	same(firstGacha.swords, { { id = 1, sword = 1 }, { id = 2, sword = 4, trait = 2 }, { id = 3, sword = 5 } }, "primer gacha: tipos y rasgos aparte")
+	equal(firstGacha.equipped, 2, "primer gacha: equipada por tipo")
+	local older = stable({
+		coins = 9, swords = { { id = 1, sword = 1 }, { id = 2, sword = 4, trait = 1 } }, equipped = 2,
+		items = { traitCrystal = 5 }, upgrades = { luck = 2 }, artifacts = { 2 }, gear = { 2 },
+	}, "guardado sin lo añadido después")
+	same(older.swords, { { id = 1, sword = 1 }, { id = 2, sword = 4, trait = 1 } }, "copias sin grado, metal ni tamaño")
+	equal(older.equipped, 2, "antiguo: equipada")
+	equal(older.items.traitCrystal, 5, "antiguo: objetos que había")
+	equal(older.items.gradeCrystal, 0, "antiguo: objeto añadido después")
+	equal(older.items[potionKey], 0, "antiguo: pociones añadidas después")
+	equal(older.upgrades.luck, 2, "antiguo: mejora que había")
+	equal(older.upgrades.capacity, 0, "antiguo: mejora sin guardar")
+	equal(older.gear[1], 2, "antiguo: accesorio equipado")
+	equal(older.pity.grades[1], 0, "antiguo: sin pity")
+	equal(older.rebirths, 0, "antiguo: sin renacimientos")
+
+	-- Datos rotos, campo a campo.
+	for _, bad in { nan, -5, -huge, "abc", true, {} } do
+		local d, g = stable({
+			coins = bad, gems = bad, rebirths = bad, playTime = bad, totalCoins = bad, robuxSpent = bad, autoSell = bad,
+			swords = { { id = 1, sword = 4 } }, equipped = bad, swordLevel = bad, traitPriority = bad, missions = bad,
+		}, "números rotos")
+		equal(d.coins, 0, "monedas rotas")
+		equal(d.gems, 0, "gemas rotas")
+		equal(d.rebirths, 0, "renacimientos rotos")
+		equal(d.playTime + d.totalCoins + d.robuxSpent + d.autoSell, 0, "contadores rotos")
+		equal(d.swords[d.equipped].sword, 4, "equipada rota: la primera")
+		equal(table.concat(modifiers.priority(d.traitPriority), ","), table.concat(modifiers.PRIORITY, ","), "prioridad de rasgos rota")
+		equal(next(d.missions), nil, "misiones rotas")
+		local g2 = fixture({ coins = bad, gems = bad })
+		equal(g2.data.trySpend(g2.player, 1), false, "con monedas rotas no se compra gratis")
+		equal(g2.data.trySpendGems(g2.player, 1), false, "con gemas rotas no se compra gratis")
+		equal(g.player:GetAttribute("Coins"), 0, "monedas rotas publicadas a cero")
+	end
+	local numeric = stable({ coins = "1e30", gems = "12", rebirths = huge, upgrades = { luck = huge } }, "números como texto e infinitos")
+	equal(numeric.coins, 1e30, "monedas guardadas como texto")
+	equal(numeric.gems, 12, "gemas guardadas como texto")
+	equal(numeric.rebirths, cfg.Rebirth.max, "renacimientos infinitos: el máximo")
+	equal(numeric.upgrades.luck, cfg.Upgrades.luck.maxLevel, "mejora infinita: su máximo")
+	for bad, level in { [1] = 1, [2.7] = 2, [-3] = 0, [1e9] = cfg.Upgrades.luck.maxLevel } do
+		equal(stable({ upgrades = { luck = bad, inventada = 5 } }, "mejoras rotas").upgrades.luck, level, "nivel de mejora " .. bad)
+	end
+	for _, bad in { nan, "x", true, {} } do
+		local d = stable({ upgrades = { luck = bad }, coins = 7 }, "mejoras rotas")
+		equal(d.upgrades.luck, 0, "nivel de mejora roto")
+		equal(d.upgrades.inventada, nil, "mejora que no existe")
+		equal(d.coins, 7, "mejoras rotas: lo demás se queda")
+	end
+	equal(stable({ upgrades = { luck = "3" } }, "mejora como texto").upgrades.luck, 3, "nivel de mejora como texto")
+	equal(stable({ upgrades = "x" }, "mejoras que no son tabla").upgrades.luck, 0, "mejoras que no son una tabla")
+
+	-- Espadas rotas: se queda lo válido (también con una entrada rota la primera), sin rasgos ni metales inventados.
+	local swords = stable({
+		gems = 4, equipped = 99,
+		swords = {
+			"rota", { id = 1, sword = 999 }, { id = 7, sword = 4, trait = 999, grade = -1, metal = nan, size = "x" },
+			{ id = 7, sword = 5, trait = 1.5, grade = 1, metal = 0, size = 0 }, 5, { sword = "4" }, { id = 9, sword = nan },
+			{ id = 8, sword = 1.5 }, { id = 10, sword = 0 }, false, { id = 11, sword = -1 }, {},
+		},
+	}, "espadas rotas")
+	same(swords.swords, { { id = 1, sword = 4 }, { id = 2, sword = 5, grade = 1 } }, "espadas rotas: solo las válidas")
+	equal(swords.equipped, 1, "equipada que no existe: la primera")
+	equal(swords.gems, 4, "espadas rotas: lo demás se queda")
+	local twins = stable({ swords = { { id = 7, sword = 4 }, { id = 7, sword = 5 }, { id = 7, sword = 6 } }, equipped = 7 }, "ids repetidos")
+	equal(#twins.swords, 3, "ids repetidos: no se pierde ninguna copia")
+	for _, bad in { { { sword = 999 }, "x" }, {}, "x", { "x", "y" } } do
+		local d = stable({ swords = bad, coins = 3 }, "sin espadas válidas")
+		same(d.swords, { { id = 1, sword = 1 } }, "sin espadas válidas: la inicial")
+		equal(d.equipped, 1, "sin espadas válidas: equipada la inicial")
+	end
+	local many = {}
+	for id = 1, 5000 do many[id] = { id = id, sword = 4 + id % 3, trait = 1 } end
+	local crowded = stable({ swords = many, equipped = 150 }, "mochila enorme")
+	equal(#crowded.swords, cfg.MaxSwords, "mochila enorme recortada al tope")
+	equal(crowded.equipped, 150, "mochila enorme: la equipada sigue")
+	equal(crowded.swords[150].sword, 4 + 150 % 3, "mochila enorme: mismas copias")
+	stable({ swords = many, equipped = 4000 }, "equipada fuera del tope")
+
+	-- Objetos, accesorios, índice, pity y pociones rotos.
+	local bits = stable({
+		items = { traitCrystal = nan, gradeCrystal = -4, missionToken = "7", inventado = 5, [potionKey] = {} },
+		artifacts = { 999, "1", 1.5, nan, 2, 2, 0, -1, 1 },
+		gear = { 2, 2, 3, "1", 999, nan, 1 },
+		index = { code(4, 1, 1), code(4, 1, 1), code(999, 0, 0), nan, huge, -1, "x", {} },
+		pity = { traits = "x", grades = { -1, nan, 1e9 } },
+		potions = {
+			nada = { tier = 1, seconds = 10 }, damage = { tier = 99, seconds = 10 }, health = { tier = 1, seconds = nan },
+			boxLuck = { tier = 1, seconds = -5 }, weaponLuck = { tier = 1, seconds = huge }, rankLuck = "x",
+			traitLuck = { tier = 1.5, seconds = 10 }, attackSpeed = { tier = 2, seconds = 30 },
+		},
+		missions = {
+			daily = "x", otra = { id = 1, progress = {}, claimed = {} },
+			weekly = { id = 2800, progress = { a = nan, b = "x", c = 3, d = -1, [1] = 5 }, claimed = { a = "sí", c = true } },
+		},
+		traitPriority = "luck,luck,luck",
+	}, "objetos y listas rotos")
+	equal(bits.items.traitCrystal, 0, "objeto NaN")
+	equal(bits.items.gradeCrystal, 0, "objeto negativo")
+	equal(bits.items.missionToken, 7, "objeto guardado como texto")
+	equal(bits.items.inventado, nil, "objeto que no existe")
+	equal(bits.items[potionKey], 0, "objeto que no es un número")
+	same(bits.artifacts, { 2, 1 }, "accesorios: solo los que existen, sin repetir")
+	same(bits.gear, { 2, 1 }, "equipados: solo los que se tienen, sin repetir")
+	same(bits.index, { code(4, 1, 1) }, "índice roto limpio")
+	equal(bits.pity.traits[1], 0, "pity que no es una tabla")
+	equal(bits.pity.grades[3], modifiers.pityLimit("grades", 3), "pity acotado al cargar")
+	same(bits.potions, { weaponLuck = { tier = 1, seconds = potionInfo.cap(1) }, attackSpeed = { tier = 2, seconds = 30 } }, "pociones: solo las válidas")
+	same(bits.missions, { weekly = { id = 2800, progress = { c = 3 }, claimed = { c = true } } }, "misiones: solo progreso y premios válidos")
+	equal(table.concat(modifiers.priority(bits.traitPriority), ","), table.concat(modifiers.PRIORITY, ","), "prioridad de rasgos sin sentido: la de siempre")
+	local owned, wearing = {}, {}
+	for index = 1, 10000 do owned[index] = 1 + index % math.min(5, lastArtifact) end
+	for index = 1, 100 do wearing[index] = 1 + index % math.min(5, lastArtifact) end
+	local codes = table.create(10000, code(4, 1, 1))
+	local lists = stable({ artifacts = owned, gear = wearing, index = codes }, "listas enormes")
+	equal(#lists.artifacts, math.min(5, lastArtifact), "accesorios repetidos miles de veces")
+	equal(#lists.gear, math.min(cfg.GearSlots, lastArtifact), "equipados recortados a los huecos")
+	equal(#lists.index, 1, "índice repetido miles de veces")
+	for _, bad in { "x", 5, true } do
+		local d = stable({ items = bad, artifacts = bad, gear = bad, index = bad, pity = bad, potions = bad, armor = bad, armorWorn = bad, coins = 8 }, "tablas que no lo son")
+		equal(#d.artifacts + #d.gear + #d.armor, 0, "listas que no son tablas")
+		equal(d.index, nil, "índice que no es una tabla")
+		equal(d.coins, 8, "listas rotas: lo demás se queda")
+	end
+
+	-- Armadura rota: hueco, calidad o mazmorra que no existen, stats inválidos, ids repetidos y equipada sin pieza.
+	local healthCap = armorStats.cap("health", 1, 1)
+	local armor = stable({
+		armor = {
+			"x",
+			{ id = 1, slot = "nada", quality = 1, level = 1, stats = {} },
+			{ id = 2, slot = "helmet", quality = 99, level = 1, stats = {} },
+			{ id = 3, slot = "helmet", quality = 1, level = 1, stats = "x" },
+			{ id = 4, slot = "helmet", quality = 1, level = 999, stats = {
+				{ stat = "health", value = huge }, { stat = "nada", value = 1 }, { stat = "luck", value = nan }, { stat = "luck", value = -1 },
+				{ stat = "damage", value = "9" }, "x", { stat = "health", value = healthCap / 4, bonus = "sí" },
+			} },
+			{ id = 4, slot = "boots", quality = 1, level = 1, stats = {} },
+			{ slot = "chest", quality = 1, level = nan, stats = {} },
+			{ id = 6, slot = "legs", quality = 1.5, level = 1, stats = {} },
+		},
+		armorWorn = { helmet = 4, boots = 99, legs = 6, nada = 1 },
+	}, "armadura rota")
+	same(armor.armor, {
+		{ id = 1, slot = "helmet", quality = 1, level = 1, stats = { { stat = "health", value = healthCap }, { stat = "health", value = healthCap / 4 } } },
+		{ id = 2, slot = "boots", quality = 1, level = 1, stats = {} },
+		{ id = 3, slot = "chest", quality = 1, level = 1, stats = {} },
+	}, "armadura rota: solo las piezas y los stats válidos")
+	same(armor.armorWorn, { helmet = 1 }, "armadura puesta: solo la que existe")
+	local pieces = {}
+	for id = 1, 500 do pieces[id] = { id = id, slot = "chest", quality = 1, level = 1, stats = {} } end
+	local closet = stable({ armor = pieces, armorWorn = { chest = 30 } }, "armadura enorme")
+	equal(#closet.armor, cfg.Armor.MaxPieces, "armadura enorme recortada al tope")
+	equal(closet.armorWorn.chest, 30, "armadura enorme: la puesta sigue")
+
+	-- Sin DataStore: si la carga falla se juega con una partida nueva y no se guarda encima; si falla el guardado, no revienta.
+	local writes = 0
+	local offline = fixture(nil, { GetAsync = function() error("sin red") end, SetAsync = function() writes += 1 end })
+	same(offline.data.read(offline.player), fresh, "carga fallida: partida nueva")
+	offline.data.addCoins(offline.player, 5)
+	offline.save()
+	equal(writes, 0, "carga fallida: no se pisa lo guardado")
+	equal(#offline.warnings, 1, "carga fallida avisada")
+	local readOnly = fixture(nil, { GetAsync = function() return { coins = 5 } end, SetAsync = function() error("sin red") end })
+	readOnly.save()
+	equal(readOnly.data.read(readOnly.player), nil, "guardado fallido: la sesión se cierra igual")
+	equal(#readOnly.warnings, 1, "guardado fallido avisado")
+end
 
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)
