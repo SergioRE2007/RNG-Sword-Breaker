@@ -49,6 +49,7 @@ local NAMES = {
 	"PartyInvite", -- servidor -> cliente: (userId del líder, nombre del líder, zona) te invitan a un grupo de mazmorra
 	"UsePotion", -- cliente -> servidor: (familia de Config.Potions.Families, tier) usar una poción del inventario; el servidor decide si activa, mejora, suma tiempo o rechaza
 	"AdminWeather", -- cliente -> servidor: (acción) menú de admin, solo administradores (server/Admin): un id de Config.Weather.Events = poner ese clima ya, "none" = despejar, "auto" = volver al calendario, "next" = el siguiente de la lista
+	"WeatherSchedule", -- servidor -> cliente: (hora de GetServerTimeNow) cuándo empieza el siguiente clima; solo se manda a los administradores, los demás no ven la cuenta atrás
 }
 
 local Remotes = {}
