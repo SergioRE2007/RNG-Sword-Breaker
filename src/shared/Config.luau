@@ -24,11 +24,8 @@ Config.Test = {
 -- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
 -- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
 Config.Admins = { 4490621018 }
-Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
 Config.BaseCooldown = 0.35 -- segundos entre golpes de una espada (cada tipo de arma lo multiplica por su "cooldown"). No hay mejora que lo baje: solo la poción de velocidad de golpe (Config.Potions)
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
-Config.SwingWindow = 1.15 -- cuánto sigue vivo el espadazo, en veces el tiempo entre golpes: mientras dura golpea a lo que entre en su alcance, cada cosa una sola vez (1.15 = lo que dura la animación; 0 = solo el instante del clic)
-Config.SwingLag = 0.15 -- segundos de más que el servidor mantiene vivo el espadazo, por el retraso con que ve moverse al jugador
 Config.StartCoins = 0
 Config.AutosaveInterval = 60
 Config.DataStoreName = "PlayerData_v1"
@@ -40,14 +37,16 @@ Config.DataStoreName = "PlayerData_v1"
 Config.SessionLock = { Retry = 3, Wait = 30, Expire = 180, SaveTries = 3 }
 
 -- Tipos de arma. Cada arma de Config.Swords lleva "kind" (sin él es "sword").
--- cooldown = multiplica el tiempo entre golpes; arc = cuánto de frente tiene que estar el objeto
--- (1 = justo delante, 0 = medio círculo, -1 = todo alrededor). El alcance es BaseRange + bladeLength.
+-- cooldown = multiplica el tiempo entre golpes. Cada arma equipada vuela a su objetivo y le pega a su ritmo; además:
+-- area = salpica: pega también a lo que haya alrededor del objetivo, hasta esa distancia en veces el largo del arma (0 = no);
+-- pierce = atraviesa: pega también a lo que haya detrás del objetivo, en línea desde el jugador, hasta esa distancia en
+-- veces su largo. La cuenta es de shared/Hitbox (Hitbox.spread).
 Config.WeaponKinds = {
-	sword = { name = "Espada", cooldown = 1, arc = 0.2 },
-	axe = { name = "Hacha", cooldown = 1.7, arc = -1 }, -- gira y pega a todo lo que le rodea, pero lenta
-	dual = { name = "Espadas dobles", cooldown = 0.55, arc = 0.2 }, -- golpes rápidos
-	spear = { name = "Lanza", cooldown = 1.1, arc = 0.8 }, -- estocada estrecha desde lejos
-	hammer = { name = "Martillo", cooldown = 2.2, arc = -0.3 }, -- muy lento, golpe en área ancha por delante y a los lados
+	sword = { name = "Espada", cooldown = 1, area = 0 },
+	axe = { name = "Hacha", cooldown = 1.7, area = 1.6 }, -- lenta, pero salpica alrededor del objetivo
+	dual = { name = "Espadas dobles", cooldown = 0.55, area = 0 }, -- golpes rápidos
+	spear = { name = "Lanza", cooldown = 1.1, area = 0, pierce = 1 }, -- atraviesa lo que hay detrás
+	hammer = { name = "Martillo", cooldown = 2.2, area = 2.2 }, -- muy lento, salpica en un área ancha
 }
 
 -- REGLA DE EQUILIBRIO (rareza -> daño): cada vez que la rareza se multiplica por 2, el daño sube un 50 %
@@ -199,8 +198,12 @@ Config.Items = {
 
 -- Armas equipadas a la vez (pedido por el usuario: con una sola, rasgos y grados solo se mejoraban en la mejor). Cada
 -- una pega con su daño (arma, metal, tamaño, SU rasgo y SU grado) y el daño del jugador es la suma; la suerte y las
--- monedas de sus rasgos se multiplican entre sí (ver shared/Stats).
-Config.Loadout = { Slots = 4 }
+-- monedas de sus rasgos se multiplican entre sí (ver shared/Stats). Las armas giran alrededor del jugador y vuelan al
+-- objetivo que elige con un clic (server/Combat, client/OrbitWeapons):
+-- Radius = círculo alrededor del jugador dentro del que se puede elegir objetivo; Leash = studs de más que puede alejarse
+-- del objetivo ya elegido antes de que las armas lo suelten; Travel = segundos que tardan en llegar al objetivo (antes no
+-- pega ninguna); Chain = lo mismo al saltar solas al siguiente enemigo de una mazmorra.
+Config.Loadout = { Slots = 4, Radius = 26, Leash = 8, Travel = 0.25, Chain = 0.15 }
 
 -- Rasgos de espada (tienda de Rasgos del hub). Se tiran con un Cristal de rasgo; "chance" = peso
 -- de salir (el % se calcula sobre el total, sin suerte). Mientras la espada está equipada

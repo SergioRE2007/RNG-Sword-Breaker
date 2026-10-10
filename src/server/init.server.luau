@@ -15,7 +15,7 @@ require(script.TempleEntrance).start() -- después de DungeonLobby: viste su ent
 require(script.LightLift).start() -- después de DungeonLobby: el ascensor de luz del pozo
 require(script.Destructibles).start()
 require(script.Movement).start()
-require(script.Swords).start()
+-- script.Swords (el arma en la mano) ya no se arranca: las armas equipadas las dibuja cada cliente (client/OrbitWeapons).
 require(script.Index).start() -- Índice de armas: antes de Gacha, que le apunta cada tirada
 require(script.Gacha).start()
 require(script.Traits).start()

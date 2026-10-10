@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local NAMES = {
-	"Swing", -- cliente -> servidor: he dado un espadazo
+	"Attack", -- cliente -> servidor: (pieza o nada) mandar las armas equipadas a por ese objeto de mi parcela o ese enemigo de mi partida, dentro de mi círculo (Config.Loadout.Radius); sin pieza, que vuelvan
 	"RollGacha", -- cliente -> servidor: tirada gratis del gacha (una cada Stats.rollTime); solo con Config.Gacha.FreeRoll, si no el servidor la ignora
 	"EquipSword", -- cliente -> servidor: (id) equipar una copia de espada del inventario, o quitarla si ya lo estaba (hasta Config.Loadout.Slots a la vez; sin huecos sustituye a la de menos daño); ("best") equipar las de más daño
 	"SellSword", -- cliente -> servidor: (id) vender una copia que no esté equipada
@@ -13,8 +13,7 @@ local NAMES = {
 	"Teleported", -- servidor -> cliente: viaje completado, cerrar menús y escenas
 	"BuyUpgrade", -- cliente -> servidor: (name) subir un nivel una mejora de Config.Upgrades
 	"BuyAllUpgrades", -- cliente -> servidor: subir todas las mejoras que se puedan pagar
-	"SwingFx", -- servidor -> los demás clientes: (player) ese jugador ha dado un espadazo
-	"Hit", -- servidor -> clientes: (player, part, position, damage)
+	"Hit", -- servidor -> clientes: (player, part, position, damage, hueco del arma que ha pegado)
 	"Broken", -- servidor -> clientes: (player, cframe, size, color, material, reward, gems, índice del objeto en Config.Destructibles; sin él, los enemigos, info = { quality, scale, luck, rolls } del objeto roto)
 	"GachaRolled", -- servidor -> cliente: (index, kept, luck, source, metal, size, extra) espada sacada; kept = false si se vendió sola; source = "object" (la dio un objeto de la parcela) o "gacha"; extra = { boost = suerte del objeto, odds = lo difícil que era para el jugador, id = el de la copia guardada (nil si se vendió), roll, rolls, batch = tanda, name, quality, origin y box = dónde estaba el objeto y su tamaño }
 	"GachaRevealed", -- cliente -> servidor: ya he destapado mi siguiente tirada rara (para mandar su aura y aviso a todos)

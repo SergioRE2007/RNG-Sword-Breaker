@@ -158,17 +158,27 @@ local function upgrade(player: Player, name: string): number
 	return Upgrades.value(name, player:GetAttribute("Upgrade_" .. name) or 0)
 end
 
--- Tipo del arma equipada: su clave ("sword", "axe", "dual", "spear") y sus datos de Config.WeaponKinds.
-function Stats.weapon(player: Player)
-	local key = Config.Swords[Stats.equipped(player).sword].kind or "sword"
+-- Tipo de una copia de arma: su clave ("sword", "axe", "dual", "spear", "hammer") y sus datos de Config.WeaponKinds.
+function Stats.kind(copy)
+	local key = Config.Swords[copy.sword].kind or "sword"
 	return key, Config.WeaponKinds[key]
 end
 
--- Segundos entre golpes: el tiempo base por lo rápida o lenta que sea el arma, entre la poción de velocidad de golpe
--- si hay una activa. No hay mejora que lo baje (la hubo, "speed": el usuario la mandó quitar).
-function Stats.cooldown(player: Player): number
-	local _, kind = Stats.weapon(player)
+-- Tipo del arma del primer hueco.
+function Stats.weapon(player: Player)
+	return Stats.kind(Stats.equipped(player))
+end
+
+-- Segundos entre golpes de una de sus armas: el tiempo base por lo rápida o lenta que sea, entre la poción de velocidad
+-- de golpe si hay una activa. No hay mejora que lo baje (la hubo, "speed": el usuario la mandó quitar).
+function Stats.weaponCooldown(player: Player, copy): number
+	local _, kind = Stats.kind(copy)
 	return math.max(Config.BaseCooldown * kind.cooldown / Stats.potion(player, "attackSpeed"), Config.MinCooldown)
+end
+
+-- Segundos entre golpes del arma del primer hueco.
+function Stats.cooldown(player: Player): number
+	return Stats.weaponCooldown(player, Stats.equipped(player))
 end
 
 -- Renacimientos que lleva el jugador (el servidor los publica en el atributo "Rebirths").

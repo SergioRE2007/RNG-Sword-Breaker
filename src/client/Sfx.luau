@@ -229,10 +229,9 @@ function Sfx.cadence(cooldown: number): number
 	return math.clamp((cooldown / SWING_QUIET) ^ 0.5, 0.4, 1)
 end
 
--- El silbido de un espadazo, que sale del personaje que lo da.
-function Sfx.swing(kind: string, cooldown: number, character: Model?, quiet: number?)
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	Sfx.play("swing_" .. kind, Sfx.cadence(cooldown) * (quiet or 1), nil, root)
+-- El silbido del tajo de un arma, que sale de donde está (un punto del mundo o una pieza).
+function Sfx.swing(kind: string, cooldown: number, at: (Vector3 | Instance)?, quiet: number?)
+	Sfx.play("swing_" .. kind, Sfx.cadence(cooldown) * (quiet or 1), nil, at)
 end
 
 function Sfx.start()

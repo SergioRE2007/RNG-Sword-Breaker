@@ -381,7 +381,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			cooldown = Stats.cooldown(player)
 			porGolpe = M.porGolpe(Upgrades.value("capacity", estado.upgrades.capacity or 0))
 			local _, kind = Stats.weapon(player)
-			area = kind.arc <= 0
+			area = (kind.area or 0) > 0
 			local zona, segundos = M.zonaMazmorra(damage, cooldown, area)
 			mazZona, mazDur, mazSucio = zona, segundos or math.huge, false
 			if not zona then

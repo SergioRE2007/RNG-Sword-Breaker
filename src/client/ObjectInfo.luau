@@ -489,6 +489,12 @@ local function pickFocus(): BasePart?
 	if not root then
 		return nil
 	end
+	-- El objeto al que van tus armas manda sobre lo que señale el ratón.
+	local holder = player:FindFirstChild("AttackTarget")
+	local attacked = holder and holder:IsA("ObjectValue") and holder.Value
+	if attacked and attacked:IsA("BasePart") and attacked.Parent and CollectionService:HasTag(attacked, TAG) then
+		return attacked
+	end
 	if lastHit and lastHit.Parent and os.clock() - lastHitAt < HIT_HOLD then
 		return lastHit
 	end

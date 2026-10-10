@@ -400,10 +400,32 @@ local hitbox = f.load("src/shared/Hitbox")
 local function target(x, y, z, sx, sy, sz, yaw)
 	return { Size = Vector3.new(sx or 2, sy or 2, sz or 2), CFrame = CFrame.new(x, y, z) * CFrame.Angles(0, yaw or 0, 0) }
 end
+for _, arc in { 0.2, -1, 0.8, -0.3 } do
+	equal(hitbox.reaches(target(0, 0, -5), CFrame.identity, 5, arc), true, "delante " .. arc)
+	equal(hitbox.reaches(target(0, 8, -2), CFrame.identity, 5, arc), false, "fuera altura " .. arc)
+	equal(hitbox.reaches(target(0, 0, -20), CFrame.identity, 5, arc), false, "fuera alcance " .. arc)
+end
+-- Círculo del jugador y a qué más llega cada tipo de arma: quien ataca está en el origen y su objetivo a 10 studs.
+equal(hitbox.within(target(0, 0, -27), Vector3.zero, config.Loadout.Radius), true, "círculo: cuenta el borde de la caja")
+equal(hitbox.within(target(0, 0, -30), Vector3.zero, config.Loadout.Radius), false, "fuera del círculo")
+local aimed = Vector3.new(0, 3, -10)
 for name, kind in config.WeaponKinds do
-	equal(hitbox.reaches(target(0, 0, -5), CFrame.identity, 5, kind.arc), true, "delante " .. name)
-	equal(hitbox.reaches(target(0, 8, -2), CFrame.identity, 5, kind.arc), false, "fuera altura " .. name)
-	equal(hitbox.reaches(target(0, 0, -20), CFrame.identity, 5, kind.arc), false, "fuera alcance " .. name)
+	local origin, range, arc = hitbox.spread(kind, 5, Vector3.zero, aimed)
+	local reaches = function(x, z)
+		return origin ~= nil and hitbox.reaches(target(x, 0, z), origin, range, arc)
+	end
+	if (kind.area or 0) > 0 then
+		equal(reaches(kind.area * 5 - 0.5, -10), true, "salpica al lado " .. name)
+		equal(reaches(0, -10 + kind.area * 5 - 0.5), true, "salpica hacia el jugador " .. name)
+		equal(reaches(kind.area * 5 + 2, -10), false, "no salpica más allá " .. name)
+	elseif (kind.pierce or 0) > 0 then
+		equal(reaches(0, -10 - kind.pierce * 5 + 0.5), true, "atraviesa detrás " .. name)
+		equal(reaches(0, -10 - kind.pierce * 5 - 2), false, "no atraviesa más allá " .. name)
+		equal(reaches(0, -5), false, "no atraviesa hacia el jugador " .. name)
+		equal(reaches(4, -12), false, "no atraviesa de lado " .. name)
+	else
+		equal(origin, nil, "un solo objetivo " .. name)
+	end
 end
 equal(hitbox.reaches(target(0, 0, 4), CFrame.identity, 5, -1), true, "hacha detrás")
 equal(hitbox.reaches(target(0, 0, 4), CFrame.identity, 5, 0.8), false, "lanza detrás")
