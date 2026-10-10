@@ -17,6 +17,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
+local MenuTile = require(script.Parent.MenuTile)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local ForgeScene = require(script.Parent.ForgeScene)
@@ -182,35 +183,16 @@ function Hud.start()
 	end)
 
 	local destinations = {
-		{ "hub", "Hub", Color3.fromRGB(255, 175, 40), function(parent)
-			Ui.image(parent, "hub")
-		end },
-		{ "home", "Casa", Color3.fromRGB(50, 190, 240), function(parent)
-			Ui.image(parent, "casa")
-		end },
-		{ "dungeon", "Mazmorras", Ui.COLORS.purple, function(parent)
-			Ui.image(parent, "mazmorras")
-		end },
+		{ "hub", "Hub", Color3.fromRGB(255, 175, 40), "hub" },
+		{ "home", "Casa", Color3.fromRGB(50, 190, 240), "casa" },
+		{ "dungeon", "Mazmorras", Ui.COLORS.purple, "mazmorras" },
 	}
 	for order, entry in destinations do
-		local button = Ui.button(travel, "", entry[3])
+		-- Botón alargado de client/MenuTile, los tres igual de anchos. La barra mide 76 de alto: lo que va debajo
+		-- (paneles de mazmorra, forja, gacha) empieza en Y = 90.
+		local button = MenuTile.new(travel, entry[2], entry[3], entry[4], true)
 		button.Name = "Travel_" .. entry[1]
 		button.LayoutOrder = order
-		button.Size = UDim2.fromOffset(220, 76) -- los tres igual de anchos: cabe "Mazmorras"
-		-- El logo, grande y dentro del botón; el nombre queda en segundo plano. Va centrado en la cara del botón,
-		-- 4 px más arriba que el centro para no pisar el labio de abajo. La barra mide 76 de alto: lo que va debajo
-		-- (paneles de mazmorra, forja, gacha) empieza en Y = 90.
-		local iconBox = Instance.new("Frame")
-		iconBox.AnchorPoint = Vector2.new(0, 0.5)
-		iconBox.Position = UDim2.new(0, 4, 0.5, -4)
-		iconBox.Size = UDim2.fromOffset(68, 68)
-		iconBox.BackgroundTransparency = 1
-		iconBox.Parent = button
-		entry[4](iconBox, entry[3])
-		local label = Ui.label(button, 26)
-		label.Position = UDim2.fromOffset(74, 0)
-		label.Size = UDim2.new(1, -80, 1, -8) -- centrado en la cara, sin el labio
-		label.Text = entry[2]
 		Ui.sparkle(button, 5)
 		button.Activated:Connect(function()
 			Remotes.Teleport:FireServer(entry[1])
@@ -297,57 +279,34 @@ function Hud.start()
 	local menu = Instance.new("Frame")
 	menu.Name = "Menu"
 	menu.AnchorPoint = Vector2.new(0, 0.5)
-	menu.Position = UDim2.new(0, 14, 0.5, 0)
-	menu.Size = UDim2.fromOffset(256, 0) -- dos botones por fila: 2 x 124 + 8 de hueco
+	-- Algo por encima del centro: en un móvil apaisado (HUD al mínimo) el menú llegaba a tocar las gemas.
+	menu.Position = UDim2.new(0, 14, 0.47, 0)
+	local menuGap = 12 -- el borde negro va por fuera del botón: con menos se pisan al crecer
+	menu.Size = UDim2.fromOffset(MenuTile.SIZE * 2 + menuGap, 0) -- dos botones por fila
 	menu.AutomaticSize = Enum.AutomaticSize.Y
 	menu.BackgroundTransparency = 1
 	menu.Parent = gui
 	local menuLayout = Instance.new("UIGridLayout")
-	menuLayout.CellSize = UDim2.fromOffset(124, 92)
-	menuLayout.CellPadding = UDim2.fromOffset(8, 8)
+	menuLayout.CellSize = UDim2.fromOffset(MenuTile.SIZE, MenuTile.SIZE)
+	menuLayout.CellPadding = UDim2.fromOffset(menuGap, menuGap)
 	menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	menuLayout.Parent = menu
 
-	-- Botones grandes con el logo arriba, grande, y el nombre pequeño debajo.
+	-- Botones cuadrados con el logo grande y el nombre abajo (client/MenuTile): ventana, nombre, color y logo.
 	local menuItems = {
-		{ "Backpack", "Mochila", Ui.COLORS.blue, function(parent)
-			Ui.image(parent, "mochila")
-		end },
-		{ "Rebirth", "Renacer", Ui.COLORS.orange, function(parent)
-			Ui.image(parent, "rebirth")
-		end },
-		{ "Upgrades", "Mejoras", Ui.COLORS.green, function(parent)
-			Ui.image(parent, "mejora")
-		end },
-		{ "PassShop", "Tienda", Color3.fromRGB(40, 185, 110), function(parent)
-			Ui.image(parent, "tienda_robux")
-		end },
+		{ "Backpack", "Mochila", Ui.COLORS.blue, "mochila" },
+		{ "Rebirth", "Renacer", Ui.COLORS.orange, "rebirth" },
+		{ "Upgrades", "Mejoras", Ui.COLORS.green, "mejora" },
+		{ "PassShop", "Tienda", Color3.fromRGB(40, 185, 110), "tienda_robux" },
 		-- Abre la lista de Comercio (antes iba arriba, con los botones de transporte: pedido por el usuario).
-		{ "TradeList", "Trades", Color3.fromRGB(40, 170, 200), function(parent)
-			Ui.image(parent, "trade")
-		end },
+		{ "TradeList", "Trades", Color3.fromRGB(40, 170, 200), "trade" },
 		-- Índice de armas (client/Index). Logo provisional: el usuario pondrá el suyo.
-		{ "Index", "Índice", Ui.COLORS.purple, function(parent)
-			Ui.image(parent, "espada")
-		end },
+		{ "Index", "Índice", Ui.COLORS.purple, "espada" },
 	}
 	for order, entry in menuItems do
-		local item = Ui.button(menu, "", entry[3])
+		local item = MenuTile.new(menu, entry[2], entry[3], entry[4])
 		item.Name = entry[1]
 		item.LayoutOrder = order
-		local iconBox = Instance.new("Frame")
-		iconBox.Name = "Icon"
-		iconBox.AnchorPoint = Vector2.new(0.5, 0)
-		iconBox.Position = UDim2.new(0.5, 0, 0, 2)
-		iconBox.Size = UDim2.fromOffset(68, 68) -- el logo acaba justo encima del nombre
-		iconBox.BackgroundTransparency = 1
-		iconBox.Parent = item
-		entry[4](iconBox)
-		local label = Ui.label(item, 18)
-		label.AnchorPoint = Vector2.new(0.5, 1)
-		label.Position = UDim2.new(0.5, 0, 1, -5)
-		label.Size = UDim2.new(1, -8, 0, 20)
-		label.Text = entry[2]
 		Ui.sparkle(item, 6)
 		item.Activated:Connect(function()
 			Ui.toggle(entry[1])
