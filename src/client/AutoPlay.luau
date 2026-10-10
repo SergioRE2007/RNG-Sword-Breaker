@@ -218,7 +218,12 @@ local function build(dock: Instance, name: string, text: string, color: Color3, 
 	return button, state, iconScale
 end
 
--- Cartel del autoclicker: lo que hay que hacer para tenerlo y el botón de unirse al grupo.
+-- Cartel de lo que es gratis por estar en el grupo (el autoclicker y la pelea automática de mazmorra): lo que hay que
+-- hacer para tenerlo y el botón de unirse al grupo.
+local UNLOCKS = {
+	click = { attribute = "AutoClick", title = "AUTOCLICKER GRATIS", name = "el Autoclicker", done = "¡Autoclicker desbloqueado!" },
+	fight = { attribute = "AutoFight", title = "AUTO DE MAZMORRA GRATIS", name = "el Auto de mazmorra", done = "¡Auto de mazmorra desbloqueado!" },
+}
 local function buildUnlock()
 	local card = Instance.new("Frame")
 	card.Name = "AutoUnlock"
@@ -240,7 +245,6 @@ local function buildUnlock()
 	title.Name = "Title"
 	title.Position = UDim2.fromOffset(16, 10)
 	title.Size = UDim2.new(1, -32, 0, 36)
-	title.Text = "AUTOCLICKER GRATIS"
 	Ui.gradient(title, WHITE, CLICK_COLOR:Lerp(WHITE, 0.5), 90)
 	local steps = Ui.label(card, 21)
 	steps.Name = "Steps"
@@ -248,7 +252,6 @@ local function buildUnlock()
 	steps.Size = UDim2.new(1, -48, 0, 92)
 	steps.TextWrapped = true
 	steps.LineHeight = 1.2
-	steps.Text = `<font color="#{ROBUX:ToHex()}">1.</font> Dale <font color="#ffd84a">ME GUSTA</font> al juego\n<font color="#{ROBUX:ToHex()}">2.</font> Únete al <font color="#ffd84a">GRUPO</font>\ny el Autoclicker es tuyo para siempre`
 
 	local join = Ui.button(card, "Unirme al grupo", ROBUX)
 	join.Name = "Join"
@@ -272,10 +275,17 @@ local function buildUnlock()
 	Ui.layer(card, LAYER.popup)
 
 	local group = 0
+	local mode = "click" -- qué se estaba pidiendo al salir el cartel
 	local asked = false -- lo último pedido ha salido de este cartel: si lo niegan, se dice en un aviso
+	local function paintText()
+		local unlock = UNLOCKS[mode]
+		title.Text = unlock.title
+		steps.Text = `<font color="#{ROBUX:ToHex()}">1.</font> Dale <font color="#ffd84a">ME GUSTA</font> al juego\n<font color="#{ROBUX:ToHex()}">2.</font> Únete al <font color="#ffd84a">GRUPO</font>\ny {unlock.name} es tuyo para siempre`
+	end
+	paintText()
 	local function retry()
 		asked = true
-		Remotes.SetAuto:FireServer("click", true)
+		Remotes.SetAuto:FireServer(mode, true)
 	end
 	join.Activated:Connect(function()
 		-- La ventana de unirse es de Roblox; si no sale (versión antigua, grupo cerrado), queda el botón de al lado.
@@ -292,15 +302,22 @@ local function buildUnlock()
 	close.Activated:Connect(function()
 		Ui.close(card)
 	end)
-	player:GetAttributeChangedSignal("AutoClick"):Connect(function()
-		if on("AutoClick") and Ui.isOpen(card) then
-			Ui.close(card)
-			Sfx.play("win")
-			Ui.toast("¡Autoclicker desbloqueado!", ON_COLOR)
-		end
-	end)
-	return function(id: number?)
+	for key, unlock in UNLOCKS do
+		player:GetAttributeChangedSignal(unlock.attribute):Connect(function()
+			if key == mode and on(unlock.attribute) and Ui.isOpen(card) then
+				Ui.close(card)
+				Sfx.play("win")
+				Ui.toast(unlock.done, ON_COLOR)
+			end
+		end)
+	end
+	return function(id: number?, asking: string)
 		group = id or 0
+		if asking ~= mode then
+			mode = asking
+			asked = false
+			paintText()
+		end
 		if Ui.isOpen(card) then
 			if asked then
 				Sfx.play("error")
@@ -364,8 +381,8 @@ function AutoPlay.start()
 	wire("farm", "AutoFarm", "AUTO", FARM_COLOR, 1)
 
 	Remotes.AutoDenied.OnClientEvent:Connect(function(mode: string, group: number?)
-		if mode == "click" then
-			showUnlock(group)
+		if UNLOCKS[mode] then
+			showUnlock(group, mode)
 		else
 			Sfx.play("error")
 			Ui.toast("El Auto es un pase de juego", FARM_COLOR)

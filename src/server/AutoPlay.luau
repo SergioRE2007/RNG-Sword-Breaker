@@ -4,7 +4,9 @@
 --   Autoclicker: gratis para quien esté en el grupo del juego (Config.AutoClicker.group). El "me gusta" no se puede
 --     comprobar: Roblox no le dice a un juego quién le ha dado like.
 --   Auto: ventaja "autoFarm" de un pase de juego, y solo dentro de tu parcela (al salir de ella se apaga solo).
--- No se guardan: los dos entran apagados.
+--   Pelea automática de mazmorra (botón "Auto" del panel de la partida, client/Dungeons): como el autoclicker, gratis
+--     para quien esté en el grupo (pedido por el usuario). Se publica en "AutoFight".
+-- No se guardan: los tres entran apagados.
 local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +21,7 @@ local AutoPlay = {}
 local CHECK_EVERY = 3 -- segundos mínimos entre dos consultas del grupo de un jugador (Roblox las limita)
 local PLOT_MARGIN = 6 -- studs de más alrededor de la parcela que aún cuentan como estar dentro
 local ORANGE = Color3.fromRGB(255, 170, 60)
+local ATTRIBUTES = { click = "AutoClick", farm = "AutoFarm", fight = "AutoFight" } -- atributo que publica cada modo
 
 local member: { [Player]: boolean } = {} -- ya se ha visto que está en el grupo
 local lastCheck: { [Player]: number } = {}
@@ -57,10 +60,12 @@ local function inPlot(player: Player): boolean
 	return math.abs(point.X) <= half and math.abs(point.Z) <= half
 end
 
-local function setClick(player: Player)
+-- Autoclicker ("click") y pelea automática de mazmorra ("fight"): los dos piden lo mismo, estar en el grupo.
+local function setGroup(player: Player, mode: string)
+	local attribute = ATTRIBUTES[mode]
 	local id = groupId()
 	if id == 0 or member[player] then
-		player:SetAttribute("AutoClick", true)
+		player:SetAttribute(attribute, true)
 		return
 	end
 	local now = os.clock()
@@ -68,12 +73,12 @@ local function setClick(player: Player)
 		lastCheck[player] = now
 		if inGroup(player, id) and player.Parent then
 			member[player] = true
-			player:SetAttribute("AutoClick", true)
+			player:SetAttribute(attribute, true)
 			return
 		end
 	end
 	if player.Parent then
-		Remotes.AutoDenied:FireClient(player, "click", id)
+		Remotes.AutoDenied:FireClient(player, mode, id)
 	end
 end
 
@@ -87,17 +92,19 @@ local function setFarm(player: Player)
 	end
 end
 
--- Enciende (si puede) o apaga el autoclicker ("click") o el Auto ("farm"). También lo usa server/Rejoin al volver.
+-- Enciende (si puede) o apaga el autoclicker ("click"), el Auto de la parcela ("farm") o la pelea automática de
+-- mazmorra ("fight"). También lo usa server/Rejoin al volver.
 function AutoPlay.set(player: Player, mode: unknown, on: unknown)
-	if mode ~= "click" and mode ~= "farm" then
+	local attribute = if type(mode) == "string" then ATTRIBUTES[mode] else nil
+	if not attribute then
 		return
 	end
 	if on ~= true then
-		player:SetAttribute(if mode == "click" then "AutoClick" else "AutoFarm", false)
-	elseif mode == "click" then
-		setClick(player)
-	else
+		player:SetAttribute(attribute, false)
+	elseif mode == "farm" then
 		setFarm(player)
+	else
+		setGroup(player, mode :: string)
 	end
 end
 

@@ -48,7 +48,11 @@ end
 
 -- Pelea automática ------------------------------------------------------------------------
 
-local autoFight = false -- lo enciende el botón "Auto" del panel; se queda puesto entre partidas
+-- Lo pide el botón "Auto" del panel (SetAuto "fight") y lo decide el servidor, que lo publica en "AutoFight": gratis
+-- para quien esté en el grupo, como el autoclicker (server/AutoPlay). Se queda puesto entre partidas.
+local function autoFight(): boolean
+	return player:GetAttribute("AutoFight") == true
+end
 
 -- Mientras está encendido y hay partida: va hacia el enemigo más cercano, lo encara y le pega. Es el mismo
 -- espadazo que un clic (SwordController.swing), así que el servidor lo valida igual.
@@ -59,7 +63,7 @@ local function runAutoFight()
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		local active = autoFight and (player:GetAttribute("Dungeon") or 0) > 0
+		local active = autoFight() and (player:GetAttribute("Dungeon") or 0) > 0
 		if not active or not root or not humanoid or humanoid.Health <= 0 then
 			if moving and root and humanoid then
 				humanoid:MoveTo(root.Position)
@@ -156,8 +160,8 @@ local function buildRunPanel()
 	loopButton.TextSize = 19
 	local function paintToggles()
 		local loop = player:GetAttribute("DungeonLoop") == true
-		autoButton.Text = if autoFight then "Auto: SÍ" else "Auto: NO"
-		autoButton.BackgroundColor3 = if autoFight then Ui.COLORS.green else Ui.COLORS.gray
+		autoButton.Text = if autoFight() then "Auto: SÍ" else "Auto: NO"
+		autoButton.BackgroundColor3 = if autoFight() then Ui.COLORS.green else Ui.COLORS.gray
 		loopButton.Text = if loop then "Repetir: SÍ" else "Repetir: NO"
 		loopButton.BackgroundColor3 = if loop then Ui.COLORS.green else Ui.COLORS.gray
 		-- Repetir lo decide el líder del grupo.
@@ -165,22 +169,14 @@ local function buildRunPanel()
 	end
 	Party.Changed:Connect(paintToggles)
 	autoButton.Activated:Connect(function()
-		autoFight = not autoFight
-		paintToggles()
+		Remotes.SetAuto:FireServer("fight", not autoFight())
 	end)
+	player:GetAttributeChangedSignal("AutoFight"):Connect(paintToggles)
 	loopButton.Activated:Connect(function()
 		Remotes.SetDungeonLoop:FireServer(player:GetAttribute("DungeonLoop") ~= true)
 	end)
 	player:GetAttributeChangedSignal("DungeonLoop"):Connect(paintToggles)
-	-- Al volver de una reconexión (server/Rejoin), quien peleaba en Auto sigue en Auto.
-	local function resume()
-		if player:GetAttribute("ResumeFight") == true then
-			autoFight = true
-		end
-		paintToggles()
-	end
-	player:GetAttributeChangedSignal("ResumeFight"):Connect(resume)
-	resume()
+	paintToggles()
 
 	-- Tu vida.
 	local track = Instance.new("Frame")
@@ -496,7 +492,7 @@ end
 
 -- ¿Tiene puesta la pelea automática? (client/Rejoin lo manda al reconectar, para seguir igual al volver)
 function Dungeons.autoFight(): boolean
-	return autoFight
+	return autoFight()
 end
 
 function Dungeons.start()
