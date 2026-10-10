@@ -62,7 +62,6 @@ local function row(parent: Instance, order: number, title: string, hint: string,
 end
 
 function Settings.start()
-	local gui = Ui.hud()
 	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 772), function(parent) -- seis filas de 104 + 10
 		Ui.image(parent, "ajustes")
 	end)
@@ -212,10 +211,11 @@ function Settings.start()
 	player:GetAttributeChangedSignal("HitboxDebug"):Connect(paintHitbox)
 	paintHitbox()
 
-	-- Botón con engranaje, arriba a la izquierda, a la derecha del botón del chat y con más margen que antes (pedido por el usuario).
-	local button = Ui.button(gui, "", Ui.COLORS.gray)
+	-- Botón con engranaje, arriba a la derecha: el último de la fila de botones pequeños (pedido por el usuario; a la
+	-- izquierda, en el móvil lo pisaban los botones de Roblox).
+	local button = Ui.button(Ui.topButtons(), "", Ui.COLORS.gray)
 	button.Name = "SettingsButton"
-	button.Position = UDim2.fromOffset(196, 14)
+	button.LayoutOrder = 1000
 	button.Size = UDim2.fromOffset(44, 44)
 	Ui.image(button, "ajustes")
 	button.Activated:Connect(function()

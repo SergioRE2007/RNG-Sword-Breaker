@@ -3,7 +3,7 @@
 -- ni el botón ni la ventana, y aunque alguien se la fabricara, el servidor comprueba cada orden.
 -- La ventana `Hud.Admin` lleva un panel por pestaña (como la mochila): `TabWeather` y `Body.Weather`, de momento. Un
 -- panel nuevo = una entrada en PANELS con su función, que recibe el marco donde montarse. El botón es pequeño y va
--- arriba a la izquierda, junto al de Ajustes: `Hud.HudRoot.TopButtons.Admin`.
+-- arriba a la derecha, junto al de Ajustes: `Hud.HudRoot.TopButtons.Admin`.
 -- Panel del clima: una casilla por clima de Config.Weather (pulsarla lo pone ya en este servidor, para todos y con
 -- su suerte), despejar el cielo y volver al calendario (`Body.Weather.Status`, `.Grid.Weather_<id>`, `.Actions.Clear`
 -- y `.Auto`).
@@ -278,7 +278,7 @@ local function build()
 	end
 	show(PANELS[1].key)
 
-	-- Botón pequeño arriba a la izquierda, junto al de Ajustes y del mismo tamaño.
+	-- Botón pequeño arriba a la derecha, junto al de Ajustes y del mismo tamaño.
 	local button = Ui.button(Ui.topButtons(), "", Color3.fromRGB(196, 70, 86))
 	button.Name = "Admin"
 	button.LayoutOrder = 100

@@ -482,20 +482,23 @@ function Ui.hud(): Frame
 	return hudRoot :: Frame
 end
 
--- Fila de botones pequeños de arriba a la izquierda, a continuación del de Ajustes (que está en 196, 14 y mide 44).
--- Los botones nuevos de esa zona se cuelgan de aquí, de 44 x 44 y con su LayoutOrder, y se colocan solos uno tras otro.
+-- Fila de botones pequeños de arriba a la derecha (pedido por el usuario: a la izquierda, en el móvil los pisaban los
+-- botones de Roblox, que la cámara del teléfono empuja hacia dentro). El de Ajustes va el último, en la esquina
+-- (LayoutOrder 1000); los nuevos se cuelgan de aquí, de 44 x 44 y con un LayoutOrder menor, y se colocan solos a su izquierda.
 local topRow: Frame? = nil
 function Ui.topButtons(): Frame
 	if not topRow then
 		local row = Instance.new("Frame")
 		row.Name = "TopButtons"
-		row.Position = UDim2.fromOffset(248, 14)
+		row.AnchorPoint = Vector2.new(1, 0)
+		row.Position = UDim2.new(1, -14, 0, 14)
 		row.Size = UDim2.fromOffset(0, 44)
 		row.AutomaticSize = Enum.AutomaticSize.X
 		row.BackgroundTransparency = 1
 		row.Parent = Ui.hud()
 		local layout = Instance.new("UIListLayout")
 		layout.FillDirection = Enum.FillDirection.Horizontal
+		layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 		layout.Padding = UDim.new(0, 8)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.Parent = row
@@ -1654,7 +1657,22 @@ end
 -- Avisos ----------------------------------------------------------------------------------
 
 local toasts: Frame? = nil
-local MAX_TOASTS = 4
+local MAX_TOASTS = 3
+local placeToasts: (() -> ())? = nil
+-- Medidas de los avisos, en unidades del HUD. Son pastillas pequeñas pegadas al borde derecho, abajo, por encima de
+-- las pociones activas (pedido por el usuario: grandes y en el centro tapaban el juego, y a los lados de la casilla
+-- del arma van a ir botones).
+local TOAST = {
+	width = 640, -- ancho máximo de un aviso: hasta los más largos (los de pociones) caben en una línea
+	narrow = 220, -- lo mínimo a lo que baja ese máximo en pantallas estrechas
+	reserve = 200, -- lo que se deja libre desde el centro: media casilla del arma, el botón de al lado y márgenes
+	height = 34,
+	text = 17,
+	icon = 22,
+	pad = 10,
+	margin = 14, -- al borde derecho y al de abajo
+	above = 8, -- separación con lo que tengan debajo
+}
 
 -- Transparencias de todo lo que se ve en `root` (él incluido): fondos, textos, imágenes y bordes.
 -- Sirve para desvanecer el aviso entero a la vez: su GroupTransparency solo apagaba el fondo y dejaba
@@ -1694,7 +1712,6 @@ local function fadeAll(list, info: TweenInfo, shown: boolean): Tween?
 	end
 	return last
 end
-local TOAST_WIDTH = 520
 
 -- Icono según de qué habla el aviso. Los rojos llevan "!".
 local function toastIcon(parent: Frame, text: string, color: Color3)
@@ -1720,32 +1737,61 @@ local function toastIcon(parent: Frame, text: string, color: Color3)
 	end
 end
 
--- Aviso en pantalla: se apilan hasta MAX_TOASTS (los nuevos entran por abajo con rebote, los viejos
--- suben), con el icono de lo que cuentan, una barra de su color y desvanecido al final.
+-- Aviso en pantalla: se apilan hasta MAX_TOASTS (los nuevos entran por abajo, los viejos suben), cada uno una
+-- pastilla tan ancha como su texto, con un icono pequeño de lo que cuenta, y se desvanecen al final.
 function Ui.toast(text: string, color: Color3)
 	if not toasts then
+		local root = Ui.hud()
 		local list = Instance.new("Frame")
 		list.Name = "Toasts"
-		list.AnchorPoint = Vector2.new(0.5, 1)
-		list.Position = UDim2.new(0.5, 0, 1, -96) -- por encima de los botones de tirar
-		list.Size = UDim2.fromOffset(TOAST_WIDTH, 0)
 		list.AutomaticSize = Enum.AutomaticSize.Y
 		list.BackgroundTransparency = 1
 		list.ZIndex = 50
-		list.Parent = Ui.hud()
+		list.Parent = root
 		local layout = Instance.new("UIListLayout")
-		layout.Padding = UDim.new(0, 8)
+		layout.Padding = UDim.new(0, 6)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-		layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 		layout.Parent = list
+		-- Debajo pueden tener la tira de pociones activas (crece hacia arriba) y, en pantallas táctiles, el botón de
+		-- salto de Roblox: la lista se pone por encima de lo que haya. Se recoloca con cada aviso, al cambiar la
+		-- pantalla y al cambiar las pociones. El ancho de la capa del HUD ya va en sus unidades (pantalla / escala).
+		local hudScale = root:FindFirstChildOfClass("UIScale") :: UIScale
+		local watched: GuiObject? = nil
+		local function place()
+			local floor = root.AbsolutePosition.Y + root.AbsoluteSize.Y
+			local bottom = TOAST.margin
+			local function clear(below: Instance?)
+				if below and below:IsA("GuiObject") and below.Visible and below.AbsoluteSize.Y > 0 then
+					bottom = math.max(bottom, (floor - below.AbsolutePosition.Y) / hudScale.Scale + TOAST.above)
+				end
+			end
+			local potions = root:FindFirstChild("Potions")
+			clear(potions)
+			if potions and potions:IsA("GuiObject") and watched ~= potions then
+				watched = potions
+				potions:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+			end
+			local touch = player.PlayerGui:FindFirstChild("TouchGui")
+			if touch and touch:IsA("ScreenGui") and touch.Enabled then
+				local controls = touch:FindFirstChild("TouchControlFrame")
+				clear(controls and controls:FindFirstChild("JumpButton"))
+			end
+			list.AnchorPoint = Vector2.new(1, 1)
+			list.Position = UDim2.new(1, -TOAST.margin, 1, -bottom)
+			list.Size = UDim2.fromOffset(math.clamp(root.Size.X.Offset / 2 - TOAST.reserve, TOAST.narrow, TOAST.width), 0)
+		end
+		root:GetPropertyChangedSignal("Size"):Connect(place)
+		placeToasts = place
 		toasts = list
 	end
-	local list = toasts :: Frame
+	local list = toasts :: Frame;
+	(placeToasts :: () -> ())()
 	Sfx.play(if color.R > 0.7 and color.G < 0.5 and color.B < 0.5 then "error" else "toast")
 	local existing = {}
 	for _, child in list:GetChildren() do
-		if child:IsA("CanvasGroup") then
+		if child:IsA("Frame") then
 			table.insert(existing, child)
 		end
 	end
@@ -1753,62 +1799,50 @@ function Ui.toast(text: string, color: Color3)
 		existing[1]:Destroy()
 	end
 
-	local item = Instance.new("CanvasGroup")
+	-- Ancho y alto según el texto: los cortos quedan pequeños y los largos parten en dos líneas sin cortarse.
+	local limit = list.Size.X.Offset
+	local textLeft = TOAST.pad + TOAST.icon + 7
+	local bounds = TextService:GetTextSize(text, TOAST.text, Ui.FONT, Vector2.new(limit - textLeft - TOAST.pad - 4, 1000))
+	local item = Instance.new("Frame")
 	item.Name = "Toast"
 	item.LayoutOrder = os.clock() * 1000
-	-- Alto según el texto, para que los avisos largos no se corten.
-	local textHeight = TextService:GetTextSize(text, 23, Ui.FONT, Vector2.new(TOAST_WIDTH - 82, 1000)).Y
-	item.Size = UDim2.new(1, 0, 0, math.max(58, textHeight + 18))
+	item.Size = UDim2.fromOffset(math.min(limit, textLeft + bounds.X + 4 + TOAST.pad), math.max(TOAST.height, bounds.Y + 14))
 	item.BackgroundColor3 = WHITE
+	item.BackgroundTransparency = 0.1
+	item.BorderSizePixel = 0
 	item.ZIndex = 50
 	item.Parent = list
-	Ui.round(item, 14)
-	Ui.stroke(item, BLACK, 4)
+	Ui.round(item, 10)
+	Ui.stroke(item, BLACK, 3)
 	Ui.gradient(item, Color3.fromRGB(70, 74, 98), Color3.fromRGB(28, 29, 40), 90)
 	local scale = Instance.new("UIScale")
-	scale.Scale = 0.85
+	scale.Scale = 0.9
 	scale.Parent = item
 
-	-- Barra de color a la izquierda y brillo arriba. La barra va metida hacia dentro y redondeada:
-	-- pegada al borde, sus esquinas cuadradas asomaban por fuera de las esquinas redondas del aviso.
-	local bar = Instance.new("Frame")
-	bar.AnchorPoint = Vector2.new(0, 0.5)
-	bar.Position = UDim2.new(0, 6, 0.5, 0)
-	bar.Size = UDim2.new(0, 6, 1, -16)
-	bar.BackgroundColor3 = color
-	bar.BorderSizePixel = 0
-	bar.ZIndex = 51
-	bar.Parent = item
-	Ui.round(bar, 3)
-	local gloss = Instance.new("Frame")
-	gloss.Position = UDim2.fromOffset(10, 3)
-	gloss.Size = UDim2.new(1, -16, 0.4, 0)
-	gloss.BackgroundColor3 = WHITE
-	gloss.BackgroundTransparency = 0.88
-	gloss.BorderSizePixel = 0
-	gloss.ZIndex = 51
-	gloss.Parent = item
-	Ui.round(gloss, 8)
 	local iconBox = Instance.new("Frame")
+	iconBox.Name = "Icon"
 	iconBox.AnchorPoint = Vector2.new(0, 0.5)
-	iconBox.Position = UDim2.new(0, 16, 0.5, 0)
+	iconBox.Position = UDim2.new(0, TOAST.pad, 0.5, 0)
+	-- El icono se hace a 48 y se encoge entero: los hechos con marcos llevan esquinas y bordes fijos, y hechos
+	-- directamente a este tamaño quedaban como una bola.
 	iconBox.Size = UDim2.fromOffset(48, 48)
 	iconBox.BackgroundTransparency = 1
-	iconBox.ZIndex = 52
 	iconBox.Parent = item
+	local shrink = Instance.new("UIScale")
+	shrink.Scale = TOAST.icon / 48
+	shrink.Parent = iconBox
 	toastIcon(iconBox, text, color)
-	local label = Ui.label(item, 23)
-	label.Position = UDim2.fromOffset(72, 0)
-	label.Size = UDim2.new(1, -82, 1, 0)
+	local label = Ui.label(item, TOAST.text)
+	label.Position = UDim2.fromOffset(textLeft, 0)
+	label.Size = UDim2.new(1, -textLeft - TOAST.pad, 1, 0)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextWrapped = true
 	label.RichText = false
 	label.TextColor3 = color:Lerp(WHITE, 0.35)
 	label.Text = text
-	label.ZIndex = 52
 	for _, descendant in item:GetDescendants() do
-		if descendant:IsA("GuiObject") and descendant.ZIndex < 52 and descendant ~= bar and descendant ~= gloss then
-			descendant.ZIndex = 52
+		if descendant:IsA("GuiObject") and descendant.ZIndex < 51 then
+			descendant.ZIndex = 51
 		end
 	end
 
@@ -1819,10 +1853,10 @@ function Ui.toast(text: string, color: Color3)
 			(entry.part :: any)[prop] = 1
 		end
 	end
-	local pop = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-	fadeAll(parts, TweenInfo.new(0.2), true)
+	local pop = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	fadeAll(parts, TweenInfo.new(0.18), true)
 	TweenService:Create(scale, pop, { Scale = 1 }):Play()
-	task.delay(3.8, function()
+	task.delay(3.2, function()
 		if item.Parent then
 			local fade = fadeAll(parts, TweenInfo.new(0.4), false)
 			if fade then
