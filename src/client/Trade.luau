@@ -34,8 +34,16 @@ local Z_COUNT = 30 -- cuenta atrás, por encima de la ventana del trato
 local Z_SUGGEST = 50 -- tarjeta de la sugerencia recibida, por encima del inventario
 local Z_INVITE = 70 -- aviso de invitación, por encima de todo lo demás
 
-local OFFER_CELL = 66
-local STOCK_CELL = 74
+local OFFER_CELL = 104
+local STOCK_CELL = 104
+
+-- Reparto de la ventana del trato: tu inventario a la izquierda (se queda con el ancho que sobra) y, a su
+-- derecha, tu oferta y la del otro, de ancho fijo para dos casillas por fila.
+local EDGE = 10 -- margen y hueco entre columnas
+local OFFER_WIDTH = 256
+local SIDE = OFFER_WIDTH * 2 + EDGE * 4 -- lo que se le quita al ancho para la columna del inventario
+local BAR = 84 -- barra de abajo (estado y botones)
+local FOOT = 34 -- línea de ayuda bajo el inventario
 
 local STEPS = {
 	editing = "1 de 3 · Elegid qué dais y pulsad Aceptar",
@@ -362,47 +370,47 @@ end
 -- Ventana del trato -----------------------------------------------------------------------
 
 local function buildTrade()
-	local window, body = Ui.window("Trade", "Trato", Vector2.new(1000, 620), function(parent)
+	local window, body = Ui.window("Trade", "Trato", Vector2.new(1160, 700), function(parent)
 		Ui.image(parent, "trade")
 	end)
 	local current = nil -- último estado que mandó el servidor, o nil si no hay trato
 
-	-- Las dos ofertas, una al lado de la otra.
+	-- Las dos ofertas, a la derecha del inventario: primero la tuya y luego la del otro.
 	local function offerPanel(name: string, left: boolean)
 		local panel = Instance.new("Frame")
 		panel.Name = name
-		panel.AnchorPoint = Vector2.new(if left then 0 else 1, 0)
-		panel.Position = UDim2.new(if left then 0 else 1, if left then 10 else -10, 0, 8)
-		panel.Size = UDim2.new(0.5, -15, 0, 214)
+		panel.AnchorPoint = Vector2.new(1, 0)
+		panel.Position = UDim2.new(1, if left then -EDGE * 2 - OFFER_WIDTH else -EDGE, 0, 8)
+		panel.Size = UDim2.new(0, OFFER_WIDTH, 1, -8 - BAR - 8)
 		panel.BackgroundColor3 = WHITE
 		panel.BorderSizePixel = 0
 		panel.Parent = body
 		Ui.round(panel, 12)
 		local stroke = Ui.stroke(panel, BLACK, 3)
 		Ui.panel(panel, Color3.fromRGB(46, 50, 92))
-		local title = Ui.label(panel, 22)
-		title.Position = UDim2.fromOffset(14, 4)
-		title.Size = UDim2.new(1, -190, 0, 30)
-		title.TextXAlignment = Enum.TextXAlignment.Left
+		local title = Ui.label(panel, 21)
+		title.Position = UDim2.fromOffset(10, 4)
+		title.Size = UDim2.new(1, -20, 0, 30)
 		title.TextTruncate = Enum.TextTruncate.AtEnd
 		local badge = Ui.label(panel, 16)
 		badge.Name = "Badge"
-		badge.AnchorPoint = Vector2.new(1, 0)
-		badge.Position = UDim2.new(1, -10, 0, 6)
-		badge.Size = UDim2.fromOffset(160, 26)
+		badge.Position = UDim2.fromOffset(10, 36)
+		badge.Size = UDim2.new(1, -20, 0, 26)
 		badge.BackgroundTransparency = 0
 		badge.BackgroundColor3 = Ui.COLORS.dark
 		Ui.round(badge, 8)
 		Ui.stroke(badge, BLACK, 2)
 		local grid = scrollGrid(panel, OFFER_CELL)
 		grid.Name = "Grid"
-		grid.Position = UDim2.fromOffset(6, 36)
-		grid.Size = UDim2.new(1, -12, 1, -42)
+		grid.Position = UDim2.fromOffset(6, 68)
+		grid.Size = UDim2.new(1, -12, 1, -74)
 		local empty = Ui.label(panel, 18)
-		empty.Position = UDim2.fromScale(0, 0.5)
-		empty.Size = UDim2.new(1, 0, 0, 24)
+		empty.AnchorPoint = Vector2.new(0.5, 0.5)
+		empty.Position = UDim2.fromScale(0.5, 0.5)
+		empty.Size = UDim2.new(1, -24, 0, 70)
+		empty.TextWrapped = true
 		empty.TextColor3 = SOFT
-		empty.Text = "Nada todavía"
+		empty.Text = if left then "Pulsa algo de tu inventario para ofrecerlo" else "Nada todavía"
 		return { panel = panel, stroke = stroke, title = title, badge = badge, grid = grid, empty = empty, shown = nil }
 	end
 	local mine = offerPanel("Mine", true)
@@ -411,8 +419,8 @@ local function buildTrade()
 	-- Tu inventario: pestañas y casillas para añadir o quitar de tu oferta.
 	local tabsRow = Instance.new("Frame")
 	tabsRow.Name = "Tabs"
-	tabsRow.Position = UDim2.fromOffset(10, 230)
-	tabsRow.Size = UDim2.new(1, -20, 0, 38)
+	tabsRow.Position = UDim2.fromOffset(EDGE, 8)
+	tabsRow.Size = UDim2.new(1, -SIDE, 0, 38)
 	tabsRow.BackgroundTransparency = 1
 	tabsRow.Parent = body
 	local tabsLayout = Instance.new("UIListLayout")
@@ -421,17 +429,20 @@ local function buildTrade()
 	tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	tabsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	tabsLayout.Parent = tabsRow
-	local hint = Ui.label(tabsRow, 16)
-	hint.LayoutOrder = 99
-	hint.Size = UDim2.fromOffset(300, 38)
+	local hint = Ui.label(body, 16)
+	hint.Name = "Hint"
+	hint.AnchorPoint = Vector2.new(0, 1)
+	hint.Position = UDim2.new(0, EDGE + 6, 1, -BAR - 6)
+	hint.Size = UDim2.new(1, -SIDE - 12, 0, FOOT)
 	hint.TextXAlignment = Enum.TextXAlignment.Left
+	hint.TextTruncate = Enum.TextTruncate.AtEnd
 	hint.TextColor3 = SOFT
-	hint.Text = "Pulsa algo tuyo para añadirlo o quitarlo."
+	hint.Text = "Pulsa algo tuyo para ofrecerlo; en tu oferta, púlsalo para quitarlo."
 
 	local stockArea = Instance.new("Frame")
 	stockArea.Name = "Stock"
-	stockArea.Position = UDim2.fromOffset(10, 274)
-	stockArea.Size = UDim2.new(1, -20, 1, -274 - 80)
+	stockArea.Position = UDim2.fromOffset(EDGE, 52)
+	stockArea.Size = UDim2.new(1, -SIDE, 1, -52 - BAR - FOOT - 10)
 	stockArea.BackgroundColor3 = WHITE
 	stockArea.BorderSizePixel = 0
 	stockArea.Parent = body
@@ -454,7 +465,7 @@ local function buildTrade()
 	amounts.Visible = false
 	amounts.Parent = stockArea
 	local amountsLayout = Instance.new("UIGridLayout")
-	amountsLayout.CellSize = UDim2.new(0.5, -14, 0, 46)
+	amountsLayout.CellSize = UDim2.new(1, -28, 0, 50)
 	amountsLayout.CellPadding = UDim2.fromOffset(10, 8)
 	amountsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	amountsLayout.Parent = amounts
@@ -672,8 +683,9 @@ local function buildTrade()
 		local button = Ui.button(tabsRow, entry[2], entry[3])
 		button.Name = "Tab_" .. entry[1]
 		button.LayoutOrder = order
-		button.Size = UDim2.fromOffset(if entry[1] == "amounts" then 200 else 140, 36)
-		button.TextSize = 19
+		-- Las cuatro se reparten el ancho de la columna.
+		button.Size = UDim2.new(1 / #TABS, -6, 0, 36)
+		button.TextSize = if #entry[2] > 10 then 15 else 19
 		tabButtons[entry[1]] = button
 		button.Activated:Connect(function()
 			tab = entry[1]
@@ -817,12 +829,12 @@ local function buildTrade()
 		Remotes.TradeSuggestRespond:FireServer(false)
 	end)
 
-	-- Tu sugerencia: una tira en la fila de pestañas (donde va la ayuda) con lo que has sugerido y "Quitar".
+	-- Tu sugerencia: una tira bajo el inventario (donde va la ayuda) con lo que has sugerido y "Quitar".
 	local chip = Instance.new("Frame")
 	chip.Name = "SuggestOut"
-	chip.AnchorPoint = Vector2.new(1, 0)
-	chip.Position = UDim2.new(1, -10, 0, 226)
-	chip.Size = UDim2.fromOffset(306, 46)
+	chip.AnchorPoint = Vector2.new(0, 1)
+	chip.Position = UDim2.new(0, EDGE, 1, -BAR - 4)
+	chip.Size = UDim2.fromOffset(330, FOOT + 2)
 	chip.BackgroundColor3 = WHITE
 	chip.BorderSizePixel = 0
 	chip.Visible = false
@@ -834,7 +846,7 @@ local function buildTrade()
 	chipRibbon.Name = "Ribbon"
 	chipRibbon.AnchorPoint = Vector2.new(0, 0.5)
 	chipRibbon.Position = UDim2.new(0, 8, 0.5, 0)
-	chipRibbon.Size = UDim2.fromOffset(76, 28)
+	chipRibbon.Size = UDim2.fromOffset(76, 24)
 	chipRibbon.BackgroundTransparency = 0
 	Ui.round(chipRibbon, 7)
 	Ui.stroke(chipRibbon, BLACK, 2)
@@ -848,7 +860,7 @@ local function buildTrade()
 	removeSuggest.Name = "Remove"
 	removeSuggest.AnchorPoint = Vector2.new(1, 0.5)
 	removeSuggest.Position = UDim2.new(1, -8, 0.5, 0)
-	removeSuggest.Size = UDim2.fromOffset(72, 30)
+	removeSuggest.Size = UDim2.fromOffset(72, 26)
 	removeSuggest.TextSize = 15
 	removeSuggest.Activated:Connect(function()
 		Remotes.TradeSuggest:FireServer(nil)
@@ -919,7 +931,7 @@ local function buildTrade()
 			end
 		end
 		if current then
-			hint.Text = if current.state ~= "editing" then "Ofertas bloqueadas." elseif suggesting then "Sugerir: pulsa algo tuyo, o pide una cantidad." else "Pulsa algo tuyo para añadirlo o quitarlo."
+			hint.Text = if current.state ~= "editing" then "Ofertas bloqueadas." elseif suggesting then "Sugerir: pulsa algo tuyo, o pide una cantidad." else "Pulsa algo tuyo para ofrecerlo; en tu oferta, púlsalo para quitarlo."
 			paintStock()
 		end
 	end
@@ -953,10 +965,20 @@ local function buildTrade()
 		Remotes.TradeCancel:FireServer()
 	end)
 
-	-- Pinta la oferta de un lado (solo rehace las casillas si ha cambiado).
+	-- Pinta la oferta de un lado (solo rehace las casillas si ha cambiado). En la tuya, cada casilla lleva una
+	-- X y al pulsarla se quita de la oferta (pedido por el usuario: buscarla en el inventario era un lío).
 	local function paintOffer(panel, side, title: string)
 		panel.title.Text = title
 		local confirming = current.state ~= "editing"
+		local own = panel == mine
+		if own then
+			for _, child in panel.grid:GetChildren() do
+				local mark = child:FindFirstChild("Remove")
+				if mark then
+					mark.Visible = not confirming
+				end
+			end
+		end
 		local done = if confirming then side.confirmed else side.accepted
 		panel.badge.Text = if not done then (if confirming then "Sin confirmar" else "Eligiendo...") elseif confirming then "CONFIRMADO" else "ACEPTADO"
 		panel.badge.TextColor3 = if done then Ui.COLORS.green:Lerp(WHITE, 0.3) else SOFT
@@ -968,30 +990,45 @@ local function buildTrade()
 		panel.shown = key
 		clear(panel.grid)
 		local order = 0
-		local function place(cell: TextButton)
+		local function place(cell: TextButton, category: string, key: any)
 			order += 1
 			cell.LayoutOrder = order
+			if not own then
+				return
+			end
+			local mark = Ui.cellTag(cell, "X", Ui.COLORS.red)
+			mark.Name = "Remove"
+			mark.AnchorPoint = Vector2.new(1, 0)
+			mark.Position = UDim2.new(1, -4, 0, 4)
+			mark.Visible = not confirming
+			cell.Activated:Connect(function()
+				if locked() then
+					Sfx.play("error")
+					return
+				end
+				Remotes.TradeOffer:FireServer(category, key, 0)
+			end)
 		end
 		if side.coins > 0 then
-			place(amountCell(panel.grid, "monedas", Ui.COLORS.coins, side.coins, "coins"))
+			place(amountCell(panel.grid, "monedas", Ui.COLORS.coins, side.coins, "coins"), "coins", nil)
 		end
 		if side.gems > 0 then
-			place(amountCell(panel.grid, "gemas", Ui.COLORS.purple, side.gems, "gems"))
+			place(amountCell(panel.grid, "gemas", Ui.COLORS.purple, side.gems, "gems"), "gems", nil)
 		end
 		for _, name in Config.ItemOrder do
 			local amount = side.items[name]
 			if amount and amount > 0 then
-				place(amountCell(panel.grid, Config.Items[name].name, Config.Items[name].color, amount, name))
+				place(amountCell(panel.grid, Config.Items[name].name, Config.Items[name].color, amount, name), "items", name)
 			end
 		end
 		for _, copy in side.swords do
-			place(swordCell(panel.grid, copy))
+			place(swordCell(panel.grid, copy), "swords", copy.id)
 		end
 		for _, piece in side.armor do
-			place(armorCell(panel.grid, piece))
+			place(armorCell(panel.grid, piece), "armor", piece.id)
 		end
 		for _, index in side.artifacts do
-			place(artifactCell(panel.grid, index))
+			place(artifactCell(panel.grid, index), "artifacts", index)
 		end
 		panel.empty.Visible = order == 0
 	end
