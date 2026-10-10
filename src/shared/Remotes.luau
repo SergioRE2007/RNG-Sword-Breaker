@@ -48,7 +48,10 @@ local NAMES = {
 	"PartyState", -- servidor -> cliente: ({ room, mine, parties }) la sala que miras, tu grupo (zona, líder, miembros, listos, opciones, estado) y los grupos abiertos de esa sala; nil = nada que enseñar
 	"PartyInvite", -- servidor -> cliente: (userId del líder, nombre del líder, zona) te invitan a un grupo de mazmorra
 	"UsePotion", -- cliente -> servidor: (familia de Config.Potions.Families, tier) usar una poción del inventario; el servidor decide si activa, mejora, suma tiempo o rechaza
-	"AdminWeather", -- cliente -> servidor: (acción) menú de admin, solo administradores (server/Admin): un id de Config.Weather.Events = poner ese clima ya, "none" = despejar, "auto" = volver al calendario, "next" = el siguiente de la lista
+	"SetAuto", -- cliente -> servidor: (modo "click" o "farm", true o false) encender o apagar el autoclicker o el Auto de la parcela; el servidor decide y lo publica en "AutoClick" / "AutoFarm"
+	"AutoDenied", -- servidor -> cliente: (modo, id del grupo) no puede encenderlo: "click" = le falta unirse al grupo, "farm" = le falta el pase
+	"Rejoin", -- cliente -> servidor: ({ fight, dungeon }) llevo mucho rato sin tocar nada: reconéctame antes de que Roblox me expulse (fight = peleaba en Auto, dungeon = zona en la que estaba)
+	"AdminWeather",-- cliente -> servidor: (acción) menú de admin, solo administradores (server/Admin): un id de Config.Weather.Events = poner ese clima ya, "none" = despejar, "auto" = volver al calendario, "next" = el siguiente de la lista
 	"WeatherSchedule", -- servidor -> cliente: (hora de GetServerTimeNow) cuándo empieza el siguiente clima; solo se manda a los administradores, los demás no ven la cuenta atrás
 }
 

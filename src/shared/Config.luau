@@ -822,9 +822,18 @@ Config.Trade = {
 -- (se crea en la página del juego; con 0 aún no está a la venta y el botón dice "Pronto"). "price" = Robux que se
 -- enseñan hasta que Roblox dice el precio real. "perksText" = lo que se lee en la tienda. "perks" = ventajas que
 -- lee Stats.perk (si varios pases dan la misma, vale la mayor): traitCount = rasgos que se pueden tirar de golpe;
--- gradeSpeed = por cuánto se multiplica la velocidad de las tiradas de grado (4 = 400 %).
-Config.GamepassOrder = { "forge" }
+-- gradeSpeed = por cuánto se multiplica la velocidad de las tiradas de grado (4 = 400 %); autoFarm = botón "Auto" junto
+-- al arma: en tu parcela, el personaje va solo a por los objetos y los rompe (server/AutoPlay y client/AutoPlay).
+Config.GamepassOrder = { "forge", "auto" }
 Config.Gamepasses = {
+	auto = {
+		id = 0,
+		name = "Auto",
+		price = 249,
+		color = Color3.fromRGB(255, 200, 60),
+		perksText = { "Botón Auto junto al arma: en tu parcela, tu personaje va solo a por los objetos y los rompe" },
+		perks = { autoFarm = 1 },
+	},
 	forge = {
 		id = 0,
 		name = "Maestro de la forja",
@@ -834,6 +843,18 @@ Config.Gamepasses = {
 		perks = { traitCount = 10, gradeSpeed = 4 },
 	},
 }
+
+-- AUTOCLICKER (botón a la izquierda del arma: da espadazos solo). Gratis para quien esté en el grupo del juego:
+-- "group" = id del grupo de Roblox (0 = el grupo dueño del juego; si el juego no es de un grupo, no se pide nada).
+-- El "me gusta" se pide en el cartel, pero Roblox no deja comprobarlo.
+Config.AutoClicker = { group = 0 }
+
+-- RECONEXIÓN (server/Rejoin y client/Rejoin): Roblox expulsa a los 20 min sin tocar nada. Antes de eso el juego saca al
+-- jugador y lo vuelve a meter él mismo, donde estaba y haciendo lo que hacía. After = segundos sin tocar nada a los que
+-- se reconecta; Countdown = segundos de aviso (tocar algo lo cancela); DungeonWait = cuánto se espera, como mucho, a que
+-- acabe la partida de mazmorra en curso para no perder sus premios (After + DungeonWait tiene que quedar por debajo de
+-- 1200); MinSession = segundos mínimos en el servidor antes de poder pedirlo.
+Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 300 }
 
 -- POCIONES (server/Potions, client/Potions y client/PotionFx; los textos salen de shared/PotionInfo). Aceleradores
 -- temporales: no sustituyen a mejores armas, rasgos, grados, armadura ni mejoras. Siete familias, cada una con su valor

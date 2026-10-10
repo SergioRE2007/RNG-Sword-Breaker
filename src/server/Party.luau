@@ -665,6 +665,18 @@ local function onRequest(player: Player, action: unknown, a: unknown, b: unknown
 	handler(player, a, b)
 end
 
+-- Lanza una partida en solitario de esa zona sin pasar por su sala (server/Rejoin, al volver de reconectar: el jugador
+-- ya estaba dentro). Se valida igual que desde el altar, menos la distancia. Devuelve si ha entrado.
+function Party.solo(player: Player, zoneArg: unknown): boolean
+	freeIfOut(player)
+	local zone = validZone(zoneArg)
+	if not zone or partyOf[player] or not canPlay(player, zone) then
+		return false
+	end
+	launchParty(createParty(player, zone, false))
+	return Dungeons.isBusy(player)
+end
+
 function Party.start()
 	Remotes.PartyRequest.OnServerEvent:Connect(onRequest)
 

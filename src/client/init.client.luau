@@ -27,6 +27,8 @@ require(script.WeaponMesh).start()
 require(script.SwingAnim).start()
 require(script.SwordController).start()
 require(script.WeaponSlot).start()
+require(script.AutoPlay).start() -- autoclicker y Auto, a los lados de la casilla del arma: después de WeaponSlot y PassShop
+require(script.Rejoin).start() -- reconexión antes de la expulsión por inactividad; después de Dungeons
 require(script.Ambience).start()
 require(script.ObjectAmbient).start()
 require(script.ObjectInfo).start()

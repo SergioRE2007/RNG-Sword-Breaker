@@ -32,5 +32,7 @@ require(script.Rebirth).start()
 require(script.Leaderboards).start()
 require(script.BestRoll).start()
 require(script.Missions).start()
+require(script.AutoPlay).start() -- autoclicker y Auto de la parcela: después de Plots y Passes
+require(script.Rejoin).start() -- reconexión antes de la expulsión por inactividad: después de Party, Dungeons y AutoPlay
 require(script.Admin).start() -- antes de quien obedece órdenes de admin
 require(script.Weather).start()
