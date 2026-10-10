@@ -1,23 +1,30 @@
--- Velocidad al andar de los personajes (Config.WalkSpeed).
+-- Velocidad al andar de los personajes (Stats.walkSpeed: Config.WalkSpeed por lo que den los pases).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(ReplicatedStorage.Shared.Config)
+local Stats = require(ReplicatedStorage.Shared.Stats)
 
 local Movement = {}
 
-local function onCharacter(character: Model)
-	local humanoid = character:WaitForChild("Humanoid", 10)
-	if humanoid and humanoid:IsA("Humanoid") then
-		humanoid.WalkSpeed = Config.WalkSpeed
+local function apply(player: Player)
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = Stats.walkSpeed(player)
 	end
 end
 
 local function onPlayer(player: Player)
-	player.CharacterAdded:Connect(onCharacter)
-	if player.Character then
-		onCharacter(player.Character)
-	end
+	player.CharacterAdded:Connect(function(character)
+		character:WaitForChild("Humanoid", 10)
+		apply(player)
+	end)
+	-- Un pase recién comprado (o recién comprobado al entrar) cambia la velocidad en el momento.
+	player.AttributeChanged:Connect(function(attribute)
+		if string.sub(attribute, 1, 5) == "Pass_" then
+			apply(player)
+		end
+	end)
+	apply(player)
 end
 
 function Movement.start()

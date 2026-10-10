@@ -120,7 +120,7 @@ local function restore(player: Player, data)
 		Dungeons.setLoop(player, data.loop == true)
 		inDungeon = Party.solo(player, data.dungeon)
 		if inDungeon and data.fight == true then
-			player:SetAttribute("ResumeFight", true)
+			AutoPlay.set(player, "fight", true)
 		end
 	end
 	if not inDungeon then
@@ -150,7 +150,7 @@ local function simulate(player: Player, data)
 	Dungeons.leave(player)
 	AutoPlay.set(player, "click", false)
 	AutoPlay.set(player, "farm", false)
-	player:SetAttribute("ResumeFight", nil)
+	AutoPlay.set(player, "fight", false)
 	local plot = Plots.get(player)
 	if plot and player.Character and data.dungeon == nil then
 		player.Character:PivotTo(CFrame.new(0, Config.Plot.FloorHeight + 4, 30))

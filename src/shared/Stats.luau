@@ -92,6 +92,24 @@ function Stats.perk(player: Player, name: string): number?
 	return best
 end
 
+-- Multiplicador de una ventaja de pase que se acumula ("weaponLuck", "coins", "luck"...): el producto de lo que dan
+-- todos los pases que tiene (x2 y x5 de suerte de armas juntos son x10: decidido por el usuario). 1 si no tiene ninguno.
+function Stats.passMult(player: Player, name: string): number
+	local total = 1
+	for key, pass in Config.Gamepasses do
+		local value = pass.perks[name]
+		if value and Stats.pass(player, key) then
+			total *= value
+		end
+	end
+	return total
+end
+
+-- Velocidad al andar: la de Config por la ventaja "walkSpeed" de los pases (VIP).
+function Stats.walkSpeed(player: Player): number
+	return Config.WalkSpeed * Stats.passMult(player, "walkSpeed")
+end
+
 -- Tier de la poción activa de esa familia (clave de Config.Potions.Families), 0 si no hay. Lo publica el servidor
 -- (server/Potions) en "Potion_<familia>" y en cuanto caduca lo quita, así que esto vale en servidor y cliente.
 function Stats.potionTier(player: Player, family: string): number
@@ -161,16 +179,16 @@ end
 -- Suerte de destructibles: multiplica la probabilidad de los tipos raros de objeto en su parcela (y la de los
 -- artefactos). Es la que sube la mejora "Suerte de destructibles", y con ella el rasgo, los artefactos y la armadura.
 function Stats.luck(player: Player): number
-	return upgrade(player, "luck") * luckBonus(player) * Stats.rebirthBonus(player, "luck")
+	return upgrade(player, "luck") * luckBonus(player) * Stats.rebirthBonus(player, "luck") * Stats.passMult(player, "luck")
 end
 
 -- Suerte de armas propia del jugador: multiplica la del objeto que da la tirada (ObjectSpec.luck), que es de donde
 -- sale casi toda, y es la única que mejora el metal y el tamaño. No hay mejora que la compre (la de suerte es solo
 -- para los destructibles: decidido por el usuario), y el rasgo, los artefactos y la armadura tampoco entran aquí:
 -- cuentan en Stats.luck. Aquí van solo las fuentes directas: los renacimientos, la poción de suerte de armas y los
--- climas más raros.
+-- climas más raros, y los pases de suerte de armas (ventaja "weaponLuck").
 function Stats.gachaLuck(player: Player): number
-	return Stats.rebirthBonus(player, "gachaLuck") * Stats.potion(player, "weaponLuck") * Stats.weather("weaponLuck")
+	return Stats.rebirthBonus(player, "gachaLuck") * Stats.potion(player, "weaponLuck") * Stats.weather("weaponLuck") * Stats.passMult(player, "weaponLuck")
 end
 
 -- Segundos por tirada gratis del gacha (solo con Config.Gacha.FreeRoll): la mejora "Velocidad de aparición"
@@ -200,12 +218,12 @@ function Stats.spawnLuck(player: Player): number
 	return Stats.potion(player, "boxLuck") * Stats.weather("luck")
 end
 
--- Monedas: artefactos, y el rasgo y el grado de la espada equipada.
+-- Monedas: artefactos, el rasgo y el grado de la espada equipada, y los pases (ventaja "coins").
 function Stats.coins(player: Player): number
 	local copy = Stats.equipped(player)
 	local trait = Config.Traits[copy.trait]
 	local grade = Config.Grades[copy.grade]
-	return gear(player, "coins") * (if trait then trait.coins or 1 else 1) * (if grade then grade.coins else 1) * Stats.rebirthBonus(player, "coins")
+	return gear(player, "coins") * (if trait then trait.coins or 1 else 1) * (if grade then grade.coins else 1) * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins")
 end
 
 function Stats.gems(player: Player): number
