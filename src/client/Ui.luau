@@ -1013,6 +1013,9 @@ local PULSE_FROM = 5 -- desde aquí el marco lleva además un halo que late
 local DUO_TONES = {
 	[7] = Color3.fromRGB(110, 60, 255), -- Secreta: rosa y violeta
 	[8] = Color3.fromRGB(110, 175, 255), -- Divina: celeste y azul claro
+	[9] = Color3.fromRGB(30, 200, 150), -- Eterna: lima y esmeralda
+	[10] = Color3.fromRGB(225, 40, 85), -- Primordial: naranja y carmesí
+	[11] = Color3.fromRGB(120, 60, 220), -- Absoluta: oro pálido y violeta
 }
 
 local shines = {} -- [UIGradient del borde] = { speed, halo, phase }

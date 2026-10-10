@@ -125,6 +125,11 @@ Config.RarityTiers = {
 	{ min = 1e9, name = "Mítica", color = Color3.fromRGB(255, 70, 70) },
 	{ min = 1e15, name = "Secreta", color = Color3.fromRGB(255, 90, 210) },
 	{ min = 1e21, name = "Divina", color = Color3.fromRGB(120, 255, 240) },
+	-- Por encima de Divina solo se llega con metal y tamaño (el arma más rara sola es Secreta): reparten las
+	-- combinaciones más altas, que si no eran todas Divinas.
+	{ min = 1e24, name = "Eterna", color = Color3.fromRGB(195, 255, 90) },
+	{ min = 1e28, name = "Primordial", color = Color3.fromRGB(255, 140, 50) },
+	{ min = 1e32, name = "Absoluta", color = Color3.fromRGB(255, 232, 140) }, -- no en blanco: la casilla saldría gris, como las sin descubrir del Índice
 }
 
 -- Modificadores permanentes: cada arma que sale del gacha puede llevar además UN metal y UN tamaño, tirados
