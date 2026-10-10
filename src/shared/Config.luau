@@ -833,12 +833,14 @@ Config.Trade = {
 -- Las que multiplican se acumulan entre pases (Stats.passMult: x2 y x5 de suerte de armas juntos son x10): weaponLuck =
 -- suerte de armas (Stats.gachaLuck); luck = suerte de destructibles (Stats.luck); coins = monedas (Stats.coins);
 -- walkSpeed = velocidad al andar (Stats.walkSpeed); dungeonLoot = premios de mazmorra (server/Loot). chatTag = etiqueta
--- delante del nombre en el chat (client/ChatTags), del color del pase.
+-- delante del nombre en el chat (client/ChatTags), del color del pase. Para la tarjeta de la tienda: "icon" = logo de
+-- Ui.IMAGES (el grande y los que caen por detrás), "tag" = texto gordo de la esquina y "ribbon" (opcional) = cinta.
 Config.GamepassOrder = { "vip", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto" }
 Config.Gamepasses = {
 	vip = {
 		id = 0,
 		name = "VIP",
+		icon = "monedas", tag = "VIP", ribbon = "POPULAR",
 		price = 449,
 		color = Color3.fromRGB(255, 205, 70),
 		perksText = { "x1,5 de monedas", "x1,5 de suerte de destructibles", "x2 de velocidad al andar", "Etiqueta [VIP] en el chat" },
@@ -848,6 +850,7 @@ Config.Gamepasses = {
 	weaponLuck2 = {
 		id = 0,
 		name = "Suerte de armas x2",
+		icon = "suerte", tag = "x2",
 		price = 299,
 		color = Color3.fromRGB(90, 220, 130),
 		perksText = { "x2 de suerte en todas las tiradas de arma", "Se multiplica con el x5: juntos, x10" },
@@ -856,6 +859,7 @@ Config.Gamepasses = {
 	weaponLuck5 = {
 		id = 0,
 		name = "Suerte de armas x5",
+		icon = "suerte", tag = "x5", ribbon = "MEJOR OFERTA",
 		price = 999,
 		color = Color3.fromRGB(255, 110, 200),
 		perksText = { "x5 de suerte en todas las tiradas de arma", "Se multiplica con el x2: juntos, x10" },
@@ -864,6 +868,7 @@ Config.Gamepasses = {
 	dungeonLoot = {
 		id = 0,
 		name = "Botín de mazmorra x2",
+		icon = "mazmorras", tag = "x2",
 		price = 349,
 		color = Color3.fromRGB(170, 120, 255),
 		perksText = { "El doble de cristales, armadura y pociones en las mazmorras" },
@@ -872,6 +877,7 @@ Config.Gamepasses = {
 	auto = {
 		id = 0,
 		name = "Auto",
+		icon = "espada", tag = "AUTO",
 		price = 249,
 		color = Color3.fromRGB(255, 200, 60),
 		perksText = { "Botón Auto junto al arma: en tu parcela, tu personaje va solo a por los objetos y los rompe" },
@@ -880,6 +886,7 @@ Config.Gamepasses = {
 	forge = {
 		id = 0,
 		name = "Maestro de la forja",
+		icon = "mejora", tag = "x10",
 		price = 199,
 		color = Color3.fromRGB(255, 150, 60),
 		perksText = { "Tira 10 rasgos a la vez (se queda el mejor)", "Tiradas de grado al 400 % de velocidad" },
