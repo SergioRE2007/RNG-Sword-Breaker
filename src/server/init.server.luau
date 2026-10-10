@@ -32,5 +32,6 @@ require(script.Rebirth).start()
 require(script.Leaderboards).start()
 require(script.BestRoll).start()
 require(script.Missions).start()
+require(script.AutoPlay).start() -- autoclicker y Auto de la parcela: después de Plots y Passes
 require(script.Admin).start() -- antes de quien obedece órdenes de admin
 require(script.Weather).start()
