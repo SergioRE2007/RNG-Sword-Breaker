@@ -197,6 +197,22 @@ function Destructibles.owns(player: Player, part: Instance): boolean
 	return object ~= nil and object.plot == Plots.get(player)
 end
 
+-- Objeto de la parcela del jugador más cercano a `from`, de entre los que están a `radius` de `center` (su círculo);
+-- nil si no hay ninguno. Para que las armas sigan solas con el siguiente cuando lleva un automático encendido.
+function Destructibles.nearest(player: Player, from: Vector3, center: Vector3, radius: number): BasePart?
+	local plot = Plots.get(player)
+	local best, bestDistance = nil, math.huge
+	for part, object in objects do
+		if object.plot == plot then
+			local distance = (part.Position - from).Magnitude
+			if distance < bestDistance and Hitbox.within(part, center, radius) then
+				best, bestDistance = part, distance
+			end
+		end
+	end
+	return best
+end
+
 -- Objetos de la parcela del jugador a los que llega un golpe dado desde `origin` (ver Hitbox.reaches).
 function Destructibles.getInRange(player: Player, origin: CFrame, range: number, arc: number): { BasePart }
 	local found = {}
