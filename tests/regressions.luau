@@ -248,6 +248,31 @@ gacha.give(player, 1e6, "object", 1)
 equal(data.read(player).equipped, 3, "arma nueva no se equipa")
 local rolled = f.remotes.GachaRolled.sent[#f.remotes.GachaRolled.sent]
 equal(rolled[8].baseOdds, config.Swords[rolled[2]].rarity, "resultado expone rareza base")
+
+-- Índice de armas: lo guardado se limpia, se estrena con la mochila una sola vez y cada tirada apunta su
+-- combinación aunque la venta automática la venda.
+local indexInfo = f.load("src/shared/IndexInfo")
+local code = indexInfo.code
+local cleanIndex = indexInfo.sanitize({ code(4, 1, 1), code(4, 1, 1), code(1, 1, 0), code(999, 0, 0), code(4, 99, 0), code(4, 0, 99), 0 / 0, math.huge, -1, 1.5, "x" })
+equal(#cleanIndex, 1, "índice guardado: solo válidos y sin repetir")
+equal(cleanIndex[1], code(4, 1, 1), "índice guardado conserva lo válido")
+equal(indexInfo.sanitize(nil), nil, "índice sin estrenar")
+equal(#indexInfo.swords(0, 0), #config.Swords, "vista base con todas las armas")
+equal(#indexInfo.swords(1, 0), #config.Swords - 1, "el arma inicial no tiene metal")
+local xf = fixture(nil)
+xf.load("src/server/Index").start()
+equal(xf.player:GetAttribute("Index"), tostring(code(1, 0, 0)), "índice estrenado con la mochila")
+xf.data.edit(xf.player, function(d) d.autoSell = math.huge end)
+xf.load("src/server/Gacha").give(xf.player, 1e6, "object", 1)
+local sold = xf.remotes.GachaRolled.sent[#xf.remotes.GachaRolled.sent]
+equal(sold[3], false, "tirada vendida sola")
+equal(indexInfo.parse(xf.player:GetAttribute("Index"))[code(sold[2], sold[6], sold[7])], true, "la tirada vendida cuenta en el índice")
+equal(#xf.data.read(xf.player).index, 2, "índice sin repetidos")
+xf.load("src/server/Gacha").give(xf.player, 1e6, "object", 1)
+equal(#xf.data.read(xf.player).index, 2, "la misma combinación no se apunta dos veces")
+local sf = fixture({ swords = { { id = 1, sword = 1 }, { id = 2, sword = 4 } }, index = { code(5, 0, 0), "x" } })
+sf.load("src/server/Index").start()
+equal(sf.player:GetAttribute("Index"), tostring(code(5, 0, 0)), "índice ya estrenado no vuelve a contar la mochila")
 f.load("src/server/Gear").onBroken(player)
 equal(#data.read(player).gear, 0, "accesorio nuevo no se equipa")
 local piece, kept = f.load("src/server/Armor").give(player, 1, 1)

@@ -14,6 +14,7 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
 local BestRoll = require(script.Parent.BestRoll)
+local Index = require(script.Parent.Index)
 
 local Gacha = {}
 
@@ -113,6 +114,7 @@ local function draw(player: Player, boost: number, source: string, info)
 	local metal = Permanent.roll(Config.Metals, base)
 	local size = Permanent.roll(Config.Sizes, base)
 	local rarity = Permanent.rarity(index, metal, size)
+	Index.record(player, index, metal, size) -- al Índice va todo lo que sale, se quede o se venda solo
 	-- Lo difícil que era para el jugador ("1 entre N"): es lo que mide el espectáculo, el aura y el aviso. La menor
 	-- de dos cuentas, porque las dos se pasan de largo por un lado:
 	--  · contra la suerte de sus objetos de siempre: un objeto mejor de lo normal da armas que para él son difíciles,
