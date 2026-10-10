@@ -48,3 +48,10 @@ Lo cubren las pruebas de Lune con dos servidores simulados (esperar a que el otr
   - Probado el 10-10-2026 con un DataStore de pruebas: jugar y parar guarda la partida (monedas, espadas, Índice) y quita el `lock`; con un candado ajeno reciente espera 30 s, echa con el aviso y no toca lo guardado; con uno de 200 s entra y carga lo último; con el candado cambiado a mitad de partida, el guardado automático no escribe, avisa en la consola y echa al jugador, y parar la partida tampoco pisa lo guardado.
 - [ ] **Juego publicado**: salir y entrar seguido varias veces (también con el botón de reconexión y tras un trato) carga siempre lo último; la consola del servidor no enseña avisos de `[PlayerData]`.
 - [ ] **Cierre del servidor** con varios jugadores (apagar servidores desde la web): todos vuelven a entrar con lo último y sin esperar.
+
+## Cuatro armas equipadas (parte 1)
+
+Lo cubren las pruebas de Lune (poner, quitar, sustituir, "best", venta y comercio con equipadas, cuentas de `Stats`, guardado antiguo y listas rotas). Probado en Studio el 11-10-2026: una partida guardada con una sola equipada entra con ella en el primer hueco; equipar, quitar y "Equipar mejores" desde el cliente; las equipadas no se venden ni salen en el trato; dos Paradojas dan x4 de suerte y de monedas y el grado ∞ multiplica x100 el daño de su arma.
+
+- [ ] **Juego publicado**: equipar cuatro, salir y volver a entrar: siguen las cuatro y en el mismo orden.
+- [ ] **Ritmo**: hasta regenerar el equilibrio (parte 3) el daño es la suma de cuatro armas y los grados ya no dan monedas; vidas y precios siguen siendo los de un arma.

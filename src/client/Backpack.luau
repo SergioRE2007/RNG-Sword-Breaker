@@ -298,11 +298,14 @@ function Backpack.start()
 	local swordsPane = panes.Swords
 
 	-- (La venta automática se cambia ahora en Ajustes.)
-	local title = Ui.label(swordsPane, 24)
-	title.Position = UDim2.fromOffset(14, 6)
-	title.Size = UDim2.fromOffset(300, 40)
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Text = "Tus espadas"
+	local swordsTitle = Ui.label(swordsPane, 24)
+	swordsTitle.Name = "Title"
+	swordsTitle.Position = UDim2.fromOffset(14, 6)
+	swordsTitle.Size = UDim2.new(1, -170, 0, 40)
+	swordsTitle.TextXAlignment = Enum.TextXAlignment.Left
+	swordsTitle.TextTruncate = Enum.TextTruncate.AtEnd
+	swordsTitle.RichText = true
+	swordsTitle.Text = "Tus espadas"
 
 	local count = Ui.label(swordsPane, 24)
 	count.Name = "Count"
@@ -346,7 +349,7 @@ function Backpack.start()
 		item.Size = UDim2.fromOffset(width, 62)
 		return item
 	end
-	local bestButton = action("Best", "Equipar mejor", Ui.COLORS.green, 12, 176)
+	local bestButton = action("Best", "Equipar mejores", Ui.COLORS.green, 12, 176)
 	local sellButton = action("Sell", "Vender armas", Ui.COLORS.red, 198, 100)
 	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 308, 104)
 	bestButton.TextSize = 23
@@ -367,21 +370,13 @@ function Backpack.start()
 		SellMenu.open(selected)
 	end)
 	bestButton.Activated:Connect(function()
-		local best, bestDamage = nil, -1
-		for _, copy in Stats.swords(player) do
-			local damage = Stats.swordDamage(copy)
-			if damage > bestDamage then
-				best, bestDamage = copy, damage
-			end
-		end
-		if best then
-			selected = best.id
-			Sfx.play("equip")
-			Remotes.EquipSword:FireServer(best.id)
-		end
+		-- Las de más daño a los huecos (Config.Loadout.Slots): lo decide el servidor.
+		Sfx.play("equip")
+		Remotes.EquipSword:FireServer("best")
 	end)
 
-	local function refreshSelection(copies, equippedId: number)
+	-- `worn` = ids de las copias equipadas, por orden de hueco.
+	local function refreshSelection(copies, worn: { number })
 		local chosen = nil
 		for _, copy in copies do
 			if copy.id == selected then
@@ -389,9 +384,9 @@ function Backpack.start()
 			end
 		end
 		if not chosen then
-			selected = equippedId
+			selected = worn[1]
 			for _, copy in copies do
-				if copy.id == equippedId then
+				if copy.id == selected then
 					chosen = copy
 				end
 			end
@@ -405,20 +400,23 @@ function Backpack.start()
 			local grade = Config.Grades[chosen.grade]
 			detail.Text = `{sword.name}{if trait then ` <font color="{hex(trait.color)}">[{trait.name}]</font>` else ""}{if grade then ` <font color="{hex(grade.color)}">[{grade.name}]</font>` else ""}\n<font color="{Ui.SOFT}">Daño {Format.multiplier(Stats.swordDamage(chosen))}</font>`
 		end
-		local isEquipped = selected == equippedId
-		equipButton.Text = if isEquipped then "Equipada" else "Equipar"
-		equipButton.BackgroundColor3 = if isEquipped then Ui.COLORS.gray else Ui.COLORS.blue
+		-- El botón pone o quita la elegida; la última equipada no se puede quitar.
+		local isEquipped = table.find(worn, selected) ~= nil
+		local only = isEquipped and #worn <= 1
+		equipButton.Text = if only then "Equipada" elseif isEquipped then "Quitar" else "Equipar"
+		equipButton.BackgroundColor3 = if only then Ui.COLORS.gray elseif isEquipped then Ui.COLORS.orange else Ui.COLORS.blue
 	end
 
 	-- Deja las casillas como el inventario tocando solo las que han cambiado. Rehacerlas todas en cada
 	-- tirada del gacha daba un tirón, porque cada casilla lleva su vista 3D.
 	local cellKeys = {} -- [id] = de qué depende lo que enseña su casilla
 	local loaded = false -- pasada la primera carga del inventario, lo que llega es nuevo
-	local function syncSwords(copies, equippedId: number)
+	local function syncSwords(copies, worn: { number })
 		local seen = {}
 		for _, copy in copies do
 			seen[copy.id] = true
-			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{copy.id == equippedId}`
+			local isEquipped = table.find(worn, copy.id) ~= nil
+			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{isEquipped}`
 			if cellKeys[copy.id] == key then
 				continue
 			end
@@ -443,7 +441,7 @@ function Backpack.start()
 			damage:FindFirstChildOfClass("UITextSizeConstraint").MaxTextSize = 23
 			damage:FindFirstChildOfClass("UIStroke").Thickness = 2.5
 			Ui.gradient(damage, Color3.new(1, 1, 1), tier.color:Lerp(Color3.new(1, 1, 1), 0.45), 90)
-			if copy.id == equippedId then
+			if isEquipped then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
 			end
 			-- Metal (círculo de su color) y tamaño (cartelito con su inicial) en el lado izquierdo, bajo la "E".
@@ -482,7 +480,7 @@ function Backpack.start()
 			end, true)
 			cell.Activated:Connect(function()
 				selected = copy.id
-				refreshSelection(Stats.swords(player), player:GetAttribute("Equipped") or 1)
+				refreshSelection(Stats.swords(player), Stats.list(player, "Loadout"))
 			end)
 			swordCells[copy.id] = cell
 			-- Las casillas que llegan después de la carga inicial entran con rebote y, si son una copia nueva, con marca.
@@ -703,16 +701,17 @@ function Backpack.start()
 		if not window.Visible then
 			return
 		end
-		local equippedId = player:GetAttribute("Equipped") or 1
+		local worn = Stats.list(player, "Loadout")
 		local copies = Stats.swords(player)
 
 		count.Text = `{#copies}/{Config.MaxSwords}`
-		local key = `{player:GetAttribute("Swords")}|{equippedId}`
+		swordsTitle.Text = `Tus espadas <font color="{Ui.SOFT}">· equipadas {#worn}/{Config.Loadout.Slots}</font>`
+		local key = `{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}`
 		if key ~= swordsKey then
 			swordsKey = key
-			syncSwords(copies, equippedId)
+			syncSwords(copies, worn)
 		end
-		refreshSelection(copies, equippedId)
+		refreshSelection(copies, worn)
 		for name, text in itemLabels do
 			text.Text = "x" .. Format.short(player:GetAttribute("Item_" .. name) or 0)
 		end

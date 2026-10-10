@@ -145,19 +145,22 @@ local function publish(player: Player)
 	player:SetAttribute("Rebirths", data.rebirths)
 
 	-- "Swords" = copias del inventario como "id:espada:rasgo:grado:metal:tamaño" (0 = ninguno) separadas por comas.
-	-- "Equipped" = id de la copia equipada; "SwordLevel" = su tipo (índice de Config.Swords).
+	-- "Loadout" = ids de las copias equipadas, por orden de hueco ("3,7,1"); "Equipped" = el de la primera y
+	-- "SwordLevel" = su tipo (índice de Config.Swords).
 	local swords = {}
+	local first = data.loadout[1]
 	local equippedType = 1
 	local equippedMetal, equippedSize = 0, 0
 	for _, copy in data.swords do
 		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}`)
-		if copy.id == data.equipped then
+		if copy.id == first then
 			equippedType = copy.sword
 			equippedMetal, equippedSize = copy.metal or 0, copy.size or 0
 		end
 	end
 	player:SetAttribute("Swords", table.concat(swords, ","))
-	player:SetAttribute("Equipped", data.equipped)
+	player:SetAttribute("Loadout", table.concat(data.loadout, ","))
+	player:SetAttribute("Equipped", first)
 	player:SetAttribute("SwordLevel", equippedType)
 	-- Metal y tamaño de la espada equipada (Swords los usa para construir la que lleva en la mano).
 	player:SetAttribute("SwordMetal", equippedMetal)
@@ -222,7 +225,14 @@ local function loadSwords(data, saved)
 	end
 
 	local oldLevel = math.clamp(math.floor(tonumber(saved.swordLevel) or 1), 1, #Config.Swords)
-	local equipped = nil
+	local equipped = nil -- (formatos antiguos) la única que se podía equipar
+	-- Copias equipadas, ya con su id nuevo y por orden de hueco: sin repetir y hasta Config.Loadout.Slots.
+	local loadout = {}
+	local function equip(id: number?)
+		if id and not table.find(loadout, id) and #loadout < Config.Loadout.Slots then
+			table.insert(loadout, id)
+		end
+	end
 	-- El formato lo dice la primera entrada que sea una copia o un tipo: con una entrada rota delante no se pierde el resto.
 	local first = nil
 	if type(saved.swords) == "table" then
@@ -236,16 +246,21 @@ local function loadSwords(data, saved)
 
 	if type(first) == "table" then
 		-- Formato actual: copias { id, sword, trait, grade }. Los ids se renumeran.
+		local renumbered = {} -- [id guardado] = id nuevo (con ids repetidos, la última copia)
 		for _, copy in saved.swords do
 			if #swords >= Config.MaxSwords then
 				break
 			end
 			if type(copy) == "table" and type(copy.sword) == "number" and Config.Swords[copy.sword] then
 				local id = add(copy.sword, validTrait(copy.trait), validGrade(copy.grade), validMetal(copy.metal), validSize(copy.size))
-				if copy.id == saved.equipped then
-					equipped = id
+				if type(copy.id) == "number" and copy.id == copy.id then
+					renumbered[copy.id] = id
 				end
 			end
+		end
+		-- Equipadas: la lista "loadout" o, en lo guardado cuando solo se equipaba una, la de "equipped".
+		for _, old in if type(saved.loadout) == "table" then saved.loadout else { saved.equipped } do
+			equip(renumbered[old])
 		end
 	elseif type(first) == "number" then
 		-- Formato del primer gacha: lista de tipos, una espada por tipo, rasgos aparte.
@@ -268,9 +283,13 @@ local function loadSwords(data, saved)
 	if #swords == 0 then
 		add(1, nil)
 	end
+	equip(equipped)
+	if #loadout == 0 then
+		loadout[1] = swords[1].id
+	end
 	data.swords = swords
 	data.nextSwordId = #swords + 1
-	data.equipped = equipped or swords[1].id
+	data.loadout = loadout
 end
 
 -- Cantidad guardada (monedas, gemas): ni NaN ni negativa. Con NaN toda comparación falla y trySpend dejaría comprar gratis.
@@ -363,7 +382,7 @@ local function applyProgress(data, hours: number)
 			trait = if snapshot.trait > 0 then snapshot.trait else nil,
 			grade = if snapshot.grade > 0 then snapshot.grade else nil,
 		})
-		data.equipped = id
+		data.loadout = { id }
 	end
 	data.artifacts, data.gear = {}, {}
 	for _, index in snapshot.artifacts do
@@ -398,7 +417,8 @@ end
 local function load(player: Player)
 	-- swords = copias { id, sword = índice de Config.Swords, trait = índice de Config.Traits o nil,
 	-- grade = índice de Config.Grades o nil };
-	-- equipped = id de la copia equipada; autoSell = se venden solas las espadas de rareza menor (0 = no);
+	-- loadout = ids de las copias equipadas, por orden de hueco (de 1 a Config.Loadout.Slots, sin repetir; lo guardado
+	-- cuando solo se equipaba una trae "equipped", un solo id); autoSell = se venden solas las espadas de rareza menor (0 = no);
 	-- items = { [nombre] = cantidad } (las pociones también son objetos); artifacts = índices de Config.Artifacts que tiene; gear = los equipados.
 	-- armor = piezas de armadura (ver shared/ArmorStats); armorWorn = { [hueco] = id de la pieza equipada }.
 	-- potions = pociones activas { [familia de Config.Potions.Families] = { tier, seconds = tiempo de juego que queda } }.
@@ -413,7 +433,7 @@ local function load(player: Player)
 		missions = {}, -- misiones: { daily = { id, progress, claimed }, weekly = { ... } } (ver server/Missions)
 		swords = { { id = 1, sword = 1 } },
 		nextSwordId = 2,
-		equipped = 1,
+		loadout = { 1 },
 		autoSell = 0,
 		traitPriority = "luck,coins,damage", -- desempate de rasgos igual de raros (ver Modifiers.priority)
 		pity = Modifiers.newPity(nil),
@@ -683,6 +703,11 @@ function PlayerData.findSword(data, id: unknown)
 		end
 	end
 	return nil
+end
+
+-- Si esa copia está equipada (en cualquiera de los huecos de data.loadout).
+function PlayerData.isEquipped(data, id: unknown): boolean
+	return table.find(data.loadout, id) ~= nil
 end
 
 function PlayerData.getCoins(player: Player): number
