@@ -32,9 +32,9 @@ local GROW = 1.04 -- lo que crece el botón entero: poco, que lo que se mueve es
 local SQUARE = {
 	size = UDim2.fromOffset(MenuTile.SIZE, MenuTile.SIZE),
 	-- El logo, algo por encima del centro: abajo va el nombre.
-	icon = { position = UDim2.fromScale(0.5, 0.42), size = UDim2.fromScale(0.84, 0.84) },
+	icon = { position = UDim2.fromScale(0.5, 0.41), size = UDim2.fromScale(0.76, 0.76) },
 	rays = { position = UDim2.fromScale(0.5, 0.46), size = UDim2.fromScale(0.96, 0.96) },
-	label = { anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, 5), size = UDim2.new(1, -6, 0, 30), text = 25 },
+	label = { anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, 5), size = UDim2.new(1, -16, 0, 26), text = 21 },
 	twinkles = {
 		{ x = 0.15, y = 0.2, size = 20, phase = 0 },
 		{ x = 0.86, y = 0.3, size = 15, phase = 2.1 },
