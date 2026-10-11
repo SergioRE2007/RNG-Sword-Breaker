@@ -31,6 +31,7 @@ ROLE_COLORS = {  # solo para verlo en Blender; en el juego manda PropModel
     "StoneDark": (0.43, 0.44, 0.49), "Gold": (1, 0.8, 0.27), "Paper": (1, 0.92, 0.65), "Roof": (0.2, 0.28, 0.43),
     "White": (0.98, 0.96, 0.92), "Black": (0.14, 0.12, 0.16), "Water": (0.3, 0.8, 0.85), "Marker": (1, 0, 1), "Fur": (0.8, 0.35, 0.15),
     "Cream": (1, 0.94, 0.85), "Tan": (0.84, 0.63, 0.4),
+    "Sack": (0.8, 0.6, 0.36), "SackDark": (0.56, 0.38, 0.22), "Rope": (0.42, 0.26, 0.15),
 }
 
 
@@ -1056,13 +1057,134 @@ def fuji(p):
     p.add("White", lathe([(31.0, 158.5), (23.0, 175), (14.5, 190.0), (0.0, 196.0)], 18))
 
 
+# ---------- Bolsa de oro (server/GoldBag) ----------
+
+def cloth(profile, n=28, folds=7, lean=(0.0, 0.0), seed=5):
+    """Tela de saco: sólido de revolución sobre Y con pliegues. profile = [(radio, y, pliegue)] de abajo a arriba
+    (puede volver a bajar por dentro de la boca): `pliegue` es cuánto ondula el radio con el ángulo a esa altura
+    (0 = liso). `lean` = cuánto se vence hacia X y Z arriba del todo (crece con el cuadrado de la altura)."""
+    rng = random.Random(seed)
+    wobble = [rng.uniform(-1, 1) for _ in range(n)]
+    height = max(y for _, y, _ in profile)
+    verts, rings = [], []
+    for r, y, fold in profile:
+        rings.append(len(verts))
+        k2 = (y / height) ** 2
+        for i in range(n):
+            a = 2 * math.pi * i / n
+            k = 1 + fold * (math.cos(folds * a) + 0.35 * wobble[i])
+            verts.append((r * k * math.cos(a) + lean[0] * k2, y, r * k * math.sin(a) + lean[1] * k2))
+    faces = [tuple(rings[0] + i for i in reversed(range(n))), tuple(rings[-1] + i for i in range(n))]
+    for j in range(len(rings) - 1):
+        a, b = rings[j], rings[j + 1]
+        faces += [(a + i, a + (i + 1) % n, b + (i + 1) % n, b + i) for i in range(n)]
+    return verts, faces
+
+
+SACK_HEIGHT = 12.4  # del suelo al borde de la boca
+SACK_LEAN = (0.55, 0.3)  # lo que se vence la boca hacia un lado
+
+
+def sack_lean(y):
+    k = (y / SACK_HEIGHT) ** 2
+    return SACK_LEAN[0] * k, SACK_LEAN[1] * k
+
+
+def gold_sack(p):
+    """Saco de oro atado con cuerda, con una moneda antigua de emblema, papeles shide colgando de la cuerda y oro
+    rebosando por la boca. Va en dos piezas con el mismo origen: el saco (GoldSack, que el juego puede encoger según
+    se vacía) y su pedestal de piedra con pilas de monedas y lingotes (GoldSackBase). El frente (-Z) mira a la
+    parcela."""
+    rng = random.Random(77)
+    # Tela: barriga ancha y caída, cuello estrangulado por la cuerda y boca abierta con volantes.
+    p.add("Sack", cloth([
+        (3.9, 0.0, 0.0), (5.4, 0.45, 0.015), (6.15, 1.5, 0.02), (6.45, 3.1, 0.025), (6.3, 4.7, 0.03),
+        (5.7, 6.2, 0.045), (4.6, 7.6, 0.075), (3.2, 8.75, 0.12), (2.15, 9.5, 0.17), (1.95, 9.95, 0.17),
+        (2.6, 10.4, 0.17), (3.5, 11.0, 0.18), (4.15, 11.8, 0.2), (4.3, SACK_HEIGHT, 0.21), (3.7, 12.3, 0.2),
+        (2.7, 11.5, 0.14),
+    ], n=42, lean=SACK_LEAN))
+    # Franja oscura por dentro de la boca y remiendo cosido en un costado.
+    lx, lz = sack_lean(11.5)
+    p.add("SackDark", cyl(2.75, 0.3, 14), T(lx, 11.35, lz))
+    patch = math.radians(118)
+    px, pz = 6.05 * math.sin(patch), 6.05 * math.cos(patch)
+    to_patch = T(px, 5.3, pz) @ R("Y", 118)
+    p.add("SackDark", sphere(1, 8, 4), to_patch @ S(1.55, 1.3, 0.3))
+    for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1), (0, -1.25), (0, 1.25)):
+        p.add("Rope", box(0.16, 0.5, 0.14), to_patch @ T(sx * 1.2, sy * 0.85, 0.24) @ R("Z", 35 * sx if sx else 90))
+
+    # Cuerda: dos vueltas en el cuello, nudo al frente y dos cabos con su borla.
+    nx, nz = sack_lean(9.75)
+    for y in (9.5, 9.98):
+        p.add("Rope", torus(2.2, 0.33, 18, 6), T(nx, y, nz))
+    knot = (nx, 9.7, nz - 2.5)
+    p.add("Rope", sphere(0.62, 8, 5), T(*knot) @ S(1.15, 0.9, 0.9))
+    for end in ((nx - 1.7, 7.0, nz - 4.45), (nx + 2.1, 7.9, nz - 4.85)):
+        p.branch("Rope", knot, end, 0.26, 0.2, 6)
+        p.add("Rope", sphere(0.42, 6, 4), T(*end) @ S(1, 1.35, 1))
+        p.add("Gold", torus(0.3, 0.1, 8, 4), T(end[0], end[1] + 0.45, end[2]))
+    # Shide: tiras de papel en zigzag colgando de la cuerda (como en un shimenawa), a los lados y detrás. Bajan
+    # tumbadas sobre el hombro del saco: de (radio 3,1, altura 9,2) a (radio 6,1, altura 6,9).
+    slope = math.degrees(math.atan2(3.0, 2.3))
+    for degrees in (62, -58, 138, -132):
+        hang = T(nx, 9.1, nz) @ R("Y", degrees) @ T(0, 0, 2.95) @ R("X", -slope)
+        for k in range(3):
+            p.add("White", box(0.95, 1.05, 0.08), hang @ T((0.34 if k % 2 else -0.34), -0.62 - k * 1.0, 0.03 * k) @ R("Z", 14 if k % 2 else -14))
+
+    # Emblema al frente: una moneda antigua (con su agujero cuadrado) cosida a la barriga.
+    front = T(0.12, 4.5, -6.3) @ R("X", -86)
+    p.add("Gold", cyl(2.5, 0.38, 16), front)
+    p.add("Gold", torus(2.3, 0.26, 16, 5), front @ T(0, 0.34, 0))
+    p.add("Gold", torus(0.95, 0.2, 4, 4), front @ T(0, 0.34, 0) @ R("Y", 45))
+    p.add("SackDark", box(1.15, 0.2, 1.15), front @ T(0, 0.36, 0))
+    for quarter in range(4):
+        p.add("Gold", box(0.26, 0.16, 0.7), front @ R("Y", 90 * quarter) @ T(0, 0.42, 1.62))
+
+    # Oro rebosando: un montón en la boca, monedas sueltas encima y dos que se escapan por el borde.
+    mx, mz = sack_lean(12.0)
+    p.add("Gold", sphere(1, 12, 5), T(mx, 11.75, mz) @ S(3.15, 1.35, 3.15))
+    for index in range(13):
+        a, reach = index * 2.4, 0.35 + 0.19 * index  # en espiral: se reparten sin amontonarse
+        y = 11.75 + 1.35 * math.sqrt(max(1 - (reach / 3.15) ** 2, 0)) + 0.03
+        lay = T(mx + reach * math.sin(a), y, mz + reach * math.cos(a)) @ R("Y", math.degrees(a)) @ R("X", 14 + 16 * reach + rng.uniform(-8, 8))
+        p.add("Gold", cyl(0.82, 0.19, 10), lay @ R("Y", rng.uniform(0, 36)))
+    # De canto, clavadas en el montón.
+    for degrees, tilt in ((200, 66), (95, 58), (-40, 72)):
+        a = math.radians(degrees)
+        p.add("Gold", cyl(0.82, 0.19, 10), T(mx + 1.5 * math.sin(a), 12.75, mz + 1.5 * math.cos(a)) @ R("Y", degrees) @ R("X", tilt))
+
+    # Pedestal: dos escalones de piedra con un aro de oro, pilas de monedas, monedas sueltas y lingotes.
+    p.group = "Base"
+    top = 0.95
+    p.add("StoneDark", cyl(12.6, 0.5, 10, 12.3))
+    p.add("Stone", cyl(11.4, top - 0.5, 10, 11.15), T(0, 0.5, 0))
+    p.add("Gold", torus(9.9, 0.14, 20, 4), T(0, top, 0))
+    for degrees, reach, count in ((152, 8.4, 8), (170, 9.7, 4), (133, 9.5, 3), (-146, 8.5, 10), (-166, 9.9, 6),
+                                  (-124, 9.6, 3), (48, 8.9, 6), (66, 9.9, 2), (-60, 9.0, 5)):
+        a = math.radians(degrees)
+        x, z = reach * math.sin(a), reach * math.cos(a)
+        for k in range(count):
+            p.add("Gold", cyl(0.86, 0.2, 10), T(x + rng.uniform(-0.09, 0.09), top + k * 0.215, z + rng.uniform(-0.09, 0.09)) @ R("Y", rng.uniform(0, 36)))
+    for _ in range(14):
+        a, reach = rng.uniform(0, 2 * math.pi), rng.uniform(7.4, 10.8)
+        p.add("Gold", cyl(0.86, 0.2, 10), T(reach * math.sin(a), top, reach * math.cos(a)) @ R("Y", rng.uniform(0, 36)))
+    # Monedas de canto, apoyadas en el saco.
+    for degrees in (95, -100, 12):
+        a = math.radians(degrees)
+        p.add("Gold", cyl(0.86, 0.2, 10), T(6.9 * math.sin(a), top + 0.82, 6.9 * math.cos(a)) @ R("Y", degrees) @ R("X", 72))
+    # Lingotes: dos juntos y uno cruzado encima.
+    bars = T(8.6 * math.sin(math.radians(-92)), top, 8.6 * math.cos(math.radians(-92))) @ R("Y", -70)
+    for x, y, turn in ((-0.62, 0.32, 0), (0.62, 0.32, 0), (0, 0.96, 24)):
+        p.add("Gold", frustum(2.5, 1.05, 2.15, 0.72, 0.62), bars @ T(x * 1.0, y, 0) @ R("Y", 90 + turn))
+
+
 ANIMALS = ["Panda", "RedPanda", "Tiger", "Fox", "Tanuki", "Deer", "Crane"]
 PIECES = {
     "Sakura": sakura, "SakuraB": sakura_b, "Maple": maple, "Pine": pine, "Bamboo": bamboo, "Torii": torii,
     "StoneLantern": stone_lantern, "Chochin": chochin, "Pagoda": pagoda, "Bridge": bridge, "Shrine": shrine,
     "Rocks": rocks, "Lotus": lotus, "Bonsai": bonsai, "Fence": fence, "Komainu": komainu,
     "Koinobori": koinobori, "Temple": temple, "Panda": panda, "RedPanda": red_panda, "Tiger": tiger, "Fox": fox, "Tanuki": tanuki,
-    "Deer": deer, "Crane": crane, "Fuji": fuji,
+    "Deer": deer, "Crane": crane, "Fuji": fuji, "GoldSack": gold_sack,
 }
 
 
@@ -1071,6 +1193,7 @@ VIEWS = {
     "Temple": [(47.0, 150.0, 28.0, 9.0), (30.0, 100.0, 35.0, -22.0), (22.0, 62.0, 12.0, 4.0)],
     "Torii": [(9.0, 34.0, 25.0, 8.0)],
     "Bridge": [(2.5, 34.0, 30.0, 18.0)],
+    "GoldSack": [(6.0, 32.0, 28.0, 16.0), (6.0, 32.0, 200.0, 12.0), (9.5, 14.0, 10.0, 34.0)],
 }
 
 

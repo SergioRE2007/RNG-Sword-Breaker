@@ -18,6 +18,7 @@ require(script.Movement).start()
 -- script.Swords (el arma en la mano) ya no se arranca: las armas equipadas las dibuja cada cliente (client/OrbitWeapons).
 require(script.Index).start() -- Índice de armas: antes de Gacha, que le apunta cada tirada
 require(script.Gacha).start()
+require(script.GoldBag).start() -- Bolsa de oro: después de Plots (pone un saco detrás de cada parcela)
 require(script.Traits).start()
 require(script.ModifierShops).start()
 require(script.Gear).start()

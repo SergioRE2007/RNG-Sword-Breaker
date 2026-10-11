@@ -352,9 +352,12 @@ function Backpack.start()
 	local bestButton = action("Best", "Equipar mejores", Ui.COLORS.green, 12, 176)
 	local sellButton = action("Sell", "Vender armas", Ui.COLORS.red, 198, 100)
 	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 308, 104)
+	-- Dejar la elegida en la Bolsa de oro (o sacarla): cabe en el hueco que queda entre los detalles y "Equipar".
+	local bagButton = action("Bag", "A la bolsa", Ui.COLORS.coins, 420, 100)
 	bestButton.TextSize = 23
 	equipButton.TextSize = 20
 	sellButton.TextSize = 17
+	bagButton.TextSize = 17
 
 	local selected = nil -- id de la copia elegida
 	local swordCells = {} -- [id] = casilla
@@ -364,6 +367,12 @@ function Backpack.start()
 		if selected then
 			Sfx.play("equip")
 			Remotes.EquipSword:FireServer(selected)
+		end
+	end)
+	bagButton.Activated:Connect(function()
+		if selected then
+			Sfx.play("equip")
+			Remotes.SetBag:FireServer(selected)
 		end
 	end)
 	sellButton.Activated:Connect(function()
@@ -405,6 +414,10 @@ function Backpack.start()
 		local only = isEquipped and #worn <= 1
 		equipButton.Text = if only then "Equipada" elseif isEquipped then "Quitar" else "Equipar"
 		equipButton.BackgroundColor3 = if only then Ui.COLORS.gray elseif isEquipped then Ui.COLORS.orange else Ui.COLORS.blue
+		-- El de la bolsa deja o saca la elegida; la única equipada tampoco se puede depositar.
+		local inBag = selected ~= nil and Stats.isDeposited(player, selected)
+		bagButton.Text = if inBag then "Sacar" else "A la bolsa"
+		bagButton.BackgroundColor3 = if only then Ui.COLORS.gray elseif inBag then Ui.COLORS.orange else Ui.COLORS.coins
 	end
 
 	-- Deja las casillas como el inventario tocando solo las que han cambiado. Rehacerlas todas en cada
@@ -416,7 +429,8 @@ function Backpack.start()
 		for _, copy in copies do
 			seen[copy.id] = true
 			local isEquipped = table.find(worn, copy.id) ~= nil
-			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{isEquipped}`
+			local inBag = Stats.isDeposited(player, copy.id)
+			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{isEquipped}:{inBag}`
 			if cellKeys[copy.id] == key then
 				continue
 			end
@@ -443,6 +457,8 @@ function Backpack.start()
 			Ui.gradient(damage, Color3.new(1, 1, 1), tier.color:Lerp(Color3.new(1, 1, 1), 0.45), 90)
 			if isEquipped then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
+			elseif inBag then
+				Ui.cellTag(cell, "B", Ui.COLORS.coins) -- depositada en la Bolsa de oro
 			end
 			-- Metal (círculo de su color) y tamaño (cartelito con su inicial) en el lado izquierdo, bajo la "E".
 			local metalDef, sizeDef = Permanent.metal(copy), Permanent.size(copy)
@@ -705,8 +721,8 @@ function Backpack.start()
 		local copies = Stats.swords(player)
 
 		count.Text = `{#copies}/{Config.MaxSwords}`
-		swordsTitle.Text = `Tus espadas <font color="{Ui.SOFT}">· equipadas {#worn}/{Config.Loadout.Slots}</font>`
-		local key = `{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}`
+		swordsTitle.Text = `Tus espadas <font color="{Ui.SOFT}">· equipadas {#worn}/{Config.Loadout.Slots} · bolsa {#Stats.list(player, "Bag")}/{Config.GoldBag.Slots}</font>`
+		local key = `{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Bag")}`
 		if key ~= swordsKey then
 			swordsKey = key
 			syncSwords(copies, worn)

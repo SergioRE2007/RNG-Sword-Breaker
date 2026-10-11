@@ -114,6 +114,17 @@ Objetivo.mazmorra = {
 -- 1,75 días de bucle y en las cuatro en unos 7.
 Objetivo.bucle = { horas = 24, rasgo = 30000, grado = 30000 }
 
+-- BOLSA DE ORO (Config.GoldBag): detrás de la parcela, las armas que el jugador deposita le pegan solas a un saco,
+-- también mientras está desconectado y sin tope de tiempo. Decidido por el usuario (11 oct 2026): hasta entonces un
+-- arma mejor solo servía para romper antes, y así da siempre más monedas.
+-- Lo que saca cada golpe lo fijó el usuario a mano en Config.GoldBag (cada x2 de daño, x1,5 de monedas) y está SIN
+-- EQUILIBRAR a propósito: el simulador la cobra con esas cuentas, pero nada de aquí la ajusta.
+-- `reales` = horas de reloj por cada hora de juego (juega unas 3 al día): la bolsa pega todo ese tiempo, así que quien
+-- juega menos saca más de ella en proporción.
+-- El jugador tipo deja en la bolsa las armas que siguen a sus equipadas (de la 5.ª a la 8.ª de más daño, sin rasgo ni
+-- grado): si deja las mejores, la bolsa le da más y la parcela le va más despacio.
+Objetivo.bolsa = { reales = 8 }
+
 -- Horas de las que se guarda el estado del jugador tipo (Config.Test.Progress, para probar cada etapa en Studio).
 Objetivo.fotos = { 0.5, 2, 5, 15, 40, 80, 120, 170, 200 }
 

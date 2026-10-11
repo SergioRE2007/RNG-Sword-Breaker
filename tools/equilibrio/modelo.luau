@@ -17,6 +17,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	local WeatherInfo = shared("WeatherInfo")
 	local Modifiers = shared("Modifiers")
 	local ArmorStats = shared("ArmorStats")
+	local BagInfo = shared("BagInfo")
 
 	local M = {}
 
@@ -386,6 +387,11 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		local salto, paciencia = jugador.salto, jugador.paciencia
 		local calibrar = opts.calibrar
 		local huecos = Config.Loadout.Slots
+		-- Bolsa de oro: detrás de las equipadas guarda las que deja en la bolsa, que le pegan todo el tiempo de reloj
+		-- (`reales` segundos por cada segundo de sesión). opts.bolsa = false: sin cobrarla.
+		local guardadas = huecos + Config.GoldBag.Slots
+		local conBolsa = opts.bolsa ~= false
+		local reales = objetivo.bolsa.reales
 
 		local attrs = {}
 		local player = {
@@ -464,10 +470,28 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		local armas, nArmas = {}, 0
 		local pausa, golpe, listo = table.create(huecos, 0), table.create(huecos, 0), table.create(huecos, 0)
 		local andanada, ritmo = 0, 0
-		local corte = 0 -- daño a partir del que un arma nueva entra entre las equipadas
+		local corte = 0 -- daño a partir del que un arma nueva entra entre las que guarda (equipadas y de la bolsa)
 		local ids = {}
-		for slot = 1, huecos do
+		for slot = 1, guardadas do
 			ids[slot] = slot
+		end
+		-- BOLSA DE ORO: por qué bolsa va y lo que lleva sacado de ella. Sus armas sacan `bolsaRate` monedas por segundo
+		-- (Stats.bagRate); el tiempo se junta en `bolsaPend` y se cobra de vez en cuando (y antes de cada cambio de daño
+		-- y de cada cita de la agenda).
+		local bolsa = { stage = 1, taken = 0 }
+		local bolsaRate, bolsaPend = 0, 0
+		res.bolsa = { ganado = 0, stage = 1 }
+		local function cobrarBolsa()
+			local coins = bolsaRate * bolsaPend * reales
+			bolsaPend = 0
+			if coins <= 0 or not conBolsa then
+				return
+			end
+			bolsa.stage, bolsa.taken = BagInfo.advance(bolsa.stage, bolsa.taken, coins)
+			estado.coins += coins
+			res.ganado += coins
+			res.bolsa.ganado += coins
+			res.bolsa.stage = bolsa.stage
 		end
 		local parte = objetivo.golpes.parte
 		local nextTipo, habitual = 2, 2
@@ -503,12 +527,17 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			estado.gear = chosen
 		end
 		local function recalcular()
+			cobrarBolsa() -- lo que llevaba pegado a la bolsa, con el daño de antes
 			local copias = {}
 			for slot, arma in estado.armas do
-				copias[slot] = `{slot}:{arma.sword}:{estado.rasgos[slot] or 0}:{estado.grados[slot] or 0}:{arma.metal}:{arma.size}`
+				-- Las de la bolsa (pasados los huecos) van sin rasgo ni grado.
+				local rasgo = if slot <= huecos then estado.rasgos[slot] or 0 else 0
+				local grado = if slot <= huecos then estado.grados[slot] or 0 else 0
+				copias[slot] = `{slot}:{arma.sword}:{rasgo}:{grado}:{arma.metal}:{arma.size}`
 			end
 			attrs.Swords = table.concat(copias, ",")
-			attrs.Loadout = table.concat(ids, ",", 1, #copias)
+			attrs.Loadout = table.concat(ids, ",", 1, math.min(#copias, huecos))
+			attrs.Bag = if #copias > huecos then table.concat(ids, ",", huecos + 1, #copias) else ""
 			attrs.Equipped = 1
 			attrs.Gear = table.concat(estado.gear, ",")
 			attrs.Rebirths = estado.rebirths
@@ -523,6 +552,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			coinMult = Stats.coins(player)
 			gacha = Stats.gachaLuck(player)
 			spawnTime = Stats.spawnTime(player)
+			bolsaRate = Stats.bagRate(player, true)
 			local otros = math.max(Upgrades.value("capacity", estado.upgrades.capacity or 0) - 1, 0)
 			armas, andanada, ritmo = {}, 0, 0
 			for slot, copy in Stats.loadout(player) do
@@ -716,6 +746,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		-- Pasa el tiempo: por cada segundo de sesión, su parte de mazmorra; cuando junta lo que dura una partida, la juega.
 		local function pasa(dt: number)
 			t += dt
+			bolsaPend += dt
+			if bolsaPend >= 5 then
+				cobrarBolsa()
+			end
 			if mazZona then
 				presupuesto += dt * mazParte
 				while presupuesto >= mazDur do
@@ -751,11 +785,14 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		end
 		for _, hour in objetivo.fotos do
 			a(hour * H, function()
+				-- Las equipadas y, detrás, las de la bolsa (sin rasgo ni grado).
 				local equipadas = {}
 				for slot, arma in estado.armas do
-					equipadas[slot] = { sword = arma.sword, metal = arma.metal, size = arma.size, trait = estado.rasgos[slot] or 0, grade = estado.grados[slot] or 0 }
+					local suya = slot <= huecos
+					equipadas[slot] = { sword = arma.sword, metal = arma.metal, size = arma.size, trait = if suya then estado.rasgos[slot] or 0 else 0, grade = if suya then estado.grados[slot] or 0 else 0 }
 				end
 				res.fotos[hour] = {
+					bolsa = bolsa.stage,
 					upgrades = table.clone(estado.upgrades),
 					rebirths = estado.rebirths,
 					armas = equipadas,
@@ -883,6 +920,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		while t < fin do
 			local sucio = false
 			while cita <= #agenda and agenda[cita].t <= t do
+				cobrarBolsa() -- las citas miran lo ganado hasta ahora
 				agenda[cita].fn()
 				cita += 1
 				sucio = true
@@ -964,15 +1002,16 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				local rarity = Config.Swords[sword].rarity
 				local total = Config.Swords[sword].damage * Permanent.damageMult({ metal = metal, size = size })
 				if total > corte then
-					-- Entra entre las equipadas, en su sitio por daño, y sale la peor si ya no cabe.
+					-- Entra entre las que guarda (equipadas y, detrás, las de la bolsa), en su sitio por daño, y sale la peor
+					-- si ya no cabe.
 					local equipadas = estado.armas
 					local position = #equipadas + 1
 					while position > 1 and total > equipadas[position - 1].base do
 						position -= 1
 					end
 					table.insert(equipadas, position, { sword = sword, metal = metal, size = size, base = total })
-					equipadas[huecos + 1] = nil
-					corte = if #equipadas < huecos then 0 else equipadas[huecos].base
+					equipadas[guardadas + 1] = nil
+					corte = if #equipadas < guardadas then 0 else equipadas[guardadas].base
 					recalcular()
 				end
 				for _, limit in umbrales do
@@ -1044,6 +1083,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				end
 			end
 		end
+		cobrarBolsa()
 		res.maz.mejores = mejores
 		res.estado = estado
 		res.dano = damage -- el de una andanada: la suma de sus armas equipadas

@@ -698,6 +698,12 @@ end)
 tf.advance(1)
 tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "swords", 2, 1)
 equal(next(tradeState().you.swords), nil, "una equipada en el segundo hueco no se ofrece")
+-- Tampoco las depositadas en la Bolsa de oro.
+tf.data.edit(tf.player, function(d) d.bag.slots = { 3 } end)
+tf.advance(1)
+tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "swords", 3, 1)
+equal(next(tradeState().you.swords), nil, "una depositada en la bolsa no se ofrece")
+tf.data.edit(tf.player, function(d) d.bag.slots = {} end)
 tf.advance(1)
 tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "swords", 3, 1)
 equal(next(tradeState().you.swords) ~= nil, true, "una sin equipar sí se ofrece")
@@ -900,6 +906,7 @@ do
 			{ id = 40, sword = 5, metal = 1, size = 1 },
 		},
 		loadout = { 20, 40 },
+		bag = { stage = 7, taken = 3, slots = { 30 }, seen = 123456 },
 		index = { code(4, 1, 1), code(lastSword, lastMetal, lastSize) },
 		items = { traitCrystal = 1e30, gradeCrystal = 7, [potionKey] = 3 },
 		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
@@ -925,6 +932,7 @@ do
 			{ id = 4, sword = 5, metal = 1, size = 1 },
 		},
 		nextSwordId = 5, loadout = { 2, 4 },
+		bag = { stage = 7, taken = 3, slots = { 3 }, seen = 123456 },
 		index = full.index, items = items,
 		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
 		armor = {
@@ -1390,9 +1398,155 @@ do
 	equal(stagedData.rebirths, 1, "Progress: renacimientos de la foto")
 	equal(stagedData.coins, staged.config.StartCoins, "Progress: no trae las monedas guardadas")
 	equal(stagedData.gems, 0, "Progress: no trae las gemas guardadas")
-	equal(#stagedData.swords, 1 + slots, "Progress: no trae las armas guardadas")
+	equal(#stagedData.swords, 1 + slots + 1, "Progress: no trae las armas guardadas")
+	equal(#stagedData.bag.slots, 1, "Progress: las armas de la foto que no caben en los huecos van a la Bolsa de oro")
+	equal(staged.data.isEquipped(stagedData, stagedData.bag.slots[1]), false, "Progress: y no están equipadas")
 	equal(table.concat(stagedData.artifacts, ","), "1", "Progress: solo los accesorios de la foto")
 	leave(staged, stagedPlayer)
+end
+
+-- Bolsa de oro (server/GoldBag, shared/BagInfo): las cuentas de las bolsas, depositar y sacar armas, que una
+-- depositada no se venda ni se equipe a la vez, el cobro de cada segundo, lo ganado mientras no estaba y lo guardado.
+roblox.implementMethod("Workspace", "GetServerTimeNow", function() return 0 end)
+do
+	local store = dataStore(nil)
+	local bf = fixture(nil, store)
+	local cfg, who = bf.config, bf.player
+	local function table3(c, first)
+		c.GoldBag.Coins, c.GoldBag.Damage, c.GoldBag.Double = 50, 100, 1.5
+		c.GoldBag.First, c.GoldBag.Growth = first or 100, 4
+		c.GoldBag.HitTime, c.GoldBag.MinAway, c.GoldBag.Slots = 1, 60, 4
+	end
+	table3(cfg)
+	local info = bf.load("src/shared/BagInfo")
+	-- Lo que saca un golpe: 100 de daño = 50 monedas y cada x2 de daño, x1,5 (decidido por el usuario).
+	equal(info.coins(100), 50, "bolsa: 100 de daño sacan 50 monedas")
+	equal(info.coins(200), 75, "bolsa: el doble de daño, x1,5")
+	equal(info.coins(400), 113, "bolsa: y otra vez x1,5 (112,5, redondeado)")
+	equal(info.coins(50), 33, "bolsa: la mitad de daño, entre 1,5")
+	equal(info.coins(0.0001), 1, "bolsa: un golpe saca al menos una moneda")
+	equal(info.coins(0), 0, "bolsa: sin daño no saca nada")
+	near(info.coins(1e30) / info.coins(5e29), 1.5, "bolsa: la regla vale con números enormes")
+	equal(info.size(1), 100, "bolsa: la primera lleva First")
+	equal(info.size(3), 1600, "bolsa: cada una, Growth veces la anterior")
+	local stage, taken, emptied = info.advance(1, 0, 40)
+	equal(stage == 1 and taken == 40 and emptied == 0, true, "bolsa: sin vaciarla sigue en la misma")
+	stage, taken, emptied = info.advance(1, 40, 100)
+	equal(stage == 2 and taken == 40 and emptied == 1, true, "bolsa: lo que sobra sale de la siguiente")
+	stage, taken, emptied = info.advance(1, 0, 100 + 400 + 1600 + 50)
+	equal(stage == 4 and taken == 50 and emptied == 3, true, "bolsa: varias vaciadas de una vez")
+	stage, taken, emptied = info.advance(1, 30, 0)
+	equal(stage == 1 and taken == 30 and emptied == 0, true, "bolsa: sin monedas no pasa nada")
+	local clean = info.sanitize({ stage = "x", taken = -5, seen = 0 / 0, slots = { 1 } })
+	equal(clean.stage == 1 and clean.taken == 0 and clean.seen == nil and #clean.slots == 0, true, "bolsa guardada rota: se limpia")
+	clean = info.sanitize({ stage = 2.7, taken = 1e9, seen = 50 })
+	equal(clean.stage == 2 and clean.taken == 400 and clean.seen == 50, true, "bolsa guardada: bolsa entera y lo sacado dentro de lo que lleva")
+
+	-- Depositar: copias 1..6, la k con la k-ésima arma de menos daño.
+	bf.overrides["src/server/Plots"] = { all = function() return {} end }
+	bf.load("src/server/Gacha").start()
+	bf.load("src/server/GoldBag").start()
+	local stats = bf.load("src/shared/Stats")
+	local byDamage = {}
+	for index in cfg.Swords do table.insert(byDamage, index) end
+	table.sort(byDamage, function(a, b) return cfg.Swords[a].damage < cfg.Swords[b].damage end)
+	bf.data.edit(who, function(d)
+		d.swords = {}
+		for id = 1, 8 do d.swords[id] = { id = id, sword = byDamage[id] } end
+		d.nextSwordId = 9
+		d.loadout = { 8 }
+		d.coins = 0
+	end)
+	local function deposit(id) bf.remotes.SetBag.OnServerEvent:fire(who, id) end
+	local function inBag() return table.concat(bf.data.read(who).bag.slots, ",") end
+	local function worn() return table.concat(bf.data.read(who).loadout, ",") end
+	deposit(8)
+	equal(inBag(), "", "la única equipada no se deposita")
+	equal(#bf.remotes.Notice.sent, 1, "y se avisa")
+	for _, bad in { 999, "x", 0 / 0, {}, true, -1, 1.5 } do deposit(bad) end
+	equal(inBag(), "", "depositar algo que no existe no cambia nada")
+	deposit(2)
+	equal(inBag(), "2", "una copia sin equipar se deposita")
+	equal(who:GetAttribute("Bag"), "2", "depositadas publicadas")
+	equal(stats.isDeposited(who, 2), true, "Stats lee las depositadas")
+	local secondHit = stats.swordDamage({ sword = byDamage[2], trait = 0, grade = 0, metal = 0, size = 0 })
+	near(stats.bagHit(who, stats.deposited(who)[1]), secondHit, "golpe a la bolsa: el daño de la depositada")
+	equal(stats.bagRate(who), info.coins(secondHit), "monedas por segundo: un golpe por segundo de cada depositada")
+	deposit(2)
+	equal(inBag(), "", "pulsar una depositada la saca")
+	bf.remotes.EquipSword.OnServerEvent:fire(who, 7)
+	deposit(7)
+	equal(inBag() == "7" and worn() == "8", true, "depositar una equipada la quita del equipo")
+	bf.remotes.EquipSword.OnServerEvent:fire(who, 7)
+	equal(inBag() == "" and worn() == "8,7", true, "equipar una depositada la saca de la bolsa")
+	for id = 2, 5 do deposit(id) end
+	equal(inBag(), "2,3,4,5", "caben Config.GoldBag.Slots")
+	deposit(6)
+	equal(inBag(), "6,3,4,5", "llena, sustituye a la de menos daño")
+	bf.remotes.EquipSword.OnServerEvent:fire(who, "best")
+	equal(worn(), "8,7,2,1", "las mejores: no cuenta con las depositadas")
+	bf.remotes.SellSwords.OnServerEvent:fire(who, { 1, 2, 3, 4, 5, 6, 7, 8 })
+	equal(#bf.data.read(who).swords, 8, "ni las equipadas ni las depositadas se venden")
+	bf.remotes.EquipSword.OnServerEvent:fire(who, 1)
+	bf.remotes.EquipSword.OnServerEvent:fire(who, 2)
+	bf.remotes.SellSwords.OnServerEvent:fire(who, { 1, 2 })
+	equal(#bf.data.read(who).swords, 6, "las que no están en uso sí se venden")
+
+	-- Cobro: cada segundo salen las monedas de un golpe de cada depositada, y se avisa al vaciar una bolsa.
+	local rate = stats.bagRate(who)
+	local perHit = 0
+	for _, copy in stats.deposited(who) do perHit += info.coins(stats.bagHit(who, copy)) end
+	equal(rate == perHit and rate >= 4, true, "las cuatro depositadas sacan al menos una moneda por golpe")
+	bf.data.edit(who, function(d) d.coins = 0 end)
+	bf.step(1)
+	equal(bf.data.read(who).coins, rate, "un segundo: un golpe de cada una")
+	equal(who:GetAttribute("BagStage"), 1, "bolsa publicada")
+	equal(who:GetAttribute("BagRate"), rate, "monedas por segundo publicadas")
+	equal(bf.data.read(who).bag.taken, rate, "lo sacado sale de la bolsa")
+	-- Con bolsas pequeñas (la primera de 2 monedas) el siguiente segundo vacía alguna.
+	table3(cfg, 2)
+	bf.data.edit(who, function(d) d.bag.taken = 0 end)
+	bf.step(1)
+	local wantStage, wantTaken, wantEmptied = info.advance(1, 0, rate)
+	equal(wantEmptied >= 1, true, "con bolsas pequeñas cae alguna")
+	equal(bf.data.read(who).bag.stage, wantStage, "pasa a la bolsa que toca")
+	equal(bf.data.read(who).bag.taken, wantTaken, "con lo que sobra sacado de ella")
+	local events = bf.remotes.BagEvent.sent
+	equal(events[#events][2] == "emptied" and events[#events][3].stage == wantStage and events[#events][3].bags == wantEmptied, true, "aviso de bolsa vaciada")
+	equal(bf.data.read(who).coins, rate * 2, "vaciar una bolsa no da monedas de más")
+	equal(bf.data.read(who).coins % 1, 0, "se pagan monedas enteras")
+
+	-- Lo ganado fuera: sale, vuelve una hora después y se cobra de golpe (sin tope de tiempo).
+	local leftStage = bf.data.read(who).bag.stage
+	local leftCoins = bf.data.read(who).coins
+	bf.data.edit(who, function(d) d.bag.seen -= 3600 end)
+	local saved = bf.save()
+	equal(#saved.bag.slots, 4, "se guardan las depositadas")
+	equal(saved.bag.stage, leftStage, "y la bolsa por la que va")
+	local back = fixture(nil, store)
+	table3(back.config, 2)
+	back.overrides["src/server/Plots"] = { all = function() return {} end }
+	back.load("src/server/GoldBag").start()
+	local returned = back.data.read(back.player)
+	equal(#returned.bag.slots, 4, "al volver siguen depositadas")
+	equal(returned.bag.stage > leftStage, true, "fuera: han seguido vaciando bolsas")
+	equal(returned.coins > leftCoins, true, "fuera: se cobra al volver")
+	local awayEvent = back.remotes.BagEvent.sent[1]
+	equal(awayEvent[2] == "away" and awayEvent[3].coins > 0 and awayEvent[3].seconds >= 3500, true, "fuera: se le avisa con lo ganado")
+	local expectedCoins = math.floor(back.load("src/shared/Stats").bagRate(back.player, true) * awayEvent[3].seconds)
+	local expectedStage = back.load("src/shared/BagInfo").advance(leftStage, saved.bag.taken, expectedCoins)
+	equal(awayEvent[3].coins, expectedCoins, "fuera: lo de un golpe por segundo de cada arma")
+	equal(returned.coins, leftCoins + expectedCoins, "fuera: eso es lo que se cobra")
+	equal(returned.bag.stage, expectedStage, "fuera: la misma cuenta de bolsas que conectado")
+	back.save()
+
+	-- Lo guardado roto: ids repetidos, que no existen o de un arma equipada, y números imposibles.
+	local broken = fixture({ coins = 1, swords = { { id = 5, sword = 1 }, { id = 9, sword = 3 }, { id = 4, sword = 4 } }, loadout = { 5 }, bag = { stage = -3, taken = "mucho", seen = "ayer", slots = { 9, 9, 5, 77, "a", 4, {} } } })
+	local brokenBag = broken.data.read(broken.player).bag
+	equal(table.concat(brokenBag.slots, ","), "2,3", "bolsa guardada: ids renumerados, sin repetir, sin la equipada ni las que no existen")
+	equal(brokenBag.stage == 1 and brokenBag.taken == 0 and brokenBag.seen == nil, true, "bolsa guardada: números imposibles fuera")
+	equal(broken.data.isLocked(broken.data.read(broken.player), 2), true, "una depositada está en uso")
+	equal(broken.data.isLocked(broken.data.read(broken.player), 99), false, "una que no existe, no")
 end
 
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)

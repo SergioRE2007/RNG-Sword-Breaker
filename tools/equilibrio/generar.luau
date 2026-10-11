@@ -436,8 +436,9 @@ local tipo = forzadas[math.ceil(#forzadas / 2)]
 local out = {
 	"-- ARCHIVO GENERADO por tools/equilibrio/generar.luau: no lo edites a mano.",
 	"-- Cómo va el jugador tipo del calendario de progreso a cada hora de juego: lo usa Config.Test.Progress (solo en",
-	"-- Studio) para empezar una partida en esa etapa. `swords` = sus armas equipadas, por hueco, cada una con su metal, su",
-	"-- tamaño, su rasgo y su grado (0 = ninguno); `armor` = { suerte, ataque, aparición } que suma su armadura.",
+	"-- Studio) para empezar una partida en esa etapa. `swords` = sus armas, cada una con su metal, su tamaño, su rasgo y su",
+	"-- grado (0 = ninguno): las primeras (hasta Config.Loadout.Slots) son las equipadas, por hueco, y las demás, las que",
+	"-- deja en su Bolsa de oro; `bag` = bolsa por la que va; `armor` = { suerte, ataque, aparición } que suma su armadura.",
 	"return {",
 }
 for _, hour in objetivo.fotos do
@@ -457,7 +458,7 @@ for _, hour in objetivo.fotos do
 		for _, arma in foto.armas do
 			table.insert(swords, `\{ sword = {arma.sword}, metal = {arma.metal}, size = {arma.size}, trait = {arma.trait}, grade = {arma.grade} }`)
 		end
-		table.insert(out, `	\{ hours = {hour}, upgrades = \{ {table.concat(upgrades, ", ")} }, rebirths = {foto.rebirths}, swords = \{ {table.concat(swords, ", ")} }, artifacts = \{ {table.concat(foto.artifacts, ", ")} }, gear = \{ {table.concat(foto.gear, ", ")} }, dungeon = {math.max(zona, 1)}, armor = \{ {foto.armadura[1]}, {foto.armadura[2]}, {foto.armadura[3]} } },`)
+		table.insert(out, `	\{ hours = {hour}, upgrades = \{ {table.concat(upgrades, ", ")} }, rebirths = {foto.rebirths}, swords = \{ {table.concat(swords, ", ")} }, artifacts = \{ {table.concat(foto.artifacts, ", ")} }, gear = \{ {table.concat(foto.gear, ", ")} }, dungeon = {math.max(zona, 1)}, bag = {foto.bolsa or 1}, armor = \{ {foto.armadura[1]}, {foto.armadura[2]}, {foto.armadura[3]} } },`)
 	end
 end
 table.insert(out, "}")

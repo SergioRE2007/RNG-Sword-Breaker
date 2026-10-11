@@ -633,7 +633,7 @@ local function buildTrade()
 	end
 
 	local function buildStock(force: boolean?)
-		local key = `{tab}|{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Armor")}|{player:GetAttribute("Artifacts")}`
+		local key = `{tab}|{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Bag")}|{player:GetAttribute("Armor")}|{player:GetAttribute("Artifacts")}`
 		if key == stockKey and not force then
 			paintStock()
 			return
@@ -662,8 +662,8 @@ local function buildTrade()
 		if tab == "swords" then
 			local worn = Stats.list(player, "Loadout")
 			for _, copy in Stats.swords(player) do
-				-- Las equipadas no se pueden dar.
-				if not table.find(worn, copy.id) then
+				-- Las equipadas y las de la Bolsa de oro no se pueden dar.
+				if not table.find(worn, copy.id) and not Stats.isDeposited(player, copy.id) then
 					add(swordCell(stock, copy), copy.id, -math.floor(math.log10(Stats.rarity(copy)) * 1000))
 				end
 			end

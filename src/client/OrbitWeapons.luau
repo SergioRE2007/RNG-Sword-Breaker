@@ -597,6 +597,31 @@ local function stepCircle(now: number)
 	end
 end
 
+-- Armas sueltas ------------------------------------------------------------------------------
+
+-- Para otros módulos (client/GoldBag: las armas depositadas en la Bolsa de oro): un arma con el mismo vuelo de ataque
+-- que las equipadas, contra un objetivo fijo. `spare` la construye y la deja rondando en `at`, encarada a `toward`;
+-- `strike` la mueve un paso (con el reloj de os.clock) y devuelve cuándo cruzó el objetivo por última vez, que es su
+-- golpe. La siguiente pasada se le pide con weapon.planned = hora del cruce.
+function OrbitWeapons.spare(owner: Player, slot: number, copy, parent: Instance, at: Vector3, toward: Vector3)
+	local weapon = buildWeapon(owner, slot, copy, parent, false)
+	local away = Vector3.new(at.X - toward.X, 0, at.Z - toward.Z)
+	weapon.mode = "wait"
+	weapon.mix = 1
+	weapon.angle = math.atan2(away.Z, away.X)
+	weapon.dist = away.Magnitude
+	weapon.heading = if away.Magnitude > 0.1 then -away.Unit else Vector3.zAxis
+	weapon.frame = facing(weapon, at)
+	place(weapon)
+	return weapon
+end
+
+function OrbitWeapons.strike(weapon, target: BasePart, ground: number, now: number, dt: number, lite: boolean): number
+	setDash(weapon, fly(weapon, target, ground, now, dt), lite)
+	place(weapon)
+	return weapon.crossed
+end
+
 -- Avisos -------------------------------------------------------------------------------------
 
 -- Golpe del arma de ese hueco: confirma su pasada (o la da ya, si no la había empezado), deja prevista la siguiente,

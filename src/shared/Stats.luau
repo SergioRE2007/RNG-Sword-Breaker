@@ -1,5 +1,6 @@
 -- Estadísticas finales del jugador: junta espada, rasgo, artefactos equipados y mejoras.
 -- Lee los atributos del Player, así que da lo mismo en el servidor y en el cliente.
+local BagInfo = require(script.Parent.BagInfo)
 local Config = require(script.Parent.Config)
 local Permanent = require(script.Parent.Permanent)
 local PotionInfo = require(script.Parent.PotionInfo)
@@ -63,6 +64,26 @@ end
 
 function Stats.isEquipped(player: Player, id: number): boolean
 	return table.find(Stats.list(player, "Loadout"), id) ~= nil or player:GetAttribute("Equipped") == id
+end
+
+-- Copias depositadas en su Bolsa de oro, por orden de hueco (el servidor publica sus ids en "Bag").
+function Stats.deposited(player: Player)
+	local byId = {}
+	for _, copy in Stats.swords(player) do
+		byId[copy.id] = copy
+	end
+	local result = {}
+	for _, id in Stats.list(player, "Bag") do
+		if byId[id] then
+			table.insert(result, byId[id])
+			byId[id] = nil
+		end
+	end
+	return result
+end
+
+function Stats.isDeposited(player: Player, id: number): boolean
+	return table.find(Stats.list(player, "Bag"), id) ~= nil
 end
 
 -- Daño de una copia de espada con su rasgo, su grado, su metal y su tamaño, sin contar artefactos.
@@ -218,6 +239,24 @@ function Stats.damage(player: Player): number
 		total += Stats.swordDamage(copy)
 	end
 	return total * damageBonus(player)
+end
+
+-- Daño de un golpe de una copia depositada a su Bolsa de oro: el suyo por lo global del jugador. `noPotion` = sin la
+-- poción de daño (lo que pega mientras su dueño está desconectado).
+function Stats.bagHit(player: Player, copy, noPotion: boolean?): number
+	local damage = Stats.swordDamage(copy) * damageBonus(player)
+	return if noPotion then damage / Stats.potion(player, "damage") else damage
+end
+
+-- Monedas por segundo que sacan de su Bolsa de oro las armas depositadas: cada una da un golpe cada
+-- Config.GoldBag.HitTime segundos, sea del tipo que sea (allí no hay salpicadura que compense a las lentas), y cada
+-- golpe saca BagInfo.coins de su daño.
+function Stats.bagRate(player: Player, noPotion: boolean?): number
+	local total = 0
+	for _, copy in Stats.deposited(player) do
+		total += BagInfo.coins(Stats.bagHit(player, copy, noPotion))
+	end
+	return total / Config.GoldBag.HitTime
 end
 
 -- Producto de lo que dan a esa estadística ("luck" o "coins") los rasgos de las armas equipadas.

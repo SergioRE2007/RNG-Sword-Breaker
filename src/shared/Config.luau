@@ -205,6 +205,24 @@ Config.Items = {
 -- pega ninguna); Chain = lo mismo al saltar solas al siguiente enemigo de una mazmorra.
 Config.Loadout = { Slots = 4, Radius = 26, Leash = 8, Travel = 0.25, Chain = 0.15 }
 
+-- Bolsa de oro (server/GoldBag, cuentas en shared/BagInfo): detrás de cada parcela hay un saco al que pegan solas las
+-- armas que su dueño deposita (aparte de las equipadas), también mientras está desconectado y sin tope de tiempo.
+-- Slots = armas que caben. HitTime = segundos entre golpes de cada arma depositada (igual para todos los tipos).
+-- Lo que saca cada golpe lo decidió el usuario (11 oct 2026) y está SIN EQUILIBRAR a propósito: con Damage de daño,
+-- Coins monedas, y cada vez que el daño se dobla, Double veces más (100 de daño = 50 monedas, 200 = 75, 400 = 112).
+-- No pasa por los multiplicadores de monedas. First = monedas de la primera bolsa; cada una lleva Growth veces las de
+-- la anterior, sin fin. MinAway = segundos fuera a partir de los que se avisa de lo ganado al volver.
+Config.GoldBag = {
+	Slots = 4,
+	HitTime = 1,
+	Coins = 50,
+	Damage = 100,
+	Double = 1.5,
+	First = 1000,
+	Growth = 4,
+	MinAway = 60,
+}
+
 -- Rasgos de espada (tienda de Rasgos del hub). Se tiran con un Cristal de rasgo; "chance" = peso
 -- de salir (el % se calcula sobre el total, sin suerte). Mientras la espada está equipada
 -- multiplican su daño (solo el de esa arma) y las monedas y la suerte del jugador; lo que no se pone vale 1.

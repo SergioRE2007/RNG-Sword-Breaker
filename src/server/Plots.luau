@@ -69,9 +69,10 @@ local function buildWall(model: Instance, cframe: CFrame, index: number)
 		local line = cframe * CFrame.Angles(0, side * math.pi / 2, 0) * CFrame.new(0, 0, -half)
 		for segment = 1, segments do
 			local x = -half + (segment - 1) * TILE
-			local isGate = side == 0 and (segment == segments / 2 or segment == segments / 2 + 1)
+			-- Detrás (side 2) hay otro paso, sin pilares de entrada: lleva a la Bolsa de oro (server/GoldBag).
+			local isGate = (side == 0 or side == 2) and (segment == segments / 2 or segment == segments / 2 + 1)
 			local gatePost = side == 0 and (segment == segments / 2 or segment == segments / 2 + 2)
-			if not (side == 0 and segment == segments / 2 + 1) then
+			if not ((side == 0 or side == 2) and segment == segments / 2 + 1) then
 				-- Pilar de piedra con un remate de teja (más alto y rojo en la entrada).
 				local height = if gatePost then 8.4 else 6
 				local width = if gatePost then 2.4 else 1.9
@@ -109,9 +110,9 @@ local function buildFence(model: Instance, cframe: CFrame, index: number)
 		local line = cframe * CFrame.Angles(0, side * math.pi / 2, 0) * CFrame.new(0, 0, -half)
 		for segment = 1, segments do
 			local x = -half + (segment - 1) * TILE
-			-- Entrada: los dos tramos del centro del lado que mira al hub.
-			local isGate = side == 0 and (segment == segments / 2 or segment == segments / 2 + 1)
-			if not (side == 0 and segment == segments / 2 + 1) then
+			-- Entrada: los dos tramos del centro del lado que mira al hub, y otro paso igual detrás (a la Bolsa de oro).
+			local isGate = (side == 0 or side == 2) and (segment == segments / 2 or segment == segments / 2 + 1)
+			if not ((side == 0 or side == 2) and segment == segments / 2 + 1) then
 				block(model, "Post", Vector3.new(1.3, 4.6, 1.3), line * CFrame.new(x, 2.3, 0), post)
 			end
 			if not isGate then
