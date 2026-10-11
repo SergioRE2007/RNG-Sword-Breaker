@@ -937,7 +937,7 @@ do
 	local lastSword, lastTrait, lastGrade, lastMetal, lastSize = #cfg.Swords, #cfg.Traits, #cfg.Grades, #cfg.Metals, #cfg.Sizes
 	local lastArtifact, lastQuality = #cfg.Artifacts, #cfg.Armor.Qualities
 	local potionKey = cfg.Potions.ItemKeys[#cfg.Potions.ItemKeys]
-	local topTier = #cfg.Potions.Families.rankLuck.values
+	local topTier = #cfg.Potions.Families.coins.values
 	local pity = { traits = {}, grades = {} }
 	for kind, counters in pity do
 		for index in modifiers.KINDS[kind].list do counters[index] = if modifiers.hasPity(kind, index) then math.min(index, modifiers.pityLimit(kind, index)) else 0 end
@@ -970,7 +970,7 @@ do
 			{ id = 13, slot = "helmet", quality = 1, level = 1, stats = {} },
 		},
 		armorWorn = { helmet = 11, boots = 12 },
-		potions = { damage = { tier = 3, seconds = 120 }, rankLuck = { tier = topTier, seconds = 1.5 } },
+		potions = { damage = { tier = 3, seconds = 120 }, coins = { tier = topTier, seconds = 1.5 } },
 		upgrades = levels,
 	}
 	local items = {}

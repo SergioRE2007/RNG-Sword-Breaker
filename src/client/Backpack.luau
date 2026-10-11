@@ -652,7 +652,7 @@ function Backpack.start()
 				cell = Ui.cell(itemGrid, item.color, tier)
 				cell.Name = "Potion_" .. key
 				cell.LayoutOrder = 100 + (table.find(order, family) :: number) * 10 + (9 - tier)
-				Potions.icon(cell, family)
+				Potions.icon(cell, family, tier)
 				Potions.addTag(cell, tier, true)
 				Ui.cellLabel(cell, "")
 				Ui.tip(cell, function()
