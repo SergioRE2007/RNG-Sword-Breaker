@@ -500,9 +500,15 @@ local function buildTrade()
 		box.Name = "Box"
 		box.AnchorPoint = Vector2.new(1, 0.5)
 		box.Size = UDim2.fromOffset(AMOUNT_BOX, 32)
-		-- Un número largo no se sale por los lados: se recorta dentro de la casilla (al escribir se ve el final).
+		-- Un número largo no se sale por los lados: se recorta dentro de la casilla. Mientras se escribe va alineado a la
+		-- derecha, para que se vean los últimos números (pedido por el usuario; los "…" tapaban lo que se tecleaba).
 		box.ClipsDescendants = true
-		box.TextTruncate = Enum.TextTruncate.AtEnd
+		box.Focused:Connect(function()
+			box.TextXAlignment = Enum.TextXAlignment.Right
+		end)
+		box.FocusLost:Connect(function()
+			box.TextXAlignment = Enum.TextXAlignment.Center
+		end)
 		box.PlaceholderText = "0"
 		box.TextSize = 19
 		box.ClearTextOnFocus = false
