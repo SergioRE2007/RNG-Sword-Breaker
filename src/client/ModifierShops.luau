@@ -30,6 +30,10 @@ local player = Players.LocalPlayer
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
 local SIZE = Vector2.new(1160, 640)
+-- Filas de la lista de resultados (118 de alto): el logo cuadrado y centrado en altura, y el texto a su derecha.
+local ICON_SIZE = 84
+local ICON_X, ICON_Y = 14, (118 - 84) / 2
+local TEXT_X = 112
 local LEFT = 0.53 -- parte del ancho del cuerpo que ocupa la izquierda (Scale)
 -- Capas de la izquierda, de abajo arriba. La interfaz ordena el ZIndex globalmente, así que son
 -- valores absolutos: la ruleta tapa la información de la espada, pero nunca BottomControls (que
@@ -630,8 +634,8 @@ local function buildShop(kind: string)
 		end
 		-- Icono a la izquierda; arriba el nombre y el % en una etiqueta a la derecha; abajo el efecto a lo ancho.
 		local iconBox = Instance.new("Frame")
-		iconBox.Position = UDim2.fromOffset(12, 17)
-		iconBox.Size = UDim2.fromOffset(62, 58)
+		iconBox.Position = UDim2.fromOffset(ICON_X, ICON_Y)
+		iconBox.Size = UDim2.fromOffset(ICON_SIZE, ICON_SIZE)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
 		entryIcon(iconBox, kind, entry)
@@ -658,8 +662,8 @@ local function buildShop(kind: string)
 		limit.Parent = percent
 		percent.Text = Modifiers.formatPercent(Modifiers.percent(kind, index))
 		local title = Ui.label(row, 30)
-		title.Position = UDim2.fromOffset(86, 8)
-		title.Size = UDim2.new(1, -210, 0, 34)
+		title.Position = UDim2.fromOffset(TEXT_X, 8)
+		title.Size = UDim2.new(1, -TEXT_X - 124, 0, 34)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		paintName(title, entry)
 		if kind == "grades" then
@@ -673,8 +677,8 @@ local function buildShop(kind: string)
 			gradient.Parent = title
 		end
 		local detail = Ui.label(row, 20)
-		detail.Position = UDim2.fromOffset(86, 54)
-		detail.Size = UDim2.new(1, -98, 0, 26)
+		detail.Position = UDim2.fromOffset(TEXT_X, 54)
+		detail.Size = UDim2.new(1, -TEXT_X - 12, 0, 26)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
 		detail.TextColor3 = Color3.fromRGB(120, 235, 120)
 		detail.Text = Modifiers.effect(entry)
@@ -684,8 +688,8 @@ local function buildShop(kind: string)
 		detailLimit.Parent = detail
 		local pityLabel = Ui.label(row, 17)
 		pityLabel.Name = "Pity"
-		pityLabel.Position = UDim2.fromOffset(86, 86)
-		pityLabel.Size = UDim2.new(1, -98, 0, 24)
+		pityLabel.Position = UDim2.fromOffset(TEXT_X, 86)
+		pityLabel.Size = UDim2.new(1, -TEXT_X - 12, 0, 24)
 		pityLabel.TextXAlignment = Enum.TextXAlignment.Left
 		pityLabel.TextScaled = true
 		local pityLimit = Instance.new("UITextSizeConstraint")
@@ -1502,7 +1506,7 @@ function ModifierShops.start()
 				bobbing[icon] = nil
 				continue
 			end
-			icon.Position = UDim2.fromOffset(12, 17 + math.sin(now * 2 + data.phase) * 3)
+			icon.Position = UDim2.fromOffset(ICON_X, ICON_Y + math.sin(now * 2 + data.phase) * 3)
 			data.scale.Scale = 1 + math.sin(now * 3 + data.phase) * 0.06
 		end
 		for layer, data in sparkly do
