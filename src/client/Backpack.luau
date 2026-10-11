@@ -170,6 +170,9 @@ local TIP_FAINT = "#868b9c" -- gris tenue de la probabilidad
 local TIP_VALUE = 25 -- tamaño del número de daño
 local TIP_DAMAGE = "#ff7d5e" -- la palabra "Daño"
 local TIP_GOLD = "#ffd65c" -- y su número
+-- Separador entre las partes del cartel (pedido por el usuario, con una captura de otro juego de referencia): una
+-- línea fina y tenue hecha de texto, porque el cartel es un solo TextLabel.
+local TIP_SEPARATOR = `<font size="11" color="#4c5370">━━━━━━━━━━━━━━━━━━━━</font>`
 
 local function swordTip(copy): (string, Color3, boolean)
 	local sword = Config.Swords[copy.sword]
@@ -194,6 +197,9 @@ local function swordTip(copy): (string, Color3, boolean)
 	if #extras > 0 then
 		table.insert(lines, table.concat(extras, " · "))
 	end
+	if trait or grade then
+		table.insert(lines, TIP_SEPARATOR)
+	end
 	if trait then
 		-- Solo el nombre, sin lo que da (pedido por el usuario: el cartel queda más limpio).
 		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo:</font> {animatedName(trait)}`)
@@ -208,7 +214,9 @@ local function swordTip(copy): (string, Color3, boolean)
 		end
 	end
 	-- El daño destaca (pedido por el usuario: no tan plano): la palabra en rojo cálido y el número más grande en dorado.
+	table.insert(lines, TIP_SEPARATOR)
 	table.insert(lines, `<font color="{TIP_DAMAGE}">Daño</font> <font size="{TIP_VALUE}" color="{TIP_GOLD}">{Format.multiplier(Stats.swordDamage(copy))}</font>`)
+	table.insert(lines, TIP_SEPARATOR)
 	if not sword.rarity then
 		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">Espada inicial</font>`)
 	else
