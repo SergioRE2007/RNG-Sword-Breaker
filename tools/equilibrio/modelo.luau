@@ -43,10 +43,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	M.pool = pool
 
 	-- Posición en `list` de lo que toca con probabilidad suerte / odds, probando del final al principio; `first` si nada.
-	local function cascada(list, luck: number, first: number, dado: number?): number
+	local function cascada(list, luck: number, first: number, dado: number?, tope: number?): number
 		local u = dado or random()
 		for index = #list, first + 1, -1 do
-			local p = luck / list[index].odds
+			local p = math.min(luck / list[index].odds, tope or math.huge)
 			if p >= 1 or u < p then
 				return index
 			end
@@ -997,8 +997,8 @@ function Modelo.nuevo(shared, mundo, objetivo)
 					end
 					u = (u - p) / (1 - p)
 				end
-				local metal = cascada(Config.Metals, gacha, 0)
-				local size = cascada(Config.Sizes, gacha, 0)
+				local metal = cascada(Config.Metals, gacha, 0, nil, Config.Gacha.PermanentCap) -- como Permanent.roll
+				local size = cascada(Config.Sizes, gacha, 0, nil, Config.Gacha.PermanentCap)
 				local rarity = Config.Swords[sword].rarity
 				local total = Config.Swords[sword].damage * Permanent.damageMult({ metal = metal, size = size })
 				if total > corte then

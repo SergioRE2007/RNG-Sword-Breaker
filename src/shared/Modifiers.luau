@@ -131,6 +131,11 @@ function Modifiers.pityLimit(kind: string, index: number): number
 	return math.ceil(Modifiers.odds(kind, index))
 end
 
+-- ¿Tiene pity ese resultado? Solo los raros (Config.ModifierPity): el contador de los demás se queda en 0.
+function Modifiers.hasPity(kind: string, index: number): boolean
+	return Modifiers.odds(kind, index) >= Config.ModifierPity.MinOdds
+end
+
 function Modifiers.newPity(saved): { [string]: { number } }
 	local pity = {}
 	for _, kind in { "traits", "grades" } do
@@ -138,7 +143,7 @@ function Modifiers.newPity(saved): { [string]: { number } }
 		local old = if type(saved) == "table" and type(saved[kind]) == "table" then saved[kind] else {}
 		for index in Modifiers.KINDS[kind].list do
 			local value = tonumber(old[index] or old[tostring(index)]) or 0
-			counters[index] = if value == value then math.clamp(math.floor(value), 0, Modifiers.pityLimit(kind, index)) else 0
+			counters[index] = if value == value and Modifiers.hasPity(kind, index) then math.clamp(math.floor(value), 0, Modifiers.pityLimit(kind, index)) else 0
 		end
 		pity[kind] = counters
 	end
@@ -149,6 +154,10 @@ end
 function Modifiers.rollWithPity(kind: string, random: Random, luck: number, counters: { number }, priority: { string }): number
 	local guaranteed = nil
 	for index in Modifiers.KINDS[kind].list do
+		if not Modifiers.hasPity(kind, index) then
+			counters[index] = 0
+			continue
+		end
 		local limit = Modifiers.pityLimit(kind, index)
 		counters[index] = math.min((counters[index] or 0) + 1, limit)
 		if counters[index] >= limit and (not guaranteed or Modifiers.better(kind, index, guaranteed, priority)) then

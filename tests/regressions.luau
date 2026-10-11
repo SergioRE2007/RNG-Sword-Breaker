@@ -255,12 +255,25 @@ local label = permanent.describeOdds(4, 1, 1)
 assert(label:find("Arma: 1 entre", 1, true) and label:find(config.Metals[1].name, 1, true) and label:find(config.Sizes[1].name, 1, true))
 checks += 1
 
+-- Por mucha suerte de armas que haya siguen saliendo armas sin metal y de tamaño normal (con x10 el Cobre salía siempre).
+do
+	local number = f.random.NextNumber
+	f.random.NextNumber = function() return 0.6 end
+	equal(permanent.roll(config.Metals, 1e9), 0, "con mucha suerte sigue habiendo armas sin metal")
+	equal(permanent.roll(config.Sizes, 1e9), 0, "con mucha suerte sigue habiendo armas de tamaño normal")
+	f.random.NextNumber = function() return 0.4 end
+	equal(permanent.roll(config.Metals, 1e9), #config.Metals, "con mucha suerte el mejor metal sale la mitad de las veces")
+	equal(permanent.roll(config.Metals, 1), 0, "sin suerte el metal sigue siendo raro")
+	f.random.NextNumber = number
+end
+
 -- Pity: límite base, obtención natural, colisiones, desempate y separación de contadores.
 for _, kind in { "traits", "grades" } do
 	local counters = modifiers.newPity(nil)[kind]
 	for index in modifiers.KINDS[kind].list do
 		equal(modifiers.pityLimit(kind, index), math.ceil(100 / modifiers.percent(kind, index)), "límite " .. kind .. index)
 		counters[index] = modifiers.pityLimit(kind, index) - 1
+		equal(modifiers.hasPity(kind, index), modifiers.odds(kind, index) >= config.ModifierPity.MinOdds, "con pity " .. kind .. index)
 	end
 	local expected = 1
 	for index in counters do
@@ -270,7 +283,7 @@ for _, kind in { "traits", "grades" } do
 	equal(result, expected, "garantía más rara " .. kind)
 	equal(counters[result], 0, "reinicio " .. kind)
 	for index in counters do
-		if index ~= result then equal(counters[index], modifiers.pityLimit(kind, index), "garantía pendiente " .. kind .. index) end
+		if index ~= result then equal(counters[index], if modifiers.hasPity(kind, index) then modifiers.pityLimit(kind, index) else 0, "garantía pendiente " .. kind .. index) end
 	end
 	local nextResult = modifiers.rollWithPity(kind, f.random, 1, counters, modifiers.PRIORITY)
 	assert(nextResult ~= result, "no perder las otras garantías")
@@ -280,16 +293,24 @@ for _, kind in { "traits", "grades" } do
 	equal(natural, 1, "resultado natural controlado " .. kind)
 	equal(clean[1], 0, "obtención natural reinicia " .. kind)
 end
-local sanitized = modifiers.newPity({ traits = { -5, 0 / 0, math.huge, 1.9 }, grades = "inválido" })
-equal(sanitized.traits[1], 0, "pity negativo")
-equal(sanitized.traits[2], 0, "pity NaN")
-equal(sanitized.traits[3], modifiers.pityLimit("traits", 3), "pity acotado")
-equal(sanitized.traits[4], 1, "pity entero")
+-- Solo tienen pity los resultados raros (de S+ y de Shogun para arriba): los fáciles ni cuentan ni se garantizan.
+equal(modifiers.hasPity("grades", 6), false, "S sin pity")
+equal(modifiers.hasPity("grades", 7), true, "S+ con pity")
+equal(modifiers.hasPity("traits", 10), false, "Samurái sin pity")
+equal(modifiers.hasPity("traits", 11), true, "Shogun con pity")
+local last = #config.Traits
+local sanitized = modifiers.newPity({ traits = { [1] = 5, [last - 3] = -5, [last - 2] = 0 / 0, [last - 1] = math.huge, [last] = 1.9 }, grades = "inválido" })
+equal(sanitized.traits[1], 0, "pity de un resultado fácil")
+equal(sanitized.traits[last - 3], 0, "pity negativo")
+equal(sanitized.traits[last - 2], 0, "pity NaN")
+equal(sanitized.traits[last - 1], modifiers.pityLimit("traits", last - 1), "pity acotado")
+equal(sanitized.traits[last], 1, "pity entero")
 equal(sanitized.grades[1], 0, "pity antiguo vacío")
-local tied = modifiers.newPity(nil).traits
-for index = 1, 3 do tied[index] = modifiers.pityLimit("traits", index) - 1 end
-equal(modifiers.rollWithPity("traits", f.random, 1, tied, { "damage", "coins", "luck" }), 2, "empate respeta prioridad del jugador")
-equal(tied[1], modifiers.pityLimit("traits", 1), "empate no pierde garantía pendiente")
+local easy = modifiers.newPity(nil).traits
+for index = 1, 3 do easy[index] = modifiers.pityLimit("traits", index) end
+equal(modifiers.rollWithPity("traits", f.random, 1, easy, modifiers.PRIORITY), 1, "los fáciles no se garantizan")
+equal(easy[2], 0, "los fáciles no cuentan")
+equal(modifiers.better("traits", 2, 1, { "damage", "coins", "luck" }), true, "empate respeta prioridad del jugador")
 
 -- Venta: modifica una sola vez, no vende equipada, acepta modificadas y vuelve a validar ids.
 local gacha = f.load("src/server/Gacha")
@@ -382,10 +403,10 @@ equal(state.pity.grades[#config.Grades], 1, "descarte conserva progreso")
 equal(data.findSword(state, 3).grade, nil, "descarte restaura grado anterior")
 
 -- Guardado real y migración de inventario: conserva elección, Pity y equipa solo lo guardado.
-state.pity.traits[2] = 1
+state.pity.traits[#config.Traits - 1] = 1
 local saved = f.save()
 local restored = fixture(saved)
-equal(restored.data.read(restored.player).pity.traits[2], 1, "pity persiste")
+equal(restored.data.read(restored.player).pity.traits[#config.Traits - 1], 1, "pity persiste")
 equal(#restored.data.read(restored.player).loadout, 2, "las equipadas persisten")
 equal(restored.data.read(restored.player).swords[restored.data.read(restored.player).loadout[2]].sword, 5, "elección persiste al renumerar ids")
 for _, value in { -2, 3.9, 99, 0 / 0, "4" } do
@@ -889,7 +910,7 @@ do
 	local topTier = #cfg.Potions.Families.rankLuck.values
 	local pity = { traits = {}, grades = {} }
 	for kind, counters in pity do
-		for index in modifiers.KINDS[kind].list do counters[index] = math.min(index, modifiers.pityLimit(kind, index)) end
+		for index in modifiers.KINDS[kind].list do counters[index] = if modifiers.hasPity(kind, index) then math.min(index, modifiers.pityLimit(kind, index)) else 0 end
 	end
 	local levels = {}
 	for name, upgrade in cfg.Upgrades do levels[name] = if name == "luck" then upgrade.maxLevel else 1 end
@@ -976,7 +997,7 @@ do
 	near(big.items.traitCrystal, 1e30, "1e30 cristales sobreviven")
 	near(big.autoSell, 1e24, "autoventa de 1e24 sobrevive")
 	equal(table.concat(big.loadout, ","), "2,4", "las equipadas sobreviven al JSON")
-	equal(big.pity.traits[2], pity.traits[2], "el pity sobrevive al JSON")
+	equal(big.pity.traits[lastTrait], pity.traits[lastTrait], "el pity sobrevive al JSON")
 	equal(big.armorWorn.helmet, 1, "la armadura puesta sobrevive al JSON")
 	equal(big.potions.damage.seconds, 120, "las pociones sobreviven al JSON")
 	sane(big, "partida pasada por JSON")
@@ -1085,7 +1106,7 @@ do
 		artifacts = { 999, "1", 1.5, nan, 2, 2, 0, -1, 1 },
 		gear = { 2, 2, 3, "1", 999, nan, 1 },
 		index = { code(4, 1, 1), code(4, 1, 1), code(999, 0, 0), nan, huge, -1, "x", {} },
-		pity = { traits = "x", grades = { -1, nan, 1e9 } },
+		pity = { traits = "x", grades = { -1, nan, 1e9, 0, 0, 0, 0, 0, 1e9 } },
 		potions = {
 			nada = { tier = 1, seconds = 10 }, damage = { tier = 99, seconds = 10 }, health = { tier = 1, seconds = nan },
 			boxLuck = { tier = 1, seconds = -5 }, weaponLuck = { tier = 1, seconds = huge }, rankLuck = "x",
@@ -1106,7 +1127,8 @@ do
 	same(bits.gear, { 2, 1 }, "equipados: solo los que se tienen, sin repetir")
 	same(bits.index, { code(4, 1, 1) }, "índice roto limpio")
 	equal(bits.pity.traits[1], 0, "pity que no es una tabla")
-	equal(bits.pity.grades[3], modifiers.pityLimit("grades", 3), "pity acotado al cargar")
+	equal(bits.pity.grades[3], 0, "pity de un grado fácil al cargar")
+	equal(bits.pity.grades[9], modifiers.pityLimit("grades", 9), "pity acotado al cargar")
 	same(bits.potions, { weaponLuck = { tier = 1, seconds = potionInfo.cap(1) }, attackSpeed = { tier = 2, seconds = 30 } }, "pociones: solo las válidas")
 	same(bits.missions, { weekly = { id = 2800, progress = { c = 3 }, claimed = { c = true } } }, "misiones: solo progreso y premios válidos")
 	equal(table.concat(modifiers.priority(bits.traitPriority), ","), table.concat(modifiers.PRIORITY, ","), "prioridad de rasgos sin sentido: la de siempre")

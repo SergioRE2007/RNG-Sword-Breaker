@@ -813,6 +813,7 @@ local function buildShop(kind: string)
 	local function refresh()
 		local ok, counters = pcall(HttpService.JSONDecode, HttpService, player:GetAttribute("Pity_" .. kind) or "[]")
 		for index, row in rows do
+			row.Pity.Visible = Modifiers.hasPity(kind, index) -- los fáciles no tienen pity
 			local limit = Modifiers.pityLimit(kind, index)
 			local progress = if ok and type(counters) == "table" then counters[index] or 0 else 0
 			row.Pity.Text = `Pity {Format.short(progress)} / {Format.short(limit)}{if progress >= limit then " · Garantía pendiente" else ""}`

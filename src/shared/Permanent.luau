@@ -56,10 +56,12 @@ function Permanent.odds(sword: number, metal: number?, size: number?, luck: numb
 end
 
 -- Tira un modificador de la lista: se prueba del más raro al más común y la suerte multiplica cada
--- probabilidad (como con las armas). Devuelve su posición, o 0 si no sale ninguno.
+-- probabilidad (como con las armas). Devuelve su posición, o 0 si no sale ninguno. Ninguno pasa de
+-- Config.Gacha.PermanentCap por tirada: sin ese tope, con suerte de armas x10 (los dos pases juntos) el Cobre salía
+-- siempre y ya no tocaba ningún arma sin metal, así que el Índice no se podía completar.
 function Permanent.roll(list, luck: number): number
 	for index = #list, 1, -1 do
-		if Chance.roll(luck / list[index].odds) then
+		if Chance.roll(math.min(luck / list[index].odds, Config.Gacha.PermanentCap)) then
 			return index
 		end
 	end

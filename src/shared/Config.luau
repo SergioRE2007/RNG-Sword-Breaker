@@ -182,6 +182,7 @@ Config.Gacha = {
 	AuraOdds = 500, -- desde aquí el aura se ve en el personaje (también para los demás)
 	AnnounceOdds = 25000, -- desde aquí se anuncia el arma a todo el servidor
 	SellValue = 0, -- gemas por vender una espada (a mano o con la venta automática). 0: las gemas salen de la parcela
+	PermanentCap = 0.5, -- probabilidad máxima de cada metal y cada tamaño en una tirada, por mucha suerte de armas que haya: así siguen saliendo armas sin metal y de tamaño normal (Permanent.roll)
 }
 
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
@@ -270,6 +271,10 @@ Config.Grades = {
 	{ name = "X", damage = 40, chance = 0.0057, color = Color3.fromRGB(230, 40, 40), rainbow = true },
 	{ name = "∞", damage = 100, chance = 0.0016, color = Color3.fromRGB(190, 150, 255), rainbow = true },
 }
+-- Pity de rasgos y grados (Modifiers.rollWithPity): solo lo tienen los resultados de "1 entre MinOdds" o más raros
+-- (pedido por el usuario: de S+ para arriba en grados, que en rasgos es de Shogun para arriba). Los fáciles no: su
+-- garantía se comía tiradas en las que podía haber salido algo mejor.
+Config.ModifierPity = { MinOdds = 400 }
 Config.GradeCost = 1 -- Cristales de grado por tirada de grado
 Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grado
 
