@@ -114,6 +114,18 @@ Objetivo.mazmorra = {
 -- 1,75 días de bucle y en las cuatro en unos 7.
 Objetivo.bucle = { horas = 24, rasgo = 30000, grado = 30000 }
 
+-- BOLSA DE ORO (Config.GoldBag): detrás de la parcela, las armas que el jugador deposita le pegan solas a un saco,
+-- también mientras está desconectado y sin tope de tiempo. Decidido por el usuario (11 oct 2026): hasta entonces un
+-- arma mejor solo servía para romper antes, y así da siempre más monedas.
+-- `parte` = parte de todo lo que ingresa el jugador tipo que le llega de la bolsa. `reales` = horas de reloj por cada
+-- hora de juego (juega unas 3 al día): la bolsa pega todo ese tiempo, así que quien juega menos saca más de ella en
+-- proporción y quien está siempre dentro, casi nada de más. `crece` = por cuánto se multiplican las monedas de una
+-- bolsa a la siguiente. `primera` = segundos de juego que le dura la primera.
+-- El jugador tipo deja en la bolsa las armas que siguen a sus equipadas (de la 5.ª a la 8.ª de más daño, sin rasgo ni
+-- grado): si deja las mejores, la bolsa le va más rápido y la parcela más despacio.
+-- De aquí salen Config.GoldBag.Bags y Growth.
+Objetivo.bolsa = { parte = 0.25, reales = 8, crece = 4, primera = 240 }
+
 -- Horas de las que se guarda el estado del jugador tipo (Config.Test.Progress, para probar cada etapa en Studio).
 Objetivo.fotos = { 0.5, 2, 5, 15, 40, 80, 120, 170, 200 }
 

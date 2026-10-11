@@ -205,6 +205,62 @@ Config.Items = {
 -- pega ninguna); Chain = lo mismo al saltar solas al siguiente enemigo de una mazmorra.
 Config.Loadout = { Slots = 4, Radius = 26, Leash = 8, Travel = 0.25, Chain = 0.15 }
 
+-- Bolsa de oro (server/GoldBag, cuentas en shared/BagInfo): detrás de cada parcela hay un saco al que pegan solas las
+-- armas que su dueño deposita (aparte de las equipadas), también mientras está desconectado y sin tope de tiempo.
+-- Cada arma da un golpe por segundo con su daño; cada punto de daño saca coins / hp monedas de la bolsa y, al
+-- vaciarla, aparece la siguiente, sin fin. La bolsa da lo que lleva: no pasa por los multiplicadores de monedas.
+-- Slots = armas que caben. MaxSpeed = nadie vacía una bolsa más de estas veces más rápido que el jugador tipo
+-- (`seconds`): unas armas muy por encima de su dueño se notan mucho, pero no se llevan la escalera en un momento.
+-- MinAway = segundos fuera a partir de los que se avisa de lo ganado al volver.
+-- "Bags" y "Growth" son NÚMEROS GENERADOS por tools/equilibrio/generar.luau (no los retoques a mano): cada bolsa es lo
+-- que el jugador tipo saca de la suya en ese tramo del calendario (objetivo.bolsa) con las armas que le sobran, y
+-- Growth es por cuánto se multiplica cada número de una bolsa a la siguiente pasada la última de la tabla.
+Config.GoldBag = {
+	Slots = 4,
+	MaxSpeed = 10,
+	MinAway = 60,
+	Bags = {
+		{ coins = 6500, hp = 190000, seconds = 1918 },
+		{ coins = 26000, hp = 630000, seconds = 1737 },
+		{ coins = 100000, hp = 4.2e6, seconds = 3708 },
+		{ coins = 420000, hp = 2.3e7, seconds = 6663 },
+		{ coins = 1.7e6, hp = 2.8e7, seconds = 4079 },
+		{ coins = 6.7e6, hp = 8.3e7, seconds = 11310 },
+		{ coins = 2.7e7, hp = 2.3e8, seconds = 15139 },
+		{ coins = 1.1e8, hp = 4.6e8, seconds = 16475 },
+		{ coins = 4.3e8, hp = 1.3e9, seconds = 15017 },
+		{ coins = 1.7e9, hp = 2.5e9, seconds = 21190 },
+		{ coins = 6.8e9, hp = 9.2e9, seconds = 31318 },
+		{ coins = 2.7e10, hp = 2.9e10, seconds = 38160 },
+		{ coins = 1.1e11, hp = 7.1e10, seconds = 32352 },
+		{ coins = 4.4e11, hp = 1.6e11, seconds = 28890 },
+		{ coins = 1.7e12, hp = 2.7e11, seconds = 35366 },
+		{ coins = 7e12, hp = 9.7e11, seconds = 62655 },
+		{ coins = 2.8e13, hp = 2e12, seconds = 65246 },
+		{ coins = 1.1e14, hp = 3.3e12, seconds = 68720 },
+		{ coins = 4.5e14, hp = 1e13, seconds = 95179 },
+		{ coins = 1.8e15, hp = 1.4e13, seconds = 63173 },
+		{ coins = 7.1e15, hp = 5.8e13, seconds = 120157 },
+		{ coins = 2.9e16, hp = 1.2e14, seconds = 131382 },
+		{ coins = 1.1e17, hp = 1.6e14, seconds = 147457 },
+		{ coins = 4.6e17, hp = 3.3e14, seconds = 129117 },
+		{ coins = 1.8e18, hp = 1.3e15, seconds = 222491 },
+		{ coins = 7.3e18, hp = 3.3e15, seconds = 250830 },
+		{ coins = 2.9e19, hp = 7.1e15, seconds = 158563 },
+		{ coins = 1.2e20, hp = 3.1e16, seconds = 214882 },
+		{ coins = 4.7e20, hp = 5.3e16, seconds = 221415 },
+		{ coins = 1.9e21, hp = 1.8e17, seconds = 292890 },
+		{ coins = 7.5e21, hp = 3.7e17, seconds = 339535 },
+		{ coins = 3e22, hp = 7.2e17, seconds = 340107 },
+		{ coins = 1.2e23, hp = 1.3e18, seconds = 299358 },
+		{ coins = 4.8e23, hp = 4e18, seconds = 284304 },
+		{ coins = 1.9e24, hp = 1.4e19, seconds = 532671 },
+		{ coins = 7.7e24, hp = 5.7e19, seconds = 523422 },
+		{ coins = 3.1e25, hp = 9e19, seconds = 440564 },
+	},
+	Growth = { coins = 4, hp = 2.63, seconds = 1.05 },
+}
+
 -- Rasgos de espada (tienda de Rasgos del hub). Se tiran con un Cristal de rasgo; "chance" = peso
 -- de salir (el % se calcula sobre el total, sin suerte). Mientras la espada está equipada
 -- multiplican su daño (solo el de esa arma) y las monedas y la suerte del jugador; lo que no se pone vale 1.
@@ -254,7 +310,7 @@ Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grad
 -- multiplica para siempre (por cada renacimiento, ese número elevado a los renacimientos que lleve).
 -- "costs" = precio de cada renacimiento. NÚMEROS GENERADOS por tools/equilibrio/generar.luau para que caigan hacia las
 -- 2, 6,5, 20, 55 y 120 h de juego (objetivo.luau): no los retoques a mano.
-Config.Rebirth = { max = 5, costs = { 1.6e8, 9e10, 1.1e15, 6.5e18, 9.2e22 }, coins = 2, damage = 2, luck = 1.5, gachaLuck = 1.5 }
+Config.Rebirth = { max = 5, costs = { 1.8e8, 1.1e11, 1.6e15, 1.2e19, 1.4e23 }, coins = 2, damage = 2, luck = 1.5, gachaLuck = 1.5 }
 
 -- Artefactos (equipo). Pueden caer al romper cualquier objeto ("rarity" = 1 entre N, la
 -- suerte de destructibles multiplica la probabilidad). "stat": damage, luck (suerte de destructibles),
@@ -435,16 +491,16 @@ Config.ObjectSizes = {
 Config.UpgradeOrder = { "capacity", "luck", "rollSpeed" }
 Config.Upgrades = {
 	-- Pocos niveles y cada uno da mucho (pedido por el usuario: el árbol era demasiado largo).
-	capacity = { name = "Más objetos", short = "Objetos", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, costs = { 54, 400, 2000, 27000, 61000, 420000, 7.5e6, 2.4e7 }, display = "%d" },
+	capacity = { name = "Más objetos", short = "Objetos", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, costs = { 53, 420, 2600, 30000, 90000, 690000, 1.3e7, 5e7 }, display = "%d" },
 	-- Suerte de destructibles (misma clave de siempre, "luck": lo comprado se conserva). x2,5 por nivel, x79Qi al máximo:
 	-- lo que falta hasta la rareza del objeto más raro (1e24) lo ponen renacer, el rasgo, los accesorios y la armadura
 	-- (con x3 por nivel la mejora sola ya los agotaba y todo lo demás sobraba). Multiplica la probabilidad
 	-- de los tipos raros de Config.Destructibles, que son los que dan más monedas, gemas y suerte de armas.
-	luck = { name = "Suerte de destructibles", short = "Suerte", desc = "Aumenta la probabilidad de encontrar destructibles raros, que dan mejores armas.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 2.5, maxLevel = 50, costs = { 25, 190, 400, 2000, 16000, 39000, 77000, 140000, 640000, 5.2e6, 1e7, 2.3e7, 6.6e7, 2.3e8, 1.3e9, 3.2e9, 8.2e9, 2.9e10, 9.6e10, 4.4e11, 2.1e12, 7.6e12, 2.1e13, 5e13, 1.5e14, 4.7e14, 1.4e15, 6.8e15, 1.5e16, 3.2e16, 1.3e17, 6.7e17, 1.9e18, 2.3e18, 2.9e18, 6.6e18, 3.6e19, 1.3e20, 3.7e20, 1.5e21, 3.4e21, 7.4e21, 2e22, 4.3e22, 1e23, 4.8e23, 1.9e24, 3.7e24, 8e24, 2.2e25 }, display = "x%s" },
+	luck = { name = "Suerte de destructibles", short = "Suerte", desc = "Aumenta la probabilidad de encontrar destructibles raros, que dan mejores armas.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 2.5, maxLevel = 50, costs = { 24, 220, 470, 2300, 25000, 57000, 96000, 190000, 700000, 6.6e6, 1.5e7, 2.6e7, 7e7, 3e8, 2.1e9, 5.2e9, 1.1e10, 4.4e10, 1.3e11, 4.1e11, 2.1e12, 9.8e12, 2.9e13, 5.7e13, 1.6e14, 5.3e14, 2e15, 9.6e15, 2.1e16, 5.4e16, 1.5e17, 6.5e17, 2.3e18, 3.5e18, 6.6e18, 1.3e19, 5.3e19, 1.9e20, 5e20, 1.9e21, 4.7e21, 9.3e21, 2.2e22, 4.2e22, 1.3e23, 8.7e23, 2.8e24, 4.6e24, 1e25, 3.6e25 }, display = "x%s" },
 	-- Segundos entre apariciones de objetos en la parcela (lo lee Stats.spawnTime): cada objeto trae tiradas de arma, así
 	-- que es la antigua "Velocidad de tirada" (misma clave, para no perder lo comprado). 1,5 s al principio, -12 % por
 	-- nivel, ~0,42 s al final. Con Config.Gacha.FreeRoll también acorta la tirada gratis (Stats.rollTime).
-	rollSpeed = { name = "Velocidad de aparición", short = "Aparición", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, costs = { 7600, 62000, 480000, 2.9e7, 3.4e9, 8.3e11, 8.9e13, 1.8e16, 1.9e18, 1.4e20 }, display = "%.2fs" },
+	rollSpeed = { name = "Velocidad de aparición", short = "Aparición", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, costs = { 10000, 84000, 680000, 4.8e7, 5.7e9, 1.1e12, 1.2e14, 2.3e16, 3.1e18, 1.8e20 }, display = "%.2fs" },
 }
 
 -- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Lo que suma un jugador a cada hora

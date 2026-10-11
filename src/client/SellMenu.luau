@@ -20,7 +20,7 @@ local confirming = false
 function SellMenu.open(id: number?)
 	selected = {}
 	confirming = false
-	if id and not Stats.isEquipped(player, id) then selected[id] = true end
+	if id and not Stats.isEquipped(player, id) and not Stats.isDeposited(player, id) then selected[id] = true end
 	Ui.toggle("SellMenu")
 end
 
@@ -89,7 +89,7 @@ function SellMenu.start()
 		cells = {}
 		local eligible = {}
 		for _, copy in Stats.swords(player) do
-			if Stats.isEquipped(player, copy.id) then continue end
+			if Stats.isEquipped(player, copy.id) or Stats.isDeposited(player, copy.id) then continue end
 			eligible[copy.id] = true
 			local tier = Rarity.tier(Stats.rarity(copy))
 			local cell = Ui.cell(stock, tier.color, table.find(Config.RarityTiers, tier))

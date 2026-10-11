@@ -28,6 +28,7 @@ require(script.WeaponAura).start()
 require(script.WeaponMesh).start()
 -- script.SwingAnim (la animación del espadazo en la mano) ya no se arranca: las armas van solas (OrbitWeapons).
 require(script.OrbitWeapons).start() -- las armas equipadas girando y atacando; después de WeaponAura y WeaponMesh, que las visten
+require(script.GoldBag).start() -- Bolsa de oro: cartel de cada saco y sus armas depositadas; después de WeaponAura, que las viste
 require(script.SwordController).start()
 require(script.WeaponSlot).start()
 require(script.AutoPlay).start() -- autoclicker y Auto, a los lados de la casilla del arma: después de WeaponSlot y PassShop

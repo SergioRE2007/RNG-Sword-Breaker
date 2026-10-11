@@ -66,7 +66,7 @@ end
 local function worstSpare(data, rarity: number): number?
 	local worst, worstRarity = nil, rarity
 	for position, copy in data.swords do
-		if not PlayerData.isEquipped(data, copy.id) and (copy.trait or 0) == 0 and (copy.grade or 0) == 0 then
+		if not PlayerData.isLocked(data, copy.id) and (copy.trait or 0) == 0 and (copy.grade or 0) == 0 then
 			local copyRarity = Permanent.rarity(copy.sword, copy.metal, copy.size)
 			if copyRarity < worstRarity then
 				worst, worstRarity = position, copyRarity
@@ -234,14 +234,23 @@ end
 
 -- Equipar (Config.Loadout.Slots armas a la vez). Con un id, pone esa copia o la quita si ya estaba: va al primer
 -- hueco libre y, sin huecos, al de la equipada que menos daño hace; la última no se puede quitar. Con "best", deja
--- equipadas las de más daño de la mochila.
+-- equipadas las de más daño de la mochila. Las depositadas en la Bolsa de oro no cuentan para "best", y equipar una
+-- la saca de la bolsa.
 local function onEquip(player: Player, id: unknown)
 	local data = PlayerData.read(player)
 	if not data then
 		return
 	end
 	if id == "best" then
-		local order = table.clone(data.swords)
+		local order = {}
+		for _, copy in data.swords do
+			if not PlayerData.inBag(data, copy.id) then
+				table.insert(order, copy)
+			end
+		end
+		if #order == 0 then
+			return
+		end
 		table.sort(order, function(a, b)
 			local damageA, damageB = copyDamage(a), copyDamage(b)
 			if damageA ~= damageB then
@@ -263,6 +272,10 @@ local function onEquip(player: Player, id: unknown)
 	PlayerData.edit(player, function(edited)
 		local loadout = edited.loadout
 		local slot = table.find(loadout, id)
+		local deposited = table.find(edited.bag.slots, id)
+		if deposited then
+			table.remove(edited.bag.slots, deposited)
+		end
 		if slot then
 			if #loadout > 1 then
 				table.remove(loadout, slot)
@@ -300,7 +313,7 @@ local function onSellMany(player: Player, ids: unknown)
 	PlayerData.edit(player, function(edited)
 		for index = #edited.swords, 1, -1 do
 			local copy = edited.swords[index]
-			if wanted[copy.id] and not PlayerData.isEquipped(edited, copy.id) then
+			if wanted[copy.id] and not PlayerData.isLocked(edited, copy.id) then
 				table.remove(edited.swords, index)
 				sold += 1
 			end

@@ -73,6 +73,10 @@ local LOOKS = {
 	Fur = { Color3.fromRGB(214, 96, 44), Enum.Material.SmoothPlastic, 0 },
 	Cream = { Color3.fromRGB(255, 240, 222), Enum.Material.SmoothPlastic, 0 },
 	Tan = { Color3.fromRGB(216, 164, 104), Enum.Material.SmoothPlastic, 0 },
+	-- La Bolsa de oro (GoldSack): tela de saco, sus sombras y remiendos, y la cuerda.
+	Sack = { Color3.fromRGB(214, 164, 98), Enum.Material.Fabric, 0 },
+	SackDark = { Color3.fromRGB(150, 104, 62), Enum.Material.Fabric, 0 },
+	Rope = { Color3.fromRGB(112, 72, 44), Enum.Material.SmoothPlastic, 0 },
 }
 
 function PropModel.has(name: string): boolean
@@ -119,6 +123,11 @@ local function collisions(model: Model, name: string, origin: CFrame, scale: num
 		end
 	elseif name == "StoneLantern" then
 		box(Vector3.new(1.5, 6, 1.5), CFrame.new(0, 3, 0))
+	elseif name == "GoldSack" then
+		-- La barriga del saco (las medidas de gold_sack() en Blender); la boca y las monedas no chocan.
+		box(Vector3.new(10, 12, 12), CFrame.new(0, 5, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
+	elseif name == "GoldSackBase" then
+		box(Vector3.new(0.95, 24.6, 24.6), CFrame.new(0, 0.475, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
 	elseif name == "Shrine" then
 		box(Vector3.new(9, 1.5, 8), CFrame.new(0, 0.75, 0))
 		box(Vector3.new(6.1, 3.6, 5.1), CFrame.new(0, 3.3, 0))

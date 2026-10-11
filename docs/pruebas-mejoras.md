@@ -68,3 +68,13 @@ Probado en Studio el 11-10-2026, con un jugador: las armas giran y no hay arma e
 - [ ] **Automáticos**: con el autoclicker las armas saltan solas de objeto en objeto (medido: uno cada 0,17 s, sin pararse); sin automático, un clic rompe uno y vuelven.
 - [ ] **Colmillo astral**: varias copias girando a la vez (dos jugadores con él) siguen dibujándose con su malla.
 - [ ] **Ritmo**: espadas y dobles ya solo pegan a un objetivo y hay 0,25 s de vuelo por objeto; medir objetos por minuto y duración de mazmorra para la parte 3.
+
+## Bolsa de oro (parte 1)
+
+Lo cubren las pruebas de Lune (cuentas de `BagInfo` con el freno y la continuación de la tabla, depositar, sacar y sustituir, que una depositada no se venda, no se comercie ni se equipe a la vez, cobro de cada segundo, lo ganado fuera entre dos servidores con el mismo DataStore y un `bag` guardado roto). Probado en Studio el 11-10-2026 con una partida nueva (`Config.Test.Progress = 0.01`): los ocho sacos detrás de las parcelas y el paso en el muro; la única equipada no se deposita; con dos armas depositadas las monedas suben cada segundo y el freno limita la primera bolsa ("MÁX" en el cartel); equipar una depositada la saca; vender una depositada no hace nada; `BagOfflineTest` de 2 h cobra de golpe y pasa de la bolsa 2 a la 6. Sin errores de scripts.
+
+- [ ] **Juego publicado**: depositar, salir y volver al cabo de un rato: siguen depositadas, la bolsa ha avanzado y sale el aviso de lo ganado fuera; lo mismo tras una reconexión por inactividad (ahí no debe avisar: son segundos).
+- [ ] **Dos jugadores**: cada uno ve el cartel y las armas del saco del otro; el saco de una parcela libre no enseña nada.
+- [ ] **Trato**: recibir un arma muy superior y depositarla: la bolsa va "MÁX" y las bolsas caen cada `seconds / 10`.
+- [ ] **De vista**: el cartel en móvil y en pantalla pequeña, y que ningún árbol ni farol del decorado pise el patio del saco en las ocho parcelas.
+- [ ] **Ritmo**: nadie ha jugado una partida larga con la bolsa; lo que supone para quien juega una hora al día (la bolsa pega las 24) está sin ver.

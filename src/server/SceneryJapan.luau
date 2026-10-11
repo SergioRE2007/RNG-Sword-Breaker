@@ -99,6 +99,10 @@ local function isOpen(position: Vector3, margin: number): boolean
 		if along > 0 and along < cfg.RingRadius and across < 14 + margin then
 			return false
 		end
+		-- El patio de la Bolsa de oro, detrás de cada parcela (server/GoldBag).
+		if along > cfg.RingRadius and along < cfg.RingRadius + cfg.Size / 2 + 36 + margin and across < 17 + margin then
+			return false
+		end
 	end
 	return true
 end
@@ -555,14 +559,15 @@ function SceneryJapan.start()
 	-- Sin animales (quitados a petición del usuario): `herd` y `CRITTERS` siguen ahí por si vuelven.
 
 	-- Luces de las parcelas (de noche las enciende el cliente): linternas sobre los pilares del muro, en las esquinas,
-	-- en el medio de los otros tres lados y en los dos pilares altos de la entrada. Mismo reparto que
+	-- en el medio de los dos lados, a cada lado del paso de atrás (el de la Bolsa de oro: su pilar central no existe) y
+	-- en los dos pilares altos de la entrada. Mismo reparto que
 	-- Plots.buildWall: el -Z de la parcela mira al hub, el muro está a Size / 2 y sus pilares miden 6 (8,4 los de la
 	-- entrada) más el remate.
 	local plot = Config.Plot
 	local half = plot.Size / 2
 	local lampSpots = {
 		Vector3.new(-half, 7.1, -half), Vector3.new(half, 7.1, -half), Vector3.new(-half, 7.1, half), Vector3.new(half, 7.1, half),
-		Vector3.new(0, 7.1, half), Vector3.new(-half, 7.1, 0), Vector3.new(half, 7.1, 0),
+		Vector3.new(-10, 7.1, half), Vector3.new(10, 7.1, half), Vector3.new(-half, 7.1, 0), Vector3.new(half, 7.1, 0),
 		Vector3.new(-10, 9.5, -half), Vector3.new(10, 9.5, -half),
 	}
 	for index = 1, plot.Count do

@@ -277,3 +277,21 @@ Mazmorra, vuelta a medir sin el empujón (misma prueba, 3 o 4 partidas de cada):
 - "Toda la suerte al máximo" (`M.horasPorArma`): rompe lo que aparece (antes lo frenaban el paseo y el golpe); con el `Config` de ahora el arma tope sale cada 448 h, así que `TypeLuckPower` bajará un poco al regenerar.
 - `BalanceSnapshots`: lista `swords` por foto, y `applyProgress` las equipa todas (hasta `Config.Loadout.Slots`).
 - El informe enseña además las armas con las que acaba la partida de daño mediano, con el rasgo y el grado de cada una.
+
+## Bolsa de oro (parte 1) — octubre de 2026
+
+Rama `bolsa-de-oro`.
+
+- **El problema**: las monedas salían solo de los objetos (`premio × Stats.coins`) y el daño no entraba en la cuenta. En cuanto todo caía de una andanada, un arma mejor no daba nada: ni la que sacabas ni la que te daban en un trato.
+- **Qué es**: detrás de cada parcela hay un saco. Se dejan en él hasta cuatro armas, aparte de las equipadas, y le pegan solas: cada punto de daño saca monedas. Vacía una bolsa, sale otra más gorda, sin fin. Pega igual conectado que desconectado.
+- **Decidido por el usuario**: las armas de la bolsa son aparte de las equipadas; el saco va en su zona pero fuera de la parcela, detrás; la bolsa se vacía (no se llena) y cada una es mayor que la anterior, sin fin; desconectado no hay tope de tiempo; cada bolsa vaciada dará una "moneda de bolsa" para más huecos o más monedas, **más adelante**.
+- **Decidido por Claude (se puede cambiar)**:
+  - Freno: nadie vacía una bolsa más de 10 veces más rápido que el jugador normal (`Config.GoldBag.MaxSpeed`). Sin él, unas armas de final de partida regaladas a un novato se llevaban todas las bolsas en un momento, que es regalar el progreso (por eso se quitaron las monedas del comercio).
+  - Cada bolsa lleva unas 4 veces más monedas que la anterior (`objetivo.bolsa.crece`), no 10: con x10 las últimas durarían semanas.
+  - La bolsa no pasa por los multiplicadores de monedas (rasgos, accesorios, VIP): da lo que pone su cartel.
+  - Todas las armas pegan a la bolsa una vez por segundo, sean del tipo que sean.
+  - Fuera no cuentan ni la poción de daño ni el clima.
+  - La bolsa es el 25 % de lo que ingresa un jugador que juega unas 3 h al día (`objetivo.bolsa`). Como pega las 24 h, quien juega menos saca más de ella en proporción.
+- **Números** (generados el 11-10-2026): 37 bolsas, de 6.500 monedas la primera a 3,1e25 la última (hacia la hora 183 del jugador tipo), cada una entre 32 minutos y 6 días de reloj. Los precios se regeneraron con la bolsa dentro: las compras caen a menos de un 10 % de su hora salvo el último renacimiento (129 h por 120) y el último nivel de suerte (181 h por 170). El jugador del informe, que juega sus mazmorras, saca de la bolsa un 34 % de sus monedas y lo completa todo hacia las 157 h (antes, 145).
+- **El saco**: modelo de Blender (`gold_sack()` en `tools/blender/crear_mapa_japones.py`; el primero, de piezas, no le gustó al usuario). Falta importarlo en Studio y pasar sus mallas a `MapMeshesPatch`; hasta entonces se ve el de piezas.
+- **Sin probar / pendiente**: guardar y volver en el juego publicado; dos jugadores; móvil; una partida larga. Las armas van quietas y sin sonido: eso, la ventana de "mientras no estabas", el aviso al jugador nuevo y el uso de las monedas de bolsa son la parte 2. Queda por ver si conviene que el jugador tipo del simulador deje en la bolsa sus mejores armas en vez de las que le sobran.

@@ -249,6 +249,86 @@ for pasada = 1, 4 do
 	end))}`)
 end
 
+-- 2b. Bolsa de oro (objetivo.bolsa): la tabla de bolsas sale de la curva del jugador tipo. Cada bolsa lleva `crece`
+-- veces más monedas que la anterior; entre todas le dan `parte` de lo que ingresa, así que la bolsa n se acaba cuando
+-- lo que lleva ganado rompiendo objetos, por parte / (1 - parte), llega a la suma de las n primeras. Su vida es el
+-- daño que sus armas depositadas le hacen en ese tramo y `seconds`, lo que dura el tramo en tiempo de reloj. Ni el
+-- daño ni lo ganado en la parcela dependen de la tabla, así que sale de una vez; después se juega otra pasada con la
+-- bolsa ya puesta, que es de la que salen los precios.
+local bolsas, crecimiento = {}, {}
+do
+	local o = objetivo.bolsa
+	local k = o.parte / (1 - o.parte)
+	local puntos = {}
+	for position, punto in runs[1].bolsa.curva do
+		puntos[position] = {
+			t = punto.t,
+			dano = med(runs, function(run)
+				return run.bolsa.curva[position].dano
+			end),
+			monedas = k * med(runs, function(run)
+				return run.bolsa.curva[position].monedas
+			end),
+		}
+	end
+	-- Entre dos puntos de la curva, en escala logarítmica (todo crece a saltos de varias veces).
+	local function mezcla(x: number, y: number, f: number): number
+		return if x > 0 and y > 0 then x * (y / x) ^ f else x + (y - x) * f
+	end
+	local function enMonedas(monedas: number): (number?, number?)
+		for position = 1, #puntos - 1 do
+			local desde, hasta = puntos[position], puntos[position + 1]
+			if monedas <= hasta.monedas and hasta.monedas > desde.monedas then
+				local f = math.clamp(if desde.monedas > 0 then math.log(monedas / desde.monedas) / math.log(hasta.monedas / desde.monedas) else (monedas - desde.monedas) / (hasta.monedas - desde.monedas), 0, 1)
+				return mezcla(desde.t, hasta.t, f), mezcla(desde.dano, hasta.dano, f)
+			end
+		end
+		return nil
+	end
+	local function enTiempo(t: number): number
+		for position = 1, #puntos - 1 do
+			local desde, hasta = puntos[position], puntos[position + 1]
+			if t <= hasta.t then
+				return mezcla(desde.monedas, hasta.monedas, math.clamp(math.log(t / desde.t) / math.log(hasta.t / desde.t), 0, 1))
+			end
+		end
+		return puntos[#puntos].monedas
+	end
+	local primera = math.max(redondo(enTiempo(o.primera), 2), 10)
+	local suma, antesT, antesD = 0, 0, 0
+	for n = 1, 400 do
+		local coins = primera * o.crece ^ (n - 1)
+		suma += coins
+		local t, dano = enMonedas(suma)
+		if not t or not dano then
+			break
+		end
+		local hp = math.max(redondo(dano - antesD, 2), 1)
+		if n > 1 then
+			hp = math.max(hp, redondo(bolsas[n - 1].hp * 1.2, 2))
+		end
+		bolsas[n] = { coins = redondo(coins, 2), hp = hp, seconds = math.max(math.round((t - antesT) * o.reales), 30) }
+		antesT, antesD = t, dano
+	end
+	assert(#bolsas >= 6, "la curva del jugador tipo no da ni para seis bolsas de oro")
+	-- Pasada la tabla, la escalera sigue como venía en las últimas bolsas.
+	local desde = bolsas[#bolsas - 5]
+	local ultima = bolsas[#bolsas]
+	crecimiento = {
+		coins = o.crece,
+		hp = math.max(math.round((ultima.hp / desde.hp) ^ (1 / 5) * 100) / 100, 1.2),
+		seconds = math.max(math.round((ultima.seconds / desde.seconds) ^ (1 / 5) * 100) / 100, 1),
+	}
+	Config.GoldBag.Bags, Config.GoldBag.Growth = bolsas, crecimiento
+	print(`bolsa de oro: {#bolsas} bolsas, la primera de {numero(bolsas[1].coins)} monedas y la última de {numero(ultima.coins)} (se acaba a las {string.format("%.0f", antesT / 3600)} h)`)
+	runs = jugar("forzado", 5000)
+	print(`con la bolsa: {string.format("%.0f", med(runs, function(run)
+		return run.bolsa.ganado / math.max(run.ganado, 1)
+	end) * 100)} % de lo ganado sale de ella y el jugador tipo acaba en la bolsa nº {med(runs, function(run)
+		return run.bolsa.stage
+	end)}`)
+end
+
 -- 3. Precios: lo que gana el jugador tipo entre compra y compra, repartido entre las pistas que le quedan abiertas.
 do
 	local eventos = runs[1].eventos
@@ -351,6 +431,16 @@ end
 for index, dungeon in Config.Dungeons do
 	print(`{dungeon.name}: hp = {numero(mazmorras[index])}`)
 end
+-- Las líneas de la tabla de bolsas, como van en Config.
+local function lineasBolsa(indent: string): { string }
+	local out = {}
+	for _, bag in bolsas do
+		table.insert(out, `{indent}\{ coins = {numero(bag.coins)}, hp = {numero(bag.hp)}, seconds = {string.format("%d", bag.seconds)} },`)
+	end
+	return out
+end
+print(`GoldBag.Growth = \{ coins = {crecimiento.coins}, hp = {crecimiento.hp}, seconds = {crecimiento.seconds} }`)
+print(table.concat(lineasBolsa("  "), "\n"))
 print("\nCompras con estos precios (mediana; objetivo entre paréntesis):")
 for pista, list in pistas do
 	local parts = {}
@@ -426,6 +516,29 @@ for position, line in lines do
 end
 local expected = #tipos + #Config.Artifacts + #Config.UpgradeOrder + 1 + 1 + #Config.Dungeons
 assert(changed == expected, `esperaba cambiar {expected} líneas de Config y han sido {changed}`)
+-- La Bolsa de oro: las filas de "Bags" (se cambian todas) y la línea de "Growth". El archivo puede venir con \r\n.
+do
+	local desde, hasta, growth = nil, nil, nil
+	for position, line in lines do
+		if not desde and string.match(line, "^%s*Bags = {%s*$") then
+			desde = position
+		elseif desde and not hasta and string.match(line, "^%s*},%s*$") then
+			hasta = position
+		elseif hasta and not growth and string.match(line, "^%s*Growth = {.*},%s*$") then
+			growth = position
+		end
+	end
+	assert(desde and hasta and growth, "no encuentro Bags y Growth de Config.GoldBag")
+	local cr = if string.sub(lines[desde], -1) == "\r" then "\r" else ""
+	local indent = string.match(lines[desde], "^(%s*)")
+	lines[growth] = `{indent}Growth = \{ coins = {crecimiento.coins}, hp = {crecimiento.hp}, seconds = {crecimiento.seconds} },{cr}`
+	for _ = desde + 1, hasta - 1 do
+		table.remove(lines, desde + 1)
+	end
+	for offset, line in lineasBolsa(indent .. "\t") do
+		table.insert(lines, desde + offset, line .. cr)
+	end
+end
 fs.writeFile(path, table.concat(lines, "\n"))
 
 -- 9. Estados del jugador tipo a cada hora (Config.Test.Progress): los de la partida forzada de daño mediano.
@@ -436,8 +549,9 @@ local tipo = forzadas[math.ceil(#forzadas / 2)]
 local out = {
 	"-- ARCHIVO GENERADO por tools/equilibrio/generar.luau: no lo edites a mano.",
 	"-- Cómo va el jugador tipo del calendario de progreso a cada hora de juego: lo usa Config.Test.Progress (solo en",
-	"-- Studio) para empezar una partida en esa etapa. `swords` = sus armas equipadas, por hueco, cada una con su metal, su",
-	"-- tamaño, su rasgo y su grado (0 = ninguno); `armor` = { suerte, ataque, aparición } que suma su armadura.",
+	"-- Studio) para empezar una partida en esa etapa. `swords` = sus armas, cada una con su metal, su tamaño, su rasgo y su",
+	"-- grado (0 = ninguno): las primeras (hasta Config.Loadout.Slots) son las equipadas, por hueco, y las demás, las que",
+	"-- deja en su Bolsa de oro; `bag` = bolsa por la que va; `armor` = { suerte, ataque, aparición } que suma su armadura.",
 	"return {",
 }
 for _, hour in objetivo.fotos do
@@ -457,7 +571,7 @@ for _, hour in objetivo.fotos do
 		for _, arma in foto.armas do
 			table.insert(swords, `\{ sword = {arma.sword}, metal = {arma.metal}, size = {arma.size}, trait = {arma.trait}, grade = {arma.grade} }`)
 		end
-		table.insert(out, `	\{ hours = {hour}, upgrades = \{ {table.concat(upgrades, ", ")} }, rebirths = {foto.rebirths}, swords = \{ {table.concat(swords, ", ")} }, artifacts = \{ {table.concat(foto.artifacts, ", ")} }, gear = \{ {table.concat(foto.gear, ", ")} }, dungeon = {math.max(zona, 1)}, armor = \{ {foto.armadura[1]}, {foto.armadura[2]}, {foto.armadura[3]} } },`)
+		table.insert(out, `	\{ hours = {hour}, upgrades = \{ {table.concat(upgrades, ", ")} }, rebirths = {foto.rebirths}, swords = \{ {table.concat(swords, ", ")} }, artifacts = \{ {table.concat(foto.artifacts, ", ")} }, gear = \{ {table.concat(foto.gear, ", ")} }, dungeon = {math.max(zona, 1)}, bag = {foto.bolsa or 1}, armor = \{ {foto.armadura[1]}, {foto.armadura[2]}, {foto.armadura[3]} } },`)
 	end
 end
 table.insert(out, "}")

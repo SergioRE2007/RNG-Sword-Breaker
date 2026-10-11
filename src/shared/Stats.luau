@@ -65,6 +65,26 @@ function Stats.isEquipped(player: Player, id: number): boolean
 	return table.find(Stats.list(player, "Loadout"), id) ~= nil or player:GetAttribute("Equipped") == id
 end
 
+-- Copias depositadas en su Bolsa de oro, por orden de hueco (el servidor publica sus ids en "Bag").
+function Stats.deposited(player: Player)
+	local byId = {}
+	for _, copy in Stats.swords(player) do
+		byId[copy.id] = copy
+	end
+	local result = {}
+	for _, id in Stats.list(player, "Bag") do
+		if byId[id] then
+			table.insert(result, byId[id])
+			byId[id] = nil
+		end
+	end
+	return result
+end
+
+function Stats.isDeposited(player: Player, id: number): boolean
+	return table.find(Stats.list(player, "Bag"), id) ~= nil
+end
+
 -- Daño de una copia de espada con su rasgo, su grado, su metal y su tamaño, sin contar artefactos.
 function Stats.swordDamage(copy): number
 	local trait = Config.Traits[copy.trait]
@@ -218,6 +238,18 @@ function Stats.damage(player: Player): number
 		total += Stats.swordDamage(copy)
 	end
 	return total * damageBonus(player)
+end
+
+-- Daño por segundo que le hacen a su Bolsa de oro las armas depositadas: un golpe por segundo de cada una, sea del
+-- tipo que sea (allí no hay salpicadura que compense a las lentas). `noPotion` = sin la poción de daño: lo que
+-- pegan mientras su dueño está desconectado.
+function Stats.bagDamage(player: Player, noPotion: boolean?): number
+	local total = 0
+	for _, copy in Stats.deposited(player) do
+		total += Stats.swordDamage(copy)
+	end
+	total *= damageBonus(player)
+	return if noPotion then total / Stats.potion(player, "damage") else total
 end
 
 -- Producto de lo que dan a esa estadística ("luck" o "coins") los rasgos de las armas equipadas.

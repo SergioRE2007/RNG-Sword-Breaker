@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
+local BagInfo = require(ReplicatedStorage.Shared.BagInfo)
 local BalanceSnapshots = require(ReplicatedStorage.Shared.BalanceSnapshots)
 local Config = require(ReplicatedStorage.Shared.Config)
 local IndexInfo = require(ReplicatedStorage.Shared.IndexInfo)
@@ -160,6 +161,7 @@ local function publish(player: Player)
 	end
 	player:SetAttribute("Swords", table.concat(swords, ","))
 	player:SetAttribute("Loadout", table.concat(data.loadout, ","))
+	player:SetAttribute("Bag", table.concat(data.bag.slots, ",")) -- ids de las depositadas en la Bolsa de oro
 	player:SetAttribute("Equipped", first)
 	player:SetAttribute("SwordLevel", equippedType)
 	-- Metal y tamaño de la espada equipada (Swords los usa para construir la que lleva en la mano).
@@ -233,6 +235,7 @@ local function loadSwords(data, saved)
 			table.insert(loadout, id)
 		end
 	end
+	local deposited = {} -- copias que estaban en la Bolsa de oro, ya con su id nuevo
 	-- El formato lo dice la primera entrada que sea una copia o un tipo: con una entrada rota delante no se pierde el resto.
 	local first = nil
 	if type(saved.swords) == "table" then
@@ -262,6 +265,15 @@ local function loadSwords(data, saved)
 		for _, old in if type(saved.loadout) == "table" then saved.loadout else { saved.equipped } do
 			equip(renumbered[old])
 		end
+		-- Depositadas en la Bolsa de oro, con su id nuevo: sin repetir y hasta Config.GoldBag.Slots.
+		if type(saved.bag) == "table" and type(saved.bag.slots) == "table" then
+			for _, old in saved.bag.slots do
+				local id = if type(old) == "number" then renumbered[old] else nil
+				if id and not table.find(deposited, id) and #deposited < Config.GoldBag.Slots then
+					table.insert(deposited, id)
+				end
+			end
+		end
 	elseif type(first) == "number" then
 		-- Formato del primer gacha: lista de tipos, una espada por tipo, rasgos aparte.
 		local traits = if type(saved.traits) == "table" then saved.traits else {}
@@ -290,6 +302,13 @@ local function loadSwords(data, saved)
 	data.swords = swords
 	data.nextSwordId = #swords + 1
 	data.loadout = loadout
+	-- Bolsa de oro: por dónde iba y qué armas tenía dentro (una equipada no puede estar también en la bolsa).
+	data.bag = BagInfo.sanitize(saved.bag)
+	for _, id in deposited do
+		if not table.find(loadout, id) then
+			table.insert(data.bag.slots, id)
+		end
+	end
 end
 
 -- Cantidad guardada (monedas, gemas): ni NaN ni negativa. Con NaN toda comparación falla y trySpend dejaría comprar gratis.
@@ -371,9 +390,10 @@ local function applyProgress(data, hours: number)
 		data.upgrades[name] = math.clamp(snapshot.upgrades[name] or 0, 0, upgrade.maxLevel)
 	end
 	data.rebirths = math.clamp(snapshot.rebirths, 0, Config.Rebirth.max)
-	local loadout = {}
+	-- Las primeras armas son las equipadas y las demás, las que deja en su Bolsa de oro.
+	local loadout, deposited = {}, {}
 	for _, entry in snapshot.swords do
-		if Config.Swords[entry.sword] and #loadout < Config.Loadout.Slots then
+		if Config.Swords[entry.sword] and #loadout + #deposited < Config.Loadout.Slots + Config.GoldBag.Slots then
 			local id = data.nextSwordId
 			data.nextSwordId += 1
 			table.insert(data.swords, {
@@ -384,12 +404,14 @@ local function applyProgress(data, hours: number)
 				trait = if entry.trait > 0 then entry.trait else nil,
 				grade = if entry.grade > 0 then entry.grade else nil,
 			})
-			table.insert(loadout, id)
+			table.insert(if #loadout < Config.Loadout.Slots then loadout else deposited, id)
 		end
 	end
 	if #loadout > 0 then
 		data.loadout = loadout
 	end
+	data.bag = BagInfo.sanitize({ stage = snapshot.bag })
+	data.bag.slots = deposited
 	data.artifacts, data.gear = {}, {}
 	for _, index in snapshot.artifacts do
 		if Config.Artifacts[index] then
@@ -429,6 +451,7 @@ local function load(player: Player)
 	-- armor = piezas de armadura (ver shared/ArmorStats); armorWorn = { [hueco] = id de la pieza equipada }.
 	-- potions = pociones activas { [familia de Config.Potions.Families] = { tier, seconds = tiempo de juego que queda } }.
 	-- index = Índice de armas: códigos de shared/IndexInfo de lo que le ha salido (nil hasta que server/Index lo estrena).
+	-- bag = Bolsa de oro: { stage, damage, slots = ids de las copias depositadas, seen } (ver shared/BagInfo).
 	local data = {
 		coins = Config.StartCoins,
 		gems = 0,
@@ -440,6 +463,7 @@ local function load(player: Player)
 		swords = { { id = 1, sword = 1 } },
 		nextSwordId = 2,
 		loadout = { 1 },
+		bag = BagInfo.sanitize(nil),
 		autoSell = 0,
 		traitPriority = "luck,coins,damage", -- desempate de rasgos igual de raros (ver Modifiers.priority)
 		pity = Modifiers.newPity(nil),
@@ -715,6 +739,17 @@ end
 -- Si esa copia está equipada (en cualquiera de los huecos de data.loadout).
 function PlayerData.isEquipped(data, id: unknown): boolean
 	return table.find(data.loadout, id) ~= nil
+end
+
+-- Si esa copia está depositada en la Bolsa de oro.
+function PlayerData.inBag(data, id: unknown): boolean
+	return table.find(data.bag.slots, id) ~= nil
+end
+
+-- Si esa copia está en uso (equipada o en la Bolsa de oro): no se vende, no se va sola con la mochila llena y no
+-- se comercia.
+function PlayerData.isLocked(data, id: unknown): boolean
+	return PlayerData.isEquipped(data, id) or PlayerData.inBag(data, id)
 end
 
 function PlayerData.getCoins(player: Player): number
