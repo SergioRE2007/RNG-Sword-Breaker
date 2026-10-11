@@ -29,7 +29,7 @@ local ModifierShops = {}
 local player = Players.LocalPlayer
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
-local SIZE = Vector2.new(1000, 540)
+local SIZE = Vector2.new(1160, 640)
 local LEFT = 0.53 -- parte del ancho del cuerpo que ocupa la izquierda (Scale)
 -- Capas de la izquierda, de abajo arriba. La interfaz ordena el ZIndex globalmente, así que son
 -- valores absolutos: la ruleta tapa la información de la espada, pero nunca BottomControls (que
