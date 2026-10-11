@@ -1337,6 +1337,14 @@ Ui.IMAGES = {
 	potion_weaponLuck_4 = "rbxassetid://123089696540790",
 	potion_weaponLuck_5 = "rbxassetid://139693134801553",
 	rebirth = "rbxassetid://90522539620973",
+	-- Centro del medallón de los rasgos especiales (Config.Traits, campo `image`; los de una sola estadística usan
+	-- monedas, espada y suerte).
+	rasgo_eterno = "rbxassetid://131845354343195",
+	rasgo_monarca = "rbxassetid://88237431685960",
+	rasgo_paradoja = "rbxassetid://107388779490803",
+	rasgo_samurai = "rbxassetid://76266618317808",
+	rasgo_shogun = "rbxassetid://91767316052986",
+	rasgo_trascendente = "rbxassetid://107888798952316",
 	suerte = "rbxassetid://114098318122458",
 	tienda_robux = "rbxassetid://93004325604664",
 	trade = "rbxassetid://118234202800810",

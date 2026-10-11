@@ -245,12 +245,12 @@ Config.Traits = {
 	{ name = "Monedas III", coins = 1.2, chance = 1.5, icon = "coins", color = Color3.fromRGB(30, 180, 70) },
 	{ name = "Daño III", damage = 2, chance = 1.5, icon = "damage", color = Color3.fromRGB(40, 120, 255) },
 	{ name = "Suerte III", luck = 1.2, chance = 1.5, icon = "luck", color = Color3.fromRGB(90, 190, 30) },
-	{ name = "Samurái", coins = 1.25, damage = 3, luck = 1.25, chance = 0.9, icon = "all", color = Color3.fromRGB(255, 120, 200), rainbow = true },
-	{ name = "Shogun", coins = 1.35, damage = 5, luck = 1.35, chance = 0.17, icon = "all", color = Color3.fromRGB(120, 230, 160), rainbow = true },
-	{ name = "Monarca", coins = 1.5, damage = 8, luck = 1.5, chance = 0.039, icon = "all", color = Color3.fromRGB(180, 120, 255), rainbow = true },
-	{ name = "Trascendente", coins = 1.65, damage = 15, luck = 1.65, chance = 0.01, icon = "all", color = Color3.fromRGB(255, 80, 60) },
-	{ name = "Eterno", coins = 1.8, damage = 30, luck = 1.8, chance = 0.0045, icon = "all", color = Color3.fromRGB(220, 40, 40) },
-	{ name = "Paradoja", coins = 2, damage = 57.5, luck = 2, chance = 0.0019, icon = "all", color = Color3.fromRGB(235, 235, 245) },
+	{ name = "Samurái", coins = 1.25, damage = 3, luck = 1.25, chance = 0.9, icon = "all", image = "rasgo_samurai", color = Color3.fromRGB(255, 120, 200), rainbow = true },
+	{ name = "Shogun", coins = 1.35, damage = 5, luck = 1.35, chance = 0.17, icon = "all", image = "rasgo_shogun", color = Color3.fromRGB(120, 230, 160), rainbow = true },
+	{ name = "Monarca", coins = 1.5, damage = 8, luck = 1.5, chance = 0.039, icon = "all", image = "rasgo_monarca", color = Color3.fromRGB(180, 120, 255), rainbow = true },
+	{ name = "Trascendente", coins = 1.65, damage = 15, luck = 1.65, chance = 0.01, icon = "all", image = "rasgo_trascendente", color = Color3.fromRGB(255, 80, 60) },
+	{ name = "Eterno", coins = 1.8, damage = 30, luck = 1.8, chance = 0.0045, icon = "all", image = "rasgo_eterno", color = Color3.fromRGB(220, 40, 40) },
+	{ name = "Paradoja", coins = 2, damage = 57.5, luck = 2, chance = 0.0019, icon = "all", image = "rasgo_paradoja", color = Color3.fromRGB(235, 235, 245) },
 }
 
 -- Grados de espada (tienda de Grados del hub). Se tiran con Cristales de grado (GradeCost cada vez) y
