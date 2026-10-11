@@ -4,6 +4,7 @@
 --   Autoclicker: gratis para quien esté en el grupo del juego (Config.AutoClicker.group). El "me gusta" no se puede
 --     comprobar: Roblox no le dice a un juego quién le ha dado like.
 --   Auto: ventaja "autoFarm" de un pase de juego, y solo dentro de tu parcela (al salir de ella se apaga solo).
+--     Encendido, el círculo de ataque cubre la parcela entera (Stats.reach): las armas llegan a todo sin moverse.
 --   Pelea automática de mazmorra (botón "Auto" del panel de la partida, client/Dungeons): como el autoclicker, gratis
 --     para quien esté en el grupo (pedido por el usuario). Se publica en "AutoFight".
 -- No se guardan: los tres entran apagados.

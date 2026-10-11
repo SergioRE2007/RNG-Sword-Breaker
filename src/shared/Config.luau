@@ -204,7 +204,9 @@ Config.Items = {
 -- del objetivo ya elegido antes de que las armas lo suelten; Travel = segundos que tardan en llegar al objetivo (antes no
 -- pega ninguna); Chain = lo mismo al saltar solas al siguiente enemigo de una mazmorra.
 -- MaxSlots = huecos con la ventaja "extraSlots" de los pases (Stats.loadoutSlots): el tope al revisar lo guardado.
-Config.Loadout = { Slots = 4, MaxSlots = 8, Radius = 26, Leash = 8, Travel = 0.25, Chain = 0.15 }
+-- FarmRadius = el radio con el Auto de la parcela encendido (pase "auto"): cubre la parcela entera desde cualquier
+-- punto de ella, así que las armas llegan a todo sin que el jugador se mueva (Stats.reach).
+Config.Loadout = { Slots = 4, MaxSlots = 8, Radius = 26, FarmRadius = 170, Leash = 8, Travel = 0.25, Chain = 0.15 }
 
 -- Bolsa de oro (server/GoldBag, cuentas en shared/BagInfo): detrás de cada parcela hay un saco al que pegan solas las
 -- armas que su dueño deposita (aparte de las equipadas), también mientras está desconectado y sin tope de tiempo.
@@ -872,7 +874,7 @@ Config.Trade = {
 -- enseñan hasta que Roblox dice el precio real. "perksText" = lo que se lee en la tienda. "perks" = ventajas que
 -- lee Stats.perk (si varios pases dan la misma, vale la mayor): traitCount = rasgos que se pueden tirar de golpe;
 -- gradeSpeed = por cuánto se multiplica la velocidad de las tiradas de grado (4 = 400 %); autoFarm = botón "Auto" junto
--- al arma: en tu parcela, el personaje va solo a por los objetos y los rompe (server/AutoPlay y client/AutoPlay).
+-- al arma: en tu parcela, las armas llegan solas a todos los objetos sin que el personaje se mueva (Stats.reach, server/AutoPlay y client/AutoPlay).
 -- Las que multiplican se acumulan entre pases (Stats.passMult: x2 y x5 de suerte de armas juntos son x10): weaponLuck =
 -- suerte de armas (Stats.gachaLuck); luck = suerte de destructibles (Stats.luck); coins = monedas (Stats.coins);
 -- walkSpeed = velocidad al andar (Stats.walkSpeed); dungeonLoot = premios de mazmorra (server/Loot). chatTag = etiqueta
@@ -925,7 +927,7 @@ Config.Gamepasses = {
 		icon = "espada", tag = "AUTO",
 		price = 249,
 		color = Color3.fromRGB(255, 200, 60),
-		perksText = { "Botón Auto junto al arma: en tu parcela, tu personaje va solo a por los objetos y los rompe" },
+		perksText = { "Botón Auto junto al arma: en tu parcela, tus armas llegan solas a todos los objetos", "No hace falta moverse ni hacer clic" },
 		perks = { autoFarm = 1 },
 	},
 	arsenal = {

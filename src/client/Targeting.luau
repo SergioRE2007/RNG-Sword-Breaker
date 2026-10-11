@@ -1,5 +1,5 @@
 -- Qué puede atacar el jugador y qué tiene a mano (librería sin start()): los objetos de su parcela y, en una mazmorra,
--- los enemigos, siempre dentro de su círculo (Config.Loadout.Radius). La comparten el clic (SwordController), los
+-- los enemigos, siempre dentro de su círculo (Stats.reach: Config.Loadout.Radius, o la parcela entera con el Auto). La comparten el clic (SwordController), los
 -- automáticos (AutoPlay, Dungeons), las armas que giran (OrbitWeapons) y la vista de pruebas (HitboxDebug). Hace la
 -- misma cuenta que server/Combat, que es quien decide.
 local CollectionService = game:GetService("CollectionService")
@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Hitbox = require(ReplicatedStorage.Shared.Hitbox)
+local Stats = require(ReplicatedStorage.Shared.Stats)
 
 local Targeting = {}
 
@@ -55,7 +56,7 @@ end
 -- Si la pieza está dentro del círculo del jugador. `radius` = otro radio (para acercarse más, o con margen).
 function Targeting.inCircle(part: BasePart, radius: number?): boolean
 	local root = Targeting.root()
-	return root ~= nil and Hitbox.within(part, root.Position, radius or Config.Loadout.Radius)
+	return root ~= nil and Hitbox.within(part, root.Position, radius or Stats.reach(player))
 end
 
 -- Lo más cercano al jugador de lo que puede atacar. Con `radius`, solo lo que esté dentro de ese círculo; `skip` =
