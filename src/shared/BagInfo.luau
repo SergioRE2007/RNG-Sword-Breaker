@@ -8,7 +8,8 @@ local BagInfo = {}
 local MAX_STEPS = 5000 -- bolsas que como mucho se vacían de una vez
 
 -- Monedas que saca de la bolsa un golpe de ese daño: Coins con Damage de daño y, cada vez que el daño se dobla,
--- Double veces más (con 100 = 50 y x1,5: 200 de daño dan 75 y 400, 112). Decidido por el usuario. Al menos 1.
+-- Double veces más. Con los números de Config (1, 1 y 2, decididos por el usuario) es una moneda por punto de daño.
+-- Al menos 1.
 function BagInfo.coins(damage: number): number
 	if not (damage > 0) then
 		return 0
