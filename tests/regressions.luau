@@ -1489,6 +1489,11 @@ do
 	equal(inBag(), "6,3,4,5", "llena, sustituye a la de menos daño")
 	bf.remotes.EquipSword.OnServerEvent:fire(who, "best")
 	equal(worn(), "8,7,2,1", "las mejores: no cuenta con las depositadas")
+	-- El menú del saco: vaciarla y llenarla con las de más daño de las que no están equipadas.
+	deposit("clear")
+	equal(inBag(), "", "\"clear\" vacía la bolsa")
+	deposit("best")
+	equal(inBag() == "6,5,4,3" and worn() == "8,7,2,1", true, "\"best\": las mejores sin equipar, sin tocar el equipo")
 	bf.remotes.SellSwords.OnServerEvent:fire(who, { 1, 2, 3, 4, 5, 6, 7, 8 })
 	equal(#bf.data.read(who).swords, 8, "ni las equipadas ni las depositadas se venden")
 	bf.remotes.EquipSword.OnServerEvent:fire(who, 1)

@@ -21,11 +21,15 @@ local Plots = require(script.Parent.Plots)
 local GoldBag = {}
 
 local TICK = 1 -- segundos entre cobros
-local DISTANCE = 20 -- del muro de atrás de la parcela al centro del saco
+local DISTANCE = 27 -- del muro de atrás de la parcela al centro del saco (SACK_DISTANCE en crear_mapa_japones.py)
 local SACK_SCALE = 1.1 -- tamaño en el juego del saco de Blender
 local DAIS = 0.95 -- altura de su pedestal (GoldSackBase), sin escalar: encima va el saco
 local RED = Color3.fromRGB(240, 65, 75)
-local STEP = Color3.fromRGB(124, 128, 150) -- las losas del camino, como la piedra oscura del pedestal
+local GRASS = 0.3 -- lo que levanta el césped (Scenery) del suelo de fuera de las parcelas: encima va el camino
+local PATH_WIDTH = 9 -- ancho del camino del paso del muro al pedestal
+local PEDESTAL = 12.6 -- radio del pedestal (GoldSackBase), sin escalar
+local STEP = Color3.fromRGB(196, 200, 218) -- las losas del camino, como la piedra clara del pedestal
+local STEP_DARK = Color3.fromRGB(124, 128, 150) -- su lecho y sus bordillos
 
 local SACK = Color3.fromRGB(176, 132, 84)
 local SACK_DARK = Color3.fromRGB(128, 92, 58)
@@ -91,6 +95,34 @@ local function fallback(model: Model, origin: CFrame)
 	end
 end
 
+-- El camino hecho con piezas: lecho oscuro, losas claras al tresbolillo y un bordillo a cada lado. `ground` es el
+-- césped bajo el saco; el camino va de su pedestal al muro de la parcela (hacia -Z).
+local function pathFallback(model: Model, ground: CFrame)
+	local near, far = PEDESTAL * SACK_SCALE - 0.6, DISTANCE + 0.5
+	local length = far - near
+	local middle = -(near + far) / 2
+	local function flat(name: string, size: Vector3, cframe: CFrame, color: Color3)
+		local piece = part(model, name, size, cframe, color)
+		piece.CastShadow = false
+		piece.CanCollide = false -- tan bajo que no hace falta pisarlo: así nadie tropieza
+		return piece
+	end
+	flat("PathBed", Vector3.new(PATH_WIDTH, 0.16, length), ground * CFrame.new(0, 0.08, middle), STEP_DARK)
+	for _, side in { -1, 1 } do
+		flat("PathCurb", Vector3.new(0.8, 0.5, length), ground * CFrame.new(side * (PATH_WIDTH / 2 + 0.2), 0.25, middle), STEP)
+	end
+	local rng = Random.new(31)
+	local rows = math.floor(length / 3.2)
+	for row = 1, rows do
+		local z = -(near + (row - 0.5) * length / rows)
+		local split = rng:NextNumber(-1.1, 1.1) -- por dónde se parte la fila en dos losas
+		for _, side in { -1, 1 } do
+			local from, to = if side < 0 then -PATH_WIDTH / 2 + 0.5 else split + 0.2, if side < 0 then split - 0.2 else PATH_WIDTH / 2 - 0.5
+			flat("PathSlab", Vector3.new(to - from, 0.3, length / rows - 0.4), ground * CFrame.new((from + to) / 2, 0.15, z) * CFrame.Angles(0, rng:NextNumber(-0.05, 0.05), 0), STEP)
+		end
+	end
+end
+
 -- El saco de una parcela y su pedestal: las piezas de Blender GoldSack y GoldSackBase (gold_sack() de
 -- tools/blender/crear_mapa_japones.py, en shared/MapMeshesPatch) o, sin ellas, el de piezas. En los dos casos el
 -- modelo lleva una pieza invisible "Body" en el centro del saco (de ella cuelga el cartel del cliente y a ella apuntan
@@ -109,11 +141,11 @@ local function build(plot, parent: Instance)
 	else
 		fallback(model, origin)
 	end
-	-- Dos losas redondas entre el paso del muro y el pedestal.
-	local upright = CFrame.Angles(0, 0, math.pi / 2)
-	for index, spot in { { 0.6, -18.3, 5 }, { -0.5, -15.2, 4.2 } } do
-		local stone = cylinder(part(model, "Step" .. index, Vector3.new(0.3, spot[3], spot[3]), ground * CFrame.new(spot[1], 0.15, spot[2]) * upright, STEP))
-		stone.CastShadow = false
+	-- Camino del paso del muro al pedestal: la pieza de Blender GoldSackPath (misma función, mismo origen que el saco,
+	-- pero en studs del juego: va sin escalar) o, sin ella, un lecho de piedra con losas y bordillos hechos con piezas.
+	local lawn = ground * CFrame.new(0, GRASS, 0)
+	if not PropModel.place(model, "GoldSackPath", lawn) then
+		pathFallback(model, lawn)
 	end
 
 	-- Mide lo que el saco: de su tamaño sacan las armas la distancia a la que lo rondan.
@@ -202,11 +234,38 @@ local function copyDamage(copy): number
 	return Stats.swordDamage({ sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 })
 end
 
--- Dejar una copia en la bolsa, o sacarla si ya estaba. Llena, sustituye a la depositada de menos daño; una equipada
+-- Dejar una copia en la bolsa, o sacarla si ya estaba (o, con "best" / "clear", llenarla con las mejores o vaciarla). Llena, sustituye a la depositada de menos daño; una equipada
 -- deja de estarlo (la última equipada no se puede depositar).
 local function onSet(player: Player, id: unknown)
 	local data = PlayerData.read(player)
-	if not data or not PlayerData.findSword(data, id) then
+	if not data then
+		return
+	end
+	if id == "best" or id == "clear" then
+		-- "clear" la vacía; "best" deja las de más daño de las que no están equipadas (lo pide el menú del saco).
+		PlayerData.edit(player, function(edited)
+			local slots = {}
+			if id == "best" then
+				local spare = {}
+				for _, copy in edited.swords do
+					if not table.find(edited.loadout, copy.id) then
+						table.insert(spare, { id = copy.id, damage = copyDamage(copy) })
+					end
+				end
+				table.sort(spare, function(a, b)
+					return if a.damage ~= b.damage then a.damage > b.damage else a.id < b.id
+				end)
+				for position = 1, math.min(#spare, Config.GoldBag.Slots) do
+					slots[position] = spare[position].id
+				end
+			end
+			edited.bag.slots = slots
+			edited.bag.seen = os.time()
+		end)
+		publish(player, data, true)
+		return
+	end
+	if not PlayerData.findSword(data, id) then
 		return
 	end
 	local message = nil

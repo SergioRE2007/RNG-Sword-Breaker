@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local BagMenu = require(script.Parent.BagMenu)
 local ForgeScene = require(script.Parent.ForgeScene)
 local OrbitWeapons = require(script.Parent.OrbitWeapons)
 local Targeting = require(script.Parent.Targeting)
@@ -113,7 +114,10 @@ function SwordController.start()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			SwordController.attack(pick(UserInputService:GetMouseLocation()))
+			local point = UserInputService:GetMouseLocation()
+			if not BagMenu.pointed(point) then -- el clic en tu Bolsa de oro abre su menú
+				SwordController.attack(pick(point))
+			end
 		elseif input.KeyCode == Enum.KeyCode.ButtonR2 then
 			SwordController.attack(pickNear())
 		end
@@ -121,8 +125,10 @@ function SwordController.start()
 	UserInputService.TouchTapInWorld:Connect(function(position, processed)
 		if not processed and not busy() then
 			-- El toque llega sin el hueco de arriba de la pantalla, que la cámara sí cuenta.
-			local inset = GuiService:GetGuiInset()
-			SwordController.attack(pick(position + inset))
+			local point = position + GuiService:GetGuiInset()
+			if not BagMenu.pointed(point) then
+				SwordController.attack(pick(point))
+			end
 		end
 	end)
 end
