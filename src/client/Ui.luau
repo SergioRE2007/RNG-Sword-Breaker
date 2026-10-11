@@ -1128,6 +1128,31 @@ local function shineColors(color: Color3, tier: number): ColorSequence
 	})
 end
 
+-- Texto con la animación de su rareza (pedido por el usuario para el nombre de las armas): el mismo degradado del marco
+-- de las casillas (shineColors) repartido por las letras y corriendo a la misma velocidad. Es RichText y cambia con el
+-- tiempo: hay que volver a pedirlo cada fotograma (Ui.tip lo hace si su contenido dice que está animado).
+function Ui.rarityText(text: string, color: Color3, tier: number?): string
+	local keys = shineColors(color, tier or 0).Keypoints
+	local count = math.max(utf8.len(text) or #text, 1)
+	local shift = os.clock() * SHINE_SPEED / 360
+	local letters = {}
+	local index = 0
+	for _, code in utf8.codes(text) do
+		local t = (index / count * 0.5 - shift) % 1
+		index += 1
+		local tint = keys[#keys].Value
+		for k = 2, #keys do
+			local a, b = keys[k - 1], keys[k]
+			if t <= b.Time then
+				tint = a.Value:Lerp(b.Value, (t - a.Time) / math.max(b.Time - a.Time, 1e-3))
+				break
+			end
+		end
+		table.insert(letters, `<font color="#{tint:ToHex()}">{utf8.char(code)}</font>`)
+	end
+	return table.concat(letters)
+end
+
 -- Casilla cuadrada con borde del color que se le pase (la rareza). El tamaño lo pone quien la usa.
 -- Con `tier` (nivel de rareza, 2 o más) el marco se anima.
 function Ui.cell(parent: Instance, color: Color3, tier: number?): TextButton
