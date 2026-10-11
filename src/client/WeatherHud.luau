@@ -29,7 +29,7 @@ local LOW = Color3.fromRGB(255, 96, 96)
 local CLEAR = Color3.fromRGB(92, 104, 140) -- insignia con el cielo despejado
 
 -- Medidas de la tarjeta (en píxeles del HUD, que ya se encoge entero en pantallas pequeñas).
-local TOP = 92 -- justo debajo de la barra de transporte (76 de alto a 10 del borde)
+local TOP = 92 -- a la altura del final de la barra de transporte (76 de alto a 10 del borde), para no pisarla en pantallas estrechas
 local HEIGHT = 52
 local BADGE = 38
 local PAD = 9
@@ -246,8 +246,9 @@ function WeatherHud.build()
 	end
 	local frame = Instance.new("Frame")
 	frame.Name = "Weather"
-	frame.AnchorPoint = Vector2.new(0.5, 0)
-	frame.Position = UDim2.new(0.5, 0, 0, TOP)
+	-- Arriba a la derecha, bajo los botones pequeños (pedido por el usuario: en el centro molestaba). Crece hacia la izquierda.
+	frame.AnchorPoint = Vector2.new(1, 0)
+	frame.Position = UDim2.new(1, -14, 0, TOP)
 	frame.Size = UDim2.fromOffset(240, HEIGHT)
 	frame.BackgroundTransparency = 1
 	frame.Parent = Ui.hud()
@@ -502,10 +503,11 @@ function WeatherHud.announce(id: string)
 		if not group.Parent then
 			return
 		end
-		-- Se recoge hacia la tarjeta de arriba.
+		-- Se recoge hacia la tarjeta de arriba a la derecha.
 		local out = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		local width = if outer then outer.Size.X.Offset else 0
 		TweenService:Create(scale, out, { Scale = 0.4 }):Play()
-		TweenService:Create(group, out, { GroupTransparency = 1, Position = UDim2.new(0.5, 0, 0, TOP + HEIGHT / 2) }):Play()
+		TweenService:Create(group, out, { GroupTransparency = 1, Position = UDim2.new(1, -14 - width / 2, 0, TOP + HEIGHT / 2) }):Play()
 		task.delay(0.42, function()
 			if banner == group then
 				banner = nil
