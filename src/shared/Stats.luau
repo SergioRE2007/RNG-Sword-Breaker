@@ -151,6 +151,16 @@ function Stats.passMult(player: Player, name: string): number
 	return total
 end
 
+-- Armas que puede llevar equipadas: las de Config más la ventaja "extraSlots" de los pases (Arsenal doble).
+function Stats.loadoutSlots(player: Player): number
+	return math.min(Config.Loadout.Slots + (Stats.perk(player, "extraSlots") or 0), Config.Loadout.MaxSlots)
+end
+
+-- Armas que caben en su Bolsa de oro: las de Config más la misma ventaja.
+function Stats.bagSlots(player: Player): number
+	return math.min(Config.GoldBag.Slots + (Stats.perk(player, "extraSlots") or 0), Config.GoldBag.MaxSlots)
+end
+
 -- Velocidad al andar: la de Config por la ventaja "walkSpeed" de los pases (VIP).
 function Stats.walkSpeed(player: Player): number
 	return Config.WalkSpeed * Stats.passMult(player, "walkSpeed")

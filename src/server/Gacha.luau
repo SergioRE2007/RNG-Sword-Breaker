@@ -232,7 +232,7 @@ local function copyDamage(copy): number
 	return Stats.swordDamage({ sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 })
 end
 
--- Equipar (Config.Loadout.Slots armas a la vez). Con un id, pone esa copia o la quita si ya estaba: va al primer
+-- Equipar (Stats.loadoutSlots armas a la vez: las de Config.Loadout.Slots más las del pase). Con un id, pone esa copia o la quita si ya estaba: va al primer
 -- hueco libre y, sin huecos, al de la equipada que menos daño hace; la última no se puede quitar. Con "best", deja
 -- equipadas las de más daño de la mochila. Las depositadas en la Bolsa de oro no cuentan para "best", y equipar una
 -- la saca de la bolsa.
@@ -260,7 +260,7 @@ local function onEquip(player: Player, id: unknown)
 		end)
 		PlayerData.edit(player, function(edited)
 			edited.loadout = {}
-			for slot = 1, math.min(Config.Loadout.Slots, #order) do
+			for slot = 1, math.min(Stats.loadoutSlots(player), #order) do
 				edited.loadout[slot] = order[slot].id
 			end
 		end)
@@ -280,7 +280,7 @@ local function onEquip(player: Player, id: unknown)
 			if #loadout > 1 then
 				table.remove(loadout, slot)
 			end
-		elseif #loadout < Config.Loadout.Slots then
+		elseif #loadout < Stats.loadoutSlots(player) then
 			table.insert(loadout, id)
 		else
 			local weakest, weakestDamage = 1, math.huge

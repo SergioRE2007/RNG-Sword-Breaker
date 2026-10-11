@@ -255,7 +255,7 @@ local function onSet(player: Player, id: unknown)
 				table.sort(spare, function(a, b)
 					return if a.damage ~= b.damage then a.damage > b.damage else a.id < b.id
 				end)
-				for position = 1, math.min(#spare, Config.GoldBag.Slots) do
+				for position = 1, math.min(#spare, Stats.bagSlots(player)) do
 					slots[position] = spare[position].id
 				end
 			end
@@ -284,7 +284,7 @@ local function onSet(player: Player, id: unknown)
 			end
 			table.remove(edited.loadout, equipped)
 		end
-		if #slots < Config.GoldBag.Slots then
+		if #slots < Stats.bagSlots(player) then
 			table.insert(slots, id)
 		else
 			local weakest, weakestDamage = 1, math.huge

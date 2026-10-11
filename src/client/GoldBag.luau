@@ -42,7 +42,7 @@ local CARD_HEIGHT = 12 -- studs del centro del saco al cartel
 -- Capas del cartel (la interfaz ordena el ZIndex globalmente).
 local Z = { card = 1, bar = 2, fill = 3, text = 4 }
 -- Dónde empiezan las armas depositadas: alrededor del saco, del lado de la parcela.
-local SPOTS = { -0.55, 0.55, -1.5, 1.5 } -- ángulo de cada hueco (0 = hacia la parcela)
+local SPOTS = { -0.55, 0.55, -1.5, 1.5, -1.02, 1.02, -2.05, 2.05 } -- ángulo de cada hueco (0 = hacia la parcela); los cuatro últimos, los del pase
 local SACK_RADIUS = 6.2
 local AIM_DROP = 4.5 -- lo que se le dice a OrbitWeapons que hay del centro del saco al suelo: así cruzan por el centro
 -- El saco de Blender (modelo "GoldSack") se encoge según se vacía y da un respingo con cada golpe.

@@ -721,7 +721,7 @@ function Backpack.start()
 		local copies = Stats.swords(player)
 
 		count.Text = `{#copies}/{Config.MaxSwords}`
-		swordsTitle.Text = `Tus espadas <font color="{Ui.SOFT}">· equipadas {#worn}/{Config.Loadout.Slots} · bolsa {#Stats.list(player, "Bag")}/{Config.GoldBag.Slots}</font>`
+		swordsTitle.Text = `Tus espadas <font color="{Ui.SOFT}">· equipadas {#worn}/{Stats.loadoutSlots(player)} · bolsa {#Stats.list(player, "Bag")}/{Stats.bagSlots(player)}</font>`
 		local key = `{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Bag")}`
 		if key ~= swordsKey then
 			swordsKey = key

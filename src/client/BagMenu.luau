@@ -39,6 +39,8 @@ local HOVER_EVERY = 0.1 -- segundos entre miradas a si el ratón está sobre el 
 local PICK_MARGIN = 1.5 -- studs de más alrededor del saco que cuentan como darle
 local REFRESH = 0.25 -- cada cuánto se pone al día la barra con la ventana abierta
 local SLOT = 104 -- lado de las casillas de los huecos
+local SLOT_SMALL = 64 -- con los huecos del pase (Stats.bagSlots) van en dos filas, más pequeñas
+local SLOT_AREA = 4 * SLOT + 3 * 14 -- ancho que ocupan los huecos sin el pase
 local CELL = 92 -- y de las de tus armas
 -- Capas de la barra (la interfaz ordena el ZIndex globalmente: lo demás va en la capa de su padre, por orden).
 local Z = { fill = 2, text = 3 }
@@ -50,6 +52,9 @@ local stageTitle: TextLabel
 local barFill: Frame
 local barAmount: TextLabel
 local rateLabel: TextLabel
+local slotGrid: UIGridLayout
+local slotHint: TextLabel
+local infoPanel: Frame
 local stockTitle: TextLabel
 local bestButton: TextButton
 local clearButton: TextButton
@@ -170,17 +175,29 @@ local function syncSlots(deposited)
 	for _, copy in deposited do
 		table.insert(parts, `{copy.id}:{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}`)
 	end
-	local key = table.concat(parts, ",") .. "|" .. tostring(player:GetAttribute("BagRate"))
+	local count = Stats.bagSlots(player)
+	local key = table.concat(parts, ",") .. "|" .. tostring(player:GetAttribute("BagRate")) .. "|" .. count
 	if key == slotKey then
 		return
 	end
 	slotKey = key
+	-- Con los huecos del pase: dos filas de casillas más pequeñas, sin la frase de abajo, y más sitio para los datos.
+	local double = count > Config.GoldBag.Slots
+	local side, gap = if double then SLOT_SMALL else SLOT, if double then 8 else 14
+	local columns = if double then math.ceil(count / 2) else count
+	local width = columns * side + (columns - 1) * gap
+	slotGrid.CellSize = UDim2.fromOffset(side, side)
+	slotGrid.CellPadding = UDim2.fromOffset(gap, gap)
+	slotGrid.FillDirectionMaxCells = columns
+	slotRow.Size = UDim2.fromOffset(width, if double then 2 * side + gap else side)
+	slotHint.Visible = not double
+	infoPanel.Size = UDim2.new(1, -(width + 14 + 14 + 12), 0, 132)
 	for _, child in slotRow:GetChildren() do
 		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
 	end
-	for slot = 1, Config.GoldBag.Slots do
+	for slot = 1, count do
 		local copy = deposited[slot]
 		local item: GuiObject
 		if copy then
@@ -206,7 +223,7 @@ local function syncStock(copies, worn: { number }, deposited)
 	for _, copy in deposited do
 		inBag[copy.id] = true
 	end
-	local full = #deposited >= Config.GoldBag.Slots
+	local full = #deposited >= Stats.bagSlots(player)
 	local global = tostring(player:GetAttribute("BagRate")) -- si cambia lo global del jugador, cambia lo que saca cada una
 	local seen = {}
 	local shown = {}
@@ -232,7 +249,7 @@ local function syncStock(copies, worn: { number }, deposited)
 		end
 		Ui.tip(cell, function()
 			local line = if Stats.isEquipped(player, copy.id) then "Equipada: al dejarla en la bolsa se quita del equipo"
-				elseif #Stats.list(player, "Bag") >= Config.GoldBag.Slots then "Bolsa llena: sustituye a la que menos saca"
+				elseif #Stats.list(player, "Bag") >= Stats.bagSlots(player) then "Bolsa llena: sustituye a la que menos saca"
 				else "Pulsa para dejarla en la bolsa"
 			return swordTip(copy, line)
 		end, true)
@@ -334,7 +351,7 @@ local function build()
 	slotRow = Instance.new("Frame")
 	slotRow.Name = "Slots"
 	slotRow.Position = UDim2.fromOffset(14, 12)
-	slotRow.Size = UDim2.fromOffset(Config.GoldBag.Slots * SLOT + (Config.GoldBag.Slots - 1) * 14, SLOT)
+	slotRow.Size = UDim2.fromOffset(SLOT_AREA, SLOT)
 	slotRow.BackgroundTransparency = 1
 	slotRow.Parent = top
 	local row = Instance.new("UIGridLayout")
@@ -342,6 +359,7 @@ local function build()
 	row.CellPadding = UDim2.fromOffset(14, 0)
 	row.SortOrder = Enum.SortOrder.LayoutOrder
 	row.Parent = slotRow
+	slotGrid = row
 
 	local hint = Ui.label(top, 15)
 	hint.Name = "Hint"
@@ -355,6 +373,7 @@ local function build()
 	hintLimit.MaxTextSize = 15
 	hintLimit.MinTextSize = 10
 	hintLimit.Parent = hint
+	slotHint = hint
 
 	local info = Instance.new("Frame")
 	info.Name = "Info"
@@ -363,6 +382,7 @@ local function build()
 	info.Size = UDim2.new(1, -(slotRow.Size.X.Offset + 14 + 14 + 12), 0, 132)
 	info.BackgroundTransparency = 1
 	info.Parent = top
+	infoPanel = info
 
 	stageTitle = Ui.label(info, 26)
 	stageTitle.Name = "Title"
@@ -512,7 +532,7 @@ end
 function BagMenu.start()
 	build()
 
-	for _, name in { "Swords", "Loadout", "Bag", "BagStage", "BagRate" } do
+	for _, name in { "Swords", "Loadout", "Bag", "BagStage", "BagRate", "Pass_arsenal" } do
 		player:GetAttributeChangedSignal(name):Connect(refresh)
 	end
 	window:GetPropertyChangedSignal("Visible"):Connect(function()

@@ -203,7 +203,8 @@ Config.Items = {
 -- Radius = círculo alrededor del jugador dentro del que se puede elegir objetivo; Leash = studs de más que puede alejarse
 -- del objetivo ya elegido antes de que las armas lo suelten; Travel = segundos que tardan en llegar al objetivo (antes no
 -- pega ninguna); Chain = lo mismo al saltar solas al siguiente enemigo de una mazmorra.
-Config.Loadout = { Slots = 4, Radius = 26, Leash = 8, Travel = 0.25, Chain = 0.15 }
+-- MaxSlots = huecos con la ventaja "extraSlots" de los pases (Stats.loadoutSlots): el tope al revisar lo guardado.
+Config.Loadout = { Slots = 4, MaxSlots = 8, Radius = 26, Leash = 8, Travel = 0.25, Chain = 0.15 }
 
 -- Bolsa de oro (server/GoldBag, cuentas en shared/BagInfo): detrás de cada parcela hay un saco al que pegan solas las
 -- armas que su dueño deposita (aparte de las equipadas), también mientras está desconectado y sin tope de tiempo.
@@ -215,6 +216,7 @@ Config.Loadout = { Slots = 4, Radius = 26, Leash = 8, Travel = 0.25, Chain = 0.1
 -- la anterior, sin fin. MinAway = segundos fuera a partir de los que se avisa de lo ganado al volver.
 Config.GoldBag = {
 	Slots = 4,
+	MaxSlots = 8, -- huecos con la ventaja "extraSlots" de los pases (Stats.bagSlots): el tope al revisar lo guardado
 	HitTime = 1,
 	Coins = 1,
 	Damage = 1,
@@ -876,7 +878,9 @@ Config.Trade = {
 -- walkSpeed = velocidad al andar (Stats.walkSpeed); dungeonLoot = premios de mazmorra (server/Loot). chatTag = etiqueta
 -- delante del nombre en el chat (client/ChatTags), del color del pase. Para la tarjeta de la tienda: "icon" = logo de
 -- Ui.IMAGES (el grande y los que caen por detrás), "tag" = texto gordo de la esquina y "ribbon" (opcional) = cinta.
-Config.GamepassOrder = { "vip", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto" }
+-- extraSlots = armas de más que se pueden equipar y, otras tantas, dejar en la Bolsa de oro (Stats.loadoutSlots y
+-- Stats.bagSlots; pedido por el usuario).
+Config.GamepassOrder = { "vip", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }
 Config.Gamepasses = {
 	vip = {
 		id = 0,
@@ -923,6 +927,15 @@ Config.Gamepasses = {
 		color = Color3.fromRGB(255, 200, 60),
 		perksText = { "Botón Auto junto al arma: en tu parcela, tu personaje va solo a por los objetos y los rompe" },
 		perks = { autoFarm = 1 },
+	},
+	arsenal = {
+		id = 0,
+		name = "Arsenal doble",
+		icon = "espada", tag = "+4",
+		price = 799,
+		color = Color3.fromRGB(240, 80, 90),
+		perksText = { "Equipa 4 armas más: 8 atacando a la vez", "4 huecos más en la Bolsa de oro: 8 armas sacando monedas" },
+		perks = { extraSlots = 4 },
 	},
 	forge = {
 		id = 0,
