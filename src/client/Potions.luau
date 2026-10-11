@@ -28,15 +28,20 @@ local function hex(color: Color3): string
 	return "#" .. color:ToHex()
 end
 
--- Icono de la poción de esa familia (frasco del color de la familia con su símbolo).
-function Potions.icon(parent: Instance, family: string)
+-- Icono de la poción: su imagen de Ui.IMAGES (potion_<familia>_<tier>) o, si no tiene, el frasco hecho con marcos.
+function Potions.icon(parent: Instance, family: string, tier: number)
+	local key = PotionInfo.key(family, tier)
+	if Ui.IMAGES[key] then
+		Ui.image(parent, key)
+		return
+	end
 	local info = cfg.Families[family]
 	Ui.potionIcon(parent, info.color, info.glyph)
 end
 
--- Texto corto del tier para la etiqueta de una casilla: I a VI, y EXC / DIV para Exclusiva y Divina.
+-- Texto corto del tier para la etiqueta de una casilla (I a V).
 function Potions.tag(tier: number): string
-	return if tier <= 6 then PotionInfo.tierName(tier) else string.upper(string.sub(PotionInfo.tierName(tier), 1, 3))
+	return PotionInfo.tierName(tier)
 end
 
 -- Pone la etiqueta del tier en una casilla (más ancha si el texto lo pide; `large` para las casillas grandes de la mochila).
@@ -113,7 +118,7 @@ function Potions.start()
 		iconBox.Size = UDim2.fromOffset(TILE_W - 14, TILE_W - 14)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = cell
-		Potions.icon(iconBox, family)
+		Potions.icon(iconBox, family, tier)
 		Potions.addTag(cell, tier)
 		local text = Ui.cellLabel(cell, "")
 		-- El latido de poco tiempo va en el reloj: la casilla ya lleva el UIScale del ratón (Ui.pressable) y Roblox solo

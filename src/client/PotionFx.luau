@@ -1,6 +1,6 @@
 -- Efectos de las pociones en el personaje (Config.Potions). Cada poción activa deja un efecto suave de partículas con el
 -- estilo de su familia ("fx"), que crece con el tier (Config.Potions.Fx): más partículas y más grandes, una luz desde
--- cierto tier y, desde Exclusiva, destellos grandes en el pecho (los de Divina, los más). Depende solo de los atributos
+-- cierto tier y, en el tier más alto, destellos grandes en el pecho. Depende solo de los atributos
 -- del Player ("Potion_<familia>", que publica el servidor): al caducar la poción el efecto se quita y al reaparecer el
 -- personaje se vuelve a poner. De los demás jugadores solo se ve su mejor poción (no llenar la pantalla); de uno mismo,
 -- todas. Las partículas salen de una pieza invisible más grande que el cuerpo, soldada a la raíz (si salieran de la
@@ -19,7 +19,6 @@ local cfg = Config.Potions
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local FIRE = "rbxasset://textures/particles/fire_main.dds"
-local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local PREFIX = "PotionFx_" -- nombre de lo que cuelga de la pieza de efectos, más la familia
 local VOLUME = PREFIX .. "Volume"
 local VOLUME_SIZE = Vector3.new(5, 7, 5) -- un poco más que el cuerpo
@@ -86,24 +85,6 @@ local STYLES = {
 			})
 		end,
 	},
-	-- Velocidad de golpe: rachas finas que suben muy rápido pegadas al cuerpo, como si cortara el aire.
-	gale = {
-		at = Vector3.new(0, -1, 0),
-		build = function(att, color, rate, size)
-			emitter(att, SPARKLE, glow(color), rate * 1.2, {
-				Lifetime = NumberRange.new(0.45, 0.7),
-				Speed = NumberRange.new(0.5, 1),
-				Shape = SHAPE.Cylinder,
-				ShapeStyle = STYLE.Surface,
-				ShapeInOut = IN_OUT.Outward,
-				Acceleration = Vector3.new(0, 22, 0),
-				Orientation = Enum.ParticleOrientation.VelocityParallel,
-				Squash = NumberSequence.new(2.5), -- alargadas en el sentido en que suben
-				Size = sizeCurve(0.45 * size, 0.05),
-				Transparency = fade(0.15),
-			})
-		end,
-	},
 	-- Vida: destellos verdes que suben despacio por todo el cuerpo.
 	vitality = {
 		at = Vector3.new(0, 0, 0),
@@ -150,8 +131,8 @@ local STYLES = {
 			})
 		end,
 	},
-	-- Suerte de grado: columna de destellos rosas que sube por el contorno del cuerpo.
-	rank = {
+	-- Monedas: columna de destellos dorados que sube por el contorno del cuerpo.
+	coins = {
 		at = Vector3.new(0, 0, 0),
 		build = function(att, color, rate, size)
 			emitter(att, SPARKLE, glow(color), rate, {
@@ -162,33 +143,6 @@ local STYLES = {
 				ShapeInOut = IN_OUT.Outward,
 				Acceleration = Vector3.new(0, 3, 0),
 				Size = sizeCurve(0.7 * size, 0.05),
-			})
-		end,
-	},
-	-- Suerte de rasgo: bruma arcana violeta con destellos, alrededor del cuerpo.
-	arcane = {
-		at = Vector3.new(0, 0, 0),
-		build = function(att, color, rate, size)
-			emitter(att, SMOKE, ColorSequence.new(color), rate * 0.5, {
-				Lifetime = NumberRange.new(1.2, 1.8),
-				Speed = NumberRange.new(0.3, 0.8),
-				Shape = SHAPE.Sphere,
-				ShapeStyle = STYLE.Surface,
-				ShapeInOut = IN_OUT.Outward,
-				RotSpeed = NumberRange.new(-60, 60),
-				LockedToPart = true,
-				LightEmission = 0.6,
-				Size = sizeCurve(0.6 * size, 1.4 * size),
-				Transparency = fade(0.5),
-			})
-			emitter(att, SPARKLE, glow(color), rate * 0.6, {
-				Lifetime = NumberRange.new(0.8, 1.4),
-				Speed = NumberRange.new(0.5, 1.2),
-				Shape = SHAPE.Sphere,
-				ShapeStyle = STYLE.Surface,
-				ShapeInOut = IN_OUT.Outward,
-				LockedToPart = true,
-				Size = sizeCurve(0.7 * size, 0),
 			})
 		end,
 	},

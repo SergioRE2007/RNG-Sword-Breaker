@@ -121,7 +121,7 @@ local function info(drop)
 			stats = `<font color="{hex(family.color:Lerp(WHITE, 0.3))}">{PotionInfo.effect(drop.family, drop.tier)}</font>\n<font color="{Ui.SOFT}">Dura {PotionInfo.minutes(PotionInfo.duration(drop.tier))}</font>`,
 			amount = drop.amount,
 			icon = function(cell)
-				Potions.icon(cell, drop.family)
+				Potions.icon(cell, drop.family, drop.tier)
 				Potions.addTag(cell, drop.tier, true)
 			end,
 		}

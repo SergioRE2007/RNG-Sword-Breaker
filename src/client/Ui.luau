@@ -1280,6 +1280,32 @@ Ui.IMAGES = {
 	monedas = "rbxassetid://134320261318517",
 	objetos = "rbxassetid://91743584320580",
 	patron_rombos = "rbxassetid://127373214598364", -- textura en mosaico de Ui.pattern
+	-- Frascos de las pociones, potion_<familia>_<tier> (client/Potions.icon; sin imagen, el frasco hecho con marcos).
+	potion_boxLuck_1 = "rbxassetid://96905997595105",
+	potion_boxLuck_2 = "rbxassetid://85811671452646",
+	potion_boxLuck_3 = "rbxassetid://117404142077120",
+	potion_boxLuck_4 = "rbxassetid://128708709462935",
+	potion_boxLuck_5 = "rbxassetid://139192967589052",
+	potion_coins_1 = "rbxassetid://109785038532302",
+	potion_coins_2 = "rbxassetid://137255215065721",
+	potion_coins_3 = "rbxassetid://71890532409500",
+	potion_coins_4 = "rbxassetid://115352503290673",
+	potion_coins_5 = "rbxassetid://133301146378505",
+	potion_damage_1 = "rbxassetid://133705477572967",
+	potion_damage_2 = "rbxassetid://117131824226103",
+	potion_damage_3 = "rbxassetid://121532166515323",
+	potion_damage_4 = "rbxassetid://95640167690304",
+	potion_damage_5 = "rbxassetid://71621091287999",
+	potion_health_1 = "rbxassetid://94471569297218",
+	potion_health_2 = "rbxassetid://108266536850091",
+	potion_health_3 = "rbxassetid://120115396221031",
+	potion_health_4 = "rbxassetid://84621521086454",
+	potion_health_5 = "rbxassetid://72411446828917",
+	potion_weaponLuck_1 = "rbxassetid://121106856770223",
+	potion_weaponLuck_2 = "rbxassetid://130523795418325",
+	potion_weaponLuck_3 = "rbxassetid://108469951057641",
+	potion_weaponLuck_4 = "rbxassetid://123089696540790",
+	potion_weaponLuck_5 = "rbxassetid://139693134801553",
 	rebirth = "rbxassetid://90522539620973",
 	suerte = "rbxassetid://114098318122458",
 	tienda_robux = "rbxassetid://93004325604664",
@@ -1412,7 +1438,7 @@ local POTION_GLYPHS = {
 }
 
 -- Poción: frasco de cristal con corcho, el líquido del color de la familia y un símbolo encima (`glyph`: sword = daño,
--- bolt = velocidad de golpe, heart = vida, box = suerte de cajas, star = suerte de armas, chevron = grado, spark = rasgo; sin él, solo el frasco).
+-- heart = vida, box = suerte de cajas, star = suerte de armas, chevron = grado, spark = rasgo; sin él, solo el frasco).
 function Ui.potionIcon(parent: Instance, color: Color3, glyph: string?)
 	-- El frasco ocupa todo su hueco y siempre es cuadrado (si el hueco no lo es, se ajusta al lado menor).
 	local holder = iconHolder(parent, 0)
