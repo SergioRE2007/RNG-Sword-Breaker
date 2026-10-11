@@ -8,9 +8,9 @@
 -- Calcula: Config.ObjectRolls.TypeLuckPower (para que el arma más rara salga cada `horasArmaTope` con la suerte al
 -- máximo), "reward" y "hp" de Config.Destructibles, los "costs" de Config.Upgrades y de Config.Rebirth, "rarity" de
 -- Config.Artifacts y el daño recomendado ("hp") de Config.Dungeons.
--- Cómo: juega partidas del jugador tipo que recibe cada compra justo a su hora (modo forzado) y mira cuánto pega
--- cuando cada tipo de objeto pasa a ser el habitual (de ahí las vidas) y cuánto gana entre compra y compra (de ahí los
--- precios). Luego juega partidas comprando de verdad con esos precios y los corrige hasta que cuadran con el calendario.
+-- Cómo: juega partidas del jugador tipo que recibe cada compra justo a su hora (modo forzado) y mira cuánto pega con
+-- sus armas equipadas (la suma de todas: una andanada) cuando cada tipo de objeto empieza a salirle a menudo (de ahí
+-- las vidas) y cuánto gana entre compra y compra (de ahí los precios). Luego juega partidas comprando de verdad con esos precios y los corrige hasta que cuadran con el calendario.
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 local Cargar = require("./cargar")
@@ -69,15 +69,17 @@ local function lista(values: { number }): string
 	return "{ " .. table.concat(parts, ", ") .. " }"
 end
 
--- Mazmorras: daño recomendado de cada zona = el del jugador tipo a su hora, suavizado con el de las zonas vecinas (en
--- escala logarítmica, como los precios). El jugador tipo sube de daño a escalones (un rasgo, un accesorio o un
--- renacimiento a una hora en punto) y sin suavizar la escalera salía a trompicones: un salto de x200 y, detrás, dos
--- zonas casi iguales (x2), que se abrían a la vez. `runs` = partidas del jugador que va justo al ritmo del calendario.
+-- Mazmorras: daño recomendado de cada zona (su "hp", por el que va la vida de sus enemigos) = la vida con la que una
+-- partida le dura objetivo.mazmorra.comoda segundos al jugador tipo a la hora de esa zona, con las armas que lleve
+-- (M.vidaMazmorra), suavizada con la de las zonas vecinas (en escala logarítmica, como los precios). El jugador tipo
+-- sube de daño a escalones (un rasgo, un accesorio o un renacimiento a una hora en punto) y sin suavizar la escalera
+-- salía a trompicones: un salto de x200 y, detrás, dos zonas casi iguales (x2), que se abrían a la vez.
+-- `runs` = partidas del jugador que va justo al ritmo del calendario.
 local function escalera(runs): { number }
 	local crudo = {}
 	for index in Config.Dungeons do
 		crudo[index] = med(runs, function(run)
-			return run.danoMazmorra[index]
+			return run.vidaMazmorra[index]
 		end)
 	end
 	local zonas = {}
@@ -434,7 +436,8 @@ local tipo = forzadas[math.ceil(#forzadas / 2)]
 local out = {
 	"-- ARCHIVO GENERADO por tools/equilibrio/generar.luau: no lo edites a mano.",
 	"-- Cómo va el jugador tipo del calendario de progreso a cada hora de juego: lo usa Config.Test.Progress (solo en",
-	"-- Studio) para empezar una partida en esa etapa. `armor` = { suerte, ataque, aparición } que suma su armadura.",
+	"-- Studio) para empezar una partida en esa etapa. `swords` = sus armas equipadas, por hueco, cada una con su metal, su",
+	"-- tamaño, su rasgo y su grado (0 = ninguno); `armor` = { suerte, ataque, aparición } que suma su armadura.",
 	"return {",
 }
 for _, hour in objetivo.fotos do
@@ -450,7 +453,11 @@ for _, hour in objetivo.fotos do
 				zona += 1
 			end
 		end
-		table.insert(out, `	\{ hours = {hour}, upgrades = \{ {table.concat(upgrades, ", ")} }, rebirths = {foto.rebirths}, sword = {foto.sword}, metal = {foto.metal}, size = {foto.size}, trait = {foto.trait}, grade = {foto.grade}, artifacts = \{ {table.concat(foto.artifacts, ", ")} }, gear = \{ {table.concat(foto.gear, ", ")} }, dungeon = {math.max(zona, 1)}, armor = \{ {foto.armadura[1]}, {foto.armadura[2]}, {foto.armadura[3]} } },`)
+		local swords = {}
+		for _, arma in foto.armas do
+			table.insert(swords, `\{ sword = {arma.sword}, metal = {arma.metal}, size = {arma.size}, trait = {arma.trait}, grade = {arma.grade} }`)
+		end
+		table.insert(out, `	\{ hours = {hour}, upgrades = \{ {table.concat(upgrades, ", ")} }, rebirths = {foto.rebirths}, swords = \{ {table.concat(swords, ", ")} }, artifacts = \{ {table.concat(foto.artifacts, ", ")} }, gear = \{ {table.concat(foto.gear, ", ")} }, dungeon = {math.max(zona, 1)}, armor = \{ {foto.armadura[1]}, {foto.armadura[2]}, {foto.armadura[3]} } },`)
 	end
 end
 table.insert(out, "}")

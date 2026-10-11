@@ -1363,6 +1363,32 @@ do
 	equal(studio.writes, testWrites, "modo de pruebas: no escribe")
 	equal(studio.value.lock.id, liveLock, "modo de pruebas: no toca el candado de la partida de verdad")
 	live.save()
+
+	-- Config.Test.Progress: el jugador tipo de shared/BalanceSnapshots entra con todas sus armas equipadas (hasta el tope
+	-- de huecos), cada una con su metal, su rasgo y su grado.
+	local staged = fixture(nil, dataStore(nil))
+	staged.services.RunService.IsStudio = function() return true end
+	staged.config.Test.Progress = 1
+	local slots = staged.config.Loadout.Slots
+	local stagedSwords = {}
+	for index = 1, slots + 1 do
+		stagedSwords[index] = { sword = index + 1, metal = if index == 1 then 2 else 0, size = 0, trait = index, grade = if index == 2 then 3 else 0 }
+	end
+	local snapshots = staged.load("src/shared/BalanceSnapshots")
+	table.clear(snapshots)
+	table.insert(snapshots, { hours = 1, upgrades = { luck = 3 }, rebirths = 1, swords = stagedSwords, artifacts = { 1 }, gear = { 1 }, dungeon = 1, armor = { 0.1, 0, 0 } })
+	local stagedPlayer = join(staged, 1)
+	local stagedData = staged.data.read(stagedPlayer)
+	equal(#stagedData.loadout, slots, "Progress: equipa las armas de la foto, hasta el tope de huecos")
+	local firstCopy = staged.data.findSword(stagedData, stagedData.loadout[1])
+	local secondCopy = staged.data.findSword(stagedData, stagedData.loadout[2])
+	equal(firstCopy.sword, 2, "Progress: la primera arma de la foto va en el primer hueco")
+	equal(firstCopy.metal, 2, "Progress: con su metal")
+	equal(firstCopy.trait, 1, "Progress: con su rasgo")
+	equal(secondCopy.grade, 3, "Progress: cada arma con su grado")
+	equal(#staged.load("src/shared/Stats").loadout(stagedPlayer), slots, "Progress: equipadas publicadas")
+	equal(stagedData.rebirths, 1, "Progress: renacimientos de la foto")
+	leave(staged, stagedPlayer)
 end
 
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)

@@ -37,61 +37,82 @@ Objetivo.mazmorras = { 5 * MIN, 1 * H, 2.5 * H, 6 * H, 12 * H, 22 * H, 36 * H, 5
 Objetivo.premio = { base = 2, potencia = 0.75 }
 
 -- Golpes que pide un objeto corriente (común y de tamaño normal) de un tipo cuando ese tipo empieza a salirle a menudo
--- al jugador (`parte` = 1 de cada 10 objetos), del primer tipo al último. Antes de eso es un objeto raro y duro (decenas
--- de golpes la primera vez que sale) y después, con el arma que va sacando, acaba cayendo de uno. Se mide ahí y no
+-- al jugador (`parte` = 1 de cada 10 objetos), del primer tipo al último. Un golpe es una andanada de sus armas
+-- equipadas (la vida se mide con la suma del daño de todas). Antes de eso es un objeto raro y duro (decenas
+-- de golpes la primera vez que sale) y después, con las armas que va sacando, acaba cayendo de uno. Se mide ahí y no
 -- cuando el tipo ya es el habitual porque, medido entonces, cada nivel de suerte llenaba la parcela de objetos que no
 -- se podían romper y subir la suerte frenaba el juego (un muro de 20 h hacia la hora 80).
 Objetivo.golpes = { inicio = 1, final = 3, parte = 0.1 }
 
--- EL JUGADOR TIPO (lo que no sale de Config). Medido en Studio con un personaje automático que anda hasta el objeto más
--- cercano y le pega al ritmo del arma (9 oct 2026): recién empezado rompe 42 objetos por minuto y con la parcela al
--- máximo (30 huecos, uno cada 0,42 s) 142, lo que aparece en los dos casos; cuando los objetos piden ~8 golpes, 24 por
--- minuto con la parcela llena y 1,14 objetos por espadazo (espada corta). De ahí `paseo` y `densidad`; la
--- `eficiencia` es lo que le falta a una persona para ser ese personaje, y está sin medir: corregirla al jugar.
+-- EL JUGADOR TIPO (lo que no sale de Config). Lleva equipadas sus armas de más daño (hasta Config.Loadout.Slots), que
+-- vuelan solas al objetivo. Medido en Studio con el Auto de la parcela (11 oct 2026, sin VIP): cuando todo cae de un
+-- golpe rompe lo que aparece (40,7 objetos por minuto recién empezado y 130–150 con la parcela al máximo, 30 huecos y
+-- uno cada 0,42 s); con objetos de varias andanadas cada arma pega a su ritmo sin perder golpes y entre un objeto roto
+-- y el primer golpe al siguiente pasan 0,20 s (`salto`). Las que salpican (hachas y martillos) y las lanzas se llevan
+-- además, con la parcela llena de N objetos, (N − 1) · π · (R + 0,5)² / `parcela` y (N − 1) · 0,5 · (L + 1)² / `parcela`
+-- objetos de más por golpe (R = alcance de la salpicadura, L = el de la lanza). La `eficiencia` es lo que le falta a
+-- una persona para ser ese personaje, y está sin medir: corregirla al jugar.
 Objetivo.jugador = {
 	eficiencia = 0.68, -- parte del tiempo que de verdad está rompiendo objetos: 0,8 de atención por 0,85 de la sesión en la parcela
-	paseo = 0.1, -- segundos de media para llegar al siguiente objeto
-	densidad = 0.01, -- objetos de más que se lleva cada espadazo por cada hueco de la parcela (con 30 huecos, 1,3 por golpe: algo más que lo medido, porque las armas y los objetos del final son más grandes)
-	paciencia = 400, -- golpes que como mucho le da a un objeto (un par de minutos); los más duros los deja
+	salto = 0.2, -- segundos entre que rompe un objeto y sus armas dan el primer golpe al siguiente (Config.Loadout.Chain y una vuelta del servidor)
+	parcela = 7600, -- lo que divide en la cuenta de la salpicadura (studs cuadrados por los que se reparten los objetos)
+	paciencia = 120, -- segundos que como mucho le dedica a un objeto; los más duros los deja
 }
 -- Lo que lleva puesto a cada hora (lo dan las mazmorras, que se equilibran para que esto se cumpla):
 -- { hora, índice de Config.Traits }, { hora, índice de Config.Grades } y { hora, suerte, ataque, aparición } de la armadura.
--- De aquí salen los precios (generar.luau). El informe juega las mazmorras de verdad y dice cuánto se cumple: con los
--- números de octubre de 2026 se cumple todo menos los dos últimos escalones, Trascendente y Z+, que por el objetivo
--- del bucle (abajo) llegan hacia las 160–170 h y no a las 140; aun así la partida entera acaba en su hora.
-Objetivo.rasgo = { { 0.7, 3 }, { 1.5, 6 }, { 3, 9 }, { 5, 10 }, { 18, 11 }, { 60, 12 }, { 140, 13 } }
-Objetivo.grado = { { 1, 3 }, { 4, 5 }, { 10, 6 }, { 30, 7 }, { 70, 8 }, { 140, 9 } }
+-- El rasgo y el grado son los de su primera arma: la segunda, la tercera y la cuarta llevan cada uno cuando las tiradas
+-- acumuladas llegan a 2, 3 y 4 veces su pity (el modelo saca la curva de tiradas de estas mismas tablas).
+-- De aquí salen los precios (generar.luau). El informe juega las mazmorras de verdad y dice cuánto se cumple: estas
+-- tablas son lo que saca su jugador (11 oct 2026) con las caídas de Config puestas para el bucle de abajo. Los
+-- primeros escalones de rasgo le salen antes, por suerte y no por pity; se dejan en la hora de su pity porque de
+-- ellos sale la curva de tiradas de las otras armas. La armadura va a escalones y la de verdad sube poco a poco, así
+-- que quien juega sus mazmorras va algo por delante del calendario: lo completa todo hacia las 145 h y no a las 175
+-- (visto bueno del usuario, 11 oct 2026). Para acercarlos habría que interpolar la tabla en modelo.partida.
+Objetivo.rasgo = { { 0.2, 3 }, { 0.5, 6 }, { 1.8, 9 }, { 2.6, 10 }, { 10, 11 }, { 34, 12 }, { 85, 13 }, { 165, 14 } }
+Objetivo.grado = { { 0.5, 3 }, { 1.4, 5 }, { 3.2, 6 }, { 14, 7 }, { 35, 8 }, { 78, 9 }, { 180, 10 } }
 Objetivo.armadura = {
-	{ 0.5, 0.05, 0.03, 0 },
-	{ 2, 0.2, 0.15, 0.04 },
-	{ 6, 0.5, 0.4, 0.06 },
-	{ 15, 1, 0.8, 0.08 },
-	{ 36, 2, 1.5, 0.12 },
-	{ 70, 3.5, 2.5, 0.16 },
-	{ 110, 5, 4, 0.2 },
-	{ 175, 9, 7, 0.25 },
+	{ 0.5, 0.07, 0, 0 },
+	{ 2, 0.25, 0.07, 0.05 },
+	{ 6, 0.5, 0.28, 0.06 },
+	{ 15, 1, 0.7, 0.09 },
+	{ 36, 1.6, 1.5, 0.12 },
+	{ 70, 2.4, 2.3, 0.17 },
+	{ 110, 3.7, 4.4, 0.18 },
+	{ 175, 8.6, 7.6, 0.25 },
 }
 
 -- MAZMORRAS: cómo las juega el jugador tipo. Con esto el simulador juega también sus partidas de mazmorra (cristales,
 -- armadura y lo que saca al desmontarla) y el informe dice si se cumplen las tablas de arriba.
--- Lo que dura una partida está medido en Studio con el personaje en Auto (9 oct 2026): con espada (0,35 s entre golpes)
--- y todo cayendo de un golpe, 19 s de pelea (zona 4); con espada y 3 / 10 / 60 golpes para esbirro, bruto y jefe, 52 s
--- (zona 5); con martillo (0,77 s) y 2 / 5 / 25 golpes, 42 s (zona 7). Los enemigos se le echan encima en piña y cada
--- espadazo se lleva a todos los de un tipo: con el martillo cada oleada dura los golpes del más duro; con la espada,
--- los de cada tipo uno detrás de otro (modelo.duracionMazmorra, que acierta esas tres medidas con un 7 % de margen).
--- Con "Repetir", tres seguidas con martillo y todo de un golpe (zona 6): 20 s de pelea y 24 s de una a la siguiente.
--- Sin medir: hacha (se cuenta como el martillo), espadas dobles y lanza (como la espada), y si aguanta vivo.
+-- Lo que dura una partida está medido en Studio con el personaje en Auto y Repetir (11 oct 2026, zona 1, en solitario,
+-- oleadas de 4, 5, 7 y 4 enemigos; ya sin el empujón de los golpes, que ahora paran al enemigo): con cuatro espadas y
+-- todo cayendo de un golpe, 23,1 s de una partida a la siguiente (de 22,2 a 24,0); con cuatro espadas y 5 / 17 / 97
+-- golpes para esbirro, bruto y jefe, 38,8 s (de 37,5 a 40,1); con cuatro martillos y 2 / 6 / 35 golpes, 30,8 s (de
+-- 30,0 a 32,2). Las armas cogen a los enemigos de uno en uno según entran en su círculo: cada oleada son los 2 s de
+-- Config.Dungeon.WaveDelay, `oleada` hasta el primer golpe, los golpes de cada arma a su ritmo (medido: 0,37 / 1,43 /
+-- 8,4 s por esbirro, bruto y jefe con las espadas, lo que da la cuenta) y, de un enemigo al siguiente, un salto que
+-- depende de lo que haya durado la pelea con el anterior: si cae al momento hay que esperar a que llegue el siguiente
+-- (`salto`: 0,53 s de media con espadas); si aguanta, los demás ya están en el círculo y solo es el vuelo (`cadena`);
+-- entre medias, cadena + (salto − cadena) · e^(−pelea / `calma`) (tras un esbirro de 0,37 s, 0,34 s de media).
+-- Con eso modelo.duracionMazmorra da 23,1 / 38,3 / 31,0 s para las tres medidas.
+-- Los martillos salpican poco: 0,035 enemigos de más por golpe y por cada otro enemigo vivo, con 9,7 de alcance (de
+-- ahí `salpica`, con la misma cuenta que en la parcela). Sin medir: la salpicadura de hachas y lanzas (se cuenta con
+-- esa misma constante), las zonas con más enemigos y si aguanta vivo.
 Objetivo.mazmorra = {
 	parte = 0.15, -- parte de la sesión que pasa en mazmorras (el resto, 0,85, es la parcela y ya va en `eficiencia`)
 	atencion = 0.8, -- parte de ese tiempo que de verdad está peleando (la misma atención que en la parcela)
-	comoda = 75, -- segundos: juega la zona más alta que termina en menos de esto (la primera, en lo que tarde). Con espada es cuando ya pega más o menos el daño recomendado de la zona
+	comoda = 75, -- segundos: juega la zona más alta que termina en menos de esto (la primera, en lo que tarde). El daño recomendado de cada zona es la vida que la deja en esto al jugador tipo a su hora
 	entrada = 4, -- segundos de una partida a la siguiente con "Repetir" (medido: los 4 de Config.Dungeon.ExitDelay)
-	oleada = 2, -- segundos de cada oleada entre que aparecen los enemigos y los tiene encima (medido: de 1 a 3)
+	oleada = 0.62, -- segundos de cada oleada entre que aparecen los enemigos y les llega el primer golpe
+	salto = 0.54, -- segundos de un enemigo que cae al momento al primer golpe al siguiente (lo que tarda en entrar en el círculo)
+	cadena = 0.16, -- lo mismo cuando el siguiente ya está dentro (Config.Loadout.Chain y una vuelta del servidor)
+	calma = 0.6, -- segundos de pelea con un enemigo tras los que el siguiente ya suele estar dentro del círculo
+	salpica = 9300, -- lo que divide en la cuenta de la salpicadura dentro de la arena (como `parcela` en Objetivo.jugador)
 }
 -- Quien deja el personaje en "Auto" y "Repetir" sin parar en la mejor zona, ya con el juego completado: cristales de
--- rasgo y de grado (contando los de desmontar la armadura) que saca en esas horas. Decidido por el usuario (9 oct
--- 2026): con esto Paradoja (52 600 tiradas) son unos 3 días y medio de bucle e ∞ (62 500) unos 4.
-Objetivo.bucle = { horas = 24, rasgo = 15000, grado = 15000 }
+-- rasgo y de grado (contando los de desmontar la armadura) que saca en esas horas. Decidido por el usuario (11 oct
+-- 2026, al pasar a cuatro armas; antes 15 000): con esto Paradoja (52 600 tiradas) sale en la primera arma en unos
+-- 1,75 días de bucle y en las cuatro en unos 7.
+Objetivo.bucle = { horas = 24, rasgo = 30000, grado = 30000 }
 
 -- Horas de las que se guarda el estado del jugador tipo (Config.Test.Progress, para probar cada etapa en Studio).
 Objetivo.fotos = { 0.5, 2, 5, 15, 40, 80, 120, 170, 200 }

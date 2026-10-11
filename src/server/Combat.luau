@@ -113,7 +113,7 @@ local function blow(player: Player, attack, weapon, slot: number, root: BasePart
 	local target: BasePart = attack.target
 	local origin, range, arc = Hitbox.spread(weapon.kind, weapon.length, root.Position, target.Position)
 	if attack.enemy then
-		Dungeons.hit(player, target, weapon.damage, root.Position, slot)
+		Dungeons.hit(player, target, weapon.damage, slot)
 		if origin then
 			Dungeons.strike(player, origin, range, arc, weapon.damage, { [target] = true }, slot)
 		end
