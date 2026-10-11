@@ -1083,6 +1083,9 @@ def cloth(profile, n=28, folds=7, lean=(0.0, 0.0), seed=5):
 
 SACK_HEIGHT = 12.4  # del suelo al borde de la boca
 SACK_LEAN = (0.55, 0.3)  # lo que se vence la boca hacia un lado
+SACK_SCALE = 1.1  # a cuánto pone el juego el saco y su pedestal (SACK_SCALE de server/GoldBag)
+SACK_DISTANCE = 27.0  # studs del muro de la parcela al centro del saco (DISTANCE de server/GoldBag)
+PATH_WIDTH = 9.0
 
 
 def sack_lean(y):
@@ -1093,7 +1096,8 @@ def sack_lean(y):
 def gold_sack(p):
     """Saco de oro atado con cuerda, con una moneda antigua de emblema, papeles shide colgando de la cuerda y oro
     rebosando por la boca. Va en dos piezas con el mismo origen: el saco (GoldSack, que el juego puede encoger según
-    se vacía) y su pedestal de piedra con pilas de monedas y lingotes (GoldSackBase). El frente (-Z) mira a la
+    se vacía), su pedestal de piedra con pilas de monedas y lingotes (GoldSackBase) y el camino de losas que llega
+    del paso del muro de la parcela (GoldSackPath, en studs del juego: va sin escalar). El frente (-Z) mira a la
     parcela."""
     rng = random.Random(77)
     # Tela: barriga ancha y caída, cuello estrangulado por la cuerda y boca abierta con volantes.
@@ -1123,16 +1127,15 @@ def gold_sack(p):
         p.branch("Rope", knot, end, 0.26, 0.2, 6)
         p.add("Rope", sphere(0.42, 6, 4), T(*end) @ S(1, 1.35, 1))
         p.add("Gold", torus(0.3, 0.1, 8, 4), T(end[0], end[1] + 0.45, end[2]))
-    # Shide: tiras de papel en zigzag colgando de la cuerda (como en un shimenawa), a los lados y detrás. Bajan
-    # tumbadas sobre el hombro del saco: de (radio 3,1, altura 9,2) a (radio 6,1, altura 6,9).
-    slope = math.degrees(math.atan2(3.0, 2.3))
-    for degrees in (62, -58, 138, -132):
-        hang = T(nx, 9.1, nz) @ R("Y", degrees) @ T(0, 0, 2.95) @ R("X", -slope)
-        for k in range(3):
-            p.add("White", box(0.95, 1.05, 0.08), hang @ T((0.34 if k % 2 else -0.34), -0.62 - k * 1.0, 0.03 * k) @ R("Z", 14 if k % 2 else -14))
+    # Tablilla de madera (ema) colgando del nudo, con su cordón.
+    tag = T(nx + 0.2, 7.55, nz - 5.05) @ R("X", -24) @ R("Z", 7)
+    p.branch("Rope", knot, (nx + 0.2, 8.5, nz - 4.5), 0.14, 0.12, 5)
+    p.add("Wood", box(1.9, 2.3, 0.24), tag)
+    p.add("Wood", frustum(1.9, 0.24, 0.5, 0.24, 0.55), tag @ T(0, 1.42, 0))
+    p.add("Gold", cyl(0.42, 0.1, 10), tag @ T(0, -0.1, -0.13) @ R("X", -90))
 
     # Emblema al frente: una moneda antigua (con su agujero cuadrado) cosida a la barriga.
-    front = T(0.12, 4.5, -6.3) @ R("X", -86)
+    front = T(0.12, 4.5, -6.42) @ R("X", -86)
     p.add("Gold", cyl(2.5, 0.38, 16), front)
     p.add("Gold", torus(2.3, 0.26, 16, 5), front @ T(0, 0.34, 0))
     p.add("Gold", torus(0.95, 0.2, 4, 4), front @ T(0, 0.34, 0) @ R("Y", 45))
@@ -1153,12 +1156,19 @@ def gold_sack(p):
         a = math.radians(degrees)
         p.add("Gold", cyl(0.82, 0.19, 10), T(mx + 1.5 * math.sin(a), 12.75, mz + 1.5 * math.cos(a)) @ R("Y", degrees) @ R("X", tilt))
 
-    # Pedestal: dos escalones de piedra con un aro de oro, pilas de monedas, monedas sueltas y lingotes.
+    # Pedestal: dos escalones redondos de piedra con un aro de oro, un ruedo de losas, mojones alrededor (menos por
+    # delante, donde llega el camino), pilas de monedas, monedas sueltas y lingotes.
     p.group = "Base"
     top = 0.95
-    p.add("StoneDark", cyl(12.6, 0.5, 10, 12.3))
-    p.add("Stone", cyl(11.4, top - 0.5, 10, 11.15), T(0, 0.5, 0))
-    p.add("Gold", torus(9.9, 0.14, 20, 4), T(0, top, 0))
+    p.add("StoneDark", cyl(12.6, 0.5, 32, 12.35))
+    p.add("Stone", cyl(11.5, top - 0.5, 32, 11.3), T(0, 0.5, 0))
+    p.add("StoneDark", torus(11.0, 0.1, 32, 4), T(0, top, 0))
+    p.add("Gold", torus(9.9, 0.16, 32, 4), T(0, top, 0))
+    for index in range(16):
+        degrees = index * 22.5
+        p.add("StoneDark", box(0.14, 0.05, 1.05), R("Y", degrees) @ T(0, top, 10.45))  # juntas del ruedo de losas
+        if 30 < degrees < 330:
+            p.add("Stone", sphere(1, 8, 4), R("Y", degrees + 180) @ T(0, 0.5, 12.0) @ S(0.42, 0.34, 0.42))
     for degrees, reach, count in ((152, 8.4, 8), (170, 9.7, 4), (133, 9.5, 3), (-146, 8.5, 10), (-166, 9.9, 6),
                                   (-124, 9.6, 3), (48, 8.9, 6), (66, 9.9, 2), (-60, 9.0, 5)):
         a = math.radians(degrees)
@@ -1177,6 +1187,35 @@ def gold_sack(p):
     for x, y, turn in ((-0.62, 0.32, 0), (0.62, 0.32, 0), (0, 0.96, 24)):
         p.add("Gold", frustum(2.5, 1.05, 2.15, 0.72, 0.62), bars @ T(x * 1.0, y, 0) @ R("Y", 90 + turn))
 
+    # Camino: lecho de grava oscura, losas irregulares al tresbolillo, bordillos de piedra y monedas caídas.
+    p.group = "Path"
+    near, far = 12.6 * SACK_SCALE - 0.7, SACK_DISTANCE + 0.6
+    length = far - near
+    half = PATH_WIDTH / 2
+    p.add("StoneDark", box(PATH_WIDTH, 0.16, length), T(0, 0.08, -(near + far) / 2))
+    rows = 4
+    deep = length / rows
+    for row in range(rows):
+        z = -(near + (row + 0.5) * deep)
+        cuts = [-half + 0.35] + sorted(rng.uniform(-half + 2.2, half - 2.2) for _ in range(1 + row % 2)) + [half - 0.35]
+        if len(cuts) == 4 and cuts[2] - cuts[1] < 2.0:
+            cuts = [cuts[0], (cuts[1] + cuts[2]) / 2, cuts[3]]
+        for left, right in zip(cuts, cuts[1:]):
+            wide, long = right - left - 0.3, deep - 0.38
+            slab = T((left + right) / 2, 0.1, z + rng.uniform(-0.1, 0.1)) @ R("Y", rng.uniform(-4, 4))
+            p.add("Stone", frustum(wide, long, wide - 0.3, long - 0.3, 0.26), slab @ T(0, 0.13, 0))
+    for side in (-1, 1):
+        z = near + 0.2
+        while z < far - 1.0:
+            long = rng.uniform(1.5, 2.3)
+            curb = T(side * (half + 0.3) + rng.uniform(-0.08, 0.08), 0, -(z + long / 2)) @ R("Y", rng.uniform(-5, 5))
+            p.add("Stone", frustum(0.95, long, 0.7, long - 0.25, rng.uniform(0.48, 0.62)), curb @ T(0, 0.27, 0))
+            z += long + 0.18
+    for x, z, turn in ((-3.3, 15.4, 0), (2.6, 17.9, 20), (-1.2, 21.6, 40), (3.5, 24.3, 10), (-2.9, 25.6, 65), (0.6, 14.6, 30)):
+        p.add("Gold", cyl(0.8, 0.18, 10), T(x, 0.36, -z) @ R("Y", turn) @ R("X", rng.uniform(-4, 4)))
+    for k in range(3):
+        p.add("Gold", cyl(0.8, 0.18, 10), T(3.4 + rng.uniform(-0.07, 0.07), 0.36 + k * 0.19, -19.9 + rng.uniform(-0.07, 0.07)))
+
 
 ANIMALS = ["Panda", "RedPanda", "Tiger", "Fox", "Tanuki", "Deer", "Crane"]
 PIECES = {
@@ -1193,7 +1232,7 @@ VIEWS = {
     "Temple": [(47.0, 150.0, 28.0, 9.0), (30.0, 100.0, 35.0, -22.0), (22.0, 62.0, 12.0, 4.0)],
     "Torii": [(9.0, 34.0, 25.0, 8.0)],
     "Bridge": [(2.5, 34.0, 30.0, 18.0)],
-    "GoldSack": [(6.0, 32.0, 28.0, 16.0), (6.0, 32.0, 200.0, 12.0), (9.5, 14.0, 10.0, 34.0)],
+    "GoldSack": [(6.0, 32.0, 28.0, 16.0), (6.0, 32.0, 200.0, 12.0), (9.5, 14.0, 10.0, 34.0), (4.0, 50.0, 205.0, 38.0)],
 }
 
 

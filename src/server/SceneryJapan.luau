@@ -100,7 +100,7 @@ local function isOpen(position: Vector3, margin: number): boolean
 			return false
 		end
 		-- El patio de la Bolsa de oro, detrás de cada parcela (server/GoldBag).
-		if along > cfg.RingRadius and along < cfg.RingRadius + cfg.Size / 2 + 36 + margin and across < 17 + margin then
+		if along > cfg.RingRadius and along < cfg.RingRadius + cfg.Size / 2 + 43 + margin and across < 17 + margin then
 			return false
 		end
 	end

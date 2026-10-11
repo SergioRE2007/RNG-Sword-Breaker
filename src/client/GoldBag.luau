@@ -290,7 +290,7 @@ local function update(model: Model, entry)
 	entry.left = math.clamp(1 - taken / full, 0, 1)
 	entry.title.Text = `BOLSA Nº {stage}`
 	entry.fill.Size = UDim2.fromScale(entry.left, 1)
-	entry.amount.Text = if deposited == 0 then `<font color="{Ui.SOFT}">Deja armas: Mochila → A la bolsa</font>` else Format.short(math.ceil(full - taken))
+	entry.amount.Text = if deposited == 0 then `<font color="{Ui.SOFT}">Haz clic en el saco para dejar armas</font>` else Format.short(math.ceil(full - taken))
 end
 
 -- Cada cuadro: las armas de los sacos cercanos vuelan y pegan, y el saco se encoge y da su respingo.
