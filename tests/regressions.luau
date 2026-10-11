@@ -257,14 +257,31 @@ checks += 1
 
 -- Por mucha suerte de armas que haya siguen saliendo armas sin metal y de tamaño normal (con x10 el Cobre salía siempre).
 do
+	local combos = permanent.combos()
+	local weapons, worst, plain = 0, nil, 0
+	for index, sword in config.Swords do
+		if sword.rarity then
+			weapons += 1
+			if not worst or sword.rarity < config.Swords[worst].rarity then worst = index end
+		end
+	end
+	equal(#combos, weapons * (#config.Metals + 1) * (#config.Sizes + 1), "un resultado por arma, metal y tamaño")
+	for position = 2, #combos do
+		assert(combos[position - 1].rarity >= combos[position].rarity, "resultados de más raro a más común")
+	end
+	equal(combos[#combos].sword, worst, "lo más común es la peor arma")
+	equal(combos[#combos].metal + combos[#combos].size, 0, "lo más común va sin metal y en tamaño normal")
+	-- La peor arma con el mejor metal y el mejor tamaño es rarísima: su rareza total, no la del arma.
+	near(permanent.odds(worst, #config.Metals, #config.Sizes, 1) / (config.Swords[worst].rarity * config.Metals[#config.Metals].odds * config.Sizes[#config.Sizes].odds), 1, "rareza total")
 	local number = f.random.NextNumber
-	f.random.NextNumber = function() return 0.6 end
-	equal(permanent.roll(config.Metals, 1e9), 0, "con mucha suerte sigue habiendo armas sin metal")
-	equal(permanent.roll(config.Sizes, 1e9), 0, "con mucha suerte sigue habiendo armas de tamaño normal")
-	f.random.NextNumber = function() return 0.4 end
-	equal(permanent.roll(config.Metals, 1e9), #config.Metals, "con mucha suerte el mejor metal sale la mitad de las veces")
-	equal(permanent.roll(config.Metals, 1), 0, "sin suerte el metal sigue siendo raro")
+	f.random.NextNumber = function() return 0.999 end
+	local sword, metal, size = permanent.rollWeapon(1)
+	equal(sword * 10000 + metal * 100 + size, worst * 10000, "sin suerte y sin acertar: la peor arma a secas")
+	-- Con suerte x30 lo que sale es de alrededor de 1 entre 30 en total: no todo de Cobre.
+	sword, metal, size = permanent.rollWeapon(30)
+	assert(permanent.rarity(sword, metal, size) <= 30.1 and permanent.rarity(sword, metal, size) > 10, "la suerte va a la rareza total")
 	f.random.NextNumber = number
+	checks += 3
 end
 
 -- Pity: límite base, obtención natural, colisiones, desempate y separación de contadores.

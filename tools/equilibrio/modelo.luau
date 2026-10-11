@@ -42,11 +42,38 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	end)
 	M.pool = pool
 
+	-- Tirada de arma como Permanent.rollWeapon (arma + metal + tamaño son un solo resultado, del más raro al más
+	-- común), con un solo número al azar. Se salta de golpe los resultados de menos de 1 entre 1e10 para esa suerte.
+	local combos = Permanent.combos()
+	local function tirarArma(luck: number): (number, number, number)
+		local limit = luck * 1e10
+		local low, high = 1, #combos
+		while low < high do
+			local mid = (low + high) // 2
+			if combos[mid].rarity <= limit then
+				high = mid
+			else
+				low = mid + 1
+			end
+		end
+		local u = random()
+		for position = low, #combos do
+			local combo = combos[position]
+			local p = luck / combo.rarity
+			if p >= 1 or u < p then
+				return combo.sword, combo.metal, combo.size
+			end
+			u = (u - p) / (1 - p)
+		end
+		local last = combos[#combos]
+		return last.sword, last.metal, last.size
+	end
+
 	-- Posición en `list` de lo que toca con probabilidad suerte / odds, probando del final al principio; `first` si nada.
-	local function cascada(list, luck: number, first: number, dado: number?, tope: number?): number
+	local function cascada(list, luck: number, first: number, dado: number?): number
 		local u = dado or random()
 		for index = #list, first + 1, -1 do
-			local p = math.min(luck / list[index].odds, tope or math.huge)
+			local p = luck / list[index].odds
 			if p >= 1 or u < p then
 				return index
 			end
@@ -977,7 +1004,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				res.ganado += coins
 			end
 
-			-- Tiradas de arma (server/Gacha): la suerte del objeto solo cuenta para el arma.
+			-- Tiradas de arma (server/Gacha): la suerte se aplica una vez, a la rareza total del arma con su metal y tamaño.
 			local objLuck = gacha * ObjectSpec.luck(def, quality, scale)
 			-- Armas tope que tocaría esperar de este objeto (la cuenta exacta, sin depender de la suerte de la partida).
 			local esperado = rolls * math.min(1, objLuck / topRarity)
@@ -987,18 +1014,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			end
 			for _ = 1, rolls do
 				res.tiradas += 1
-				local sword = 2
-				u = random()
-				for _, index in pool do
-					local p = objLuck / Config.Swords[index].rarity
-					if p >= 1 or u < p then
-						sword = index
-						break
-					end
-					u = (u - p) / (1 - p)
-				end
-				local metal = cascada(Config.Metals, gacha, 0, nil, Config.Gacha.PermanentCap) -- como Permanent.roll
-				local size = cascada(Config.Sizes, gacha, 0, nil, Config.Gacha.PermanentCap)
+				local sword, metal, size = tirarArma(objLuck)
 				local rarity = Config.Swords[sword].rarity
 				local total = Config.Swords[sword].damage * Permanent.damageMult({ metal = metal, size = size })
 				if total > corte then

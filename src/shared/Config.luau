@@ -182,7 +182,6 @@ Config.Gacha = {
 	AuraOdds = 500, -- desde aquí el aura se ve en el personaje (también para los demás)
 	AnnounceOdds = 25000, -- desde aquí se anuncia el arma a todo el servidor
 	SellValue = 0, -- gemas por vender una espada (a mano o con la venta automática). 0: las gemas salen de la parcela
-	PermanentCap = 0.5, -- probabilidad máxima de cada metal y cada tamaño en una tirada, por mucha suerte de armas que haya: así siguen saliendo armas sin metal y de tamaño normal (Permanent.roll)
 }
 
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
