@@ -794,8 +794,8 @@ function Backpack.start()
 		local artifacts = Stats.list(player, "Artifacts")
 		local worn = Stats.list(player, "Gear")
 		gearHint.Text = if #artifacts == 0
-			then "Aún no tienes accesorios: caen al romper objetos."
-			else `Equipados {#worn}/{Config.GearSlots}. Pulsa para equipar o quitar.`
+			then "Rompe objetos para conseguir accesorios."
+			else `Equipados {#worn}/{Config.GearSlots}`
 		for index, cell in gearCells do
 			cell.Visible = table.find(artifacts, index) ~= nil
 			cell.Select.Visible = table.find(worn, index) ~= nil
