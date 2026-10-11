@@ -1366,7 +1366,7 @@ do
 
 	-- Config.Test.Progress: el jugador tipo de shared/BalanceSnapshots entra con todas sus armas equipadas (hasta el tope
 	-- de huecos), cada una con su metal, su rasgo y su grado.
-	local staged = fixture(nil, dataStore(nil))
+	local staged = fixture(nil, dataStore({ coins = 777, gems = 9, swords = { { id = 1, sword = 1 }, { id = 2, sword = 9 } }, nextSwordId = 3, loadout = { 2 }, artifacts = { 2 } }))
 	staged.services.RunService.IsStudio = function() return true end
 	staged.config.Test.Progress = 1
 	local slots = staged.config.Loadout.Slots
@@ -1388,6 +1388,10 @@ do
 	equal(secondCopy.grade, 3, "Progress: cada arma con su grado")
 	equal(#staged.load("src/shared/Stats").loadout(stagedPlayer), slots, "Progress: equipadas publicadas")
 	equal(stagedData.rebirths, 1, "Progress: renacimientos de la foto")
+	equal(stagedData.coins, staged.config.StartCoins, "Progress: no trae las monedas guardadas")
+	equal(stagedData.gems, 0, "Progress: no trae las gemas guardadas")
+	equal(#stagedData.swords, 1 + slots, "Progress: no trae las armas guardadas")
+	equal(table.concat(stagedData.artifacts, ","), "1", "Progress: solo los accesorios de la foto")
 	leave(staged, stagedPlayer)
 end
 
