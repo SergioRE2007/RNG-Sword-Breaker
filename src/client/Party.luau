@@ -363,7 +363,7 @@ local function buildWindow()
 		local lines = {
 			`<font color="{soft}">Daño recomendado</font>  <font color="{hex(if strong then GOOD else BAD)}">{Format.short(level.hp)}</font>`,
 			`<font color="{soft}">Golpe enemigo</font>  <font color="{hex(if tough then GOOD else BAD)}">{Format.short(low)} a {Format.short(high)}</font>`,
-			`<font color="{soft}">Premios</font>`,
+			`<font color="{soft}">Botín por partida</font>`,
 		}
 		for _, reward in DungeonInfo.rewards(zone) do
 			table.insert(lines, `<font color="{hex(reward.color)}">{reward.text}</font>`)

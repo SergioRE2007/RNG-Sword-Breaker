@@ -85,8 +85,8 @@ local function build(board: BasePart)
 	tagline.TextTruncate = Enum.TextTruncate.AtEnd
 	tagline.Text = `<font color="{Ui.SOFT}">{level.tagline or ""}</font>`
 
-	-- Premios principales.
-	local rewards = Ui.label(root, 34)
+	-- Lo que cae en una partida (DungeonInfo.rewards): cuatro líneas, por eso la letra es más pequeña que antes.
+	local rewards = Ui.label(root, 26)
 	rewards.Position = UDim2.fromOffset(34, 112)
 	rewards.Size = UDim2.new(1, -68, 0, 120)
 	rewards.TextXAlignment = Enum.TextXAlignment.Left
