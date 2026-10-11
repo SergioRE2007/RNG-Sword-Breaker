@@ -17,6 +17,34 @@ local window, refresh, paint
 local selected, cells = {}, {}
 local confirming = false
 
+-- X roja y medio transparente encima de las armas elegidas (pedido por el usuario: es un menú de vender, que se vea
+-- que se van). Dos barras cruzadas, por encima de la vista 3D (2) y del daño (3).
+local MARK_COLOR = Color3.fromRGB(235, 45, 55)
+local MARK_ALPHA = 0.4 -- transparencia de la X
+local function sellMark(cell: GuiObject): Frame
+	local mark = Instance.new("Frame")
+	mark.Name = "SellMark"
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.BackgroundTransparency = 1
+	mark.Visible = false
+	mark.ZIndex = 4
+	mark.Parent = cell
+	for _, turn in { 45, -45 } do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Position = UDim2.fromScale(0.5, 0.5)
+		bar.Size = UDim2.fromScale(0.95, 0.15)
+		bar.Rotation = turn
+		bar.BackgroundColor3 = MARK_COLOR
+		bar.BackgroundTransparency = MARK_ALPHA
+		bar.BorderSizePixel = 0
+		bar.ZIndex = 4
+		bar.Parent = mark
+		Ui.round(bar, 6)
+	end
+	return mark
+end
+
 function SellMenu.open(id: number?)
 	selected = {}
 	confirming = false
@@ -77,6 +105,7 @@ function SellMenu.start()
 		local count = 0
 		for id, cell in cells do
 			cell.Select.Visible = selected[id] == true
+			cell.SellMark.Visible = selected[id] == true
 			if selected[id] then count += 1 end
 		end
 		if count == 0 then confirming = false end
@@ -97,6 +126,7 @@ function SellMenu.start()
 			local cell = Ui.cell(stock, tier.color, table.find(Config.RarityTiers, tier))
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = copy.id
+			sellMark(cell)
 			WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
 			Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
 			Ui.tip(cell, function()
