@@ -460,6 +460,9 @@ local function load(player: Player)
 	end
 	local canSave = false
 	local lockId = nil -- candado de sesión que tiene cogido esta carga (nil = ninguno)
+	-- Modo de pruebas (solo en Studio): empezar en una hora del calendario de progreso, sin guardar y sin lo que hubiera
+	-- guardado (se parte de una partida vacía: si no, las monedas y las armas de la partida de verdad se mezclaban).
+	local progress = RunService:IsStudio() and (Config.Test.Progress or 0) > 0
 
 	local ds = getStore()
 	if ds then
@@ -470,7 +473,7 @@ local function load(player: Player)
 		lockId = lock
 		if ok then
 			canSave = true
-			if type(saved) == "table" then
+			if type(saved) == "table" and not progress then
 				data.coins = amount(saved.coins, data.coins)
 				data.gems = amount(saved.gems, 0)
 				local rebirths = tonumber(saved.rebirths) or 0
@@ -530,10 +533,8 @@ local function load(player: Player)
 		return
 	end
 
-	-- Modo de pruebas (solo en Studio): empezar en una hora del calendario de progreso, sin guardar. Manda sobre los
-	-- demás modos de prueba de esta función (dinero infinito, todas las armas...), que con él no actúan: lo que se
-	-- quiere ver es cómo va un jugador de verdad a esas alturas.
-	local progress = RunService:IsStudio() and (Config.Test.Progress or 0) > 0
+	-- Config.Test.Progress manda sobre los demás modos de prueba de esta función (dinero infinito, todas las armas...),
+	-- que con él no actúan: lo que se quiere ver es cómo va un jugador de verdad a esas alturas.
 	if progress then
 		applyProgress(data, Config.Test.Progress)
 		canSave = false
