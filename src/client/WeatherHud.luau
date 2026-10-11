@@ -1,5 +1,6 @@
 -- Lo que se ve del clima en la interfaz: librería sin start() (la lleva client/Weather).
---  · `Hud.HudRoot.Weather`: tarjeta arriba en el centro, bajo la barra de transporte. Con clima: insignia con su
+--  · `Hud.HudRoot.TopButtons.Weather`: tarjeta en la fila de botones pequeños de arriba a la derecha, a la izquierda
+--    de Ajustes (y del botón Admin, para los administradores; pedido por el usuario). Con clima: insignia con su
 --    dibujo, nombre, lo que da y el tiempo que queda (rojo y latiendo al final). Despejado: cuánto falta para el
 --    siguiente. El contenido va en `Weather.Card`: SkillTree esconde y devuelve los hijos de HudRoot, así que lo que
 --    se esconde por otros motivos (mazmorra, forja) es la tarjeta de dentro.
@@ -29,7 +30,6 @@ local LOW = Color3.fromRGB(255, 96, 96)
 local CLEAR = Color3.fromRGB(92, 104, 140) -- insignia con el cielo despejado
 
 -- Medidas de la tarjeta (en píxeles del HUD, que ya se encoge entero en pantallas pequeñas).
-local TOP = 92 -- a la altura del final de la barra de transporte (76 de alto a 10 del borde), para no pisarla en pantallas estrechas
 local HEIGHT = 52
 local BADGE = 38
 local PAD = 9
@@ -246,12 +246,11 @@ function WeatherHud.build()
 	end
 	local frame = Instance.new("Frame")
 	frame.Name = "Weather"
-	-- Arriba a la derecha, bajo los botones pequeños (pedido por el usuario: en el centro molestaba). Crece hacia la izquierda.
-	frame.AnchorPoint = Vector2.new(1, 0)
-	frame.Position = UDim2.new(1, -14, 0, TOP)
+	-- En la fila de botones pequeños (Ui.topButtons): antes que el de Admin (100) y que Ajustes (1000), a su izquierda.
+	frame.LayoutOrder = 50
 	frame.Size = UDim2.fromOffset(240, HEIGHT)
 	frame.BackgroundTransparency = 1
-	frame.Parent = Ui.hud()
+	frame.Parent = Ui.topButtons()
 	outer = frame
 
 	card = Instance.new("Frame")
@@ -505,9 +504,16 @@ function WeatherHud.announce(id: string)
 		end
 		-- Se recoge hacia la tarjeta de arriba a la derecha.
 		local out = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-		local width = if outer then outer.Size.X.Offset else 0
+		-- El centro de la tarjeta en píxeles del HUD (que lleva su propio UIScale).
+		local hud = Ui.hud()
+		local hudScale = hud:FindFirstChildOfClass("UIScale")
+		local target = group.Position
+		if outer then
+			local center = (outer.AbsolutePosition + outer.AbsoluteSize / 2 - hud.AbsolutePosition) / (if hudScale then hudScale.Scale else 1)
+			target = UDim2.fromOffset(center.X, center.Y)
+		end
 		TweenService:Create(scale, out, { Scale = 0.4 }):Play()
-		TweenService:Create(group, out, { GroupTransparency = 1, Position = UDim2.new(1, -14 - width / 2, 0, TOP + HEIGHT / 2) }):Play()
+		TweenService:Create(group, out, { GroupTransparency = 1, Position = target }):Play()
 		task.delay(0.42, function()
 			if banner == group then
 				banner = nil
