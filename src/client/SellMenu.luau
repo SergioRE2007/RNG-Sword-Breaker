@@ -46,9 +46,11 @@ function SellMenu.start()
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = stock
 	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, 6)
-	padding.PaddingLeft = UDim.new(0, 6)
-	padding.PaddingBottom = UDim.new(0, 6)
+	-- Hueco para lo que sobresale de las casillas (crecen al pasar el ratón y las raras llevan halo): con menos, el borde
+	-- de la fila de arriba se cortaba contra el de la lista.
+	padding.PaddingTop = UDim.new(0, 12)
+	padding.PaddingLeft = UDim.new(0, 12)
+	padding.PaddingBottom = UDim.new(0, 12)
 	padding.Parent = stock
 	local actions = Instance.new("Frame")
 	actions.Name = "Actions"
