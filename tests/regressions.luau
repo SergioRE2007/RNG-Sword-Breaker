@@ -793,7 +793,10 @@ do
 	local six = {}
 	for id = 1, 6 do six[id] = { id = id * 10, sword = 3 + id } end
 	local function loaded(saved) local g = fixture(saved); return table.concat(g.data.read(g.player).loadout, ",") end
-	equal(loaded({ swords = six, loadout = { 30, 30, 990, "x", 20, 0 / 0, 50, 60, 10 } }), "3,2,5,6", "equipadas guardadas: limpias y hasta el tope")
+	equal(loaded({ swords = six, loadout = { 30, 30, 990, "x", 20, 0 / 0, 50, 60, 10 } }), "3,2,5,6,1", "equipadas guardadas: limpias (el tope al cargar es MaxSlots, el del pase)")
+	local nine = {}
+	for id = 1, 9 do nine[id] = { id = id, sword = 3 + id } end
+	equal(loaded({ swords = nine, loadout = { 1, 2, 3, 4, 5, 6, 7, 8, 9 } }), "1,2,3,4,5,6,7,8", "equipadas guardadas: hasta el tope")
 	equal(loaded({ swords = six, loadout = "x", equipped = 20 }), "2", "lista rota: vale la antigua")
 	equal(loaded({ swords = six, loadout = {} }), "1", "lista vacía: la primera")
 	equal(loaded({ swords = six, loadout = { 990 }, equipped = 20 }), "1", "lista sin ninguna válida: la primera")
@@ -826,7 +829,7 @@ do
 	local function sane(d, label: string)
 		local ok = d.coins >= 0 and d.gems >= 0 and d.playTime >= 0 and d.totalCoins >= 0 and d.robuxSpent >= 0 and d.autoSell >= 0
 		ok = ok and d.rebirths >= 0 and d.rebirths <= cfg.Rebirth.max and d.rebirths % 1 == 0
-		ok = ok and #d.swords >= 1 and #d.swords <= cfg.MaxSwords and d.nextSwordId == #d.swords + 1 and #d.loadout >= 1 and #d.loadout <= cfg.Loadout.Slots
+		ok = ok and #d.swords >= 1 and #d.swords <= cfg.MaxSwords and d.nextSwordId == #d.swords + 1 and #d.loadout >= 1 and #d.loadout <= cfg.Loadout.MaxSlots
 		for position, id in d.loadout do
 			ok = ok and d.swords[id] ~= nil and table.find(d.loadout, id) == position
 		end

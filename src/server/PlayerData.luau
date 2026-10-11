@@ -228,10 +228,11 @@ local function loadSwords(data, saved)
 
 	local oldLevel = math.clamp(math.floor(tonumber(saved.swordLevel) or 1), 1, #Config.Swords)
 	local equipped = nil -- (formatos antiguos) la única que se podía equipar
-	-- Copias equipadas, ya con su id nuevo y por orden de hueco: sin repetir y hasta Config.Loadout.Slots.
+	-- Copias equipadas, ya con su id nuevo y por orden de hueco: sin repetir y hasta Config.Loadout.MaxSlots (al cargar
+	-- aún no se sabe qué pases tiene: más de Slots solo las pudo equipar con el pase, que valida server/Gacha).
 	local loadout = {}
 	local function equip(id: number?)
-		if id and not table.find(loadout, id) and #loadout < Config.Loadout.Slots then
+		if id and not table.find(loadout, id) and #loadout < Config.Loadout.MaxSlots then
 			table.insert(loadout, id)
 		end
 	end
@@ -265,11 +266,11 @@ local function loadSwords(data, saved)
 		for _, old in if type(saved.loadout) == "table" then saved.loadout else { saved.equipped } do
 			equip(renumbered[old])
 		end
-		-- Depositadas en la Bolsa de oro, con su id nuevo: sin repetir y hasta Config.GoldBag.Slots.
+		-- Depositadas en la Bolsa de oro, con su id nuevo: sin repetir y hasta Config.GoldBag.MaxSlots.
 		if type(saved.bag) == "table" and type(saved.bag.slots) == "table" then
 			for _, old in saved.bag.slots do
 				local id = if type(old) == "number" then renumbered[old] else nil
-				if id and not table.find(deposited, id) and #deposited < Config.GoldBag.Slots then
+				if id and not table.find(deposited, id) and #deposited < Config.GoldBag.MaxSlots then
 					table.insert(deposited, id)
 				end
 			end

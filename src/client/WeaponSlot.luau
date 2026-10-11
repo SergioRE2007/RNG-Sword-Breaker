@@ -1,4 +1,4 @@
--- Las armas equipadas, abajo en el centro: una casilla por hueco de Config.Loadout.Slots, con la misma casilla, vista
+-- Las armas equipadas, abajo en el centro: una casilla por hueco de Stats.loadoutSlots (con el pase, en dos filas), con la misma casilla, vista
 -- 3D y cartel que la mochila. Pulsar cualquiera abre la mochila, que es donde se cambian. La casilla de un arma da
 -- un latido cada vez que esa arma pega (aviso Hit con su hueco): se ve que cada una lleva su ritmo.
 --   Hud.HudRoot.WeaponSlot.Row.Slot<n>.Sword (hueco con arma) o .Empty (libre)
@@ -110,11 +110,12 @@ end
 
 function WeaponSlot.start()
 	local root = Ui.hud()
-	local slots = Config.Loadout.Slots
+	-- Los huecos de más del pase (ventaja "extraSlots") van en una segunda fila, encima: el ancho no cambia.
+	local perRow = Config.Loadout.Slots
 	local dock = Instance.new("Frame")
 	dock.Name = "WeaponSlot"
 	dock.AnchorPoint = Vector2.new(0.5, 1)
-	dock.Size = UDim2.fromOffset(slots * SIZE + (slots - 1) * GAP, SIZE)
+	dock.Size = UDim2.fromOffset(perRow * SIZE + (perRow - 1) * GAP, SIZE)
 	dock.BackgroundTransparency = 1
 	dock.Parent = root
 	local function fit()
@@ -127,30 +128,45 @@ function WeaponSlot.start()
 	-- Las casillas van en su propia fila: del dock cuelgan también los botones de AutoPlay.
 	local row = Instance.new("Frame")
 	row.Name = "Row"
+	row.AnchorPoint = Vector2.new(0, 1)
+	row.Position = UDim2.fromScale(0, 1)
 	row.Size = FULL
 	row.BackgroundTransparency = 1
 	row.Parent = dock
-	local list = Instance.new("UIListLayout")
-	list.FillDirection = Enum.FillDirection.Horizontal
+	local list = Instance.new("UIGridLayout")
+	list.CellSize = UDim2.fromOffset(SIZE, SIZE)
+	list.CellPadding = UDim2.fromOffset(GAP, GAP)
+	list.FillDirectionMaxCells = perRow
+	list.StartCorner = Enum.StartCorner.BottomLeft -- los cuatro primeros huecos, abajo
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	list.VerticalAlignment = Enum.VerticalAlignment.Bottom
 	list.SortOrder = Enum.SortOrder.LayoutOrder
-	list.Padding = UDim.new(0, GAP)
 	list.Parent = row
 
 	-- Cada hueco es un marco fijo de la fila, y la casilla va dentro centrada: así crece al pasar el ratón o al latir
 	-- sin mover a las de al lado.
 	local holders, cells, keys, beats = {}, {}, {}, {}
-	for index = 1, slots do
-		local holder = Instance.new("Frame")
-		holder.Name = "Slot" .. index
-		holder.LayoutOrder = index
-		holder.Size = UDim2.fromOffset(SIZE, SIZE)
-		holder.BackgroundTransparency = 1
-		holder.Parent = row
-		holders[index] = holder
+	-- Tantos huecos como pueda equipar: se añaden o se quitan cuando llega (o cambia) lo que dan sus pases.
+	local function resize()
+		local slots = math.max(Stats.loadoutSlots(player), #Stats.loadout(player))
+		for index = #holders + 1, slots do
+			local holder = Instance.new("Frame")
+			holder.Name = "Slot" .. index
+			holder.LayoutOrder = index
+			holder.BackgroundTransparency = 1
+			holder.Parent = row
+			holders[index] = holder
+		end
+		for index = #holders, slots + 1, -1 do
+			holders[index]:Destroy()
+			holders[index], cells[index], keys[index] = nil, nil, nil
+		end
+		local rows = math.ceil(slots / perRow)
+		row.Size = UDim2.new(1, 0, 0, rows * SIZE + (rows - 1) * GAP)
 	end
 
 	local function refresh()
+		resize()
 		local copies = Stats.loadout(player)
 		for index, holder in holders do
 			local copy = copies[index]
@@ -176,6 +192,11 @@ function WeaponSlot.start()
 	for _, attribute in { "Loadout", "Equipped", "Swords" } do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
+	player.AttributeChanged:Connect(function(attribute)
+		if string.sub(attribute, 1, 5) == "Pass_" then
+			refresh()
+		end
+	end)
 	refresh()
 
 	Remotes.Hit.OnClientEvent:Connect(function(hitter: Player, _part, _position, _damage, slot: number?)
