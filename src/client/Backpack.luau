@@ -165,12 +165,17 @@ local function animatedName(entry): string
 	return table.concat(letters)
 end
 
+local TIP_TITLE = 28 -- tamaño del nombre en el cartel (el resto va a 21, el de Ui.tip)
+local TIP_ODDS = 16 -- y el de la probabilidad
+local TIP_FAINT = "#868b9c" -- gris tenue de la probabilidad
+
 local function swordTip(copy): (string, Color3, boolean)
 	local sword = Config.Swords[copy.sword]
 	local trait = Config.Traits[copy.trait]
 	local rarity = Stats.rarity(copy)
 	local tier = Rarity.tier(rarity)
-	local lines = { sword.name, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
+	-- Pedido por el usuario: el nombre más grande que el resto y la probabilidad más pequeña y en gris tenue.
+	local lines = { `<font size="{TIP_TITLE}">{sword.name}</font>`, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
 	local grade = Config.Grades[copy.grade]
 	local border = tier.color
 	-- Metal y tamaño (permanentes, salen con el arma): solo el nombre, en una línea. Pedido por el usuario: el cartel
@@ -200,10 +205,10 @@ local function swordTip(copy): (string, Color3, boolean)
 	end
 	table.insert(lines, `Daño {Format.multiplier(Stats.swordDamage(copy))}`)
 	if not sword.rarity then
-		table.insert(lines, `<font color="{Ui.SOFT}">Espada inicial</font>`)
+		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">Espada inicial</font>`)
 	else
 		-- Una sola probabilidad: la del arma entera, con su metal y su tamaño.
-		table.insert(lines, `<font color="{Ui.SOFT}">1 entre {Format.short(rarity)}</font>`)
+		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">1 entre {Format.short(rarity)}</font>`)
 	end
 	return table.concat(lines, "\n"), border, trait ~= nil or grade ~= nil
 end
