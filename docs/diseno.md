@@ -278,6 +278,16 @@ Mazmorra, vuelta a medir sin el empujón (misma prueba, 3 o 4 partidas de cada):
 - `BalanceSnapshots`: lista `swords` por foto, y `applyProgress` las equipa todas (hasta `Config.Loadout.Slots`).
 - El informe enseña además las armas con las que acaba la partida de daño mediano, con el rasgo y el grado de cada una.
 
+## Juego de 70 h — octubre de 2026
+
+Pedido por el usuario: 200 h era demasiado y a los 20 minutos ya se notaba el parón. Sin pases, tenerlo casi todo son unas 70 h, con las 5 primeras muy cargadas de compras.
+
+- **Calendario nuevo** (`tools/equilibrio/objetivo.luau`): suerte 50 a las 60 h (nivel 10 a los 14 min, 24 a las 5 h), capacidad completa a los 30 min, aparición a las 30 h, renacimientos a las 0,5 / 2 / 6 / 18 / 42 h, accesorios de los 2 min a las 55 h y mazmorras de los 3 min a las 64 h.
+- **Fortuna**: mejora nueva del árbol, x1,5 de monedas por nivel (20 niveles), pagada con gemas. Es el primer uso de las gemas. No acorta el juego (los precios se generan contando con ella): pone una compra entre nivel y nivel de suerte.
+- **Arma más rara**: ya no se fija en horas sino con el consumible de Robux que el usuario quiere crear (x1000 a la suerte de armas de un objeto): con todo al máximo y las mejores pociones, 1 de cada 1000 usos. Sin pagar ni pociones quedan unas 680 h de romper objetos (antes 500) y `TypeLuckPower` pasa de 0,419 a 0,411. El consumible no está hecho.
+- **Bolsa de oro**: sigue pagando igual, pero los precios ya se generan con ella. Con este calendario pesa poco: en la primera hora da en torno a una quinta parte de las monedas y a partir de la quinta casi nada, porque las monedas de los objetos crecen mucho más deprisa que el daño. Pendiente de que el usuario decida si la quiere más fuerte.
+- **Rasgos, grados y armadura**: las caídas de cristales no se tocaron (las ata el bucle de 24 h), así que en 70 h el jugador normal acaba con Trascendente o Eterno y Z+ o X en su mejor arma; Paradoja e ∞ siguen siendo cosa del bucle.
+
 ## Bolsa de oro — octubre de 2026
 
 Rama `bolsa-de-oro`.

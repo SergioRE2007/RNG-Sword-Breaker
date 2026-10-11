@@ -15,7 +15,7 @@ local Format = shared("Format")
 local M = Modelo.nuevo(shared, mundo, objetivo)
 
 local partidas = tonumber(process.args[1]) or 9
-local horas = tonumber(process.args[2]) or 260
+local horas = tonumber(process.args[2]) or 100
 local ritmo = tonumber(process.args[3]) or 1
 local equipo = if table.find(process.args, "calendario") then "calendario" else "mazmorras"
 local tiempo, mediana = Util.tiempo, Util.mediana
@@ -145,18 +145,19 @@ end)}`)
 
 print("\n-- Ritmo --")
 parts = {}
-for _, hour in { 1, 5, 15, 40, 80, 120, 170, 200 } do
+for _, hour in { 1, 2, 5, 10, 20, 35, 50, 70 } do
 	if hour <= horas then
-		local values, coins = {}, {}
+		local values, coins, bolsa = {}, {}, {}
 		for _, run in runs do
 			local now, before = run.ritmo[hour], run.ritmo[hour - 1]
 			if now then
 				table.insert(values, now.objetos - (if before then before.objetos else 0))
 				table.insert(coins, now.monedas - (if before then before.monedas else 0))
+				table.insert(bolsa, (now.bolsa - (if before then before.bolsa else 0)) / math.max(coins[#coins], 1) * 100)
 			end
 		end
 		if #values > 0 then
-			table.insert(parts, `hora {hour}: {math.round(mediana(values))} objetos y {Format.short(mediana(coins))} monedas`)
+			table.insert(parts, `hora {hour}: {math.round(mediana(values))} objetos y {Format.short(mediana(coins))} monedas ({string.format("%.0f", mediana(bolsa))} % de la bolsa)`)
 		end
 	end
 end
@@ -327,7 +328,7 @@ do
 	print(`Armas equipadas al final: {table.concat(parts, " · ")}`)
 end
 
-print("\n-- Con TODA la suerte al máximo (solo sale el tipo más raro y todo cae de un golpe; sin pociones, con el clima que toque): horas por cada arma --")
+print("\n-- Con TODA la suerte al máximo, sin pagar (solo sale el tipo más raro y todo cae de un golpe; sin pociones, con el clima que toque): horas por cada arma --")
 local dano = med(function(run)
 	return run.dano
 end)
@@ -339,7 +340,7 @@ for position = 1, 6 do
 	table.insert(parts, `{sword.name} (1 entre {Format.short(sword.rarity)}): {tiempo(hours[position] * 3600)}`)
 end
 print(table.concat(parts, "\n"))
-print(`(objetivo de la más rara: {objetivo.horasArmaTope} h; sin clima saldría cada {string.format("%.0f", sinClima)} h; daño de sus armas equipadas al final de la partida: {Format.short(dano)})`)
+print(`(la más rara, con el consumible de x{objetivo.consumible.suerte} y además las mejores pociones: una cada {string.format("%.0f", M.usosConsumible(objetivo.consumible.suerte, 200000))} usos, objetivo {objetivo.consumible.usos}; sin clima saldría cada {string.format("%.0f", sinClima)} h; daño de sus armas equipadas al final de la partida: {Format.short(dano)})`)
 
 -- Cuántas armas tope toca esperar en una partida entera, y cuánto de eso lo da cada clima.
 local top = Config.Swords[M.pool[1]]

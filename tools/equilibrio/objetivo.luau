@@ -1,4 +1,4 @@
--- CALENDARIO DE PROGRESO: lo que se quiere que tarde cada cosa en una partida de ~200 h. Es lo único que se toca para
+-- CALENDARIO DE PROGRESO: lo que se quiere que tarde cada cosa en una partida de ~70 h (sin pases). Es lo único que se toca para
 -- cambiar el ritmo del juego: `lune run tools/equilibrio/generar.luau` saca de aquí los precios, las vidas y demás
 -- números de Config, y `lune run tools/equilibrio/informe.luau` dice cuánto se tarda de verdad con el Config que hay.
 local H = 3600
@@ -6,31 +6,35 @@ local MIN = 60
 
 local Objetivo = {}
 
--- Arma más rara de Config.Swords: horas de romper objetos, con TODA la suerte al máximo (todos los objetos del tipo
--- más raro, todo cayendo de un golpe y los cinco renacimientos; sin pociones y con el clima que vaya tocando, que da
--- la mayor parte de las opciones), por cada una que sale de media. Decidido por el usuario.
+-- Arma más rara de Config.Swords. Decidido por el usuario (11 oct 2026): se mide con el consumible de Robux que va a
+-- crear, que da x`suerte` a la suerte de armas de UN objeto. Con todo al máximo (objeto del tipo más raro, los cinco
+-- renacimientos y las mejores pociones de suerte de armas y de cajas; cielo despejado) tiene que salir, de media, una
+-- vez cada `usos` consumibles. Las horas que le salen al que no paga las dice el generador y el informe.
 -- De aquí sale Config.ObjectRolls.TypeLuckPower.
-Objetivo.horasArmaTope = 500
+Objetivo.consumible = { suerte = 1000, usos = 1000 }
 
 -- Nivel n de la mejora de suerte (de `niveles`): segundos de juego en los que lo compra el jugador tipo. Muy rápido
--- al principio y cada vez más cuesta: el nivel 10 a los ~40 min, el 25 a las 15 h, el 40 a las 78 h y el último a las 170.
-Objetivo.horasSuerte = 170
+-- al principio y cada vez más cuesta: el nivel 10 a los ~14 min, el 24 a las 5 h, el 40 a las 27 h y el último a las 60.
+Objetivo.horasSuerte = 60
 function Objetivo.suerte(n: number, niveles: number): number
 	return Objetivo.horasSuerte * H * (n / niveles) ^ 3.5 + 8 * n
 end
 
 -- Las demás mejoras: segundo en que se compra cada nivel.
+-- `fortune` (monedas, se paga con gemas): sus compras caen entre las de suerte, la mitad en las 5 primeras horas.
 Objetivo.mejoras = {
-	capacity = { 15, 45, 2 * MIN, 5 * MIN, 12 * MIN, 25 * MIN, 50 * MIN, 80 * MIN },
-	rollSpeed = { 3 * MIN, 10 * MIN, 30 * MIN, 1.5 * H, 3.5 * H, 8 * H, 15 * H, 27 * H, 45 * H, 70 * H },
+	capacity = { 10, 30, 75, 3 * MIN, 6 * MIN, 11 * MIN, 19 * MIN, 30 * MIN },
+	rollSpeed = { 1 * MIN, 4 * MIN, 10 * MIN, 25 * MIN, 1 * H, 2.5 * H, 5 * H, 10 * H, 18 * H, 30 * H },
+	fortune = { 4 * MIN, 9 * MIN, 17 * MIN, 28 * MIN, 45 * MIN, 1.2 * H, 1.8 * H, 2.6 * H, 3.6 * H, 4.8 * H, 6.5 * H, 9 * H, 12 * H, 16 * H, 21 * H, 27 * H, 34 * H, 42 * H, 51 * H, 62 * H },
 }
-Objetivo.renacer = { 2 * H, 6.5 * H, 20 * H, 55 * H, 120 * H }
+Objetivo.renacer = { 0.5 * H, 2 * H, 6 * H, 18 * H, 42 * H }
 -- Parte de lo que gana que el jugador tipo dedica a cada cosa mientras le quedan niveles (de ahí salen los precios).
-Objetivo.reparto = { luck = 0.5, rebirth = 0.25, rollSpeed = 0.15, capacity = 0.1 }
+-- El reparto es entre las que se pagan con la misma moneda: `fortune` es la única de gemas y se las lleva todas.
+Objetivo.reparto = { luck = 0.5, rebirth = 0.25, rollSpeed = 0.15, capacity = 0.1, fortune = 1 }
 
 -- Accesorios (por su posición en Config.Artifacts) y mazmorras (Config.Dungeons): cuándo los consigue o le llega el daño.
-Objetivo.accesorios = { 5 * MIN, 15 * MIN, 45 * MIN, 2 * H, 5 * H, 12 * H, 30 * H, 60 * H, 105 * H, 155 * H }
-Objetivo.mazmorras = { 5 * MIN, 1 * H, 2.5 * H, 6 * H, 12 * H, 22 * H, 36 * H, 55 * H, 80 * H, 110 * H, 140 * H, 175 * H }
+Objetivo.accesorios = { 2 * MIN, 6 * MIN, 15 * MIN, 40 * MIN, 1.5 * H, 4 * H, 10 * H, 22 * H, 38 * H, 55 * H }
+Objetivo.mazmorras = { 3 * MIN, 20 * MIN, 1 * H, 2 * H, 4 * H, 8 * H, 14 * H, 22 * H, 32 * H, 43 * H, 54 * H, 64 * H }
 
 -- Monedas de cada tipo de objeto = base * rareza ^ potencia. Con menos de 1 un objeto raro sigue siendo un premio
 -- gordo, pero no paga de golpe varios niveles (con 1 o más, sí: era la bola de nieve de antes).
@@ -68,17 +72,19 @@ Objetivo.jugador = {
 -- ellos sale la curva de tiradas de las otras armas. La armadura va a escalones y la de verdad sube poco a poco, así
 -- que quien juega sus mazmorras va algo por delante del calendario: lo completa todo hacia las 145 h y no a las 175
 -- (visto bueno del usuario, 11 oct 2026). Para acercarlos habría que interpolar la tabla en modelo.partida.
-Objetivo.rasgo = { { 0.2, 3 }, { 0.5, 6 }, { 1.8, 9 }, { 2.6, 10 }, { 10, 11 }, { 34, 12 }, { 85, 13 }, { 165, 14 } }
-Objetivo.grado = { { 0.5, 3 }, { 1.4, 5 }, { 3.2, 6 }, { 14, 7 }, { 35, 8 }, { 78, 9 }, { 180, 10 } }
+-- (Calendario de 70 h, 11 oct 2026: horas a medio camino de dos pasadas del informe, una con el jugador por detrás del
+-- calendario y otra por delante. Las caídas de cristales no se han tocado, porque salen del bucle de abajo: en 70 h
+-- Trascendente y Z+ le llegan a la primera arma más por suerte que por pity, y Paradoja e ∞ quedan para el bucle.)
+Objetivo.rasgo = { { 0.2, 3 }, { 0.35, 6 }, { 1.2, 9 }, { 2.2, 10 }, { 7, 11 }, { 25, 12 }, { 60, 13 } }
+Objetivo.grado = { { 0.45, 3 }, { 1.3, 5 }, { 2.4, 6 }, { 10, 7 }, { 24, 8 }, { 55, 9 } }
 Objetivo.armadura = {
-	{ 0.5, 0.07, 0, 0 },
-	{ 2, 0.25, 0.07, 0.05 },
-	{ 6, 0.5, 0.28, 0.06 },
-	{ 15, 1, 0.7, 0.09 },
-	{ 36, 1.6, 1.5, 0.12 },
-	{ 70, 2.4, 2.3, 0.17 },
-	{ 110, 3.7, 4.4, 0.18 },
-	{ 175, 8.6, 7.6, 0.25 },
+	{ 0.8, 0.1, 0.04, 0 },
+	{ 2.5, 0.5, 0.1, 0.07 },
+	{ 6, 0.8, 0.5, 0.08 },
+	{ 14, 1.4, 0.9, 0.1 },
+	{ 27, 2.5, 1.7, 0.2 },
+	{ 42, 4, 2, 0.2 },
+	{ 64, 6, 7, 0.2 },
 }
 
 -- MAZMORRAS: cómo las juega el jugador tipo. Con esto el simulador juega también sus partidas de mazmorra (cristales,
@@ -126,6 +132,6 @@ Objetivo.bucle = { horas = 24, rasgo = 30000, grado = 30000 }
 Objetivo.bolsa = { reales = 8 }
 
 -- Horas de las que se guarda el estado del jugador tipo (Config.Test.Progress, para probar cada etapa en Studio).
-Objetivo.fotos = { 0.5, 2, 5, 15, 40, 80, 120, 170, 200 }
+Objetivo.fotos = { 0.5, 1, 2, 5, 10, 20, 35, 50, 70 }
 
 return Objetivo

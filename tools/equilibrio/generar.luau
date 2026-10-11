@@ -5,8 +5,8 @@
 --   lune run tools/equilibrio/generar.luau [partidas] mazmorras [aplicar]
 --                                                                solo el daño recomendado de las zonas de mazmorra, con
 --                                                                el Config que hay (no recalcula vidas ni precios)
--- Calcula: Config.ObjectRolls.TypeLuckPower (para que el arma más rara salga cada `horasArmaTope` con la suerte al
--- máximo), "reward" y "hp" de Config.Destructibles, los "costs" de Config.Upgrades y de Config.Rebirth, "rarity" de
+-- Calcula: Config.ObjectRolls.TypeLuckPower (para que el arma más rara salga una vez cada `consumible.usos` usos del
+-- consumible de suerte con todo al máximo), "reward" y "hp" de Config.Destructibles, los "costs" de Config.Upgrades y de Config.Rebirth, "rarity" de
 -- Config.Artifacts y el daño recomendado ("hp") de Config.Dungeons.
 -- Cómo: juega partidas del jugador tipo que recibe cada compra justo a su hora (modo forzado) y mira cuánto pega con
 -- sus armas equipadas (la suma de todas: una andanada) cuando cada tipo de objeto empieza a salirle a menudo (de ahí
@@ -183,18 +183,20 @@ for _, def in tipos do
 	end
 end
 
--- 1. Suerte del tipo. "Con toda la suerte al máximo" es el caso más favorable: un jugador al que solo le sale el tipo
--- más raro y que lo tumba todo de un golpe (rompe todo lo que aparece), con los cinco renacimientos, sin pociones y con
--- el clima que vaya tocando. No depende de lo que valgan las vidas, así que se resuelve primero: las horas van con 1 / rareza ^ TypeLuckPower.
-local function horasTope(): number
-	return M.horasPorArma(math.huge, 1, 40000)[1]
+-- 1. Suerte del tipo: la que hace que, con todo al máximo y el consumible de suerte puesto (M.usosConsumible), el arma
+-- más rara salga una vez cada objetivo.consumible.usos. No depende de lo que valgan las vidas, así que se resuelve
+-- primero: los usos van con 1 / rareza ^ TypeLuckPower. Lo que tarda quien no paga (todo al máximo, sin pociones y con
+-- el clima que vaya tocando) se enseña, pero no se fija.
+local consumible = objetivo.consumible
+local function usosTope(): number
+	return M.usosConsumible(consumible.suerte, 200000)
 end
 local rarest = tipos[#tipos].rarity
 for _ = 1, 4 do
-	local power = Config.ObjectRolls.TypeLuckPower - math.log(objetivo.horasArmaTope / horasTope()) / math.log(rarest)
+	local power = Config.ObjectRolls.TypeLuckPower - math.log(consumible.usos / usosTope()) / math.log(rarest)
 	Config.ObjectRolls.TypeLuckPower = math.round(power * 1000) / 1000
 end
-print(`TypeLuckPower {Config.ObjectRolls.TypeLuckPower}: arma tope cada {string.format("%.0f", horasTope())} h con toda la suerte al máximo`)
+print(`TypeLuckPower {Config.ObjectRolls.TypeLuckPower}: arma tope cada {string.format("%.0f", usosTope())} consumibles de x{consumible.suerte} con todo al máximo, y cada {string.format("%.0f", M.horasPorArma(math.huge, 1, 40000)[1])} h de romper objetos sin pagar ni pociones`)
 
 -- 2. Vidas, con el jugador que va justo al ritmo del calendario: cada tipo vale sus golpes por lo que pega el jugador
 -- cuando ese tipo empieza a salirle a menudo (objetivo.golpes.parte). Mientras un tipo aún es más raro que eso, en las
@@ -249,7 +251,12 @@ for pasada = 1, 4 do
 	end))}`)
 end
 
--- 3. Precios: lo que gana el jugador tipo entre compra y compra, repartido entre las pistas que le quedan abiertas.
+-- 3. Precios: lo que gana el jugador tipo entre compra y compra, repartido entre las pistas que le quedan abiertas y
+-- se pagan con esa moneda (monedas, o gemas en las mejoras con currency = "gems").
+local function moneda(pista: string): string
+	local upgrade = Config.Upgrades[pista]
+	return if upgrade and upgrade.currency == "gems" then "gemas" else "monedas"
+end
 do
 	local eventos = runs[1].eventos
 	local quedan, botes = {}, {}
@@ -258,23 +265,25 @@ do
 		botes[pista] = 0
 		costes[pista] = {}
 	end
-	local antes = 0
+	local antes = { monedas = 0, gemas = 0 }
 	for position, evento in eventos do
-		local ganado = med(runs, function(run)
-			return run.eventos[position].monedas
-		end)
-		local peso = 0
-		for pista, left in quedan do
-			if left > 0 then
-				peso += objetivo.reparto[pista]
+		for clave, previo in antes do
+			local ganado = med(runs, function(run)
+				return run.eventos[position][clave]
+			end)
+			local peso = 0
+			for pista, left in quedan do
+				if left > 0 and moneda(pista) == clave then
+					peso += objetivo.reparto[pista]
+				end
 			end
-		end
-		for pista, left in quedan do
-			if left > 0 then
-				botes[pista] += (ganado - antes) * objetivo.reparto[pista] / peso
+			for pista, left in quedan do
+				if left > 0 and moneda(pista) == clave then
+					botes[pista] += (ganado - previo) * objetivo.reparto[pista] / peso
+				end
 			end
+			antes[clave] = ganado
 		end
-		antes = ganado
 		table.insert(costes[evento.pista], botes[evento.pista])
 		botes[evento.pista] = 0
 		quedan[evento.pista] -= 1
