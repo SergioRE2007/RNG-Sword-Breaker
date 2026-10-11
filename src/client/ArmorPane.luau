@@ -99,10 +99,6 @@ local function pieceTip(piece): (string, Color3)
 			table.insert(lines, `<font color="{hex(GOLD)}">✦ {ArmorStats.text(entry.stat, entry.value)}</font>`)
 		end
 	end
-	table.insert(lines, if piece.worn then `<font color="{hex(Ui.COLORS.green)}">Equipada</font>` else `<font color="{Ui.SOFT}">No equipada</font>`)
-	-- Las calidades corrientes no dan cristales al desmontarlas (Config.Armor.Qualities, "value").
-	local crystals = ArmorStats.salvage(piece)
-	table.insert(lines, `<font color="{Ui.SOFT}">Desmontar: {if crystals > 0 then `+{Format.short(crystals)} {Config.Items.gradeCrystal.name}` else "no da cristales"}</font>`)
 	return table.concat(lines, "\n"), quality.color
 end
 
@@ -133,7 +129,7 @@ function ArmorPane.build(pane: Frame, helpers)
 			if entry.piece then
 				return pieceTip(entry.piece)
 			end
-			return `{cfg.Slots[slot].name}\n<font color="{Ui.SOFT}">Vacío: elige una pieza y pulsa Equipar.</font>`, Ui.COLORS.gray
+			return `{cfg.Slots[slot].name}\n<font color="{Ui.SOFT}">Vacío</font>`, Ui.COLORS.gray
 		end, true)
 		cell.Activated:Connect(function()
 			if entry.piece then

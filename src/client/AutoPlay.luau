@@ -304,9 +304,9 @@ function AutoPlay.start()
 		end
 		Ui.tip(button, function()
 			if mode == "click" then
-				return "<b>Autoclicker</b>\nTus armas atacan solas a lo más cercano de tu círculo.\nGratis: dale me gusta al juego y únete al grupo.", CLICK_COLOR
+				return "<b>Autoclicker</b>\nTus armas atacan solas", CLICK_COLOR
 			end
-			return "<b>Auto</b>\nEn tu parcela, tu personaje va solo a por los objetos y los rompe.\nPase de juego.", FARM_COLOR
+			return "<b>Auto</b>\nTus armas rompen toda tu parcela", FARM_COLOR
 		end, true)
 		paint()
 	end

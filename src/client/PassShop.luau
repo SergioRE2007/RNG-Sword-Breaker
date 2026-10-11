@@ -31,7 +31,7 @@ local GOLD = Color3.fromRGB(255, 225, 90)
 -- Medidas de la tarjeta (píxeles de diseño: la ventana entera se encoge con su UIScale).
 local COLUMNS = 3
 local GAP = 12
-local CARD_HEIGHT = 300
+local CARD_HEIGHT = 252
 local SHOWN_ROWS = 2 -- filas de tarjetas a la vista; las demás, deslizando
 local PEEK = 46 -- lo que asoma de la fila siguiente cuando hay más
 local PAD = 8 -- margen de la tarjeta
@@ -351,26 +351,9 @@ function PassShop.start()
 		nameLimit.Parent = name
 		Ui.gradient(name, WHITE, pass.color:Lerp(WHITE, 0.4), 90)
 
-		-- Lo que da, una línea por ventaja. El texto se encoge si un pase trae muchas.
-		local lines = {}
-		for _, text in pass.perksText do
-			table.insert(lines, `<font color="#{ROBUX:ToHex()}">+</font> {text}`)
-		end
+		-- Sin lista de ventajas (pedido por el usuario: sobraban las descripciones): el escaparate, su etiqueta y el
+		-- nombre ya dicen lo que da cada pase.
 		local buyHeight = 54
-		local perksTop = PAD + ART_HEIGHT + 44
-		local perks = Ui.label(card, 20)
-		perks.Name = "Perks"
-		perks.Position = UDim2.fromOffset(PAD + 4, perksTop)
-		perks.Size = UDim2.new(1, -PAD * 2 - 8, 1, -perksTop - buyHeight - PAD - 8)
-		perks.TextXAlignment = Enum.TextXAlignment.Left
-		perks.TextYAlignment = Enum.TextYAlignment.Top
-		perks.TextWrapped = true
-		perks.TextScaled = true
-		perks.Text = table.concat(lines, "\n")
-		local perksLimit = Instance.new("UITextSizeConstraint")
-		perksLimit.MaxTextSize = 20
-		perksLimit.MinTextSize = 10
-		perksLimit.Parent = perks
 
 		local buy = Ui.button(card, "", ROBUX)
 		buy.Name = "Buy"

@@ -551,7 +551,7 @@ function Backpack.start()
 		Ui.gemIcon(cell, item.color)
 		itemLabels[name] = Ui.cellLabel(cell, "x0")
 		Ui.tip(cell, function()
-			return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>\n<font color="{Ui.SOFT}">Se usa en la pestaña Espadas.</font>`, item.color
+			return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>`, item.color
 		end)
 	end
 
@@ -576,7 +576,7 @@ function Backpack.start()
 	potionHint.Position = UDim2.new(0, 14, 1, -6)
 	potionHint.Size = UDim2.new(1, -28, 0, 28)
 	potionHint.TextXAlignment = Enum.TextXAlignment.Left
-	potionHint.Text = `<font color="{Ui.SOFT}">Pulsa una poción para activarla. Pasa el ratón para ver qué hace.</font>`
+	potionHint.Text = `<font color="{Ui.SOFT}">Pulsa una poción para usarla.</font>`
 
 	local function refreshPotions()
 		local order = Config.Potions.Order
@@ -625,7 +625,7 @@ function Backpack.start()
 			if index then
 				return artifactTip(index)
 			end
-			return `Ranura {slot}\n<font color="{Ui.SOFT}">Vacía: pulsa un accesorio para equiparlo.</font>`, Ui.COLORS.gray
+			return `Ranura {slot}\n<font color="{Ui.SOFT}">Vacía</font>`, Ui.COLORS.gray
 		end)
 		cell.Activated:Connect(function()
 			if slots[slot].index then
