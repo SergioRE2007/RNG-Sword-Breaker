@@ -30,7 +30,7 @@ function Stats.swords(player: Player)
 	return result
 end
 
--- Copia equipada.
+-- Primera copia equipada (la del hueco 1).
 function Stats.equipped(player: Player)
 	local id = player:GetAttribute("Equipped")
 	for _, copy in Stats.swords(player) do
@@ -41,10 +41,35 @@ function Stats.equipped(player: Player)
 	return { id = 0, sword = 1, trait = 0, grade = 0, metal = 0, size = 0 }
 end
 
--- Daño de una copia de espada con su rasgo, su metal y su tamaño, sin contar artefactos.
+-- Copias equipadas, por orden de hueco (hasta Config.Loadout.Slots). El servidor publica sus ids en "Loadout"
+-- ("3,7,1"); sin él, la del atributo "Equipped".
+function Stats.loadout(player: Player)
+	local byId = {}
+	for _, copy in Stats.swords(player) do
+		byId[copy.id] = copy
+	end
+	local result = {}
+	for _, id in Stats.list(player, "Loadout") do
+		if byId[id] then
+			table.insert(result, byId[id])
+			byId[id] = nil -- un id repetido no cuenta dos veces
+		end
+	end
+	if #result == 0 then
+		table.insert(result, Stats.equipped(player))
+	end
+	return result
+end
+
+function Stats.isEquipped(player: Player, id: number): boolean
+	return table.find(Stats.list(player, "Loadout"), id) ~= nil or player:GetAttribute("Equipped") == id
+end
+
+-- Daño de una copia de espada con su rasgo, su grado, su metal y su tamaño, sin contar artefactos.
 function Stats.swordDamage(copy): number
 	local trait = Config.Traits[copy.trait]
-	return Config.Swords[copy.sword].damage * (if trait then trait.damage or 1 else 1) * Permanent.damageMult(copy)
+	local grade = Config.Grades[copy.grade]
+	return Config.Swords[copy.sword].damage * (if trait then trait.damage or 1 else 1) * (if grade then grade.damage or 1 else 1) * Permanent.damageMult(copy)
 end
 
 -- Rareza total ("1 entre N") de una copia: la del arma por las de su metal y su tamaño.
@@ -133,17 +158,27 @@ local function upgrade(player: Player, name: string): number
 	return Upgrades.value(name, player:GetAttribute("Upgrade_" .. name) or 0)
 end
 
--- Tipo del arma equipada: su clave ("sword", "axe", "dual", "spear") y sus datos de Config.WeaponKinds.
-function Stats.weapon(player: Player)
-	local key = Config.Swords[Stats.equipped(player).sword].kind or "sword"
+-- Tipo de una copia de arma: su clave ("sword", "axe", "dual", "spear", "hammer") y sus datos de Config.WeaponKinds.
+function Stats.kind(copy)
+	local key = Config.Swords[copy.sword].kind or "sword"
 	return key, Config.WeaponKinds[key]
 end
 
--- Segundos entre golpes: el tiempo base por lo rápida o lenta que sea el arma, entre la poción de velocidad de golpe
--- si hay una activa. No hay mejora que lo baje (la hubo, "speed": el usuario la mandó quitar).
-function Stats.cooldown(player: Player): number
-	local _, kind = Stats.weapon(player)
+-- Tipo del arma del primer hueco.
+function Stats.weapon(player: Player)
+	return Stats.kind(Stats.equipped(player))
+end
+
+-- Segundos entre golpes de una de sus armas: el tiempo base por lo rápida o lenta que sea, entre la poción de velocidad
+-- de golpe si hay una activa. No hay mejora que lo baje (la hubo, "speed": el usuario la mandó quitar).
+function Stats.weaponCooldown(player: Player, copy): number
+	local _, kind = Stats.kind(copy)
 	return math.max(Config.BaseCooldown * kind.cooldown / Stats.potion(player, "attackSpeed"), Config.MinCooldown)
+end
+
+-- Segundos entre golpes del arma del primer hueco.
+function Stats.cooldown(player: Player): number
+	return Stats.weaponCooldown(player, Stats.equipped(player))
 end
 
 -- Renacimientos que lleva el jugador (el servidor los publica en el atributo "Rebirths").
@@ -166,14 +201,40 @@ function Stats.rebirthCost(player: Player): number
 	return math.floor(Config.Rebirth.cost * Config.Rebirth.growth ^ Stats.rebirths(player))
 end
 
-function Stats.damage(player: Player): number
-	return Stats.swordDamage(Stats.equipped(player)) * gear(player, "damage") * Stats.rebirthBonus(player, "damage") * (1 + armor(player, "damage")) * Stats.potion(player, "damage")
+-- Lo que multiplica el daño de cualquiera de sus armas: artefactos, renacimientos, armadura y poción.
+local function damageBonus(player: Player): number
+	return gear(player, "damage") * Stats.rebirthBonus(player, "damage") * (1 + armor(player, "damage")) * Stats.potion(player, "damage")
 end
 
--- Multiplicador de suerte que dan el rasgo de la espada equipada, los artefactos y la armadura.
+-- Daño con el que pega una de sus copias equipadas: el suyo (Stats.swordDamage) por lo que lleva el jugador.
+function Stats.weaponDamage(player: Player, copy): number
+	return Stats.swordDamage(copy) * damageBonus(player)
+end
+
+-- Daño del jugador: la suma del de sus armas equipadas (cada una con su rasgo y su grado).
+function Stats.damage(player: Player): number
+	local total = 0
+	for _, copy in Stats.loadout(player) do
+		total += Stats.swordDamage(copy)
+	end
+	return total * damageBonus(player)
+end
+
+-- Producto de lo que dan a esa estadística ("luck" o "coins") los rasgos de las armas equipadas.
+local function traits(player: Player, stat: string): number
+	local total = 1
+	for _, copy in Stats.loadout(player) do
+		local trait = Config.Traits[copy.trait]
+		if trait then
+			total *= trait[stat] or 1
+		end
+	end
+	return total
+end
+
+-- Multiplicador de suerte que dan los rasgos de las armas equipadas, los artefactos y la armadura.
 local function luckBonus(player: Player): number
-	local trait = Config.Traits[Stats.equipped(player).trait]
-	return (if trait then trait.luck or 1 else 1) * gear(player, "luck") * (1 + armor(player, "luck"))
+	return traits(player, "luck") * gear(player, "luck") * (1 + armor(player, "luck"))
 end
 
 -- Suerte de destructibles: multiplica la probabilidad de los tipos raros de objeto en su parcela (y la de los
@@ -218,12 +279,10 @@ function Stats.spawnLuck(player: Player): number
 	return Stats.potion(player, "boxLuck") * Stats.weather("luck")
 end
 
--- Monedas: artefactos, el rasgo y el grado de la espada equipada, y los pases (ventaja "coins").
+-- Monedas: artefactos, los rasgos de las armas equipadas, renacimientos y los pases (ventaja "coins"). Los grados
+-- ya no dan monedas: multiplican el daño de su arma (Stats.swordDamage).
 function Stats.coins(player: Player): number
-	local copy = Stats.equipped(player)
-	local trait = Config.Traits[copy.trait]
-	local grade = Config.Grades[copy.grade]
-	return gear(player, "coins") * (if trait then trait.coins or 1 else 1) * (if grade then grade.coins else 1) * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins")
+	return gear(player, "coins") * traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins")
 end
 
 function Stats.gems(player: Player): number

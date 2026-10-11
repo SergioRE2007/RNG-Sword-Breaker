@@ -1,5 +1,5 @@
--- Autoclicker y Auto de la parcela (botones a los lados de la casilla del arma, client/AutoPlay). Los espadazos los
--- sigue dando el cliente, por el mismo camino que un clic (Swing), así que aquí solo se decide si puede tenerlos
+-- Autoclicker y Auto de la parcela (botones a los lados de las casillas de las armas, client/AutoPlay). Los objetivos
+-- los sigue pidiendo el cliente, por el mismo camino que un clic (Attack), así que aquí solo se decide si puede tenerlos
 -- encendidos y se publica en los atributos "AutoClick" y "AutoFarm" del jugador:
 --   Autoclicker: gratis para quien esté en el grupo del juego (Config.AutoClicker.group). El "me gusta" no se puede
 --     comprobar: Roblox no le dice a un juego quién le ha dado like.

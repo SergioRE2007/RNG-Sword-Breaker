@@ -193,7 +193,7 @@ function Settings.start()
 
 	-- Ver hitbox -------------------------------------------------------------------------
 	-- Solo cambia el atributo local "HitboxDebug" del jugador: quien dibuja es client/HitboxDebug.
-	local hitboxRow = row(list, 6, "Ver hitbox", "Dibuja en el suelo hasta dónde llega tu arma (en blanco mientras dura el golpe) y marca en verde lo que alcanzarías.", false, Ui.COLORS.red)
+	local hitboxRow = row(list, 6, "Ver hitbox", "Dibuja en el suelo tu círculo de ataque, marca en verde lo que puedes elegir y enseña hasta dónde salpican tus armas.", false, Ui.COLORS.red)
 	local hitboxButton = Ui.button(hitboxRow, "", Ui.COLORS.gray)
 	hitboxButton.Name = "Hitbox"
 	hitboxButton.AnchorPoint = Vector2.new(1, 0.5)

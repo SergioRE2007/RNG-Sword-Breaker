@@ -1,173 +1,130 @@
--- Convierte los clics con la espada equipada en espadazos: animación, sonido y aviso al servidor.
-local Players = game:GetService("Players")
+-- Entrada del ataque: el clic, el toque o el gatillo del mando eligen un objetivo (un objeto de tu parcela o un enemigo
+-- de tu mazmorra, dentro de tu círculo) y se le pide al servidor que mande allí las armas equipadas (Attack). El
+-- servidor valida y decide (server/Combat); aquí solo se elige y se adelanta el vuelo de las armas (OrbitWeapons).
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Stats = require(ReplicatedStorage.Shared.Stats)
 local ForgeScene = require(script.Parent.ForgeScene)
-local Sfx = require(script.Parent.Sfx)
-local SwingAnim = require(script.Parent.SwingAnim)
+local OrbitWeapons = require(script.Parent.OrbitWeapons)
+local Targeting = require(script.Parent.Targeting)
+local Ui = require(script.Parent.Ui)
 
 local SwordController = {}
 
--- Si se le pone una función, se llama en cada espadazo que sale (la usa HitboxDebug, el modo de pruebas).
-SwordController.onSwing = nil :: (() -> ())?
+local AIM_ASSIST = 60 -- píxeles alrededor de un objetivo en los que el clic o el toque cuentan como darle
+local REPEAT = 0.5 -- segundos sin volver a pedir el mismo objetivo mientras el servidor contesta
+local FACING = 10 -- con el mando: studs que "acerca" a un objetivo tenerlo delante de la cámara
 
-local player = Players.LocalPlayer
-local hooked = setmetatable({}, { __mode = "k" })
-local watched = setmetatable({}, { __mode = "k" })
-local lastSwing = 0
-local equipmentRevision = 0 -- los intentos de recuperación nunca deshacen un cambio manual
+local asked: BasePart? = nil
+local askedAt = 0
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Include
 
-local function swordIn(container: Instance?): Tool?
-	if container then
-		for _, item in container:GetChildren() do
-			if item:IsA("Tool") and item:GetAttribute("Sword") then
-				return item
+-- Manda las armas a por esa pieza. Devuelve true si se ha pedido (o ya iban a por ella): no vale lo que no es tuyo, lo
+-- que queda fuera del círculo (el aro avisa en rojo) ni nada mientras estás en la forja, donde el clic es el martillazo.
+function SwordController.attack(part: BasePart?): boolean
+	if ForgeScene.isActive() or not part or not Targeting.valid(part) then
+		return false
+	end
+	if not Targeting.inCircle(part) then
+		OrbitWeapons.deny()
+		return false
+	end
+	local now = os.clock()
+	if Targeting.current() == part or (asked == part and now - askedAt < REPEAT) then
+		return true
+	end
+	asked, askedAt = part, now
+	OrbitWeapons.aim(part)
+	Remotes.Attack:FireServer(part)
+	return true
+end
+
+-- Hace volver las armas.
+function SwordController.recall()
+	asked = nil
+	OrbitWeapons.aim(nil)
+	if Targeting.current() then
+		Remotes.Attack:FireServer(nil)
+	end
+end
+
+-- Lo que señala ese punto de la pantalla: la pieza que tiene debajo o, si no hay ninguna, la más cercana al puntero
+-- de las que le quedan a menos de AIM_ASSIST píxeles (ayuda de puntería: en el móvil el dedo tapa lo que toca).
+local function pick(point: Vector2): BasePart?
+	local camera = workspace.CurrentCamera
+	local candidates = Targeting.candidates()
+	if not camera or #candidates == 0 then
+		return nil
+	end
+	local ray = camera:ViewportPointToRay(point.X, point.Y)
+	params.FilterDescendantsInstances = candidates
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+	if hit and hit.Instance:IsA("BasePart") and Targeting.valid(hit.Instance) then
+		return hit.Instance
+	end
+	-- Lo que mide un stud en pantalla a un stud de la cámara, para saber cuánto ocupa cada pieza.
+	local focal = camera.ViewportSize.Y / (2 * math.tan(math.rad(camera.FieldOfView) / 2))
+	local best, bestGap = nil, AIM_ASSIST
+	for _, part in candidates do
+		local screen, visible = camera:WorldToViewportPoint(part.Position)
+		if visible and Targeting.inCircle(part) then
+			local gap = (Vector2.new(screen.X, screen.Y) - point).Magnitude - part.Size.Magnitude / 2 / screen.Z * focal
+			if gap < bestGap then
+				best, bestGap = part, gap
 			end
 		end
 	end
-	return nil
+	return best
 end
 
-function SwordController.isDrawn(): boolean
-	return swordIn(player.Character) ~= nil
-end
-
--- Guardar solo cambia dónde está la herramienta; la copia elegida y sus mejoras se conservan.
-function SwordController.toggle()
-	if ForgeScene.isActive() then return end
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not humanoid or humanoid.Health <= 0 then return end
-	equipmentRevision += 1
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if swordIn(character) then
-		humanoid:UnequipTools()
-		Sfx.play("sheath", nil, nil, root)
-	else
-		local tool = swordIn(player:FindFirstChildOfClass("Backpack"))
-		if tool then
-			humanoid:EquipTool(tool)
-			Sfx.play("unsheath", nil, nil, root)
+-- Sin puntero (mando): lo más cercano del círculo, con ventaja para lo que la cámara tiene delante.
+local function pickNear(): BasePart?
+	local root = Targeting.root()
+	local camera = workspace.CurrentCamera
+	if not root or not camera then
+		return nil
+	end
+	local look = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+	look = if look.Magnitude > 1e-3 then look.Unit else Vector3.zAxis
+	local best, bestScore = nil, math.huge
+	for _, part in Targeting.candidates() do
+		if Targeting.inCircle(part) then
+			local offset = Vector3.new(part.Position.X - root.Position.X, 0, part.Position.Z - root.Position.Z)
+			local facing = if offset.Magnitude > 0.5 then offset.Unit:Dot(look) else 1
+			local score = offset.Magnitude + (1 - facing) * FACING
+			if score < bestScore then
+				best, bestScore = part, score
+			end
 		end
 	end
+	return best
 end
 
-local function swing(tool: Tool)
-	-- En la forja el clic es el martillazo: ni animación de ataque ni espadazo (el servidor tampoco se entera).
-	if ForgeScene.isActive() then
-		return
-	end
-	local now = os.clock()
-	local cooldown = Stats.cooldown(player)
-	if now - lastSwing < cooldown then
-		return
-	end
-	lastSwing = now
-
-	local kind = (Stats.weapon(player))
-	if not SwingAnim.play(player.Character, cooldown, kind) then
-		-- Sin esqueleto R15: el script Animate por defecto reproduce el tajo al ver este valor en la herramienta.
-		local anim = Instance.new("StringValue")
-		anim.Name = "toolanim"
-		anim.Value = "Slash"
-		anim.Parent = tool
-	end
-
-	Sfx.swing(kind, cooldown, player.Character)
-
-	Remotes.Swing:FireServer()
-	if SwordController.onSwing then
-		SwordController.onSwing()
-	end
-end
-
-local function hook(instance: Instance)
-	if instance:IsA("Tool") and instance:GetAttribute("Sword") and not hooked[instance] then
-		hooked[instance] = true
-		instance.Activated:Connect(function()
-			swing(instance)
-		end)
-	end
-end
-
--- Al entrar en la partida, el servidor pone la espada en la mano antes de que este cliente esté listo: se ve en la
--- mano, pero Roblox no la da por equipada y los clics no hacían nada hasta cambiar de arma. Si un arma está en la
--- mano y no llega su aviso de equipada, el cliente la guarda y la vuelve a sacar para recibir el aviso.
-local RETRIES = 5 -- intentos por partida, por si algo raro la dejara soltándose sin parar
-local retries = 0
-
-local function ensureEquipped(instance: Instance)
-	if not (instance:IsA("Tool") and instance:GetAttribute("Sword")) then
-		return
-	end
-	local equipped = false
-	local revision = equipmentRevision
-	local connection = instance.Equipped:Connect(function()
-		equipped = true
-	end)
-	task.delay(0.6, function()
-		connection:Disconnect()
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if not equipped and humanoid and humanoid.Health > 0 and instance.Parent == character and retries < RETRIES and revision == equipmentRevision then
-			retries += 1
-			humanoid:UnequipTools()
-			task.defer(function()
-				if revision == equipmentRevision and humanoid.Health > 0 and player.Character == character and instance.Parent == player:FindFirstChildOfClass("Backpack") then
-					humanoid:EquipTool(instance :: Tool)
-				end
-			end)
-		end
-	end)
-end
-
-local function watch(container: Instance)
-	if watched[container] then return end
-	watched[container] = true
-	local inHand = container == player.Character
-	container.ChildAdded:Connect(function(child)
-		hook(child)
-		if inHand then
-			ensureEquipped(child)
-		end
-	end)
-	for _, child in container:GetChildren() do
-		hook(child)
-		if inHand then
-			ensureEquipped(child)
-		end
-	end
-end
-
--- Da un espadazo con la espada que lleva en la mano, como si hubiera hecho clic (lo usa el modo automático de
--- las mazmorras). Pasa por el mismo tiempo de espera que los clics.
-function SwordController.swing()
-	local character = player.Character
-	local tool = swordIn(character)
-	if tool then
-		swing(tool)
-		return
-	end
-	-- Guardada: se saca sola y el siguiente intento ya golpea.
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	local stored = swordIn(player:FindFirstChildOfClass("Backpack"))
-	if stored and humanoid and humanoid.Health > 0 and not ForgeScene.isActive() then
-		equipmentRevision += 1
-		humanoid:EquipTool(stored)
-	end
+local function busy(): boolean
+	return ForgeScene.isActive() or Ui.anyOpen() or UserInputService:GetFocusedTextBox() ~= nil
 end
 
 function SwordController.start()
-	watch(player:WaitForChild("Backpack"))
-	player.CharacterAdded:Connect(function(character)
-		watch(character)
-		watch(player:WaitForChild("Backpack"))
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or busy() then
+			return
+		end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			SwordController.attack(pick(UserInputService:GetMouseLocation()))
+		elseif input.KeyCode == Enum.KeyCode.ButtonR2 then
+			SwordController.attack(pickNear())
+		end
 	end)
-	if player.Character then
-		watch(player.Character)
-	end
+	UserInputService.TouchTapInWorld:Connect(function(position, processed)
+		if not processed and not busy() then
+			-- El toque llega sin el hueco de arriba de la pantalla, que la cámara sí cuenta.
+			local inset = GuiService:GetGuiInset()
+			SwordController.attack(pick(position + inset))
+		end
+	end)
 end
 
 return SwordController

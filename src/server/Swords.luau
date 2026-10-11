@@ -1,3 +1,5 @@
+-- YA NO SE ARRANCA (server/init): las armas equipadas no van en la mano, las dibuja cada cliente girando alrededor
+-- del jugador (client/OrbitWeapons). Se guarda hasta que el sistema nuevo se dé por bueno.
 -- Entrega al jugador la espada de su nivel (el modelo lo construye shared/SwordModel).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

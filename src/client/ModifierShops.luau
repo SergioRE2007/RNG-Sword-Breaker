@@ -388,7 +388,7 @@ local function buildShop(kind: string)
 	warning.Size = UDim2.fromScale(1, 0.15)
 	warning.TextWrapped = true
 	warning.TextColor3 = Color3.fromRGB(200, 200, 210)
-	warning.Text = `Al tirar se sustituye el {string.lower(info.label)} que tenga la espada.\nMientras esté equipada, {if kind == "traits" then "sube sus monedas, daño o suerte" else "multiplica sus monedas"}.`
+	warning.Text = `Al tirar se sustituye el {string.lower(info.label)} que tenga la espada.\nMientras esté equipada, {if kind == "traits" then "sube su daño y tus monedas o tu suerte" else "multiplica su daño"}.`
 
 	-- Botones de abajo, repartidos por el UIListLayout (los anchos suman 1 con los huecos).
 	local function control(name: string, text: string, color: Color3, order: number, width: number, textSize: number): TextButton
@@ -866,7 +866,7 @@ local function buildShop(kind: string)
 				child:Destroy()
 			end
 		end
-		local equipped = player:GetAttribute("Equipped")
+		local worn = Stats.list(player, "Loadout")
 		-- De la más rara a la más común; dentro de la misma rareza, de más a menos daño.
 		local copies = Stats.swords(player)
 		table.sort(copies, function(a, b)
@@ -888,7 +888,7 @@ local function buildShop(kind: string)
 			if current then
 				Ui.cellLabel(cell, current.name)
 			end
-			if copy.id == equipped then
+			if table.find(worn, copy.id) then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
 			end
 			for _, descendant in cell:GetDescendants() do
@@ -1443,7 +1443,7 @@ local function buildShop(kind: string)
 			refresh()
 		end
 	end)
-	for _, attribute in { "Swords", "Equipped", "Item_gradeCrystal", "Item_traitCrystal", "Pity_" .. kind } do
+	for _, attribute in { "Swords", "Equipped", "Loadout", "Item_gradeCrystal", "Item_traitCrystal", "Pity_" .. kind } do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()

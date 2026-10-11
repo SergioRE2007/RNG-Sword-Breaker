@@ -66,7 +66,7 @@ end
 local function worstSpare(data, rarity: number): number?
 	local worst, worstRarity = nil, rarity
 	for position, copy in data.swords do
-		if copy.id ~= data.equipped and (copy.trait or 0) == 0 and (copy.grade or 0) == 0 then
+		if not PlayerData.isEquipped(data, copy.id) and (copy.trait or 0) == 0 and (copy.grade or 0) == 0 then
 			local copyRarity = Permanent.rarity(copy.sword, copy.metal, copy.size)
 			if copyRarity < worstRarity then
 				worst, worstRarity = position, copyRarity
@@ -227,13 +227,60 @@ local function onRoll(player: Player)
 	draw(player, 1, "gacha")
 end
 
+-- Daño de una copia del inventario con su rasgo y su grado (lo que decide cuál es "la mejor" y cuál se sustituye).
+local function copyDamage(copy): number
+	return Stats.swordDamage({ sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 })
+end
+
+-- Equipar (Config.Loadout.Slots armas a la vez). Con un id, pone esa copia o la quita si ya estaba: va al primer
+-- hueco libre y, sin huecos, al de la equipada que menos daño hace; la última no se puede quitar. Con "best", deja
+-- equipadas las de más daño de la mochila.
 local function onEquip(player: Player, id: unknown)
 	local data = PlayerData.read(player)
-	if data and PlayerData.findSword(data, id) then
-		PlayerData.edit(player, function(edited)
-			edited.equipped = id
-		end)
+	if not data then
+		return
 	end
+	if id == "best" then
+		local order = table.clone(data.swords)
+		table.sort(order, function(a, b)
+			local damageA, damageB = copyDamage(a), copyDamage(b)
+			if damageA ~= damageB then
+				return damageA > damageB
+			end
+			return a.id < b.id
+		end)
+		PlayerData.edit(player, function(edited)
+			edited.loadout = {}
+			for slot = 1, math.min(Config.Loadout.Slots, #order) do
+				edited.loadout[slot] = order[slot].id
+			end
+		end)
+		return
+	end
+	if not PlayerData.findSword(data, id) then
+		return
+	end
+	PlayerData.edit(player, function(edited)
+		local loadout = edited.loadout
+		local slot = table.find(loadout, id)
+		if slot then
+			if #loadout > 1 then
+				table.remove(loadout, slot)
+			end
+		elseif #loadout < Config.Loadout.Slots then
+			table.insert(loadout, id)
+		else
+			local weakest, weakestDamage = 1, math.huge
+			for position, equipped in loadout do
+				local copy = PlayerData.findSword(edited, equipped)
+				local damage = if copy then copyDamage(copy) else 0
+				if damage < weakestDamage then
+					weakest, weakestDamage = position, damage
+				end
+			end
+			loadout[weakest] = id
+		end
+	end)
 end
 
 local function onSellMany(player: Player, ids: unknown)
@@ -253,7 +300,7 @@ local function onSellMany(player: Player, ids: unknown)
 	PlayerData.edit(player, function(edited)
 		for index = #edited.swords, 1, -1 do
 			local copy = edited.swords[index]
-			if wanted[copy.id] and copy.id ~= edited.equipped then
+			if wanted[copy.id] and not PlayerData.isEquipped(edited, copy.id) then
 				table.remove(edited.swords, index)
 				sold += 1
 			end

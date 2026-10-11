@@ -221,7 +221,9 @@ local function meshed(add: Add, def, scale: number, anchored: boolean, metal: nu
 	handle:SetAttribute("Mesh", def.mesh)
 	handle:SetAttribute("MeshScale", scale)
 	handle:SetAttribute("MeshMetal", metal or 0)
-	if RunService:IsClient() then
+	-- Las de adorno (vistas 3D, tiradas) se visten aquí mismo. Las que se mueven (las que giran alrededor del jugador)
+	-- llevan la etiqueta, y client/WeaponMesh las viste y anima sus piezas sueltas.
+	if RunService:IsClient() and anchored then
 		MeshWeapon.attach(handle, anchored)
 	else
 		handle:AddTag(MeshWeapon.TAG)

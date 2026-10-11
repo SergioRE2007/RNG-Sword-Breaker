@@ -24,11 +24,8 @@ Config.Test = {
 -- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
 -- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
 Config.Admins = { 4490621018 }
-Config.BaseRange = 5 -- alcance base; se le suma el largo de la hoja
 Config.BaseCooldown = 0.35 -- segundos entre golpes de una espada (cada tipo de arma lo multiplica por su "cooldown"). No hay mejora que lo baje: solo la poción de velocidad de golpe (Config.Potions)
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
-Config.SwingWindow = 1.15 -- cuánto sigue vivo el espadazo, en veces el tiempo entre golpes: mientras dura golpea a lo que entre en su alcance, cada cosa una sola vez (1.15 = lo que dura la animación; 0 = solo el instante del clic)
-Config.SwingLag = 0.15 -- segundos de más que el servidor mantiene vivo el espadazo, por el retraso con que ve moverse al jugador
 Config.StartCoins = 0
 Config.AutosaveInterval = 60
 Config.DataStoreName = "PlayerData_v1"
@@ -40,14 +37,16 @@ Config.DataStoreName = "PlayerData_v1"
 Config.SessionLock = { Retry = 3, Wait = 30, Expire = 180, SaveTries = 3 }
 
 -- Tipos de arma. Cada arma de Config.Swords lleva "kind" (sin él es "sword").
--- cooldown = multiplica el tiempo entre golpes; arc = cuánto de frente tiene que estar el objeto
--- (1 = justo delante, 0 = medio círculo, -1 = todo alrededor). El alcance es BaseRange + bladeLength.
+-- cooldown = multiplica el tiempo entre golpes. Cada arma equipada vuela a su objetivo y le pega a su ritmo; además:
+-- area = salpica: pega también a lo que haya alrededor del objetivo, hasta esa distancia en veces el largo del arma (0 = no);
+-- pierce = atraviesa: pega también a lo que haya detrás del objetivo, en línea desde el jugador, hasta esa distancia en
+-- veces su largo. La cuenta es de shared/Hitbox (Hitbox.spread).
 Config.WeaponKinds = {
-	sword = { name = "Espada", cooldown = 1, arc = 0.2 },
-	axe = { name = "Hacha", cooldown = 1.7, arc = -1 }, -- gira y pega a todo lo que le rodea, pero lenta
-	dual = { name = "Espadas dobles", cooldown = 0.55, arc = 0.2 }, -- golpes rápidos
-	spear = { name = "Lanza", cooldown = 1.1, arc = 0.8 }, -- estocada estrecha desde lejos
-	hammer = { name = "Martillo", cooldown = 2.2, arc = -0.3 }, -- muy lento, golpe en área ancha por delante y a los lados
+	sword = { name = "Espada", cooldown = 1, area = 0 },
+	axe = { name = "Hacha", cooldown = 1.7, area = 1.6 }, -- lenta, pero salpica alrededor del objetivo
+	dual = { name = "Espadas dobles", cooldown = 0.55, area = 0 }, -- golpes rápidos
+	spear = { name = "Lanza", cooldown = 1.1, area = 0, pierce = 1 }, -- atraviesa lo que hay detrás
+	hammer = { name = "Martillo", cooldown = 2.2, area = 2.2 }, -- muy lento, salpica en un área ancha
 }
 
 -- REGLA DE EQUILIBRIO (rareza -> daño): cada vez que la rareza se multiplica por 2, el daño sube un 50 %
@@ -197,44 +196,56 @@ Config.Items = {
 	gradeCrystal = { name = "Cristal de grado", description = "Se gasta en la tienda de Grados del hub: da un grado al azar a la espada que elijas. Lo sueltan los enemigos de las mazmorras.", color = Color3.fromRGB(200, 120, 255) },
 }
 
+-- Armas equipadas a la vez (pedido por el usuario: con una sola, rasgos y grados solo se mejoraban en la mejor). Cada
+-- una pega con su daño (arma, metal, tamaño, SU rasgo y SU grado) y el daño del jugador es la suma; la suerte y las
+-- monedas de sus rasgos se multiplican entre sí (ver shared/Stats). Las armas giran alrededor del jugador y vuelan al
+-- objetivo que elige con un clic (server/Combat, client/OrbitWeapons):
+-- Radius = círculo alrededor del jugador dentro del que se puede elegir objetivo; Leash = studs de más que puede alejarse
+-- del objetivo ya elegido antes de que las armas lo suelten; Travel = segundos que tardan en llegar al objetivo (antes no
+-- pega ninguna); Chain = lo mismo al saltar solas al siguiente enemigo de una mazmorra.
+Config.Loadout = { Slots = 4, Radius = 26, Leash = 8, Travel = 0.25, Chain = 0.15 }
+
 -- Rasgos de espada (tienda de Rasgos del hub). Se tiran con un Cristal de rasgo; "chance" = peso
 -- de salir (el % se calcula sobre el total, sin suerte). Mientras la espada está equipada
--- multiplican sus monedas, su daño y la suerte (de parcela y de gacha); lo que no se pone vale 1.
+-- multiplican su daño (solo el de esa arma) y las monedas y la suerte del jugador; lo que no se pone vale 1.
+-- El daño va alto y la suerte y las monedas bajas (decidido por el usuario): con varias armas equipadas el daño se
+-- suma, pero la suerte y las monedas de sus rasgos se multiplican (cuatro Paradojas = x16).
 -- "icon" = coins, damage, luck o all (los que lo suben todo salen con arcoíris).
 -- No cambies el orden: el guardado usa la posición en la lista; lo nuevo, al final.
 Config.Traits = {
-	{ name = "Monedas I", coins = 1.2, chance = 24.76, icon = "coins", color = Color3.fromRGB(110, 220, 120) },
+	{ name = "Monedas I", coins = 1.05, chance = 24.76, icon = "coins", color = Color3.fromRGB(110, 220, 120) },
 	{ name = "Daño I", damage = 1.2, chance = 24.76, icon = "damage", color = Color3.fromRGB(90, 210, 230) },
-	{ name = "Suerte I", luck = 1.2, chance = 24.76, icon = "luck", color = Color3.fromRGB(150, 230, 90) },
-	{ name = "Monedas II", coins = 1.5, chance = 6.7, icon = "coins", color = Color3.fromRGB(60, 200, 90) },
+	{ name = "Suerte I", luck = 1.05, chance = 24.76, icon = "luck", color = Color3.fromRGB(150, 230, 90) },
+	{ name = "Monedas II", coins = 1.1, chance = 6.7, icon = "coins", color = Color3.fromRGB(60, 200, 90) },
 	{ name = "Daño II", damage = 1.5, chance = 6.7, icon = "damage", color = Color3.fromRGB(50, 170, 240) },
-	{ name = "Suerte II", luck = 1.5, chance = 6.7, icon = "luck", color = Color3.fromRGB(120, 210, 50) },
-	{ name = "Monedas III", coins = 2, chance = 1.5, icon = "coins", color = Color3.fromRGB(30, 180, 70) },
+	{ name = "Suerte II", luck = 1.1, chance = 6.7, icon = "luck", color = Color3.fromRGB(120, 210, 50) },
+	{ name = "Monedas III", coins = 1.2, chance = 1.5, icon = "coins", color = Color3.fromRGB(30, 180, 70) },
 	{ name = "Daño III", damage = 2, chance = 1.5, icon = "damage", color = Color3.fromRGB(40, 120, 255) },
-	{ name = "Suerte III", luck = 2, chance = 1.5, icon = "luck", color = Color3.fromRGB(90, 190, 30) },
-	{ name = "Samurái", coins = 3, damage = 3, luck = 3, chance = 0.9, icon = "all", color = Color3.fromRGB(255, 120, 200), rainbow = true },
-	{ name = "Shogun", coins = 5, damage = 5, luck = 5, chance = 0.17, icon = "all", color = Color3.fromRGB(120, 230, 160), rainbow = true },
-	{ name = "Monarca", coins = 8, damage = 8, luck = 8, chance = 0.039, icon = "all", color = Color3.fromRGB(180, 120, 255), rainbow = true },
-	{ name = "Trascendente", coins = 15, damage = 15, luck = 15, chance = 0.01, icon = "all", color = Color3.fromRGB(255, 80, 60) },
-	{ name = "Eterno", coins = 30, damage = 30, luck = 30, chance = 0.0045, icon = "all", color = Color3.fromRGB(220, 40, 40) },
-	{ name = "Paradoja", coins = 57.5, damage = 57.5, luck = 57.5, chance = 0.0019, icon = "all", color = Color3.fromRGB(235, 235, 245) },
+	{ name = "Suerte III", luck = 1.2, chance = 1.5, icon = "luck", color = Color3.fromRGB(90, 190, 30) },
+	{ name = "Samurái", coins = 1.25, damage = 3, luck = 1.25, chance = 0.9, icon = "all", color = Color3.fromRGB(255, 120, 200), rainbow = true },
+	{ name = "Shogun", coins = 1.35, damage = 5, luck = 1.35, chance = 0.17, icon = "all", color = Color3.fromRGB(120, 230, 160), rainbow = true },
+	{ name = "Monarca", coins = 1.5, damage = 8, luck = 1.5, chance = 0.039, icon = "all", color = Color3.fromRGB(180, 120, 255), rainbow = true },
+	{ name = "Trascendente", coins = 1.65, damage = 15, luck = 1.65, chance = 0.01, icon = "all", color = Color3.fromRGB(255, 80, 60) },
+	{ name = "Eterno", coins = 1.8, damage = 30, luck = 1.8, chance = 0.0045, icon = "all", color = Color3.fromRGB(220, 40, 40) },
+	{ name = "Paradoja", coins = 2, damage = 57.5, luck = 2, chance = 0.0019, icon = "all", color = Color3.fromRGB(235, 235, 245) },
 }
 
 -- Grados de espada (tienda de Grados del hub). Se tiran con Cristales de grado (GradeCost cada vez) y
--- multiplican las monedas mientras la espada está equipada. "chance" como en los rasgos.
+-- multiplican el daño de esa arma mientras está equipada (decidido por el usuario: antes daban monedas). "chance"
+-- como en los rasgos.
 -- No cambies el orden: el guardado usa la posición en la lista.
 Config.Grades = {
-	{ name = "D", coins = 1.1, chance = 50.21, color = Color3.fromRGB(200, 200, 205) },
-	{ name = "C", coins = 1.25, chance = 25, color = Color3.fromRGB(80, 210, 80) },
-	{ name = "B", coins = 1.5, chance = 12, color = Color3.fromRGB(60, 140, 255) },
-	{ name = "A", coins = 2, chance = 7.4, color = Color3.fromRGB(160, 80, 255) },
-	{ name = "A+", coins = 3, chance = 3.8, color = Color3.fromRGB(255, 190, 40) },
-	{ name = "S", coins = 5, chance = 1.3, color = Color3.fromRGB(240, 50, 60) },
-	{ name = "S+", coins = 8, chance = 0.2, color = Color3.fromRGB(50, 80, 255) },
-	{ name = "Z", coins = 12, chance = 0.063, color = Color3.fromRGB(40, 210, 190) },
-	{ name = "Z+", coins = 20, chance = 0.019, color = Color3.fromRGB(200, 90, 255), rainbow = true },
-	{ name = "X", coins = 40, chance = 0.0057, color = Color3.fromRGB(230, 40, 40), rainbow = true },
-	{ name = "∞", coins = 100, chance = 0.0016, color = Color3.fromRGB(190, 150, 255), rainbow = true },
+	{ name = "D", damage = 1.1, chance = 50.21, color = Color3.fromRGB(200, 200, 205) },
+	{ name = "C", damage = 1.25, chance = 25, color = Color3.fromRGB(80, 210, 80) },
+	{ name = "B", damage = 1.5, chance = 12, color = Color3.fromRGB(60, 140, 255) },
+	{ name = "A", damage = 2, chance = 7.4, color = Color3.fromRGB(160, 80, 255) },
+	{ name = "A+", damage = 3, chance = 3.8, color = Color3.fromRGB(255, 190, 40) },
+	{ name = "S", damage = 5, chance = 1.3, color = Color3.fromRGB(240, 50, 60) },
+	{ name = "S+", damage = 8, chance = 0.2, color = Color3.fromRGB(50, 80, 255) },
+	{ name = "Z", damage = 12, chance = 0.063, color = Color3.fromRGB(40, 210, 190) },
+	{ name = "Z+", damage = 20, chance = 0.019, color = Color3.fromRGB(200, 90, 255), rainbow = true },
+	{ name = "X", damage = 40, chance = 0.0057, color = Color3.fromRGB(230, 40, 40), rainbow = true },
+	{ name = "∞", damage = 100, chance = 0.0016, color = Color3.fromRGB(190, 150, 255), rainbow = true },
 }
 Config.GradeCost = 1 -- Cristales de grado por tirada de grado
 Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grado

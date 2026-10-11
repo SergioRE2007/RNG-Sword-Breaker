@@ -209,7 +209,7 @@ local function problem(side, other): string?
 		end
 	end
 	for id in offer.swords do
-		if not PlayerData.findSword(data, id) or id == data.equipped then
+		if not PlayerData.findSword(data, id) or PlayerData.isEquipped(data, id) then
 			return `{side.name} ya no tiene una de las espadas (o la lleva equipada)`
 		end
 	end
@@ -458,8 +458,8 @@ local function applyOffer(session, side, other, category: unknown, key: unknown,
 		end
 		offer.items[key] = if value > 0 then value else nil
 	elseif category == "swords" then
-		-- La equipada no se puede dar: hay que equipar otra antes.
-		if on and (not PlayerData.findSword(data, key) or key == data.equipped) then
+		-- Las equipadas no se pueden dar: hay que quitarlas antes.
+		if on and (not PlayerData.findSword(data, key) or PlayerData.isEquipped(data, key)) then
 			return false
 		end
 		offer.swords[key] = if on then true else nil
@@ -610,7 +610,7 @@ local function onSuggest(player: Player, intent: unknown, category: unknown, key
 		end
 	elseif intent == "give" then
 		if category == "swords" then
-			if not PlayerData.findSword(data, key) or key == data.equipped then
+			if not PlayerData.findSword(data, key) or PlayerData.isEquipped(data, key) then
 				return
 			end
 		elseif category == "armor" then

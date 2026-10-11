@@ -633,7 +633,7 @@ local function buildTrade()
 	end
 
 	local function buildStock(force: boolean?)
-		local key = `{tab}|{player:GetAttribute("Swords")}|{player:GetAttribute("Equipped")}|{player:GetAttribute("Armor")}|{player:GetAttribute("Artifacts")}`
+		local key = `{tab}|{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Armor")}|{player:GetAttribute("Artifacts")}`
 		if key == stockKey and not force then
 			paintStock()
 			return
@@ -660,10 +660,10 @@ local function buildTrade()
 			end)
 		end
 		if tab == "swords" then
-			local equipped = player:GetAttribute("Equipped")
+			local worn = Stats.list(player, "Loadout")
 			for _, copy in Stats.swords(player) do
-				-- La equipada no se puede dar.
-				if copy.id ~= equipped then
+				-- Las equipadas no se pueden dar.
+				if not table.find(worn, copy.id) then
 					add(swordCell(stock, copy), copy.id, -math.floor(math.log10(Stats.rarity(copy)) * 1000))
 				end
 			end
@@ -1100,7 +1100,7 @@ local function buildTrade()
 		end
 	end)
 	player.AttributeChanged:Connect(function(attribute)
-		if current and window.Visible and (attribute == "Swords" or attribute == "Armor" or attribute == "Artifacts" or attribute == "Equipped" or attribute == "Coins" or attribute == "Gems" or string.sub(attribute, 1, 5) == "Item_") then
+		if current and window.Visible and (attribute == "Swords" or attribute == "Armor" or attribute == "Artifacts" or attribute == "Loadout" or attribute == "Coins" or attribute == "Gems" or string.sub(attribute, 1, 5) == "Item_") then
 			buildStock()
 		end
 	end)
