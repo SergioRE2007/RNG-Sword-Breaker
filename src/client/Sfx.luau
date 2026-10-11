@@ -136,6 +136,7 @@ local MAX_VOLUME = 10 -- el tope de Sound.Volume
 -- bajando hasta callar del todo en ROLLOFF_MAX.
 local ROLLOFF_MIN = 40
 local ROLLOFF_MAX = 200
+local RETRY = { 1, 2, 4, 8, 15, 30, 60 } -- segundos entre un intento y el siguiente de cargar los audios que fallan
 local SWING_QUIET = 0.35 -- con menos segundos que estos entre golpes, el espadazo va bajando de volumen
 
 -- A qué suena cada material de Config.Destructibles (lo que no sale aquí suena a piedra). Un objeto se lo
@@ -261,11 +262,32 @@ function Sfx.start()
 		end
 		template[name] = variants
 	end
-	-- Y se piden cuanto antes, para que estén ya al entrar.
+	-- Y se piden cuanto antes, para que estén ya al entrar. Una plantilla cuya carga falla (pasa al entrar, sobre
+	-- todo con audios de otra cuenta a los que el juego tiene permiso) no lo vuelve a intentar sola y cada copia
+	-- suya tarda 0,35 s en oírse (medido): se le vuelve a poner el audio hasta que carga.
 	task.spawn(function()
-		pcall(function()
-			ContentProvider:PreloadAsync(list)
-		end)
+		local pending = list
+		for _, pause in RETRY do
+			pcall(function()
+				ContentProvider:PreloadAsync(pending)
+			end)
+			local failed = {}
+			for _, sound in pending do
+				if not sound.IsLoaded then
+					table.insert(failed, sound)
+				end
+			end
+			if #failed == 0 then
+				break
+			end
+			task.wait(pause)
+			for _, sound in failed do
+				local id = sound.SoundId
+				sound.SoundId = ""
+				sound.SoundId = id
+			end
+			pending = failed
+		end
 	end)
 end
 
