@@ -889,10 +889,10 @@ Config.Trade = {
 -- Ui.IMAGES (el grande y los que caen por detrás), "tag" = texto gordo de la esquina y "ribbon" (opcional) = cinta.
 -- extraSlots = armas de más que se pueden equipar y, otras tantas, dejar en la Bolsa de oro (Stats.loadoutSlots y
 -- Stats.bagSlots; pedido por el usuario).
-Config.GamepassOrder = { "vip", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }
+Config.GamepassOrder = { "vip", "coins2", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }
 Config.Gamepasses = {
 	vip = {
-		id = 0,
+		id = 2027114984,
 		name = "VIP",
 		icon = "monedas", tag = "VIP", ribbon = "POPULAR",
 		price = 449,
@@ -902,7 +902,7 @@ Config.Gamepasses = {
 		chatTag = "VIP",
 	},
 	weaponLuck2 = {
-		id = 0,
+		id = 2025987032,
 		name = "Suerte de armas x2",
 		icon = "suerte", tag = "x2",
 		price = 299,
@@ -911,7 +911,7 @@ Config.Gamepasses = {
 		perks = { weaponLuck = 2 },
 	},
 	weaponLuck5 = {
-		id = 0,
+		id = 2026598990,
 		name = "Suerte de armas x5",
 		icon = "suerte", tag = "x5", ribbon = "MEJOR OFERTA",
 		price = 999,
@@ -920,7 +920,7 @@ Config.Gamepasses = {
 		perks = { weaponLuck = 5 },
 	},
 	dungeonLoot = {
-		id = 0,
+		id = 2027079048,
 		name = "Botín de mazmorra x2",
 		icon = "mazmorras", tag = "x2",
 		price = 349,
@@ -929,7 +929,7 @@ Config.Gamepasses = {
 		perks = { dungeonLoot = 2 },
 	},
 	auto = {
-		id = 0,
+		id = 2026755018,
 		name = "Auto",
 		icon = "espada", tag = "AUTO",
 		price = 249,
@@ -938,7 +938,7 @@ Config.Gamepasses = {
 		perks = { autoFarm = 1 },
 	},
 	arsenal = {
-		id = 0,
+		id = 2026904972,
 		name = "Arsenal doble",
 		icon = "espada", tag = "+4",
 		price = 799,
@@ -947,13 +947,22 @@ Config.Gamepasses = {
 		perks = { extraSlots = 4 },
 	},
 	forge = {
-		id = 0,
+		id = 2025668973,
 		name = "Maestro de la forja",
 		icon = "mejora", tag = "x10",
 		price = 199,
 		color = Color3.fromRGB(255, 150, 60),
 		perksText = { "Tira 10 rasgos a la vez (se queda el mejor)", "Tiradas de grado al 400 % de velocidad" },
 		perks = { traitCount = 10, gradeSpeed = 4 },
+	},
+	coins2 = {
+		id = 2025747023,
+		name = "Monedas x2",
+		icon = "monedas", tag = "x2",
+		price = 299,
+		color = Color3.fromRGB(70, 200, 230),
+		perksText = { "x2 de monedas en todo lo que rompes", "Se multiplica con el VIP: juntos, x3" },
+		perks = { coins = 2 },
 	},
 }
 
