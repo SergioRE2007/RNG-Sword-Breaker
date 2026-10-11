@@ -43,6 +43,7 @@ local SUPER_BELOW = 1 -- los grados con menos de este % dan el súper martillazo
 local api: any = nil
 local active = false
 local striking = false
+local hiddenSlot: GuiObject? = nil -- casilla del arma escondida al entrar (se vuelve a enseñar al salir)
 local lastRequest = 0 -- cuándo se pidió la última tirada (el servidor exige un tiempo mínimo entre tiradas)
 local scene: any = nil -- lo que existe mientras la escena está activa
 local ui: any = nil
@@ -73,7 +74,7 @@ local function buildUi()
 		local size = workspace.CurrentCamera.ViewportSize
 		scale.Scale = math.clamp(size.Y / 720, 0.7, 1.25)
 		-- El UIScale agranda también al marco: se encoge a la inversa para que llene la pantalla justa
-		-- (si no, con pantallas grandes Salir, Arma y Auto quedan fuera por la derecha).
+		-- (si no, con pantallas grandes Salir, Arma y Auto quedan fuera de la pantalla).
 		root.Size = UDim2.fromScale(1 / scale.Scale, 1 / scale.Scale)
 	end
 	fit()
@@ -93,8 +94,9 @@ local function buildUi()
 
 	local exit = Ui.button(root, "Salir", Ui.COLORS.red)
 	exit.Name = "Exit"
-	exit.AnchorPoint = Vector2.new(1, 0)
-	exit.Position = UDim2.new(1, -16, 0, 84)
+	-- Abajo en medio (pedido por el usuario).
+	exit.AnchorPoint = Vector2.new(0.5, 1)
+	exit.Position = UDim2.new(0.5, 0, 1, -24)
 	exit.Size = UDim2.fromOffset(130, 52)
 	exit.TextSize = 24
 
@@ -119,7 +121,7 @@ local function buildUi()
 		return button
 	end
 	local weapon = side("Weapon", "Arma", Ui.COLORS.blue, 1)
-	local auto = side("Auto", "Auto", Ui.COLORS.red, 2)
+	local auto = side("Auto", "Auto", Ui.COLORS.purple, 2)
 	local settings = side("Settings", "Ajustes", Ui.COLORS.gray, 3)
 
 	-- Cuadro tras un martillazo a mano: quedarse con el grado nuevo o descartarlo y volver al anterior.
@@ -234,7 +236,7 @@ local function refreshUi()
 	ui.cost.Text = `Cristales: {Format.short(crystals)} ({Config.GradeCost} por golpe)`
 	ui.cost.TextColor3 = if api.canAfford() then WHITE else Ui.COLORS.red
 	ui.auto.Text = if api.state.auto then "Parar" else "Auto"
-	ui.auto.BackgroundColor3 = if api.state.auto then Ui.COLORS.orange else Ui.COLORS.red
+	ui.auto.BackgroundColor3 = if api.state.auto then Ui.COLORS.orange else Ui.COLORS.purple
 	ui.weapon.Text = if scene and scene.placedId then "Cambiar" else "Arma"
 	if not scene then
 		return
@@ -854,6 +856,13 @@ function ForgeScene.enter()
 	end
 	active = true
 	striking = false
+	-- La casilla del arma con Click y Auto (Hud.HudRoot.WeaponSlot) tapaba Salir, que va abajo en medio; en la forja el clic
+	-- es el martillazo, así que se esconde mientras tanto.
+	local slot = Ui.hud():FindFirstChild("WeaponSlot") :: GuiObject?
+	hiddenSlot = if slot and slot.Visible then slot else nil
+	if hiddenSlot then
+		hiddenSlot.Visible = false
+	end
 	local rotation = anvil.CFrame.Rotation
 	local folder = Instance.new("Folder")
 	folder.Name = "ForgeSceneFx"
@@ -1073,6 +1082,10 @@ function ForgeScene.exit()
 		return
 	end
 	active = false
+	if hiddenSlot then
+		hiddenSlot.Visible = true
+		hiddenSlot = nil
+	end
 	local s = scene
 	if choose then
 		choose(true) -- al salir con el cuadro abierto no se reforja
