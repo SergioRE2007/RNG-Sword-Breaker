@@ -245,7 +245,7 @@ Config.Traits = {
 	{ name = "Monedas III", coins = 1.2, chance = 1.5, icon = "coins", color = Color3.fromRGB(30, 180, 70) },
 	{ name = "Daño III", damage = 2, chance = 1.5, icon = "damage", color = Color3.fromRGB(40, 120, 255) },
 	{ name = "Suerte III", luck = 1.2, chance = 1.5, icon = "luck", color = Color3.fromRGB(90, 190, 30) },
-	{ name = "Samurái", coins = 1.25, damage = 3, luck = 1.25, chance = 0.9, icon = "all", image = "rasgo_samurai", color = Color3.fromRGB(255, 120, 200), rainbow = true },
+	{ name = "Samurái", coins = 1.25, damage = 3, luck = 1.25, chance = 0.9, pity = true, icon = "all", image = "rasgo_samurai", color = Color3.fromRGB(255, 120, 200), rainbow = true },
 	{ name = "Shogun", coins = 1.35, damage = 5, luck = 1.35, chance = 0.17, icon = "all", image = "rasgo_shogun", color = Color3.fromRGB(120, 230, 160), rainbow = true },
 	{ name = "Monarca", coins = 1.5, damage = 8, luck = 1.5, chance = 0.039, icon = "all", image = "rasgo_monarca", color = Color3.fromRGB(180, 120, 255), rainbow = true },
 	{ name = "Trascendente", coins = 1.65, damage = 15, luck = 1.65, chance = 0.01, icon = "all", image = "rasgo_trascendente", color = Color3.fromRGB(255, 80, 60) },
@@ -272,7 +272,8 @@ Config.Grades = {
 }
 -- Pity de rasgos y grados (Modifiers.rollWithPity): solo lo tienen los resultados de "1 entre MinOdds" o más raros
 -- (pedido por el usuario: de S+ para arriba en grados, que en rasgos es de Shogun para arriba). Los fáciles no: su
--- garantía se comía tiradas en las que podía haber salido algo mejor.
+-- garantía se comía tiradas en las que podía haber salido algo mejor. Una entrada con `pity = true` lo tiene aunque
+-- sea más fácil (Samurái, pedido por el usuario).
 Config.ModifierPity = { MinOdds = 400 }
 Config.GradeCost = 1 -- Cristales de grado por tirada de grado
 Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grado

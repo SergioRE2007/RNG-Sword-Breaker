@@ -113,23 +113,10 @@ local function displayOrder(kind: string)
 	return result
 end
 
--- Insignia de un rasgo: halo de su color detrás, aro de su color con relieve, disco oscuro dentro y
--- encima el dibujo de lo que sube (moneda, espada, trébol; hexágono en los especiales). Los de nivel
--- (I, II, III) llevan abajo tantas estrellitas como su nivel, para distinguirlos sin leer.
+-- Insignia de un rasgo: el logo de lo que sube (moneda, espada, trébol; los especiales, el suyo propio), sin círculos
+-- alrededor (pedido por el usuario: con el medallón los logos quedaban apretados). Los de nivel (I, II, III) llevan
+-- abajo tantas estrellitas como su nivel, para distinguirlos sin leer.
 local COIN = Color3.fromRGB(255, 205, 60)
-local function circle(parent: Instance, size: number, color: Color3): Frame
-	local frame = Instance.new("Frame")
-	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.fromScale(0.5, 0.5)
-	frame.Size = UDim2.fromScale(size, size)
-	frame.BackgroundColor3 = color
-	frame.BorderSizePixel = 0
-	frame.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.5, 0)
-	corner.Parent = frame
-	return frame
-end
 local function traitBadge(parent: GuiObject, entry)
 	local badge = Instance.new("Frame")
 	badge.Name = "Badge"
@@ -140,39 +127,19 @@ local function traitBadge(parent: GuiObject, entry)
 	badge.Parent = parent
 	local square = Instance.new("UIAspectRatioConstraint")
 	square.Parent = badge
-	local tint = if entry.rainbow then WHITE else entry.color
-
-	for _, layer in { { 1.3, 0.86 }, { 1.12, 0.74 } } do
-		circle(badge, layer[1], tint).BackgroundTransparency = layer[2]
-	end
-	local ring = circle(badge, 0.94, WHITE)
-	Ui.stroke(ring, BLACK, 2)
-	if entry.rainbow then
-		rainbow(ring)
-	else
-		Ui.gradient(ring, tint:Lerp(WHITE, 0.45), tint:Lerp(BLACK, 0.25), 90)
-	end
-	local disc = circle(ring, 0.8, WHITE)
-	Ui.gradient(disc, tint:Lerp(BLACK, 0.35), tint:Lerp(BLACK, 0.7), 90)
-	Ui.stroke(disc, BLACK, 1.5)
 
 	local art = Instance.new("Frame")
 	art.Name = "Art"
 	art.AnchorPoint = Vector2.new(0.5, 0.5)
-	art.Position = UDim2.fromScale(0.5, 0.56)
-	art.Size = UDim2.fromScale(1.25, 1.25)
+	art.Position = UDim2.fromScale(0.5, 0.5)
+	art.Size = UDim2.fromScale(1.2, 1.2)
 	art.BackgroundTransparency = 1
-	art.Parent = disc
-	if entry.image then
-		Ui.image(art, entry.image) -- su propio logo (rasgos especiales)
-	elseif entry.icon == "coins" then
-		Ui.image(art, "monedas")
-	elseif entry.icon == "damage" then
-		Ui.image(art, "espada")
-	elseif entry.icon == "luck" then
-		Ui.image(art, "suerte")
+	art.Parent = badge
+	local logo = entry.image or (if entry.icon == "coins" then "monedas" elseif entry.icon == "damage" then "espada" elseif entry.icon == "luck" then "suerte" else nil)
+	if logo then
+		Ui.image(art, logo)
 	else
-		local _, pieces = Ui.hex(disc, 22, tint)
+		local _, pieces = Ui.hex(badge, 22, if entry.rainbow then WHITE else entry.color)
 		for _, piece in pieces do
 			if entry.rainbow then
 				rainbow(piece)

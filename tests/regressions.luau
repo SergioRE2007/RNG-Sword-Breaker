@@ -291,7 +291,7 @@ for _, kind in { "traits", "grades" } do
 	for index in modifiers.KINDS[kind].list do
 		equal(modifiers.pityLimit(kind, index), math.ceil(100 / modifiers.percent(kind, index)), "límite " .. kind .. index)
 		counters[index] = modifiers.pityLimit(kind, index) - 1
-		equal(modifiers.hasPity(kind, index), modifiers.odds(kind, index) >= config.ModifierPity.MinOdds, "con pity " .. kind .. index)
+		equal(modifiers.hasPity(kind, index), modifiers.KINDS[kind].list[index].pity == true or modifiers.odds(kind, index) >= config.ModifierPity.MinOdds, "con pity " .. kind .. index)
 	end
 	local expected = 1
 	for index in counters do
@@ -311,10 +311,12 @@ for _, kind in { "traits", "grades" } do
 	equal(natural, 1, "resultado natural controlado " .. kind)
 	equal(clean[1], 0, "obtención natural reinicia " .. kind)
 end
--- Solo tienen pity los resultados raros (de S+ y de Shogun para arriba): los fáciles ni cuentan ni se garantizan.
+-- Solo tienen pity los resultados raros (de S+ y de Shogun para arriba) y los marcados con `pity = true` (Samurái): los
+-- demás fáciles ni cuentan ni se garantizan.
 equal(modifiers.hasPity("grades", 6), false, "S sin pity")
 equal(modifiers.hasPity("grades", 7), true, "S+ con pity")
-equal(modifiers.hasPity("traits", 10), false, "Samurái sin pity")
+equal(modifiers.hasPity("traits", 9), false, "Suerte III sin pity")
+equal(modifiers.hasPity("traits", 10), true, "Samurái con pity aunque es más fácil que el mínimo")
 equal(modifiers.hasPity("traits", 11), true, "Shogun con pity")
 local last = #config.Traits
 local sanitized = modifiers.newPity({ traits = { [1] = 5, [last - 3] = -5, [last - 2] = 0 / 0, [last - 1] = math.huge, [last] = 1.9 }, grades = "inválido" })
