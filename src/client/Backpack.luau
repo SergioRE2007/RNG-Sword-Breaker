@@ -7,7 +7,6 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -195,13 +194,14 @@ local function swordTip(copy): (string, Color3, boolean)
 		table.insert(lines, table.concat(extras, " · "))
 	end
 	if trait then
-		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo:</font> {animatedName(trait)} ({Modifiers.effect(trait)})`)
+		-- Solo el nombre, sin lo que da (pedido por el usuario: el cartel queda más limpio).
+		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo:</font> {animatedName(trait)}`)
 		if trait.rainbow then
 			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
 	if grade then
-		table.insert(lines, `<font color="{hex(grade.color)}">Grado:</font> {animatedName(grade)} ({Modifiers.effect(grade)})`)
+		table.insert(lines, `<font color="{hex(grade.color)}">Grado:</font> {animatedName(grade)}`)
 		if grade.rainbow then
 			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
