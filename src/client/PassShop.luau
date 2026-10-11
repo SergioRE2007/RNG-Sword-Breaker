@@ -31,7 +31,7 @@ local GOLD = Color3.fromRGB(255, 225, 90)
 -- Medidas de la tarjeta (píxeles de diseño: la ventana entera se encoge con su UIScale).
 local COLUMNS = 3
 local GAP = 12
-local CARD_HEIGHT = 300
+local CARD_HEIGHT = 324
 local SHOWN_ROWS = 2 -- filas de tarjetas a la vista; las demás, deslizando
 local PEEK = 46 -- lo que asoma de la fila siguiente cuando hay más
 local PAD = 8 -- margen de la tarjeta
@@ -351,7 +351,7 @@ function PassShop.start()
 		nameLimit.Parent = name
 		Ui.gradient(name, WHITE, pass.color:Lerp(WHITE, 0.4), 90)
 
-		-- Lo que da: una o dos líneas cortas por pase (perksText).
+		-- Lo que da, una línea por ventaja (perksText). El texto se encoge si un pase trae muchas.
 		local lines = {}
 		for _, text in pass.perksText do
 			table.insert(lines, `<font color="#{ROBUX:ToHex()}">+</font> {text}`)
