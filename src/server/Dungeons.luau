@@ -199,7 +199,7 @@ local function spawnEnemy(run, key: string)
 	velocity.PrimaryTangentAxis = Vector3.xAxis
 	velocity.SecondaryTangentAxis = Vector3.zAxis
 	velocity.PlaneVelocity = Vector2.zero
-	velocity.MaxForce = mass * 140 -- limitada: un espadazo lo empuja un momento
+	velocity.MaxForce = mass * 140 -- limitada: tarda un momento en arrancar y en frenar
 	velocity.Parent = body
 	local align = Instance.new("AlignOrientation")
 	align.Mode = Enum.OrientationAlignmentMode.OneAttachment
@@ -211,7 +211,7 @@ local function spawnEnemy(run, key: string)
 
 	body.Parent = run.model
 	body:SetNetworkOwner(nil)
-	run.enemies[body] = { def = def, size = size, hp = hp, velocity = velocity, align = align, nextAttack = os.clock() + def.attackTime * 0.5, mass = mass }
+	run.enemies[body] = { def = def, size = size, hp = hp, velocity = velocity, align = align, nextAttack = os.clock() + def.attackTime * 0.5, halt = 0 }
 	run.left += 1
 end
 
@@ -453,9 +453,8 @@ function Dungeons.isEnemy(player: Player, body: Instance): boolean
 end
 
 -- Golpe de un arma del jugador a un enemigo de su partida (lo llama Combat con el daño ya calculado en el servidor).
--- `from` = de dónde viene el golpe (lo empuja hacia el otro lado) y `slot` = hueco del arma, para que el cliente sepa
--- cuál da el tajo. Devuelve true si lo mata.
-function Dungeons.hit(player: Player, body: BasePart, damage: number, from: Vector3, slot: number?): boolean
+-- `slot` = hueco del arma, para que el cliente sepa cuál da el tajo. Devuelve true si lo mata.
+function Dungeons.hit(player: Player, body: BasePart, damage: number, slot: number?): boolean
 	local run = runOf[player]
 	local enemy = run and run.state == "fighting" and run.enemies[body]
 	if not enemy then
@@ -472,12 +471,10 @@ function Dungeons.hit(player: Player, body: BasePart, damage: number, from: Vect
 		return true
 	end
 	body:SetAttribute("HP", enemy.hp)
-	-- Empujón hacia atrás.
-	local away = body.Position - from
-	away = Vector3.new(away.X, 0, away.Z)
-	if away.Magnitude > 0.1 then
-		body:ApplyImpulse(away.Unit * enemy.mass * 28)
-	end
+	-- El golpe lo deja parado un momento. No lo empuja (pedido por el usuario): con varias armas pegándole desde lejos
+	-- lo sacaban del círculo y se quedaban sin objetivo.
+	enemy.halt = os.clock() + cfg.HitStop
+	enemy.velocity.PlaneVelocity = Vector2.zero
 	return false
 end
 
@@ -495,7 +492,7 @@ function Dungeons.strike(player: Player, origin: CFrame, range: number, arc: num
 		end
 	end
 	for _, body in hit do
-		Dungeons.hit(player, body, damage, origin.Position, slot)
+		Dungeons.hit(player, body, damage, slot)
 	end
 end
 
@@ -592,7 +589,7 @@ local function step()
 			local gap = flat.Magnitude - enemy.size.X / 2 - 1
 			local direction = if flat.Magnitude > 0.1 then flat.Unit else Vector3.zAxis
 			enemy.align.CFrame = CFrame.lookAt(Vector3.zero, direction)
-			local speed = if gap > def.attackRange * 0.6 then def.speed else 0
+			local speed = if gap > def.attackRange * 0.6 and now >= enemy.halt then def.speed else 0
 			enemy.velocity.PlaneVelocity = Vector2.new(direction.X, direction.Z) * speed
 			if gap <= def.attackRange and math.abs(offset.Y) < enemy.size.Y + 6 and now >= enemy.nextAttack then
 				enemy.nextAttack = now + def.attackTime

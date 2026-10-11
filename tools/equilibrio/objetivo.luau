@@ -82,11 +82,16 @@ Objetivo.armadura = {
 -- MAZMORRAS: cómo las juega el jugador tipo. Con esto el simulador juega también sus partidas de mazmorra (cristales,
 -- armadura y lo que saca al desmontarla) y el informe dice si se cumplen las tablas de arriba.
 -- Lo que dura una partida está medido en Studio con el personaje en Auto y Repetir (11 oct 2026, zona 1, en solitario,
--- oleadas de 4, 5, 7 y 4 enemigos): con cuatro espadas y todo cayendo de un golpe, de 21,8 a 23,5 s de una partida a
--- la siguiente; con cuatro espadas y 5 / 17 / 97 golpes para esbirro, bruto y jefe, 44,2 s; con cuatro martillos y
--- 2 / 6 / 35 golpes, 32,5 s. Las armas cogen a los enemigos de uno en uno según entran en su círculo: cada oleada son
--- los 2 s de Config.Dungeon.WaveDelay, `oleada` hasta el primer golpe, los golpes de cada arma a su ritmo y `salto`
--- por cada enemigo después del primero (modelo.duracionMazmorra, que da 24,1 / 42,3 / 32,5 s para esas tres medidas).
+-- oleadas de 4, 5, 7 y 4 enemigos; ya sin el empujón de los golpes, que ahora paran al enemigo): con cuatro espadas y
+-- todo cayendo de un golpe, 23,1 s de una partida a la siguiente (de 22,2 a 24,0); con cuatro espadas y 5 / 17 / 97
+-- golpes para esbirro, bruto y jefe, 38,8 s (de 37,5 a 40,1); con cuatro martillos y 2 / 6 / 35 golpes, 30,8 s (de
+-- 30,0 a 32,2). Las armas cogen a los enemigos de uno en uno según entran en su círculo: cada oleada son los 2 s de
+-- Config.Dungeon.WaveDelay, `oleada` hasta el primer golpe, los golpes de cada arma a su ritmo (medido: 0,37 / 1,43 /
+-- 8,4 s por esbirro, bruto y jefe con las espadas, lo que da la cuenta) y, de un enemigo al siguiente, un salto que
+-- depende de lo que haya durado la pelea con el anterior: si cae al momento hay que esperar a que llegue el siguiente
+-- (`salto`: 0,53 s de media con espadas); si aguanta, los demás ya están en el círculo y solo es el vuelo (`cadena`);
+-- entre medias, cadena + (salto − cadena) · e^(−pelea / `calma`) (tras un esbirro de 0,37 s, 0,34 s de media).
+-- Con eso modelo.duracionMazmorra da 23,1 / 38,2 / 30,9 s para las tres medidas.
 -- Los martillos salpican poco: 0,035 enemigos de más por golpe y por cada otro enemigo vivo, con 9,7 de alcance (de
 -- ahí `salpica`, con la misma cuenta que en la parcela). Sin medir: la salpicadura de hachas y lanzas (se cuenta con
 -- esa misma constante), las zonas con más enemigos y si aguanta vivo.
@@ -95,8 +100,10 @@ Objetivo.mazmorra = {
 	atencion = 0.8, -- parte de ese tiempo que de verdad está peleando (la misma atención que en la parcela)
 	comoda = 75, -- segundos: juega la zona más alta que termina en menos de esto (la primera, en lo que tarde). El daño recomendado de cada zona es la vida que la deja en esto al jugador tipo a su hora
 	entrada = 4, -- segundos de una partida a la siguiente con "Repetir" (medido: los 4 de Config.Dungeon.ExitDelay)
-	oleada = 0.7, -- segundos de cada oleada entre que aparecen los enemigos y les llega el primer golpe
-	salto = 0.58, -- segundos de un enemigo muerto al primer golpe al siguiente (vuelo, lo que tarda en entrar en el círculo y el empujón)
+	oleada = 0.62, -- segundos de cada oleada entre que aparecen los enemigos y les llega el primer golpe
+	salto = 0.54, -- segundos de un enemigo que cae al momento al primer golpe al siguiente (lo que tarda en entrar en el círculo)
+	cadena = 0.16, -- lo mismo cuando el siguiente ya está dentro (Config.Loadout.Chain y una vuelta del servidor)
+	calma = 0.6, -- segundos de pelea con un enemigo tras los que el siguiente ya suele estar dentro del círculo
 	salpica = 9300, -- lo que divide en la cuenta de la salpicadura dentro de la arena (como `parcela` en Objetivo.jugador)
 }
 -- Quien deja el personaje en "Auto" y "Repetir" sin parar en la mejor zona, ya con el juego completado: cristales de

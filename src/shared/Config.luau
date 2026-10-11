@@ -505,6 +505,7 @@ Config.Dungeon = {
 	TimeLimit = 300, -- segundos para terminar la mazmorra
 	WaveDelay = 2, -- pausa entre oleadas
 	ExitDelay = 4, -- segundos en la arena tras ganar, antes de volver al hub
+	HitStop = 0.25, -- segundos que se queda parado un enemigo al recibir un golpe que no lo mata (no lo empuja)
 	-- Menú de botín al acabar la partida (server/DropMenu, client/DropMenu): el botín se retiene mientras dura la
 	-- partida y el jugador marca lo que tira. Sin respuesta en `Timeout` s, o con Repetir / Auto de pelea, se queda todo.
 	DropMenu = {

@@ -192,8 +192,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	-- Segundos que tarda en una partida de la zona `index` (de una a la siguiente) con esas armas (lista de M.arma), o
 	-- nil si no le da tiempo a acabarla. `vida` = por cuánto va la vida de los enemigos (si falta, el "hp" de la zona).
 	-- Medido en Studio con el personaje en Auto (ver objetivo.mazmorra): las armas cogen a los enemigos de uno en uno.
-	-- Al llegar pega cada una cuando le toca (su reloj sigue de un enemigo a otro) y de un enemigo muerto al primer
-	-- golpe al siguiente pasa `salto`. Las que salpican gastan además a los que esperan (de media, a todos lo mismo).
+	-- Al llegar pega cada una cuando le toca (su reloj sigue de un enemigo a otro). De un enemigo muerto al primer golpe
+	-- al siguiente pasa `salto` si cayó al momento (hay que esperar a que llegue el siguiente) y solo `cadena` si la
+	-- pelea fue larga (los demás ya están en el círculo). Las que salpican gastan además a los que esperan (de media,
+	-- a todos lo mismo).
 	function M.duracionMazmorra(index: number, armas, vida: number?): number?
 		local mult = vida or zonas[index].hp
 		local count = #armas
@@ -211,7 +213,8 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		for _, wave in oleadas[index] do
 			pelea += Config.Dungeon.WaveDelay + maz.oleada
 			-- `t` cuenta desde el primer golpe de la oleada, al que las armas llegan descansadas.
-			local t, gastado, primero = 0, 0, true
+			local t, gastado = 0, 0
+			local anterior: number? = nil -- lo que duró la pelea con el enemigo anterior
 			for slot = 1, count do
 				listo[slot] = 0
 			end
@@ -222,11 +225,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 					if hp <= 0 then
 						continue -- se lo ha llevado la salpicadura antes de que le tocara
 					end
-					if primero then
-						primero = false
-					else
-						t += maz.salto
+					if anterior then
+						t += maz.cadena + (maz.salto - maz.cadena) * math.exp(-anterior / maz.calma)
 					end
+					local llegada = t
 					if hp > andanada * SEGUIDOS then
 						local dt = hp / ritmo
 						t += dt
@@ -253,6 +255,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 							gastado += extra[pick]
 						until hp <= 0
 					end
+					anterior = t - llegada
 					if pelea + t > limite then
 						return nil
 					end
