@@ -1417,9 +1417,13 @@ do
 		c.GoldBag.First, c.GoldBag.Growth = first or 100, 4
 		c.GoldBag.HitTime, c.GoldBag.MinAway, c.GoldBag.Slots = 1, 60, 4
 	end
-	table3(cfg)
 	local info = bf.load("src/shared/BagInfo")
-	-- Lo que saca un golpe: 100 de daño = 50 monedas y cada x2 de daño, x1,5 (decidido por el usuario).
+	-- Con los números de Config: una moneda por punto de daño (decidido por el usuario).
+	equal(info.coins(1), 1, "bolsa: 1 de daño saca 1 moneda")
+	equal(info.coins(1e7), 1e7, "bolsa: 10M de daño sacan 10M monedas")
+	near(info.coins(3.2e17), 3.2e17, "bolsa: y con números enormes, lo mismo")
+	-- La cuenta, con otros números: 100 de daño = 50 monedas y cada x2 de daño, x1,5.
+	table3(cfg)
 	equal(info.coins(100), 50, "bolsa: 100 de daño sacan 50 monedas")
 	equal(info.coins(200), 75, "bolsa: el doble de daño, x1,5")
 	equal(info.coins(400), 113, "bolsa: y otra vez x1,5 (112,5, redondeado)")
