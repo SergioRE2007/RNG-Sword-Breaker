@@ -400,7 +400,7 @@ local function pond(parent: Instance, center: Vector3, radius: number)
 		-- Hueco real en el suelo: cuenca con paredes y fondo oscuro y, llenándola hasta el borde, una lámina de agua plana
 		-- (el agua de Terrain va por celdas de 4 studs: sale combada y no llega a la orilla).
 		surface = 0.12
-		local depth = 3.2
+		local depth = 8
 		local wallRadius, walls = radius + 0.6, 48
 		ring(walls, wallRadius, 0, function(offset)
 			local angle = math.atan2(offset.Z, offset.X)
@@ -409,6 +409,9 @@ local function pond(parent: Instance, center: Vector3, radius: number)
 		end)
 		decor(disc(parent, "PondBed", center, radius + 1, -depth - 0.2, -depth, Color3.fromRGB(14, 62, 86), Enum.Material.SmoothPlastic))
 		decor(disc(parent, "PondDeep", center, radius * 0.6, -depth, -depth + 0.02, Color3.fromRGB(8, 40, 66), Enum.Material.SmoothPlastic))
+		-- Agua de Terrain en el hueco (de -8 a 0, alineada con las celdas de 4 studs) para poder nadar: el personaje solo nada
+		-- en agua de Terrain. Por encima va la lámina plana de cristal, que es la que se ve.
+		workspace.Terrain:FillCylinder(CFrame.new(center.X, -depth / 2, center.Z), depth, radius - 0.5, Enum.Material.Water)
 		local water = disc(parent, "Pond", center, radius, 0.02, surface, sea.Color, Enum.Material.Glass)
 		water.Transparency = 0.3
 		water.Reflectance = 0.2
