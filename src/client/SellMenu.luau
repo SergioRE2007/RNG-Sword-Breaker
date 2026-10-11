@@ -92,10 +92,11 @@ function SellMenu.start()
 	row.SortOrder = Enum.SortOrder.LayoutOrder
 	row.Parent = actions
 	local buttons = {}
-	for order, spec in { { "SelectAll", "Seleccionar todo", Ui.COLORS.blue }, { "Clear", "Deseleccionar todo", Ui.COLORS.gray }, { "Sell", "Vender selección", Ui.COLORS.red }, { "Cancel", "Volver", Ui.COLORS.gray } } do
+	-- Solo dos botones (pedido por el usuario): quitar la selección es pulsar las casillas y salir, la X de la ventana.
+	for order, spec in { { "SelectAll", "Seleccionar todo", Ui.COLORS.blue }, { "Sell", "Vender selección", Ui.COLORS.red } } do
 		local button = Ui.button(actions, spec[2], spec[3])
 		button.Name = spec[1]
-		button.Size = UDim2.fromScale(0.235, 1)
+		button.Size = UDim2.fromScale(0.49, 1)
 		button.LayoutOrder = order
 		button.TextWrapped = true
 		button.TextSize = 20
@@ -163,19 +164,6 @@ function SellMenu.start()
 		confirming = false
 		for id in cells do selected[id] = true end
 		paint()
-	end)
-	buttons.Clear.Activated:Connect(function()
-		selected = {}
-		confirming = false
-		paint()
-	end)
-	buttons.Cancel.Activated:Connect(function()
-		if confirming then
-			confirming = false
-			paint()
-		else
-			Ui.toggle("Backpack")
-		end
 	end)
 	buttons.Sell.Activated:Connect(function()
 		if not confirming then
