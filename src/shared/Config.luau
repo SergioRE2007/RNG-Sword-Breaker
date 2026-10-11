@@ -889,7 +889,7 @@ Config.Trade = {
 -- Ui.IMAGES (el grande y los que caen por detrás), "tag" = texto gordo de la esquina y "ribbon" (opcional) = cinta.
 -- extraSlots = armas de más que se pueden equipar y, otras tantas, dejar en la Bolsa de oro (Stats.loadoutSlots y
 -- Stats.bagSlots; pedido por el usuario).
-Config.GamepassOrder = { "vip", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }
+Config.GamepassOrder = { "vip", "coins2", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }
 Config.Gamepasses = {
 	vip = {
 		id = 2027114984,
@@ -954,6 +954,15 @@ Config.Gamepasses = {
 		color = Color3.fromRGB(255, 150, 60),
 		perksText = { "Tira 10 rasgos a la vez (se queda el mejor)", "Tiradas de grado al 400 % de velocidad" },
 		perks = { traitCount = 10, gradeSpeed = 4 },
+	},
+	coins2 = {
+		id = 2025747023,
+		name = "Monedas x2",
+		icon = "monedas", tag = "x2",
+		price = 299,
+		color = Color3.fromRGB(70, 200, 230),
+		perksText = { "x2 de monedas en todo lo que rompes", "Se multiplica con el VIP: juntos, x3" },
+		perks = { coins = 2 },
 	},
 }
 
