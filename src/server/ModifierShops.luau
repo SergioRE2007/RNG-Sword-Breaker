@@ -104,7 +104,7 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 	local odds = Modifiers.odds(kind, index, luck)
 	if odds >= Config.AnnounceOdds then
 		local what = if kind == "traits" then "el rasgo" else "el grado"
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha sacado {what} {entry.name} ({Modifiers.formatPercent(Modifiers.percent(kind, index, luck))}, 1 entre {Format.short(odds)})!`, entry.color)
+		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha sacado {what} {entry.name} (1 entre {Format.short(odds)})!`, entry.color)
 	end
 end
 

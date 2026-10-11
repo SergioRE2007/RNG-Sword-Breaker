@@ -29,7 +29,7 @@ local GOLD = Color3.fromRGB(255, 205, 70)
 
 local TAG = "GoldBag"
 local TICK = 0.25 -- cada cuánto se ponen al día los carteles
-local RANGE = 230 -- studs: más lejos no se ve el cartel
+local RANGE = 70 -- studs: más lejos no se ve el cartel (pedido por el usuario: desde lejos mide lo mismo en pantalla y tapaba la parcela)
 local FAR = 170 -- studs de la cámara desde los que las armas de un saco no se mueven
 local NEAR = 75 -- y desde los que sus golpes no suenan
 local TOAST_EVERY = 15 -- segundos entre avisos de bolsa vaciada (con armas muy fuertes caen seguidas)
@@ -59,16 +59,6 @@ local function factor(): number
 	local camera = workspace.CurrentCamera
 	local view = if camera then camera.ViewportSize else SCREEN
 	return math.clamp(math.min(view.X / SCREEN.X, view.Y / SCREEN.Y), MIN_FACTOR, 1)
-end
-
-local function clock(seconds: number): string
-	seconds = math.floor(seconds)
-	if seconds >= 86400 then
-		return `{seconds // 86400} d {seconds % 86400 // 3600} h`
-	elseif seconds >= 3600 then
-		return `{seconds // 3600} h {seconds % 3600 // 60} min`
-	end
-	return `{math.max(seconds // 60, 1)} min`
 end
 
 -- Monedas que saltan del saco con cada golpe: un emisor que solo suelta las que se le piden.
@@ -336,13 +326,12 @@ local function onEvent(kind: string, info)
 		if os.clock() - lastToast >= TOAST_EVERY then
 			lastToast = os.clock()
 			Sfx.play("win")
-			Ui.toast(`{if pendingBags > 1 then `¡{pendingBags} bolsas vaciadas!` else "¡Bolsa vaciada!"} La nº {info.stage} lleva {Format.short(BagInfo.size(info.stage or 1))} monedas`, GOLD)
+			Ui.toast(if pendingBags > 1 then `¡{pendingBags} bolsas vaciadas!` else "¡Bolsa vaciada!", GOLD)
 			pendingBags = 0
 		end
 	elseif kind == "away" then
-		local bags = info.bags or 0
 		Sfx.play("win")
-		Ui.toast(`Mientras no estabas ({clock(info.seconds or 0)}) tu bolsa ha dado {Format.short(info.coins or 0)} monedas{if bags > 0 then ` · {bags} {if bags == 1 then "bolsa vaciada" else "bolsas vaciadas"}` else ""}`, GOLD)
+		Ui.toast(`Mientras no estabas: +{Format.short(info.coins or 0)} monedas`, GOLD)
 	end
 end
 

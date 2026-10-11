@@ -73,18 +73,18 @@ function Armor.store(player: Player, piece, luck: number): boolean
 			edited.nextArmorId += 1
 			table.insert(edited.armor, piece)
 		end)
-		Remotes.Notice:FireClient(player, `¡{ArmorStats.name(piece)}!\n{quality.name}`, quality.color)
+		Remotes.Notice:FireClient(player, `¡{ArmorStats.name(piece)} ({quality.name})!`, quality.color)
 	else
 		local crystals = ArmorStats.salvage(piece)
 		PlayerData.edit(player, function(edited)
 			edited.items[CRYSTAL] += crystals
 		end)
-		local gained = if crystals > 0 then `\n+{Format.short(crystals)} {Config.Items[CRYSTAL].name}` else ""
+		local gained = if crystals > 0 then ` (+{Format.short(crystals)} cristales)` else ""
 		Remotes.Notice:FireClient(player, `Armadura llena: {ArmorStats.name(piece)} desmontada{gained}`, quality.color)
 	end
 	local odds = quality.odds / luck
 	if odds >= Config.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {ArmorStats.name(piece)} de calidad {quality.name} (1 entre {Format.short(odds)})!`, quality.color)
+		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {ArmorStats.name(piece)} ({quality.name}, 1 entre {Format.short(odds)})!`, quality.color)
 	end
 	return kept
 end

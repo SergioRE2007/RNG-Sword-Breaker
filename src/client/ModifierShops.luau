@@ -388,7 +388,7 @@ local function buildShop(kind: string)
 	warning.Size = UDim2.fromScale(1, 0.15)
 	warning.TextWrapped = true
 	warning.TextColor3 = Color3.fromRGB(200, 200, 210)
-	warning.Text = `Al tirar se sustituye el {string.lower(info.label)} que tenga la espada.\nMientras esté equipada, {if kind == "traits" then "sube su daño y tus monedas o tu suerte" else "multiplica su daño"}.`
+	warning.Text = `Tirar cambia el {string.lower(info.label)} de la espada.`
 
 	-- Botones de abajo, repartidos por el UIListLayout (los anchos suman 1 con los huecos).
 	local function control(name: string, text: string, color: Color3, order: number, width: number, textSize: number): TextButton
@@ -480,7 +480,7 @@ local function buildShop(kind: string)
 	pickerGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	pickerGrid.Parent = pickerList
 
-	local stopper, stopList = overlay("StopAt", if kind == "traits" then "Ajustes" else "La tirada automática para con:")
+	local stopper, stopList = overlay("StopAt", if kind == "traits" then "Ajustes" else "Parar con:")
 	local stopGrid = Instance.new("UIGridLayout")
 	stopGrid.CellSize = UDim2.fromOffset(136, 54) -- más alto: en pantallas pequeñas la ventana se encoge
 	stopGrid.CellPadding = UDim2.fromOffset(8, 8)
@@ -509,7 +509,7 @@ local function buildShop(kind: string)
 		local hint = Ui.label(section, 18)
 		hint.Size = UDim2.fromScale(1, 0.3)
 		hint.TextColor3 = Color3.fromRGB(200, 200, 210)
-		hint.Text = "Si en \"mejor de tres\" empatan en rareza, gana la primera (pulsa una para subirla):"
+		hint.Text = "Si empatan, gana la de arriba. Pulsa para subir:"
 		hint.TextScaled = true
 		hint.ZIndex = Z.overlay + 1
 		local hintLimit = Instance.new("UITextSizeConstraint")
@@ -549,7 +549,7 @@ local function buildShop(kind: string)
 		local stopTitle = Ui.label(stopper, 20)
 		stopTitle.Position = UDim2.fromOffset(12, 142)
 		stopTitle.Size = UDim2.new(1, -24, 0, 26)
-		stopTitle.Text = "La tirada automática para con:"
+		stopTitle.Text = "Parar con:"
 		stopTitle.ZIndex = Z.overlay + 1
 		stopList.Position = UDim2.fromOffset(12, 172)
 		stopList.Size = UDim2.new(1, -24, 1, -252)
@@ -816,7 +816,7 @@ local function buildShop(kind: string)
 			row.Pity.Visible = Modifiers.hasPity(kind, index) -- los fáciles no tienen pity
 			local limit = Modifiers.pityLimit(kind, index)
 			local progress = if ok and type(counters) == "table" then counters[index] or 0 else 0
-			row.Pity.Text = `Pity {Format.short(progress)} / {Format.short(limit)}{if progress >= limit then " · Garantía pendiente" else ""}`
+			row.Pity.Text = `Garantía {Format.short(progress)} / {Format.short(limit)}{if progress >= limit then " · ¡Lista!" else ""}`
 			row.Pity.TextColor3 = if progress >= limit then Ui.COLORS.orange else Color3.fromRGB(190, 195, 215)
 		end
 		local copy = selectedCopy()
@@ -849,11 +849,11 @@ local function buildShop(kind: string)
 			slotHint.Text = "Elige espada"
 		end
 		if kind == "traits" then
-			cost.Text = `Cristales de rasgo: {Format.short(player:GetAttribute("Item_traitCrystal") or 0)}  ·  {state.count} por tirada`
+			cost.Text = `Cristales: {Format.short(player:GetAttribute("Item_traitCrystal") or 0)}`
 			countButton.Text = `x{state.count}`
 			countButton.BackgroundColor3 = if state.count > 3 then Ui.COLORS.purple elseif state.count == 3 then Ui.COLORS.orange else Ui.COLORS.gray
 		else
-			cost.Text = `Cristales de grado: {Format.short(player:GetAttribute("Item_gradeCrystal") or 0)}  ·  {Config.GradeCost} por tirada`
+			cost.Text = `Cristales: {Format.short(player:GetAttribute("Item_gradeCrystal") or 0)}`
 		end
 		cost.TextColor3 = if canAfford() then WHITE else Ui.COLORS.red
 		rollButton.BackgroundColor3 = if canAfford() and copy then Ui.COLORS.blue else Ui.COLORS.gray

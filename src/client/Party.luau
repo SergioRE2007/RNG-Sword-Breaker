@@ -355,21 +355,17 @@ local function buildWindow()
 			end
 		end
 		local damage = Stats.damage(player)
-		local health = Stats.maxHealth(player)
-		local low, high = DungeonCard.enemyHits(level)
 		local strong = damage >= level.hp
-		local tough = high <= health / 2
 		local soft = Ui.SOFT
 		local lines = {
 			`<font color="{soft}">Daño recomendado</font>  <font color="{hex(if strong then GOOD else BAD)}">{Format.short(level.hp)}</font>`,
-			`<font color="{soft}">Golpe enemigo</font>  <font color="{hex(if tough then GOOD else BAD)}">{Format.short(low)} a {Format.short(high)}</font>`,
-			`<font color="{soft}">Premios</font>`,
+			`<font color="{soft}">Botín por partida</font>`,
 		}
 		for _, reward in DungeonInfo.rewards(zone) do
 			table.insert(lines, `<font color="{hex(reward.color)}">{reward.text}</font>`)
 		end
 		local waves = if theme and theme.waves then theme.waves else Config.Dungeon.Waves
-		table.insert(lines, `<font color="{soft}">{#waves} oleadas · la última con jefe · {math.floor(Config.Dungeon.TimeLimit / 60)} min</font>`)
+		table.insert(lines, `<font color="{soft}">{#waves} oleadas · {math.floor(Config.Dungeon.TimeLimit / 60)} min</font>`)
 		info.Text = table.concat(lines, "\n")
 		local lock = DungeonInfo.lock(zone, damage)
 		if lock then

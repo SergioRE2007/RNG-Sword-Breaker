@@ -105,18 +105,12 @@ function Permanent.roll(list, luck: number): number
 	return 0
 end
 
--- Texto para resultados e inventario: probabilidades base, independientes de cualquier suerte.
+-- Texto para resultados e inventario: un solo "1 entre N", el del arma con su metal y su tamaño (probabilidad base,
+-- independiente de cualquier suerte). Pedido por el usuario: sin desglose por arma, metal y tamaño, que el juego es
+-- para niños y sobraban números.
 function Permanent.describeOdds(sword: number, metal: number?, size: number?): string
 	local Format = require(script.Parent.Format)
-	local parts = { `Arma: 1 entre {Format.short(Config.Swords[sword].rarity or 1)}` }
-	local metalEntry, sizeEntry = entry(Config.Metals, metal), entry(Config.Sizes, size)
-	if metalEntry then
-		table.insert(parts, `{metalEntry.name}: 1 entre {Format.short(metalEntry.odds)}`)
-	end
-	if sizeEntry then
-		table.insert(parts, `{sizeEntry.name}: 1 entre {Format.short(sizeEntry.odds)}`)
-	end
-	return table.concat(parts, " · ")
+	return `1 entre {Format.short(Permanent.rarity(sword, metal, size))}`
 end
 
 -- "Espada de acero (Oro, Gigante)": el nombre del arma con sus modificadores, si los tiene.

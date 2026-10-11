@@ -27,11 +27,11 @@ function Gear.onBroken(player: Player)
 			end)
 			Remotes.Notice:FireClient(
 				player,
-				`¡Accesorio: {artifact.name}!\n{Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}`,
+				`¡Accesorio: {artifact.name}!`,
 				artifact.color
 			)
 			if artifact.rarity / luck >= Config.AnnounceOdds then
-				Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha encontrado {artifact.name} (1 entre {Format.short(artifact.rarity)})!`, artifact.color)
+				Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha encontrado {artifact.name} (1 entre {Format.short(artifact.rarity / luck)})!`, artifact.color)
 			end
 			return
 		end

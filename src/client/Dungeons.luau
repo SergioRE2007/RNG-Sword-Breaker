@@ -238,8 +238,7 @@ local function buildRunPanel()
 		local waves = player:GetAttribute("DungeonWaves") or #cfg.Waves
 		title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>`
 		local left = math.max(0, (player:GetAttribute("DungeonEnds") or 0) - workspace:GetServerTimeNow())
-		local enemies = player:GetAttribute("DungeonLeft") or 0
-		detail.Text = `<font color="{Ui.SOFT}">Oleada</font> {math.max(wave, 1)}/{waves}  <font color="{Ui.SOFT}">·  Enemigos</font> {if wave == 0 then "..." else tostring(enemies)}  <font color="{Ui.SOFT}">·</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
+		detail.Text = `<font color="{Ui.SOFT}">Oleada</font> {math.max(wave, 1)}/{waves}  <font color="{Ui.SOFT}">·</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
 		if wave ~= shownWave and wave > 0 then
 			shownWave = wave
 			Sfx.play("wave")
@@ -449,7 +448,7 @@ local function buildFeedback()
 				return
 			end
 			loot.Text = if (tonumber(data.granted) or 0) > 0
-				then `<font color="{Ui.SOFT}">Botín añadido a tu inventario (Repetir o Auto).</font>`
+				then `<font color="{Ui.SOFT}">Botín en tu inventario.</font>`
 				else `<font color="{Ui.SOFT}">Sin premios esta vez.</font>`
 			card.Visible = true
 			if not Performance.get() then

@@ -164,17 +164,17 @@ local function spawnIn(plot)
 	counts[plot] = (counts[plot] or 0) + 1
 	part.Parent = folder
 
-	if spec.typeOdds >= Config.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡A {owner.DisplayName} le ha aparecido {def.name} (1 entre {Format.short(def.rarity)})!`, def.color)
-	end
-	-- Rareza y tamaño fuera de lo normal: aviso al dueño y, si es muy raro, a todos.
+	-- Avisos cortos (pedido por el usuario): qué ha salido y nada más; la suerte y las tiradas las enseña el cartel del
+	-- objeto. Rareza y tamaño fuera de lo normal: aviso al dueño y, si es muy raro, a todos. Un solo aviso a todos por
+	-- objeto, aunque sea raro por su tipo y por su rareza a la vez.
 	local rarity = ObjectSpec.rarity(spec.quality)
 	if spec.odds >= Config.ObjectRolls.NoticeOdds then
-		local rolls = if spec.rolls == 1 then "1 tirada" else `{spec.rolls} tiradas`
-		Remotes.Notice:FireClient(owner, `¡Te ha aparecido {describe(def, spec)}!\nSuerte de armas x{Format.multiplier(spec.luck)} · {rolls}`, rarity.color)
+		Remotes.Notice:FireClient(owner, `¡Te ha aparecido {describe(def, spec)}!`, rarity.color)
 	end
 	if spec.odds >= Config.ObjectRolls.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡A {owner.DisplayName} le ha aparecido {describe(def, spec)}: suerte de armas x{Format.multiplier(spec.luck)}!`, rarity.color)
+		Remotes.Announce:FireAllClients(`¡A {owner.DisplayName} le ha aparecido {describe(def, spec)}!`, rarity.color)
+	elseif spec.typeOdds >= Config.AnnounceOdds then
+		Remotes.Announce:FireAllClients(`¡A {owner.DisplayName} le ha aparecido {def.name} (1 entre {Format.short(spec.typeOdds)})!`, def.color)
 	end
 end
 

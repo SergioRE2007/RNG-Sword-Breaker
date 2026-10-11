@@ -252,7 +252,8 @@ end
 equal(config.damageFromRarity(2), 1, "rareza inicial")
 near(config.damageFromRarity(8), 2.25, "curva de daño")
 local label = permanent.describeOdds(4, 1, 1)
-assert(label:find("Arma: 1 entre", 1, true) and label:find(config.Metals[1].name, 1, true) and label:find(config.Sizes[1].name, 1, true))
+-- Un solo número, sin desglose por metal y tamaño.
+assert(label:find("^1 entre ") and not label:find("·", 1, true) and not label:find(config.Metals[1].name, 1, true))
 checks += 1
 
 -- Por mucha suerte de armas que haya siguen saliendo armas sin metal y de tamaño normal (con x10 el Cobre salía siempre).

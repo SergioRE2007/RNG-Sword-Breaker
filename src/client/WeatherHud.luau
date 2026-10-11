@@ -304,14 +304,13 @@ function WeatherHud.build()
 	Ui.tip(card, function()
 		local id, def = WeatherInfo.current()
 		if not (id and def) then
-			return `<b>Cielo despejado</b>\n<font color="{Ui.SOFT}">Cada cierto tiempo llega un clima distinto.\nTodos dan suerte de destructibles;\nlos más raros, también suerte de armas.</font>`, CLEAR
+			return "<b>Cielo despejado</b>", CLEAR
 		end
 		local tier = WeatherInfo.tier(def)
 		local lines = {
 			`<font color="{hex(def.color:Lerp(WHITE, 0.3))}"><b>{def.name}</b></font>`,
 			`<font color="{hex(tier.color)}">{tier.name}  ·  {WeatherInfo.oddsText(id)}</font>`,
-			`<font color="{Ui.SOFT}">{def.desc}</font>`,
-			buffLine(def, true),
+			buffLine(def),
 		}
 		return table.concat(lines, "\n"), def.color
 	end, true)

@@ -24,6 +24,9 @@ local SellMenu = require(script.Parent.SellMenu)
 
 local player = Players.LocalPlayer
 local CELL = 100
+local SLOT = 76 -- lado de los huecos de armas equipadas de la pestaña Espadas
+local SLOT_SMALL = 60 -- con los huecos del pase (8) caben en la misma fila
+local SLOT_GAP = 8
 
 local function hex(color: Color3): string
 	return "#" .. color:ToHex()
@@ -170,16 +173,18 @@ local function swordTip(copy): (string, Color3, boolean)
 	local lines = { sword.name, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
 	local grade = Config.Grades[copy.grade]
 	local border = tier.color
-	-- Metal y tamaño (permanentes, salen con el arma): lo que son y lo que multiplican.
+	-- Metal y tamaño (permanentes, salen con el arma): solo el nombre, en una línea. Pedido por el usuario: el cartel
+	-- es para niños, sin lo que multiplica cada uno ni su probabilidad por separado.
 	local metal, size = Permanent.metal(copy), Permanent.size(copy)
+	local extras = {}
 	if metal then
-		table.insert(lines, `<font color="{hex(metal.color)}">Metal: {metal.name}</font> (x{Format.multiplier(Permanent.damage(metal.odds))} daño · 1 entre {Format.short(metal.odds)})`)
+		table.insert(extras, `<font color="{hex(metal.color)}">{metal.name}</font>`)
 	end
 	if size then
-		table.insert(lines, `<font color="{hex(size.color)}">Tamaño: {size.name}</font> (x{Format.multiplier(Permanent.damage(size.odds))} daño, x{size.scale} de largo · 1 entre {Format.short(size.odds)})`)
+		table.insert(extras, `<font color="{hex(size.color)}">{size.name}</font>`)
 	end
-	if trait or grade then
-		table.insert(lines, "") -- aparte: rasgo y grado forman su propio bloque
+	if #extras > 0 then
+		table.insert(lines, table.concat(extras, " · "))
 	end
 	if trait then
 		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo:</font> {animatedName(trait)} ({Modifiers.effect(trait)})`)
@@ -193,19 +198,11 @@ local function swordTip(copy): (string, Color3, boolean)
 			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
-	if trait or grade then
-		table.insert(lines, "")
-	end
 	table.insert(lines, `Daño {Format.multiplier(Stats.swordDamage(copy))}`)
 	if not sword.rarity then
 		table.insert(lines, `<font color="{Ui.SOFT}">Espada inicial</font>`)
-	elseif metal or size then
-		-- La rareza total multiplica la del arma por las de su metal y su tamaño: se enseñan las dos, para que se vea
-		-- de dónde sale un número tan grande (un arma de 1 entre 5Qa con Etherio y Universal es de 1 entre 5Dc).
-		local extras = if metal and size then "metal y tamaño" elseif metal then "metal" else "tamaño"
-		table.insert(lines, `<font color="{Ui.SOFT}">Arma: 1 entre {Format.short(sword.rarity)}</font>`)
-		table.insert(lines, `<font color="{Ui.SOFT}">Con {extras}: 1 entre {Format.short(rarity)}</font>`)
 	else
+		-- Una sola probabilidad: la del arma entera, con su metal y su tamaño.
 		table.insert(lines, `<font color="{Ui.SOFT}">1 entre {Format.short(rarity)}</font>`)
 	end
 	return table.concat(lines, "\n"), border, trait ~= nil or grade ~= nil
@@ -300,9 +297,10 @@ function Backpack.start()
 	-- (La venta automática se cambia ahora en Ajustes.)
 	local swordsTitle = Ui.label(swordsPane, 24)
 	swordsTitle.Name = "Title"
-	swordsTitle.Position = UDim2.fromOffset(14, 6)
-	swordsTitle.Size = UDim2.new(1, -170, 0, 40)
-	swordsTitle.TextXAlignment = Enum.TextXAlignment.Left
+	swordsTitle.AnchorPoint = Vector2.new(1, 0)
+	swordsTitle.Position = UDim2.new(1, -152, 0, 8)
+	swordsTitle.Size = UDim2.fromOffset(190, SLOT)
+	swordsTitle.TextXAlignment = Enum.TextXAlignment.Right
 	swordsTitle.TextTruncate = Enum.TextTruncate.AtEnd
 	swordsTitle.RichText = true
 	swordsTitle.Text = "Tus espadas"
@@ -310,7 +308,7 @@ function Backpack.start()
 	local count = Ui.label(swordsPane, 24)
 	count.Name = "Count"
 	count.AnchorPoint = Vector2.new(1, 0)
-	count.Position = UDim2.new(1, -12, 0, 6)
+	count.Position = UDim2.new(1, -12, 0, 8 + (SLOT - 40) / 2)
 	count.Size = UDim2.fromOffset(130, 40)
 	count.BackgroundTransparency = 0
 	count.BackgroundColor3 = Ui.COLORS.blue
@@ -318,7 +316,22 @@ function Backpack.start()
 	Ui.bevel(count)
 	Ui.stroke(count, Color3.new(0, 0, 0), 2)
 
-	local swordGrid = grid(swordsPane, UDim2.fromOffset(8, 52), UDim2.new(1, -16, 1, -134))
+	-- Armas equipadas: una casilla por hueco, arriba (pedido por el usuario: sustituye a las casillas que había abajo
+	-- en el HUD, y funciona como el menú de la bolsa: pulsar un arma de la lista la equipa y pulsar un hueco la quita).
+	local slotRow = Instance.new("Frame")
+	slotRow.Name = "Slots"
+	slotRow.Position = UDim2.fromOffset(12, 8)
+	slotRow.Size = UDim2.new(1, -24, 0, SLOT)
+	slotRow.BackgroundTransparency = 1
+	slotRow.Parent = swordsPane
+	local slotLayout = Instance.new("UIListLayout")
+	slotLayout.FillDirection = Enum.FillDirection.Horizontal
+	slotLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	slotLayout.Padding = UDim.new(0, SLOT_GAP)
+	slotLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	slotLayout.Parent = slotRow
+
+	local swordGrid = grid(swordsPane, UDim2.fromOffset(8, SLOT + 16), UDim2.new(1, -16, 1, -(SLOT + 98)))
 
 	-- Barra de abajo: detalles de la espada elegida y sus acciones, sobre una franja oscura.
 	local bar = Instance.new("Frame")
@@ -351,30 +364,13 @@ function Backpack.start()
 	end
 	local bestButton = action("Best", "Equipar mejores", Ui.COLORS.green, 12, 176)
 	local sellButton = action("Sell", "Vender armas", Ui.COLORS.red, 198, 100)
-	local equipButton = action("Equip", "Equipar", Ui.COLORS.blue, 308, 104)
-	-- Dejar la elegida en la Bolsa de oro (o sacarla): cabe en el hueco que queda entre los detalles y "Equipar".
-	local bagButton = action("Bag", "A la bolsa", Ui.COLORS.coins, 420, 100)
 	bestButton.TextSize = 23
-	equipButton.TextSize = 20
 	sellButton.TextSize = 17
-	bagButton.TextSize = 17
 
-	local selected = nil -- id de la copia elegida
+	local selected = nil -- id de la última copia pulsada (la que enseña la barra de abajo)
 	local swordCells = {} -- [id] = casilla
 	local swordsKey = nil
 
-	equipButton.Activated:Connect(function()
-		if selected then
-			Sfx.play("equip")
-			Remotes.EquipSword:FireServer(selected)
-		end
-	end)
-	bagButton.Activated:Connect(function()
-		if selected then
-			Sfx.play("equip")
-			Remotes.SetBag:FireServer(selected)
-		end
-	end)
 	sellButton.Activated:Connect(function()
 		SellMenu.open(selected)
 	end)
@@ -409,15 +405,124 @@ function Backpack.start()
 			local grade = Config.Grades[chosen.grade]
 			detail.Text = `{sword.name}{if trait then ` <font color="{hex(trait.color)}">[{trait.name}]</font>` else ""}{if grade then ` <font color="{hex(grade.color)}">[{grade.name}]</font>` else ""}\n<font color="{Ui.SOFT}">Daño {Format.multiplier(Stats.swordDamage(chosen))}</font>`
 		end
-		-- El botón pone o quita la elegida; la última equipada no se puede quitar.
-		local isEquipped = table.find(worn, selected) ~= nil
-		local only = isEquipped and #worn <= 1
-		equipButton.Text = if only then "Equipada" elseif isEquipped then "Quitar" else "Equipar"
-		equipButton.BackgroundColor3 = if only then Ui.COLORS.gray elseif isEquipped then Ui.COLORS.orange else Ui.COLORS.blue
-		-- El de la bolsa deja o saca la elegida; la única equipada tampoco se puede depositar.
-		local inBag = selected ~= nil and Stats.isDeposited(player, selected)
-		bagButton.Text = if inBag then "Sacar" else "A la bolsa"
-		bagButton.BackgroundColor3 = if only then Ui.COLORS.gray elseif inBag then Ui.COLORS.orange else Ui.COLORS.coins
+	end
+
+	-- Casilla de una copia (la de la lista y la de su hueco son la misma): vista 3D, daño y marcas.
+	local function swordCell(parent: Instance, copy, isEquipped: boolean, inBag: boolean): TextButton
+		local trait = Config.Traits[copy.trait]
+		local tier = Rarity.tier(Stats.rarity(copy))
+		local cell = Ui.cell(parent, tier.color, table.find(Config.RarityTiers, tier))
+		WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
+		-- Daño grande abajo a la izquierda.
+		local damage = Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
+		damage.Position = UDim2.new(0.5, 3, 1, -3)
+		damage.Size = UDim2.new(1, -10, 0, 26)
+		damage.TextXAlignment = Enum.TextXAlignment.Left
+		damage:FindFirstChildOfClass("UITextSizeConstraint").MaxTextSize = 23
+		damage:FindFirstChildOfClass("UIStroke").Thickness = 2.5
+		Ui.gradient(damage, Color3.new(1, 1, 1), tier.color:Lerp(Color3.new(1, 1, 1), 0.45), 90)
+		if isEquipped then
+			Ui.cellTag(cell, "E", Ui.COLORS.green)
+		elseif inBag then
+			Ui.cellTag(cell, "B", Ui.COLORS.coins) -- depositada en la Bolsa de oro
+		end
+		-- Metal (círculo de su color) y tamaño (cartelito con su inicial) en el lado izquierdo, bajo la "E".
+		local metalDef, sizeDef = Permanent.metal(copy), Permanent.size(copy)
+		if metalDef then
+			local dot = Instance.new("Frame")
+			dot.Name = "Metal"
+			dot.Position = UDim2.fromOffset(6, 30)
+			dot.Size = UDim2.fromOffset(18, 18)
+			dot.BackgroundColor3 = metalDef.color
+			dot.BorderSizePixel = 0
+			dot.ZIndex = 3
+			dot.Parent = cell
+			Ui.round(dot, 9)
+			Ui.stroke(dot, Color3.new(0, 0, 0), 2)
+		end
+		if sizeDef then
+			Ui.cellTag(cell, string.sub(sizeDef.name, 1, 1), sizeDef.color).Position = UDim2.fromOffset(4, if metalDef then 52 else 30)
+		end
+		if trait then
+			-- Rombo del color del rasgo en la esquina.
+			local mark = Instance.new("Frame")
+			mark.Name = "Trait"
+			mark.AnchorPoint = Vector2.new(1, 0)
+			mark.Position = UDim2.new(1, -9, 0, 9)
+			mark.Size = UDim2.fromOffset(20, 20)
+			mark.Rotation = 45
+			mark.BackgroundColor3 = trait.color
+			mark.BorderSizePixel = 0
+			mark.ZIndex = 3
+			mark.Parent = cell
+			Ui.stroke(mark, Color3.new(0, 0, 0), 2)
+		end
+		Ui.tip(cell, function()
+			return swordTip(copy)
+		end, true)
+		return cell
+	end
+
+	-- Fila de huecos: cada uno es un marco del tamaño de una casilla de la lista, encogido con su UIScale, así la
+	-- casilla de dentro es la misma que la de la lista y no hace falta otra con medidas más pequeñas.
+	local slotHolders, slotCells, slotKeys = {}, {}, {}
+	local function syncSlots(copies, worn: { number })
+		local total = math.max(Stats.loadoutSlots(player), #worn)
+		-- Con los huecos del pase (8) van más pequeños para caber en la misma fila.
+		local side = if total > Config.Loadout.Slots then SLOT_SMALL else SLOT
+		for index = #slotHolders + 1, total do
+			local holder = Instance.new("Frame")
+			holder.Name = "Slot" .. index
+			holder.LayoutOrder = index
+			holder.Size = UDim2.fromOffset(CELL, CELL)
+			holder.BackgroundTransparency = 1
+			holder.Parent = slotRow
+			Instance.new("UIScale").Parent = holder
+			slotHolders[index] = holder
+		end
+		for index = #slotHolders, total + 1, -1 do
+			slotHolders[index]:Destroy()
+			slotHolders[index], slotCells[index], slotKeys[index] = nil, nil, nil
+		end
+		swordsTitle.Visible = total <= Config.Loadout.Slots
+		for index, holder in slotHolders do
+			holder.UIScale.Scale = side / CELL
+			local copy = nil
+			for _, candidate in copies do
+				if candidate.id == worn[index] then
+					copy = candidate
+				end
+			end
+			local key = if copy then `{copy.id}:{copy.sword}:{copy.metal}:{copy.size}:{copy.trait}:{copy.grade}` else ""
+			if key == slotKeys[index] then
+				continue
+			end
+			slotKeys[index] = key
+			if slotCells[index] then
+				slotCells[index]:Destroy()
+			end
+			local cell
+			if copy then
+				cell = swordCell(holder, copy, false, false)
+				cell.Name = "Sword"
+				cell.Activated:Connect(function()
+					-- Quitar la del hueco (la última equipada no se puede: el servidor no la quita).
+					Sfx.play("equip")
+					Remotes.EquipSword:FireServer(copy.id)
+				end)
+			else
+				cell = Ui.cell(holder, Ui.COLORS.gray)
+				cell.Name = "Empty"
+				local plus = Ui.label(cell, 52)
+				plus.Name = "Plus"
+				plus.Size = UDim2.fromScale(1, 1)
+				plus.Text = "+"
+				plus.TextTransparency = 0.35
+				plus.ZIndex = 3
+			end
+			cell.Size = UDim2.fromScale(1, 1)
+			slotCells[index] = cell
+		end
 	end
 
 	-- Deja las casillas como el inventario tocando solo las que han cambiado. Rehacerlas todas en cada
@@ -440,62 +545,14 @@ function Backpack.start()
 			end
 			cellKeys[copy.id] = key
 
-			local sword = Config.Swords[copy.sword]
-			local trait = Config.Traits[copy.trait]
-			local tier = Rarity.tier(Stats.rarity(copy))
-			local cell = Ui.cell(swordGrid, tier.color, table.find(Config.RarityTiers, tier))
-			cell.Name = "Sword" .. copy.id
 			-- (El orden de las casillas, de más a menos daño, se pone al final de syncSwords.)
-			WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
-			-- Daño grande abajo a la izquierda.
-			local damage = Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
-			damage.Position = UDim2.new(0.5, 3, 1, -3)
-			damage.Size = UDim2.new(1, -10, 0, 26)
-			damage.TextXAlignment = Enum.TextXAlignment.Left
-			damage:FindFirstChildOfClass("UITextSizeConstraint").MaxTextSize = 23
-			damage:FindFirstChildOfClass("UIStroke").Thickness = 2.5
-			Ui.gradient(damage, Color3.new(1, 1, 1), tier.color:Lerp(Color3.new(1, 1, 1), 0.45), 90)
-			if isEquipped then
-				Ui.cellTag(cell, "E", Ui.COLORS.green)
-			elseif inBag then
-				Ui.cellTag(cell, "B", Ui.COLORS.coins) -- depositada en la Bolsa de oro
-			end
-			-- Metal (círculo de su color) y tamaño (cartelito con su inicial) en el lado izquierdo, bajo la "E".
-			local metalDef, sizeDef = Permanent.metal(copy), Permanent.size(copy)
-			if metalDef then
-				local dot = Instance.new("Frame")
-				dot.Name = "Metal"
-				dot.Position = UDim2.fromOffset(6, 30)
-				dot.Size = UDim2.fromOffset(18, 18)
-				dot.BackgroundColor3 = metalDef.color
-				dot.BorderSizePixel = 0
-				dot.ZIndex = 3
-				dot.Parent = cell
-				Ui.round(dot, 9)
-				Ui.stroke(dot, Color3.new(0, 0, 0), 2)
-			end
-			if sizeDef then
-				Ui.cellTag(cell, string.sub(sizeDef.name, 1, 1), sizeDef.color).Position = UDim2.fromOffset(4, if metalDef then 52 else 30)
-			end
-			if trait then
-				-- Rombo del color del rasgo en la esquina.
-				local mark = Instance.new("Frame")
-				mark.Name = "Trait"
-				mark.AnchorPoint = Vector2.new(1, 0)
-				mark.Position = UDim2.new(1, -9, 0, 9)
-				mark.Size = UDim2.fromOffset(20, 20)
-				mark.Rotation = 45
-				mark.BackgroundColor3 = trait.color
-				mark.BorderSizePixel = 0
-				mark.ZIndex = 3
-				mark.Parent = cell
-				Ui.stroke(mark, Color3.new(0, 0, 0), 2)
-			end
-			Ui.tip(cell, function()
-				return swordTip(copy)
-			end, true)
+			local cell = swordCell(swordGrid, copy, isEquipped, inBag)
+			cell.Name = "Sword" .. copy.id
 			cell.Activated:Connect(function()
+				-- Pulsar un arma la equipa, o la quita si ya lo estaba (como en el menú de la bolsa).
 				selected = copy.id
+				Sfx.play("equip")
+				Remotes.EquipSword:FireServer(copy.id)
 				refreshSelection(Stats.swords(player), Stats.list(player, "Loadout"))
 			end)
 			swordCells[copy.id] = cell
@@ -557,7 +614,7 @@ function Backpack.start()
 		Ui.gemIcon(cell, item.color)
 		itemLabels[name] = Ui.cellLabel(cell, "x0")
 		Ui.tip(cell, function()
-			return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>\n<font color="{Ui.SOFT}">Se usa en la pestaña Espadas.</font>`, item.color
+			return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>`, item.color
 		end)
 	end
 
@@ -582,7 +639,7 @@ function Backpack.start()
 	potionHint.Position = UDim2.new(0, 14, 1, -6)
 	potionHint.Size = UDim2.new(1, -28, 0, 28)
 	potionHint.TextXAlignment = Enum.TextXAlignment.Left
-	potionHint.Text = `<font color="{Ui.SOFT}">Pulsa una poción para activarla. Pasa el ratón para ver qué hace.</font>`
+	potionHint.Text = `<font color="{Ui.SOFT}">Pulsa una poción para usarla.</font>`
 
 	local function refreshPotions()
 		local order = Config.Potions.Order
@@ -631,7 +688,7 @@ function Backpack.start()
 			if index then
 				return artifactTip(index)
 			end
-			return `Ranura {slot}\n<font color="{Ui.SOFT}">Vacía: pulsa un accesorio para equiparlo.</font>`, Ui.COLORS.gray
+			return `Ranura {slot}\n<font color="{Ui.SOFT}">Vacía</font>`, Ui.COLORS.gray
 		end)
 		cell.Activated:Connect(function()
 			if slots[slot].index then
@@ -721,7 +778,8 @@ function Backpack.start()
 		local copies = Stats.swords(player)
 
 		count.Text = `{#copies}/{Config.MaxSwords}`
-		swordsTitle.Text = `Tus espadas <font color="{Ui.SOFT}">· equipadas {#worn}/{Stats.loadoutSlots(player)} · bolsa {#Stats.list(player, "Bag")}/{Stats.bagSlots(player)}</font>`
+		swordsTitle.Text = `Equipadas {#worn}/{Stats.loadoutSlots(player)}`
+		syncSlots(copies, worn)
 		local key = `{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Bag")}`
 		if key ~= swordsKey then
 			swordsKey = key
@@ -736,8 +794,8 @@ function Backpack.start()
 		local artifacts = Stats.list(player, "Artifacts")
 		local worn = Stats.list(player, "Gear")
 		gearHint.Text = if #artifacts == 0
-			then "Aún no tienes accesorios: caen al romper objetos."
-			else `Equipados {#worn}/{Config.GearSlots}. Pulsa para equipar o quitar.`
+			then "Rompe objetos para conseguir accesorios."
+			else `Equipados {#worn}/{Config.GearSlots}`
 		for index, cell in gearCells do
 			cell.Visible = table.find(artifacts, index) ~= nil
 			cell.Select.Visible = table.find(worn, index) ~= nil

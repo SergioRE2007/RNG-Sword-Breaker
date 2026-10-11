@@ -106,7 +106,7 @@ end
 
 local function swordTip(copy, line: string)
 	local text, color, animated = Backpack.swordTip(copy)
-	return `{text}\n<font color="{GOLD_HEX}">Saca {Format.short(coinsPerHit(copy))} monedas por golpe</font>\n<font color="{Ui.SOFT}">{line}</font>`, color, animated
+	return `{text}\n<font color="{GOLD_HEX}">+{Format.short(coinsPerHit(copy))} monedas por golpe</font>\n<font color="{Ui.SOFT}">{line}</font>`, color, animated
 end
 
 -- Casilla de un arma: vista 3D, lo que saca por golpe abajo y sus marcas (metal, tamaño y rasgo, como en la mochila).
@@ -248,9 +248,9 @@ local function syncStock(copies, worn: { number }, deposited)
 			Ui.cellTag(cell, "E", Ui.COLORS.green)
 		end
 		Ui.tip(cell, function()
-			local line = if Stats.isEquipped(player, copy.id) then "Equipada: al dejarla en la bolsa se quita del equipo"
-				elseif #Stats.list(player, "Bag") >= Stats.bagSlots(player) then "Bolsa llena: sustituye a la que menos saca"
-				else "Pulsa para dejarla en la bolsa"
+			local line = if Stats.isEquipped(player, copy.id) then "Equipada: dejará de estarlo"
+				elseif #Stats.list(player, "Bag") >= Stats.bagSlots(player) then "Bolsa llena: cambia a la peor"
+				else "Pulsa: a la bolsa"
 			return swordTip(copy, line)
 		end, true)
 		cell.Activated:Connect(function()

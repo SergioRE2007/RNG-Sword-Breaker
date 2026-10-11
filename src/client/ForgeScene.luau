@@ -231,7 +231,7 @@ local function refreshUi()
 	end
 	local copy = api.selectedCopy()
 	local crystals = player:GetAttribute("Item_gradeCrystal") or 0
-	ui.cost.Text = `Cristales de grado: {Format.short(crystals)}  ·  {Config.GradeCost} por martillazo`
+	ui.cost.Text = `Cristales: {Format.short(crystals)} ({Config.GradeCost} por golpe)`
 	ui.cost.TextColor3 = if api.canAfford() then WHITE else Ui.COLORS.red
 	ui.auto.Text = if api.state.auto then "Parar" else "Auto"
 	ui.auto.BackgroundColor3 = if api.state.auto then Ui.COLORS.orange else Ui.COLORS.red
@@ -240,9 +240,9 @@ local function refreshUi()
 		return
 	end
 	if not scene.placedId then
-		ui.hint.Text = "Haz clic en la silueta del yunque para elegir un arma"
+		ui.hint.Text = "Elige un arma en el yunque"
 	elseif api.state.auto then
-		ui.hint.Text = "Martillazos automáticos… (pulsa Parar)"
+		ui.hint.Text = "Automático: pulsa Parar"
 	elseif not copy then
 		ui.hint.Text = "Elige un arma"
 	else
@@ -577,7 +577,7 @@ local function confirmReforge(): boolean
 	ui.decisionGrade.Text = `Grado {entry.name}`
 	ui.decisionGrade.TextColor3 = if entry.rainbow then WHITE else entry.color
 	ui.decisionInfo.Text = `{Modifiers.effect(entry)} · {percent}`
-	ui.decisionOld.Text = "Lo tienes marcado como deseado: si reforjas, lo pierdes"
+	ui.decisionOld.Text = "Es el que querías: si reforjas, lo pierdes"
 	ui.decision.Visible = true
 	if scene then
 		scene.deciding = true
