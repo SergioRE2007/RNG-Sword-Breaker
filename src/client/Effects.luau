@@ -206,9 +206,10 @@ function Effects.start()
 			if not Performance.get() then
 				ObjectBreak.play(cframe, size, objectIndex)
 			end
-		else
+		elseif objectIndex then
 			shatter(cframe, size, color, material)
 		end
+		-- Los enemigos de mazmorra (sin objectIndex) no sueltan trozos al morir: solo sonido.
 		-- Cuanto mejor era el objeto (su rareza), más espectáculo al romperse.
 		local quality = if info then info.quality or 1 else 1
 		if quality > 1 and not Performance.get() then
