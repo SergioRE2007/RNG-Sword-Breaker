@@ -452,19 +452,32 @@ function Backpack.start()
 		if sizeDef then
 			Ui.cellTag(cell, string.sub(sizeDef.name, 1, 1), sizeDef.color).Position = UDim2.fromOffset(4, if metalDef then 52 else 30)
 		end
-		if trait then
-			-- Rombo del color del rasgo en la esquina.
+		-- Rasgo arriba a la derecha (su logo) y grado abajo a la derecha (su nombre en su color), pedido por el usuario.
+		local logo = trait and Ui.traitLogo(trait)
+		if logo then
 			local mark = Instance.new("Frame")
 			mark.Name = "Trait"
 			mark.AnchorPoint = Vector2.new(1, 0)
-			mark.Position = UDim2.new(1, -9, 0, 9)
-			mark.Size = UDim2.fromOffset(20, 20)
-			mark.Rotation = 45
-			mark.BackgroundColor3 = trait.color
-			mark.BorderSizePixel = 0
-			mark.ZIndex = 3
+			mark.Position = UDim2.new(1, -2, 0, 2)
+			mark.Size = UDim2.fromOffset(36, 36)
+			mark.BackgroundTransparency = 1
 			mark.Parent = cell
-			Ui.stroke(mark, Color3.new(0, 0, 0), 2)
+			Ui.image(mark, logo).ZIndex = 4
+		end
+		local gradeDef = Config.Grades[copy.grade]
+		if gradeDef then
+			local tag = Ui.label(cell, 16)
+			tag.Name = "Grade"
+			tag.AnchorPoint = Vector2.new(1, 1)
+			tag.Position = UDim2.new(1, -5, 1, -5)
+			tag.Size = UDim2.fromOffset(math.max(24, 8 + 10 * (utf8.len(gradeDef.name) or 1)), 22)
+			tag.BackgroundTransparency = 0
+			tag.BackgroundColor3 = Ui.COLORS.dark
+			tag.TextColor3 = gradeDef.color
+			tag.Text = gradeDef.name
+			tag.ZIndex = 4
+			Ui.round(tag, 6)
+			Ui.stroke(tag, gradeDef.color, 2)
 		end
 		Ui.tip(cell, function()
 			return swordTip(copy)

@@ -139,7 +139,7 @@ local function traitBadge(parent: GuiObject, entry)
 	art.Size = UDim2.fromScale(1.2, 1.2)
 	art.BackgroundTransparency = 1
 	art.Parent = badge
-	local logo = entry.image or (if entry.icon == "coins" then "monedas" elseif entry.icon == "damage" then "espada" elseif entry.icon == "luck" then "suerte" else nil)
+	local logo = Ui.traitLogo(entry)
 	if logo then
 		Ui.image(art, logo)
 	else

@@ -1364,6 +1364,15 @@ function Ui.image(parent: Instance, name: string): ImageLabel
 	return image
 end
 
+-- Nombre en Ui.IMAGES del logo de un rasgo (Config.Traits): el suyo propio (`image`, los especiales) o el de lo que
+-- sube (monedas, espada, trébol). nil si no tiene ninguno.
+function Ui.traitLogo(trait): string?
+	if trait.image then
+		return trait.image
+	end
+	return if trait.icon == "coins" then "monedas" elseif trait.icon == "damage" then "espada" elseif trait.icon == "luck" then "suerte" else nil
+end
+
 -- Iconos hechos con marcos, para lo que cambia de color con cada casilla (gemas de objetos, accesorios, pociones...).
 function Ui.gemIcon(parent: Instance, color: Color3)
 	local holder = iconHolder(parent, 45)
