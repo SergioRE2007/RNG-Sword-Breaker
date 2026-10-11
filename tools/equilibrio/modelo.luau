@@ -120,9 +120,49 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		return objetivo.golpes.inicio + (objetivo.golpes.final - objetivo.golpes.inicio) * (index - 1) / (#tipos - 1)
 	end
 
-	-- Objetos que se lleva por delante cada espadazo con la parcela llena: más cuantos más quepan en ella.
-	function M.porGolpe(capacity: number): number
-		return 1 + objetivo.jugador.densidad * (capacity - 1)
+	-- ARMAS EQUIPADAS (server/Combat). Lo que hace falta de una copia equipada para pegar con ella: daño por golpe,
+	-- segundos entre golpes y hasta dónde salpica (hachas y martillos) o atraviesa (lanzas), como Hitbox.spread.
+	function M.arma(player, copy)
+		local _, kind = Stats.kind(copy)
+		local length = Config.Swords[copy.sword].bladeLength
+		return { dano = Stats.weaponDamage(player, copy), cooldown = Stats.weaponCooldown(player, copy), area = (kind.area or 0) * length, lanza = (kind.pierce or 0) * length }
+	end
+	-- Objetos (o enemigos) de más que se lleva cada golpe de esa arma por cada otro que haya alrededor. `reparto` =
+	-- objetivo.jugador.parcela en la parcela y objetivo.mazmorra.salpica en la arena (medidos en Studio).
+	local function salpica(arma, reparto: number): number
+		if arma.area > 0 then
+			return math.pi * (arma.area + 0.5) ^ 2 / reparto
+		elseif arma.lanza > 0 then
+			return 0.5 * (arma.lanza + 1) ^ 2 / reparto
+		end
+		return 0
+	end
+	local SEGUIDOS = 12 -- andanadas a partir de las que una pelea se cuenta a ritmo medio en vez de golpe a golpe
+
+	-- Hora del calendario en la que el jugador tipo lleva `n` tiradas de rasgo ("traits") o de grado ("grades"). Las
+	-- tablas de `objetivo` dicen a qué hora lleva cada uno su primera arma, que es cuando las tiradas llegan a su pity;
+	-- entre un punto y otro, y después del último, se interpola en logaritmos.
+	local tablas = { traits = objetivo.rasgo, grades = objetivo.grado }
+	for kind, tabla in tablas do
+		for position = 2, #tabla do
+			local antes, ahora = tabla[position - 1], tabla[position]
+			assert(ahora[1] > antes[1] and Modifiers.pityLimit(kind, ahora[2]) > Modifiers.pityLimit(kind, antes[2]), `objetivo: la tabla de {kind} tiene que ir a más en horas y en rareza`)
+		end
+	end
+	function M.horaTiradas(kind: string, n: number): number
+		local tabla = tablas[kind]
+		local hora, tiradas = tabla[1][1], Modifiers.pityLimit(kind, tabla[1][2])
+		if n <= tiradas or #tabla == 1 then
+			return hora * n / tiradas
+		end
+		for position = 2, #tabla do
+			local siguiente, hasta = tabla[position][1], Modifiers.pityLimit(kind, tabla[position][2])
+			if n <= hasta or position == #tabla then
+				return hora * (siguiente / hora) ^ (math.log(n / tiradas) / math.log(hasta / tiradas))
+			end
+			hora, tiradas = siguiente, hasta
+		end
+		return hora
 	end
 
 	-- MAZMORRAS (server/Dungeons, server/Loot y server/Armor). Enemigos de cada oleada de cada zona, ya con su "count".
@@ -149,40 +189,119 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		pesoMods += mod.chance
 	end
 
-	-- Segundos que tarda en una partida de la zona `index` (de una a la siguiente) pegando `dano` cada `cooldown`
-	-- segundos, o nil si no le da tiempo a acabarla. `area` = lleva un arma que pega alrededor (martillo, hacha).
-	-- Medido en Studio con el personaje en Auto (ver objetivo.mazmorra): los enemigos se le echan encima en piña, así
-	-- que cada espadazo se lleva a todos los de un tipo a la vez. Con un arma de área caen todos los tipos juntos (la
-	-- oleada dura los golpes del más duro); con una de frente va un tipo detrás de otro (se suman).
-	function M.duracionMazmorra(index: number, dano: number, cooldown: number, area: boolean?): number?
-		local zona = zonas[index]
+	-- Segundos que tarda en una partida de la zona `index` (de una a la siguiente) con esas armas (lista de M.arma), o
+	-- nil si no le da tiempo a acabarla. `vida` = por cuánto va la vida de los enemigos (si falta, el "hp" de la zona).
+	-- Medido en Studio con el personaje en Auto (ver objetivo.mazmorra): las armas cogen a los enemigos de uno en uno.
+	-- Al llegar pega cada una cuando le toca (su reloj sigue de un enemigo a otro) y de un enemigo muerto al primer
+	-- golpe al siguiente pasa `salto`. Las que salpican gastan además a los que esperan (de media, a todos lo mismo).
+	function M.duracionMazmorra(index: number, armas, vida: number?): number?
+		local mult = vida or zonas[index].hp
+		local count = #armas
+		local andanada, ritmo, ritmoExtra = 0, 0, 0
+		local extra = table.create(count, 0) -- vida que le quita cada golpe del arma a cada uno de los demás
+		for slot, arma in armas do
+			extra[slot] = arma.dano * salpica(arma, maz.salpica)
+			andanada += arma.dano
+			ritmo += arma.dano / arma.cooldown
+			ritmoExtra += extra[slot] / arma.cooldown
+		end
+		local listo = table.create(count, 0)
+		local limite = Config.Dungeon.TimeLimit
 		local pelea = 0
 		for _, wave in oleadas[index] do
-			local suma, mayor = 0, 0
-			for _, entry in wave do
-				local hits = math.max(1, math.ceil(entry.def.hp * zona.hp / dano - 1e-9))
-				suma += hits
-				mayor = math.max(mayor, hits)
+			pelea += Config.Dungeon.WaveDelay + maz.oleada
+			-- `t` cuenta desde el primer golpe de la oleada, al que las armas llegan descansadas.
+			local t, gastado, primero = 0, 0, true
+			for slot = 1, count do
+				listo[slot] = 0
 			end
-			pelea += Config.Dungeon.WaveDelay + maz.oleada + (if area then mayor else suma) * cooldown
-		end
-		if pelea > Config.Dungeon.TimeLimit then
-			return nil
+			for _, entry in wave do
+				local total = entry.def.hp * mult * (1 - 1e-9)
+				for _ = 1, entry.n do
+					local hp = total - gastado
+					if hp <= 0 then
+						continue -- se lo ha llevado la salpicadura antes de que le tocara
+					end
+					if primero then
+						primero = false
+					else
+						t += maz.salto
+					end
+					if hp > andanada * SEGUIDOS then
+						local dt = hp / ritmo
+						t += dt
+						gastado += dt * ritmoExtra
+						for slot = 1, count do
+							listo[slot] = t
+						end
+					else
+						for slot = 1, count do
+							if listo[slot] < t then
+								listo[slot] = t
+							end
+						end
+						repeat
+							local pick, at = 1, listo[1]
+							for slot = 2, count do
+								if listo[slot] < at then
+									pick, at = slot, listo[slot]
+								end
+							end
+							t = at
+							listo[pick] = at + armas[pick].cooldown
+							hp -= armas[pick].dano
+							gastado += extra[pick]
+						until hp <= 0
+					end
+					if pelea + t > limite then
+						return nil
+					end
+				end
+			end
+			pelea += t
 		end
 		return pelea + maz.entrada
 	end
 
 	-- Zona que juega y lo que tarda en cada partida: la más alta que termina en `comoda` segundos (la primera, en lo
-	-- que tarde). nil si aún no puede con ninguna.
-	function M.zonaMazmorra(dano: number, cooldown: number, area: boolean?): (number?, number?)
+	-- que tarde). nil si aún no puede con ninguna. Cada zona es más dura que la anterior: en la primera que no le sale, para.
+	function M.zonaMazmorra(armas): (number?, number?)
 		local zona, segundos = nil, nil
 		for index = 1, #zonas do
-			local d = M.duracionMazmorra(index, dano, cooldown, area)
-			if d and (d <= maz.comoda or index == 1) then
-				zona, segundos = index, d
+			local d = M.duracionMazmorra(index, armas)
+			if not d or (d > maz.comoda and index > 1) then
+				break
 			end
+			zona, segundos = index, d
 		end
 		return zona, segundos
+	end
+
+	-- Vida de los enemigos (el "hp" de la zona, que es también el daño recomendado de su cartel) con la que una partida
+	-- de esa zona le dura `comoda` segundos a quien lleva esas armas. De aquí sale la escalera de zonas (generar.luau).
+	function M.vidaMazmorra(index: number, armas): number
+		local function comoda(vida: number): boolean
+			local d = M.duracionMazmorra(index, armas, vida)
+			return d ~= nil and d <= maz.comoda
+		end
+		local high = 0
+		for _, arma in armas do
+			high += arma.dano
+		end
+		local low = high / 1000
+		assert(comoda(low), `la zona {index} no cabe en objetivo.mazmorra.comoda ni con todo cayendo de un golpe`)
+		while comoda(high) do
+			low, high = high, high * 4
+		end
+		for _ = 1, 40 do
+			local mid = math.sqrt(low * high)
+			if comoda(mid) then
+				low = mid
+			else
+				high = mid
+			end
+		end
+		return low
 	end
 
 	-- Lo que da de media una partida de esa zona: cristales de rasgo y de grado que sueltan los enemigos y el final,
@@ -249,15 +368,18 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	-- ritmo (multiplica su eficiencia); equipo = "calendario" (lleva el rasgo, el grado y la armadura que le suponen las
 	-- tablas de `objetivo` a cada hora; es lo que hay si no se pone) o "mazmorras" (lleva lo que saca de verdad de sus
 	-- partidas de mazmorra y de los cristales); semilla (del azar de las mazmorras);
-	-- sinSuerte (no compra la mejora de suerte); rasgo y grado (los lleva desde el principio); parar (acaba en cuanto
-	-- lo tiene todo: mejoras, renacimientos y accesorios).
+	-- sinSuerte (no compra la mejora de suerte); rasgo y grado (los lleva desde el principio en todas las armas); parar
+	-- (acaba en cuanto lo tiene todo: mejoras, renacimientos y accesorios).
+	-- Lleva equipadas sus armas de más daño (arma * metal * tamaño), hasta Config.Loadout.Slots; el rasgo y el grado van
+	-- por hueco: el mejor, en la mejor arma.
 	function M.partida(opts)
 		local forzado = opts.modo == "forzado"
 		local fin = opts.horas * H
 		local jugador = objetivo.jugador
 		local eficiencia = jugador.eficiencia * (opts.ritmo or 1)
-		local paseo, paciencia = jugador.paseo, jugador.paciencia
+		local salto, paciencia = jugador.salto, jugador.paciencia
 		local calibrar = opts.calibrar
+		local huecos = Config.Loadout.Slots
 
 		local attrs = {}
 		local player = {
@@ -271,11 +393,9 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			rebirths = 0,
 			artifacts = {},
 			gear = {},
-			sword = 1,
-			metal = 0,
-			size = 0,
-			trait = opts.rasgo or 0,
-			grade = opts.grado or 0,
+			armas = { { sword = 1, metal = 0, size = 0, base = Config.Swords[1].damage } }, -- de más a menos daño
+			rasgos = table.create(huecos, opts.rasgo or 0), -- [hueco] = índice de Config.Traits (0 = ninguno)
+			grados = table.create(huecos, opts.grado or 0),
 			armadura = { 0, 0, 0 },
 		}
 		for _, name in Config.UpgradeOrder do
@@ -297,10 +417,14 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		local equipoReal = opts.equipo == "mazmorras"
 		local pity = Modifiers.newPity(nil)
 		local prioridad = Modifiers.PRIORITY
-		local mejor = { traits = 0, grades = 0 } -- lo más raro que ha sacado de cada cosa
+		-- Los resultados más raros que ha sacado de cada cosa, del mejor al peor (uno por arma equipada): con el equipo de
+		-- las mazmorras son los que lleva.
+		local mejores = { traits = {}, grades = {} }
+		if equipoReal then
+			estado.rasgos, estado.grados = mejores.traits, mejores.grades
+		end
 		local puesto = {} -- [hueco] = pieza de armadura que lleva
 		local mazZona, mazDur, presupuesto, mazSucio = nil, math.huge, 0, false
-		local area = false -- lleva un arma de área (martillo o hacha)
 		local mazParte = maz.parte * maz.atencion * (opts.ritmo or 1)
 		local cristalParcela = Config.Items.traitCrystal.dropChance or 0
 
@@ -315,10 +439,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			armas = {}, -- [umbral de rareza] = segundo de la primera
 			cuenta = {}, -- [índice de arma] = cuántas (solo las de 1 entre 1e15 o más)
 			eventos = {}, -- (forzado) { t, pista, monedas ganadas hasta entonces }
-			danoTipo = {}, -- [tipo] = daño por golpe cuando empieza a salir a menudo (objetivo.golpes.parte)
+			danoTipo = {}, -- [tipo] = daño de una andanada de sus armas cuando empieza a salir a menudo (objetivo.golpes.parte)
 			horaTipo = {},
 			lambda = {}, -- (forzado) [accesorio] = suma de suerte de los objetos rotos hasta su hora
-			danoMazmorra = {},
+			vidaMazmorra = {}, -- [zona] = vida con la que le dura `comoda` segundos a su hora (M.vidaMazmorra)
 			fotos = {},
 			ritmo = {}, -- { hora, objetos, monedas } cada hora en punto
 		}
@@ -327,8 +451,18 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		end
 
 		-- Estadísticas del jugador, con Stats de verdad sobre sus atributos.
-		local luck, typeLuck, objectLuck, damage, coinMult, gacha, spawnTime, cooldown, porGolpe
-		local bestDamage = Config.Swords[1].damage
+		local luck, typeLuck, objectLuck, damage, coinMult, gacha, spawnTime
+		-- Sus armas equipadas (lista de M.arma) y, por hueco, lo que cuenta en la parcela: segundos entre golpes, vida que
+		-- quita cada golpe (con lo que salpica en una parcela llena) y cuándo puede volver a pegar (`listo`, contado desde
+		-- que rompió el último objeto). `andanada` = un golpe de cada una; `ritmo` = vida que quitan por segundo.
+		local armas, nArmas = {}, 0
+		local pausa, golpe, listo = table.create(huecos, 0), table.create(huecos, 0), table.create(huecos, 0)
+		local andanada, ritmo = 0, 0
+		local corte = 0 -- daño a partir del que un arma nueva entra entre las equipadas
+		local ids = {}
+		for slot = 1, huecos do
+			ids[slot] = slot
+		end
 		local parte = objetivo.golpes.parte
 		local nextTipo, habitual = 2, 2
 		local t = 0
@@ -363,7 +497,12 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			estado.gear = chosen
 		end
 		local function recalcular()
-			attrs.Swords = `1:{estado.sword}:{estado.trait}:{estado.grade}:{estado.metal}:{estado.size}`
+			local copias = {}
+			for slot, arma in estado.armas do
+				copias[slot] = `{slot}:{arma.sword}:{estado.rasgos[slot] or 0}:{estado.grados[slot] or 0}:{arma.metal}:{arma.size}`
+			end
+			attrs.Swords = table.concat(copias, ",")
+			attrs.Loadout = table.concat(ids, ",", 1, #copias)
 			attrs.Equipped = 1
 			attrs.Gear = table.concat(estado.gear, ",")
 			attrs.Rebirths = estado.rebirths
@@ -378,11 +517,18 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			coinMult = Stats.coins(player)
 			gacha = Stats.gachaLuck(player)
 			spawnTime = Stats.spawnTime(player)
-			cooldown = Stats.cooldown(player)
-			porGolpe = M.porGolpe(Upgrades.value("capacity", estado.upgrades.capacity or 0))
-			local _, kind = Stats.weapon(player)
-			area = (kind.area or 0) > 0
-			local zona, segundos = M.zonaMazmorra(damage, cooldown, area)
+			local otros = math.max(Upgrades.value("capacity", estado.upgrades.capacity or 0) - 1, 0)
+			armas, andanada, ritmo = {}, 0, 0
+			for slot, copy in Stats.loadout(player) do
+				local arma = M.arma(player, copy)
+				armas[slot] = arma
+				pausa[slot] = arma.cooldown
+				golpe[slot] = arma.dano * (1 + otros * salpica(arma, jugador.parcela))
+				andanada += golpe[slot]
+				ritmo += golpe[slot] / arma.cooldown
+			end
+			nArmas = #armas
+			local zona, segundos = M.zonaMazmorra(armas)
 			mazZona, mazDur, mazSucio = zona, segundos or math.huge, false
 			if not zona then
 				presupuesto = 0
@@ -405,15 +551,17 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			table.insert(agenda, { t = at, fn = fn })
 		end
 		if not equipoReal then
-			for _, entry in objetivo.rasgo do
-				a(entry[1] * H, function()
-					estado.trait = math.max(estado.trait, entry[2])
-				end)
-			end
-			for _, entry in objetivo.grado do
-				a(entry[1] * H, function()
-					estado.grade = math.max(estado.grade, entry[2])
-				end)
+			-- Las tablas son las de la primera arma; la que hace j lleva cada rasgo y cada grado cuando las tiradas
+			-- acumuladas del calendario llegan a j veces su pity.
+			for kind, lista in { traits = estado.rasgos, grades = estado.grados } do
+				for _, entry in tablas[kind] do
+					for slot = 1, huecos do
+						local hora = if slot == 1 then entry[1] else M.horaTiradas(kind, slot * Modifiers.pityLimit(kind, entry[2]))
+						a(hora * H, function()
+							lista[slot] = math.max(lista[slot], entry[2])
+						end)
+					end
+				end
 			end
 			for _, entry in objetivo.armadura do
 				a(entry[1] * H, function()
@@ -438,12 +586,15 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				if not mz.primero[kind][result] then
 					mz.primero[kind][result] = t
 				end
-				if mejor[kind] == 0 or Modifiers.better(kind, result, mejor[kind], prioridad) then
-					mejor[kind] = result
-					if equipoReal then
-						estado[info.field] = result
-						mazSucio = true
+				local top = mejores[kind]
+				if #top < huecos or Modifiers.better(kind, result, top[#top], prioridad) then
+					local position = #top + 1
+					while position > 1 and Modifiers.better(kind, result, top[position - 1], prioridad) do
+						position -= 1
 					end
+					table.insert(top, position, result)
+					top[huecos + 1] = nil
+					mazSucio = mazSucio or equipoReal
 				end
 			end
 		end
@@ -589,19 +740,19 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		end
 		for index, at in objetivo.mazmorras do
 			a(at, function()
-				res.danoMazmorra[index] = damage
+				res.vidaMazmorra[index] = M.vidaMazmorra(index, armas)
 			end)
 		end
 		for _, hour in objetivo.fotos do
 			a(hour * H, function()
+				local equipadas = {}
+				for slot, arma in estado.armas do
+					equipadas[slot] = { sword = arma.sword, metal = arma.metal, size = arma.size, trait = estado.rasgos[slot] or 0, grade = estado.grados[slot] or 0 }
+				end
 				res.fotos[hour] = {
 					upgrades = table.clone(estado.upgrades),
 					rebirths = estado.rebirths,
-					sword = estado.sword,
-					metal = estado.metal,
-					size = estado.size,
-					trait = estado.trait,
-					grade = estado.grade,
+					armas = equipadas,
 					artifacts = table.clone(estado.artifacts),
 					gear = table.clone(estado.gear),
 					armadura = table.clone(estado.armadura),
@@ -687,6 +838,42 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		recalcular()
 		precioMinimo()
 
+		-- Segundos que le lleva un objeto de esa vida, desde que rompió el anterior: lo que tarda en aparecer o, si es más,
+		-- lo que tarda en romperlo. Las armas llegan a los `salto` segundos y pega cada una cuando le toca: su reloj
+		-- sigue de un objeto a otro (server/Combat), así que las que no han hecho falta para este llegan listas al siguiente.
+		local function romper(hp: number): number
+			local caida
+			if hp > andanada * SEGUIDOS then
+				caida = salto + hp / ritmo
+				for slot = 1, nArmas do
+					listo[slot] = caida
+				end
+			else
+				hp *= 1 - 1e-9
+				for slot = 1, nArmas do
+					if listo[slot] < salto then
+						listo[slot] = salto
+					end
+				end
+				repeat
+					local pick, at = 1, listo[1]
+					for slot = 2, nArmas do
+						if listo[slot] < at then
+							pick, at = slot, listo[slot]
+						end
+					end
+					caida = at
+					listo[pick] = at + pausa[pick]
+					hp -= golpe[pick]
+				until hp <= 0
+			end
+			local ciclo = math.max(spawnTime, caida)
+			for slot = 1, nArmas do
+				listo[slot] = math.max(listo[slot] - ciclo, 0)
+			end
+			return ciclo
+		end
+
 		while t < fin do
 			local sucio = false
 			while cita <= #agenda and agenda[cita].t <= t do
@@ -726,14 +913,13 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				local base = M.golpes(ti) * (if ti < nextTipo then res.danoTipo[ti] else damage * (def.rarity * parte / luck) ^ calibrar[ti])
 				hp *= base / def.hp
 			end
-			local hits = math.max(1, math.ceil(hp / damage - 1e-9))
-			if hits > paciencia then
+			if hp > ritmo * paciencia then
 				-- Demasiado duro: lo deja. Cuenta el hueco de aparición.
 				res.saltados += 1
 				pasa(spawnTime / eficiencia)
 				continue
 			end
-			pasa(math.max(spawnTime, paseo + hits * cooldown / porGolpe) / eficiencia)
+			pasa(romper(hp) / eficiencia)
 			res.objetos += 1
 			-- Cristal de rasgo de los objetos que dan gemas (server/Traits).
 			if def.gems > 0 and azar() < cristalParcela then
@@ -771,9 +957,16 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				local size = cascada(Config.Sizes, gacha, 0)
 				local rarity = Config.Swords[sword].rarity
 				local total = Config.Swords[sword].damage * Permanent.damageMult({ metal = metal, size = size })
-				if total > bestDamage then
-					bestDamage = total
-					estado.sword, estado.metal, estado.size = sword, metal, size
+				if total > corte then
+					-- Entra entre las equipadas, en su sitio por daño, y sale la peor si ya no cabe.
+					local equipadas = estado.armas
+					local position = #equipadas + 1
+					while position > 1 and total > equipadas[position - 1].base do
+						position -= 1
+					end
+					table.insert(equipadas, position, { sword = sword, metal = metal, size = size, base = total })
+					equipadas[huecos + 1] = nil
+					corte = if #equipadas < huecos then 0 else equipadas[huecos].base
 					recalcular()
 				end
 				for _, limit in umbrales do
@@ -845,10 +1038,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				end
 			end
 		end
-		res.maz.mejor = mejor
+		res.maz.mejores = mejores
 		res.estado = estado
-		res.dano = damage
-		res.cooldown, res.area = cooldown, area
+		res.dano = damage -- el de una andanada: la suma de sus armas equipadas
+		res.equipo = armas
 		res.suerte = luck
 		mundo.Weather = nil
 		return res
@@ -856,9 +1049,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 
 	-- Con TODA la suerte al máximo (todos los objetos del tipo más raro y todos los renacimientos, sin pociones y con el
 	-- clima que vaya tocando, o sin él con conClima = false): horas de romper objetos por cada arma de las `count` más
-	-- raras. `dano` = daño por golpe del jugador; `samples` = objetos de muestra por cada clima.
+	-- raras. `dano` = daño de una andanada de sus armas (se cuentan como espadas); `samples` = objetos de muestra por
+	-- cada clima.
 	function M.horasPorArma(dano: number, count: number, samples: number, conClima: boolean?): { number }
-		-- (dano = math.huge: todo le cae de un golpe, que es el jugador que más objetos rompe.)
+		-- (dano = math.huge: todo le cae de un golpe, que es el jugador que más objetos rompe: todo lo que aparece.)
 		local def = tipos[#tipos]
 		local gacha = Config.Rebirth.gachaLuck ^ Config.Rebirth.max
 		local attrs = {}
@@ -874,7 +1068,6 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		}
 		mundo.Weather = nil
 		local spawnTime, cooldown = Stats.spawnTime(player), Stats.cooldown(player)
-		local porGolpe = M.porGolpe(Upgrades.value("capacity", Config.Upgrades.capacity.maxLevel))
 		local jugador = objetivo.jugador
 		-- Armas por segundo con una suerte de rareza y tamaño de los objetos y una suerte de armas dadas.
 		local function ritmo(objectLuck: number, weaponLuck: number): { number }
@@ -883,11 +1076,12 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			for _ = 1, samples do
 				local quality, _, scale, rolls = tirarObjeto(def, objectLuck)
 				local hits = math.max(1, math.ceil(ObjectSpec.hp(def, quality, scale) / dano - 1e-9))
-				if hits > jugador.paciencia then
+				local caida = jugador.salto + (hits - 1) * cooldown
+				if caida > jugador.paciencia then
 					seconds += spawnTime / jugador.eficiencia
 					continue
 				end
-				seconds += math.max(spawnTime, jugador.paseo + hits * cooldown / porGolpe) / jugador.eficiencia
+				seconds += math.max(spawnTime, caida) / jugador.eficiencia
 				local objLuck = gacha * weaponLuck * ObjectSpec.luck(def, quality, scale)
 				local left = 1
 				for position = 1, count do

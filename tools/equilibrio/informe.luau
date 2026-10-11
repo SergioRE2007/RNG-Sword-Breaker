@@ -288,7 +288,7 @@ do
 	local bucle = objetivo.bucle
 	local rasgos, grados, duraciones, zonasFinal = {}, {}, {}, {}
 	for _, run in runs do
-		local zona, segundos = M.zonaMazmorra(run.dano, run.cooldown, run.area)
+		local zona, segundos = M.zonaMazmorra(run.equipo)
 		if zona and segundos then
 			local botin = M.botinMazmorra(zona)
 			local veces = bucle.horas * 3600 / segundos
@@ -302,8 +302,24 @@ do
 		local rasgo, grado = mediana(rasgos), mediana(grados)
 		local ultimoRasgo = Modifiers.pityLimit("traits", #Config.Traits)
 		local ultimoGrado = Modifiers.pityLimit("grades", #Config.Grades)
-		print(`En bucle sin parar {bucle.horas} h (en {Config.Dungeons[math.round(mediana(zonasFinal))].name}, {string.format("%.0f", mediana(duraciones))} s por partida): {string.format("%.0f", rasgo)} cristales de rasgo ({bucle.rasgo}) y {string.format("%.0f", grado)} de grado ({bucle.grado}) → {Config.Traits[#Config.Traits].name} asegurado en {string.format("%.1f", ultimoRasgo / rasgo * bucle.horas / 24)} días de bucle y {Config.Grades[#Config.Grades].name} en {string.format("%.1f", ultimoGrado / grado * bucle.horas / 24)}`)
+		print(`En bucle sin parar {bucle.horas} h (en {Config.Dungeons[math.round(mediana(zonasFinal))].name}, {string.format("%.0f", mediana(duraciones))} s por partida): {string.format("%.0f", rasgo)} cristales de rasgo ({bucle.rasgo}) y {string.format("%.0f", grado)} de grado ({bucle.grado}) → {Config.Traits[#Config.Traits].name} asegurado en la primera arma en {string.format("%.1f", ultimoRasgo / rasgo * bucle.horas / 24)} días de bucle y {Config.Grades[#Config.Grades].name} en {string.format("%.1f", ultimoGrado / grado * bucle.horas / 24)} (en las {Config.Loadout.Slots}, {Config.Loadout.Slots} veces más)`)
 	end
+end
+
+-- Las armas con las que acaba la partida de daño mediano, por hueco, con su rasgo y su grado.
+do
+	local Permanent = shared("Permanent")
+	local orden = table.clone(runs)
+	table.sort(orden, function(x, y)
+		return x.dano < y.dano
+	end)
+	local estado = orden[math.ceil(#orden / 2)].estado
+	parts = {}
+	for slot, arma in estado.armas do
+		local trait, grade = Config.Traits[estado.rasgos[slot] or 0], Config.Grades[estado.grados[slot] or 0]
+		table.insert(parts, `{Permanent.name(arma.sword, arma.metal, arma.size)} [{if trait then trait.name else "sin rasgo"}, {if grade then grade.name else "sin grado"}]`)
+	end
+	print(`Armas equipadas al final: {table.concat(parts, " · ")}`)
 end
 
 print("\n-- Con TODA la suerte al máximo (solo sale el tipo más raro y todo cae de un golpe; sin pociones, con el clima que toque): horas por cada arma --")
@@ -318,7 +334,7 @@ for position = 1, 6 do
 	table.insert(parts, `{sword.name} (1 entre {Format.short(sword.rarity)}): {tiempo(hours[position] * 3600)}`)
 end
 print(table.concat(parts, "\n"))
-print(`(objetivo de la más rara: {objetivo.horasArmaTope} h; sin clima saldría cada {string.format("%.0f", sinClima)} h; daño por golpe al final de la partida: {Format.short(dano)})`)
+print(`(objetivo de la más rara: {objetivo.horasArmaTope} h; sin clima saldría cada {string.format("%.0f", sinClima)} h; daño de sus armas equipadas al final de la partida: {Format.short(dano)})`)
 
 -- Cuántas armas tope toca esperar en una partida entera, y cuánto de eso lo da cada clima.
 local top = Config.Swords[M.pool[1]]

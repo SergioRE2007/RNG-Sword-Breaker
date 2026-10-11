@@ -354,8 +354,8 @@ local function loadArmor(data, saved)
 end
 
 -- Modo de pruebas Config.Test.Progress: deja `data` como estaría el jugador tipo del calendario de progreso a esa
--- hora de juego (shared/BalanceSnapshots, generado por tools/equilibrio): mejoras, renacimientos, su arma equipada con
--- rasgo y grado, accesorios y una armadura puesta que suma lo que llevaría. Con menos horas que el primer estado
+-- hora de juego (shared/BalanceSnapshots, generado por tools/equilibrio): mejoras, renacimientos, sus armas equipadas,
+-- cada una con su rasgo y su grado, accesorios y una armadura puesta que suma lo que llevaría. Con menos horas que el primer estado
 -- guardado, es una partida nueva.
 local function applyProgress(data, hours: number)
 	local snapshot = nil
@@ -371,18 +371,24 @@ local function applyProgress(data, hours: number)
 		data.upgrades[name] = math.clamp(snapshot.upgrades[name] or 0, 0, upgrade.maxLevel)
 	end
 	data.rebirths = math.clamp(snapshot.rebirths, 0, Config.Rebirth.max)
-	if Config.Swords[snapshot.sword] then
-		local id = data.nextSwordId
-		data.nextSwordId += 1
-		table.insert(data.swords, {
-			id = id,
-			sword = snapshot.sword,
-			metal = if snapshot.metal > 0 then snapshot.metal else nil,
-			size = if snapshot.size > 0 then snapshot.size else nil,
-			trait = if snapshot.trait > 0 then snapshot.trait else nil,
-			grade = if snapshot.grade > 0 then snapshot.grade else nil,
-		})
-		data.loadout = { id }
+	local loadout = {}
+	for _, entry in snapshot.swords do
+		if Config.Swords[entry.sword] and #loadout < Config.Loadout.Slots then
+			local id = data.nextSwordId
+			data.nextSwordId += 1
+			table.insert(data.swords, {
+				id = id,
+				sword = entry.sword,
+				metal = if entry.metal > 0 then entry.metal else nil,
+				size = if entry.size > 0 then entry.size else nil,
+				trait = if entry.trait > 0 then entry.trait else nil,
+				grade = if entry.grade > 0 then entry.grade else nil,
+			})
+			table.insert(loadout, id)
+		end
+	end
+	if #loadout > 0 then
+		data.loadout = loadout
 	end
 	data.artifacts, data.gear = {}, {}
 	for _, index in snapshot.artifacts do
