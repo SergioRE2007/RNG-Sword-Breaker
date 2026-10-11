@@ -1,5 +1,6 @@
 -- Lo que se ve del clima en la interfaz: librería sin start() (la lleva client/Weather).
---  · `Hud.HudRoot.Weather`: tarjeta arriba en el centro, bajo la barra de transporte. Con clima: insignia con su
+--  · `Hud.HudRoot.TopButtons.Weather`: tarjeta en la fila de botones pequeños de arriba a la derecha, a la izquierda
+--    de Ajustes (y del botón Admin, para los administradores; pedido por el usuario). Con clima: insignia con su
 --    dibujo, nombre, lo que da y el tiempo que queda (rojo y latiendo al final). Despejado: cuánto falta para el
 --    siguiente. El contenido va en `Weather.Card`: SkillTree esconde y devuelve los hijos de HudRoot, así que lo que
 --    se esconde por otros motivos (mazmorra, forja) es la tarjeta de dentro.
@@ -29,12 +30,13 @@ local LOW = Color3.fromRGB(255, 96, 96)
 local CLEAR = Color3.fromRGB(92, 104, 140) -- insignia con el cielo despejado
 
 -- Medidas de la tarjeta (en píxeles del HUD, que ya se encoge entero en pantallas pequeñas).
-local TOP = 92 -- justo debajo de la barra de transporte (76 de alto a 10 del borde)
 local HEIGHT = 52
 local BADGE = 38
 local PAD = 9
 local CLOCK_WIDTH = 74
 local TEXT_ROOM = 320 -- ancho máximo del nombre y de lo que da
+local ROW_GAP = 14 -- separación de la fila de botones pequeños (Ui.topButtons), y mínima con la barra de transporte
+local BELOW = 66 -- altura de la tarjeta cuando no cabe en la fila: justo debajo de sus botones (44 de alto a 14 del borde)
 -- Capas (la interfaz ordena el ZIndex globalmente): la tarjeta va con el resto del HUD y el cartel por encima de las
 -- ventanas y por debajo de los avisos (50).
 local Z_BANNER = 40
@@ -233,10 +235,39 @@ end
 -- Tarjeta --------------------------------------------------------------------------------------------------
 
 -- Ancho de la tarjeta según el texto más largo: el reloj tiene su hueco fijo, así que no baila con los segundos.
+-- Sitio de la tarjeta: en la fila de botones pequeños si cabe al lado de la barra de transporte; en pantallas estrechas
+-- no cabe y baja a su propia línea, debajo de esos botones y pegada al borde derecho.
+local function place()
+	if not outer then
+		return
+	end
+	local hud = Ui.hud()
+	local row = Ui.topButtons()
+	local travel = hud:FindFirstChild("Travel") :: GuiObject?
+	local hudScale = hud:FindFirstChildOfClass("UIScale")
+	local s = if hudScale then hudScale.Scale else 1
+	local rowLeft = row.AbsolutePosition.X -- borde izquierdo de la fila sin la tarjeta
+	if outer.Parent == row and outer.Visible then
+		rowLeft += outer.AbsoluteSize.X + ROW_GAP * s
+	end
+	local cardLeft = rowLeft - (outer.Size.X.Offset + ROW_GAP) * s
+	local fits = not travel or cardLeft >= travel.AbsolutePosition.X + travel.AbsoluteSize.X + ROW_GAP * s
+	if fits and outer.Parent ~= row then
+		outer.AnchorPoint = Vector2.zero
+		outer.Position = UDim2.new()
+		outer.Parent = row
+	elseif not fits and outer.Parent == row then
+		outer.AnchorPoint = Vector2.new(1, 0)
+		outer.Position = UDim2.new(1, -ROW_GAP, 0, BELOW)
+		outer.Parent = hud
+	end
+end
+
 local function fit()
 	if outer then
 		local text = math.min(math.max(title.TextBounds.X, detail.TextBounds.X), TEXT_ROOM)
 		outer.Size = UDim2.fromOffset(PAD + BADGE + 8 + math.ceil(text) + 14 + CLOCK_WIDTH + PAD, HEIGHT)
+		task.defer(place)
 	end
 end
 
@@ -246,11 +277,11 @@ function WeatherHud.build()
 	end
 	local frame = Instance.new("Frame")
 	frame.Name = "Weather"
-	frame.AnchorPoint = Vector2.new(0.5, 0)
-	frame.Position = UDim2.new(0.5, 0, 0, TOP)
+	-- En la fila de botones pequeños (Ui.topButtons): antes que el de Admin (100) y que Ajustes (1000), a su izquierda.
+	frame.LayoutOrder = 50
 	frame.Size = UDim2.fromOffset(240, HEIGHT)
 	frame.BackgroundTransparency = 1
-	frame.Parent = Ui.hud()
+	frame.Parent = Ui.topButtons()
 	outer = frame
 
 	card = Instance.new("Frame")
@@ -315,6 +346,9 @@ function WeatherHud.build()
 		return table.concat(lines, "\n"), def.color
 	end, true)
 
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+		task.defer(place)
+	end)
 	WeatherHud.show(nil)
 end
 
@@ -371,10 +405,13 @@ function WeatherHud.tick(seconds: number, now: number)
 	clockPulse.Scale = if low and not Performance.get() then 1 + 0.1 * (0.5 + 0.5 * math.sin(now * 6)) else 1
 end
 
--- Esconde la tarjeta mientras ese hueco es de otro panel (mazmorra, forja).
+-- Esconde la tarjeta (cielo despejado para quien no es administrador, mazmorra, forja). También el marco de fuera, para
+-- que no deje su hueco en la fila de botones.
 function WeatherHud.setHidden(hidden: boolean)
 	if outer and card.Visible == hidden then
 		card.Visible = not hidden
+		outer.Visible = not hidden
+		task.defer(place)
 	end
 end
 
@@ -502,10 +539,18 @@ function WeatherHud.announce(id: string)
 		if not group.Parent then
 			return
 		end
-		-- Se recoge hacia la tarjeta de arriba.
+		-- Se recoge hacia la tarjeta de arriba a la derecha.
 		local out = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		-- El centro de la tarjeta en píxeles del HUD (que lleva su propio UIScale).
+		local hud = Ui.hud()
+		local hudScale = hud:FindFirstChildOfClass("UIScale")
+		local target = group.Position
+		if outer then
+			local center = (outer.AbsolutePosition + outer.AbsoluteSize / 2 - hud.AbsolutePosition) / (if hudScale then hudScale.Scale else 1)
+			target = UDim2.fromOffset(center.X, center.Y)
+		end
 		TweenService:Create(scale, out, { Scale = 0.4 }):Play()
-		TweenService:Create(group, out, { GroupTransparency = 1, Position = UDim2.new(0.5, 0, 0, TOP + HEIGHT / 2) }):Play()
+		TweenService:Create(group, out, { GroupTransparency = 1, Position = target }):Play()
 		task.delay(0.42, function()
 			if banner == group then
 				banner = nil

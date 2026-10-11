@@ -161,7 +161,7 @@ function Hud.start()
 	travel.Parent = gui
 	local travelLayout = Instance.new("UIListLayout")
 	travelLayout.FillDirection = Enum.FillDirection.Horizontal
-	travelLayout.Padding = UDim.new(0, 12)
+	travelLayout.Padding = UDim.new(0, 18)
 	travelLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	travelLayout.Parent = travel
 
