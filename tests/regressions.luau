@@ -653,13 +653,10 @@ f.player:SetAttribute("Upgrade_fortune", 0)
 -- El tamaño y la rareza del objeto pesan de verdad en la suerte de armas.
 equal(objectSpec.luck(rarest, 1, 2) / objectSpec.luck(rarest, 1, 1) >= 8, true, "el tamaño pesa en la suerte de armas")
 equal(objectSpec.luck(rarest, #f.config.ObjectRarities, 1) / objectSpec.luck(rarest, 1, 1) >= 20, true, "la rareza pesa en la suerte de armas")
--- Velocidad de golpe: tiempo base por el tipo de arma, y solo su poción lo baja.
+-- Velocidad de golpe: tiempo base por el tipo de arma, sin nada que lo baje.
 local swingBefore = stats.cooldown(f.player)
 local _, weaponKind = stats.weapon(f.player)
 near(swingBefore, f.config.BaseCooldown * weaponKind.cooldown, "tiempo base entre golpes")
-f.player:SetAttribute("Potion_attackSpeed", 3)
-near(stats.cooldown(f.player), swingBefore / f.config.Potions.Families.attackSpeed.values[3], "la poción acelera el golpe")
-f.player:SetAttribute("Potion_attackSpeed", nil)
 -- Armadura: la vida escala con el power de la zona, los porcentajes con su bonus, y lo guardado de antes se recorta.
 local lastZone = #f.config.Dungeons
 equal(armorStats.scaling("health", lastZone), f.config.Dungeons[lastZone].power, "la vida de la armadura escala con el power")
@@ -937,7 +934,7 @@ do
 	local lastSword, lastTrait, lastGrade, lastMetal, lastSize = #cfg.Swords, #cfg.Traits, #cfg.Grades, #cfg.Metals, #cfg.Sizes
 	local lastArtifact, lastQuality = #cfg.Artifacts, #cfg.Armor.Qualities
 	local potionKey = cfg.Potions.ItemKeys[#cfg.Potions.ItemKeys]
-	local topTier = #cfg.Potions.Families.rankLuck.values
+	local topTier = #cfg.Potions.Families.coins.values
 	local pity = { traits = {}, grades = {} }
 	for kind, counters in pity do
 		for index in modifiers.KINDS[kind].list do counters[index] = if modifiers.hasPity(kind, index) then math.min(index, modifiers.pityLimit(kind, index)) else 0 end
@@ -970,7 +967,7 @@ do
 			{ id = 13, slot = "helmet", quality = 1, level = 1, stats = {} },
 		},
 		armorWorn = { helmet = 11, boots = 12 },
-		potions = { damage = { tier = 3, seconds = 120 }, rankLuck = { tier = topTier, seconds = 1.5 } },
+		potions = { damage = { tier = 3, seconds = 120 }, coins = { tier = topTier, seconds = 1.5 } },
 		upgrades = levels,
 	}
 	local items = {}
@@ -1140,7 +1137,7 @@ do
 		potions = {
 			nada = { tier = 1, seconds = 10 }, damage = { tier = 99, seconds = 10 }, health = { tier = 1, seconds = nan },
 			boxLuck = { tier = 1, seconds = -5 }, weaponLuck = { tier = 1, seconds = huge }, rankLuck = "x",
-			traitLuck = { tier = 1.5, seconds = 10 }, attackSpeed = { tier = 2, seconds = 30 },
+			traitLuck = { tier = 1.5, seconds = 10 }, attackSpeed = { tier = 2, seconds = 30 }, coins = { tier = 2, seconds = 30 },
 		},
 		missions = {
 			daily = "x", otra = { id = 1, progress = {}, claimed = {} },
@@ -1159,7 +1156,7 @@ do
 	equal(bits.pity.traits[1], 0, "pity que no es una tabla")
 	equal(bits.pity.grades[3], 0, "pity de un grado fácil al cargar")
 	equal(bits.pity.grades[9], modifiers.pityLimit("grades", 9), "pity acotado al cargar")
-	same(bits.potions, { weaponLuck = { tier = 1, seconds = potionInfo.cap(1) }, attackSpeed = { tier = 2, seconds = 30 } }, "pociones: solo las válidas")
+	same(bits.potions, { weaponLuck = { tier = 1, seconds = potionInfo.cap(1) }, coins = { tier = 2, seconds = 30 } }, "pociones: solo las válidas")
 	same(bits.missions, { weekly = { id = 2800, progress = { c = 3 }, claimed = { c = true } } }, "misiones: solo progreso y premios válidos")
 	equal(table.concat(modifiers.priority(bits.traitPriority), ","), table.concat(modifiers.PRIORITY, ","), "prioridad de rasgos sin sentido: la de siempre")
 	local owned, wearing = {}, {}

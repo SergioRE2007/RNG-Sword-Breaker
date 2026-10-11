@@ -24,7 +24,7 @@ Config.Test = {
 -- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
 -- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
 Config.Admins = { 4490621018 }
-Config.BaseCooldown = 0.35 -- segundos entre golpes de una espada (cada tipo de arma lo multiplica por su "cooldown"). No hay mejora que lo baje: solo la poción de velocidad de golpe (Config.Potions)
+Config.BaseCooldown = 0.35 -- segundos entre golpes de una espada (cada tipo de arma lo multiplica por su "cooldown"). No hay mejora ni poción que lo baje
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
 Config.StartCoins = 0
 Config.AutosaveInterval = 60
@@ -458,7 +458,7 @@ Config.ObjectSizes = {
 -- En el árbol de mejoras cada mejora es una rama y cada nivel un nodo: "short" es el nombre
 -- del nodo, "icon" su dibujo (box, orb, sword, gem) y "color" el de la rama; "desc" (opcional) explica lo que hace.
 -- No hay mejora de suerte de armas (la hubo, "gachaLuck", pagada con gemas): esa suerte sale de los objetos.
--- Tampoco de velocidad de golpe (la hubo, "speed": el usuario la mandó quitar): el golpe solo se acelera con su poción.
+-- Tampoco de velocidad de golpe (la hubo, "speed": el usuario la mandó quitar): el golpe va siempre al ritmo de su arma.
 Config.UpgradeOrder = { "capacity", "luck", "rollSpeed", "fortune" }
 Config.Upgrades = {
 	-- Pocos niveles y cada uno da mucho (pedido por el usuario: el árbol era demasiado largo).
@@ -970,77 +970,63 @@ Config.AutoClicker = { group = 1002188803 }
 Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 300 }
 
 -- POCIONES (server/Potions, client/Potions y client/PotionFx; los textos salen de shared/PotionInfo). Aceleradores
--- temporales: no sustituyen a mejores armas, rasgos, grados, armadura ni mejoras. Siete familias, cada una con su valor
--- por tier en "values" (lo que multiplica, o lo que suma si es "additive": 0.15 = +15 %). Los tiers son 1-6 (I a VI) y,
--- solo en las familias con más valores (suerte de grado y de rasgo), 7 (Exclusiva) y 8 (Divina). Para cambiar "Daño VI de
--- x3 a x2,75" basta con tocar su valor aquí. Números a ojo, sin equilibrar.
+-- temporales: no sustituyen a mejores armas, rasgos, grados, armadura ni mejoras. Cinco familias, cada una con su valor
+-- por tier en "values" (lo que multiplica, o lo que suma si es "additive": 0.15 = +15 %). Los tiers son 1-5 (I a V).
+-- Para cambiar "Daño V de x2,4 a x2,2" basta con tocar su valor aquí. Números a ojo, sin equilibrar.
 --   damage: multiplica el daño (Stats.damage).    health: suma un % a la vida máxima (Stats.maxHealth).
---   attackSpeed: divide el tiempo entre golpes (Stats.cooldown). Es lo único que acelera el golpe: no hay mejora que lo haga.
 --   boxLuck: suerte de APARICIÓN de los objetos de la parcela (su tipo, su rareza y su tamaño: Stats.spawnLuck). No es la
 --     de las armas: las armas solo mejoran de rebote, porque salen mejores objetos.
 --   weaponLuck: suerte de las tiradas de arma al romper objetos (Stats.gachaLuck, la misma casilla que los renacimientos).
---   rankLuck / traitLuck: suerte al tirar grados (Forja) y rasgos (Mesa de encantamiento). Suben el peso de lo raro más
---     que el de lo común (shared/Modifiers), así que lo rarísimo sigue siéndolo.
--- "fx" = estilo del efecto en el personaje (client/PotionFx), "glyph" = símbolo del icono (Ui.potionIcon).
+--   coins: multiplica las monedas que ganas (Stats.coins).
+-- "fx" = estilo del efecto en el personaje (client/PotionFx), "glyph" = símbolo del icono hecho con marcos (Ui.potionIcon),
+-- que solo sale si la poción no tiene imagen (Ui.IMAGES potion_<familia>_<tier>; hoy la tienen todas).
 Config.Potions = {
-	Order = { "damage", "attackSpeed", "health", "boxLuck", "weaponLuck", "rankLuck", "traitLuck" },
-	Tiers = { "I", "II", "III", "IV", "V", "VI", "Exclusiva", "Divina" },
-	-- Color de cada tier: el de la rareza que ocupa su posición en Config.RarityTiers (Exclusiva = Secreta, Divina = Divina).
-	-- Duración de cada tier en segundos de juego: 10, 15, 20, 25, 30, 45, 60 y 90 min. Solo corre con el jugador conectado
+	Order = { "damage", "health", "boxLuck", "weaponLuck", "coins" },
+	Tiers = { "I", "II", "III", "IV", "V" },
+	-- Color de cada tier: el de la rareza que ocupa su posición en Config.RarityTiers.
+	-- Duración de cada tier en segundos de juego: 10, 15, 20, 25 y 30 min. Solo corre con el jugador conectado
 	-- (lo que queda se guarda en sus datos, así que sale y vuelve y sigue igual).
-	Durations = { 600, 900, 1200, 1500, 1800, 2700, 3600, 5400 },
+	Durations = { 600, 900, 1200, 1500, 1800 },
 	MaxStack = 2, -- usar otra del mismo tier suma su duración, hasta esta cantidad de veces la duración del tier
 	UseCooldown = 0.3, -- segundos mínimos entre dos usos de un jugador
 	LowTime = 60, -- el HUD avisa (el tiempo se pone rojo y late) cuando quedan menos segundos
-	AnnounceFrom = 7, -- desde este tier se anuncia a todo el servidor al conseguirla
+	AnnounceFrom = 5, -- desde este tier se anuncia a todo el servidor al conseguirla
 	Families = {
 		damage = {
 			name = "Poción de daño", effect = "Daño", desc = "Multiplica el daño de tus golpes.",
 			color = Color3.fromRGB(255, 90, 80), glyph = "sword", fx = "embers",
-			values = { 1.15, 1.30, 1.55, 1.90, 2.40, 3.00 },
-		},
-		attackSpeed = {
-			name = "Poción de velocidad de golpe", effect = "Velocidad de golpe", desc = "Golpeas más rápido con cualquier arma.",
-			color = Color3.fromRGB(255, 170, 60), glyph = "bolt", fx = "gale",
-			values = { 1.10, 1.20, 1.30, 1.45, 1.60, 1.80 },
+			values = { 1.15, 1.30, 1.55, 1.90, 2.40 },
 		},
 		health = {
 			name = "Poción de vida", effect = "Vida máxima", desc = "Sube tu vida máxima, la de la armadura incluida.",
-			color = Color3.fromRGB(90, 225, 120), glyph = "heart", fx = "vitality", additive = true,
-			values = { 0.15, 0.30, 0.50, 0.80, 1.25, 2.00 },
+			color = Color3.fromRGB(255, 140, 50), glyph = "heart", fx = "vitality", additive = true,
+			values = { 0.15, 0.30, 0.50, 0.80, 1.25 },
 		},
 		boxLuck = {
 			name = "Poción de suerte de cajas", effect = "Suerte de aparición",
 			desc = "Mejora la suerte con la que aparecen los objetos de tu parcela: tipos más raros, mejor rareza y más tamaño. No cambia la suerte de las armas.",
-			color = Color3.fromRGB(255, 200, 60), glyph = "box", fx = "fortune",
-			values = { 1.20, 1.45, 1.80, 2.30, 3.00, 4.00 },
+			color = Color3.fromRGB(90, 225, 100), glyph = "box", fx = "fortune",
+			values = { 1.20, 1.45, 1.80, 2.30, 3.00 },
 		},
 		weaponLuck = {
 			name = "Poción de suerte de armas", effect = "Suerte de armas",
 			desc = "Mejora la suerte de las armas que salen al romper objetos. No cambia los objetos que aparecen.",
-			color = Color3.fromRGB(70, 210, 255), glyph = "star", fx = "stars",
-			values = { 1.10, 1.25, 1.45, 1.75, 2.15, 2.75 },
+			color = Color3.fromRGB(175, 90, 255), glyph = "star", fx = "stars",
+			values = { 1.10, 1.25, 1.45, 1.75, 2.15 },
 		},
-		rankLuck = {
-			name = "Poción de suerte de grado", effect = "Suerte de grado",
-			desc = "Mejora la suerte al tirar grados en la Forja: los grados más raros se hacen algo menos raros, pero siguen siendo raros.",
-			color = Color3.fromRGB(255, 105, 190), glyph = "chevron", fx = "rank",
-			values = { 1.15, 1.30, 1.50, 1.80, 2.20, 2.75, 4.00, 6.00 },
-		},
-		traitLuck = {
-			name = "Poción de suerte de rasgo", effect = "Suerte de rasgo",
-			desc = "Mejora la suerte al tirar rasgos en la Mesa de encantamiento: los rasgos más raros se hacen algo menos raros, pero siguen siendo raros.",
-			color = Color3.fromRGB(155, 105, 255), glyph = "spark", fx = "arcane",
-			values = { 1.15, 1.30, 1.50, 1.80, 2.25, 2.80, 4.50, 7.00 },
+		coins = {
+			name = "Poción de monedas", effect = "Monedas", desc = "Multiplica las monedas que ganas.",
+			color = Color3.fromRGB(255, 205, 60), glyph = "spark", fx = "coins",
+			values = { 1.25, 1.50, 2.00, 2.50, 3.50 },
 		},
 	},
 	-- Efectos en el personaje (client/PotionFx), por tier: partículas por segundo y tamaño de cada efecto, brillo de la luz
 	-- (0 = sin luz; una sola por personaje, la de su mejor poción) y desde qué tier salen los destellos grandes del pecho.
 	Fx = {
-		rate = { 4, 5, 6, 8, 10, 13, 16, 20 },
-		size = { 1.6, 1.75, 1.9, 2.1, 2.3, 2.6, 3, 3.5 },
-		light = { 0, 0, 0, 0, 0.2, 0.4, 0.7, 1.1 },
-		halo = 7,
+		rate = { 4, 5, 6, 8, 10 },
+		size = { 1.6, 1.75, 1.9, 2.1, 2.3 },
+		light = { 0, 0, 0, 0.2, 0.4 },
+		halo = 5,
 	},
 
 	-- CAÍDAS. Dos fuentes, cada una por NIVEL DE CONTENIDO (1 bajo, 2 medio, 3 bueno, 4 alto, 5 excepcional):
@@ -1061,94 +1047,74 @@ Config.Potions = {
 			{ -- 1: bajo (Caja, Barril). Casi todo es suerte de cajas y de tier I; lo demás, casi nunca.
 				boxLuck = { weight = 56, tiers = { 100 } },
 				damage = { weight = 20, tiers = { 100 } },
-				attackSpeed = { weight = 20, tiers = { 100 } },
 				health = { weight = 20, tiers = { 100 } },
 				weaponLuck = { weight = 0.3, tiers = { 100 } },
-				rankLuck = { weight = 0.5, tiers = { 96, 4 } },
-				traitLuck = { weight = 0.5, tiers = { 96, 4 } },
+				coins = { weight = 20, tiers = { 100 } },
 			},
 			{ -- 2: medio (Roca, Pilar, Cristal, Roca de armas)
 				boxLuck = { weight = 46, tiers = { 55, 30, 15 } },
 				damage = { weight = 18, tiers = { 55, 30, 15 } },
-				attackSpeed = { weight = 18, tiers = { 55, 30, 15 } },
 				health = { weight = 18, tiers = { 55, 30, 15 } },
 				weaponLuck = { weight = 4, tiers = { 70, 30 } },
-				rankLuck = { weight = 5, tiers = { 70, 25, 5 } },
-				traitLuck = { weight = 5, tiers = { 70, 25, 5 } },
+				coins = { weight = 18, tiers = { 55, 30, 15 } },
 			},
 			{ -- 3: bueno (Monolito, Obelisco, Meteorito)
 				boxLuck = { weight = 32, tiers = { 0, 50, 33, 17 } },
 				damage = { weight = 15, tiers = { 0, 50, 33, 17 } },
-				attackSpeed = { weight = 15, tiers = { 0, 50, 33, 17 } },
 				health = { weight = 15, tiers = { 0, 50, 33, 17 } },
 				weaponLuck = { weight = 7, tiers = { 0, 50, 33, 17 } },
-				rankLuck = { weight = 12, tiers = { 25, 40, 23, 10, 2 } },
-				traitLuck = { weight = 12, tiers = { 25, 40, 23, 10, 2 } },
+				coins = { weight = 15, tiers = { 0, 50, 33, 17 } },
 			},
-			{ -- 4: alto (Núcleo, Estrella, Agujero negro). Exclusiva y Divina, casi imposibles.
+			{ -- 4: alto (Núcleo, Estrella, Agujero negro)
 				boxLuck = { weight = 24, tiers = { 0, 0, 45, 35, 20 } },
 				damage = { weight = 12, tiers = { 0, 0, 45, 35, 20 } },
-				attackSpeed = { weight = 12, tiers = { 0, 0, 45, 35, 20 } },
 				health = { weight = 12, tiers = { 0, 0, 45, 35, 20 } },
 				weaponLuck = { weight = 6, tiers = { 0, 0, 45, 35, 20 } },
-				rankLuck = { weight = 17, tiers = { 0, 10, 30, 30, 20, 9.5, 0.4, 0.1 } },
-				traitLuck = { weight = 17, tiers = { 0, 10, 30, 30, 20, 9.5, 0.4, 0.1 } },
+				coins = { weight = 12, tiers = { 0, 0, 45, 35, 20 } },
 			},
 			{ -- 5: excepcional (Fragmento del vacío, Singularidad, Origen, Infinito). Aquí está el premio gordo de las cajas.
-				boxLuck = { weight = 20, tiers = { 0, 0, 0, 40, 35, 25 } },
-				damage = { weight = 10, tiers = { 0, 0, 0, 40, 35, 25 } },
-				attackSpeed = { weight = 10, tiers = { 0, 0, 0, 40, 35, 25 } },
-				health = { weight = 10, tiers = { 0, 0, 0, 40, 35, 25 } },
-				weaponLuck = { weight = 5, tiers = { 0, 0, 0, 40, 35, 25 } },
-				rankLuck = { weight = 20, tiers = { 0, 0, 4, 18, 29, 29, 14, 6 } },
-				traitLuck = { weight = 20, tiers = { 0, 0, 4, 18, 29, 29, 14, 6 } },
+				boxLuck = { weight = 20, tiers = { 0, 0, 0, 40, 35 } },
+				damage = { weight = 10, tiers = { 0, 0, 0, 40, 35 } },
+				health = { weight = 10, tiers = { 0, 0, 0, 40, 35 } },
+				weaponLuck = { weight = 5, tiers = { 0, 0, 0, 40, 35 } },
+				coins = { weight = 10, tiers = { 0, 0, 0, 40, 35 } },
 			},
 		},
 		dungeon = {
 			{ -- 1: bajo (Bosque, Minas)
 				boxLuck = { weight = 40, tiers = { 70, 30 } },
 				damage = { weight = 22, tiers = { 70, 30 } },
-				attackSpeed = { weight = 22, tiers = { 70, 30 } },
 				health = { weight = 22, tiers = { 70, 30 } },
 				weaponLuck = { weight = 1.5, tiers = { 80, 20 } },
-				rankLuck = { weight = 5, tiers = { 85, 15 } },
-				traitLuck = { weight = 5, tiers = { 85, 15 } },
+				coins = { weight = 22, tiers = { 70, 30 } },
 			},
 			{ -- 2: medio (Cripta, Templo)
 				boxLuck = { weight = 30, tiers = { 30, 40, 30 } },
 				damage = { weight = 18, tiers = { 30, 40, 30 } },
-				attackSpeed = { weight = 18, tiers = { 30, 40, 30 } },
 				health = { weight = 18, tiers = { 30, 40, 30 } },
 				weaponLuck = { weight = 4, tiers = { 50, 35, 15 } },
-				rankLuck = { weight = 11, tiers = { 45, 35, 15, 5 } },
-				traitLuck = { weight = 11, tiers = { 45, 35, 15, 5 } },
+				coins = { weight = 18, tiers = { 30, 40, 30 } },
 			},
 			{ -- 3: bueno (Abismo, Infierno)
 				boxLuck = { weight = 24, tiers = { 0, 30, 40, 30 } },
 				damage = { weight = 14, tiers = { 0, 30, 40, 30 } },
-				attackSpeed = { weight = 14, tiers = { 0, 30, 40, 30 } },
 				health = { weight = 14, tiers = { 0, 30, 40, 30 } },
 				weaponLuck = { weight = 6, tiers = { 0, 35, 40, 25 } },
-				rankLuck = { weight = 17, tiers = { 10, 30, 30, 20, 8, 2 } },
-				traitLuck = { weight = 17, tiers = { 10, 30, 30, 20, 8, 2 } },
+				coins = { weight = 14, tiers = { 0, 30, 40, 30 } },
 			},
 			{ -- 4: alto (Vacío, Nebulosa, Galaxia)
 				boxLuck = { weight = 24, tiers = { 0, 0, 30, 40, 30 } },
 				damage = { weight = 10, tiers = { 0, 0, 30, 40, 30 } },
-				attackSpeed = { weight = 10, tiers = { 0, 0, 30, 40, 30 } },
 				health = { weight = 10, tiers = { 0, 0, 30, 40, 30 } },
 				weaponLuck = { weight = 7, tiers = { 0, 0, 30, 40, 30 } },
-				rankLuck = { weight = 26, tiers = { 0, 8, 22, 30, 24, 12, 3, 1 } },
-				traitLuck = { weight = 26, tiers = { 0, 8, 22, 30, 24, 12, 3, 1 } },
+				coins = { weight = 10, tiers = { 0, 0, 30, 40, 30 } },
 			},
-			{ -- 5: endgame (Cosmos, Origen, Infinito). La mejor fuente de Exclusivas y Divinas.
-				boxLuck = { weight = 24, tiers = { 0, 0, 0, 30, 40, 30 } },
-				damage = { weight = 8, tiers = { 0, 0, 0, 30, 40, 30 } },
-				attackSpeed = { weight = 8, tiers = { 0, 0, 0, 30, 40, 30 } },
-				health = { weight = 8, tiers = { 0, 0, 0, 30, 40, 30 } },
-				weaponLuck = { weight = 8, tiers = { 0, 0, 0, 30, 40, 30 } },
-				rankLuck = { weight = 29, tiers = { 0, 0, 0, 10, 25, 35, 22, 8 } },
-				traitLuck = { weight = 29, tiers = { 0, 0, 0, 10, 25, 35, 22, 8 } },
+			{ -- 5: endgame (Cosmos, Origen, Infinito)
+				boxLuck = { weight = 24, tiers = { 0, 0, 0, 30, 40 } },
+				damage = { weight = 8, tiers = { 0, 0, 0, 30, 40 } },
+				health = { weight = 8, tiers = { 0, 0, 0, 30, 40 } },
+				weaponLuck = { weight = 8, tiers = { 0, 0, 0, 30, 40 } },
+				coins = { weight = 8, tiers = { 0, 0, 0, 30, 40 } },
 			},
 		},
 	},

@@ -213,7 +213,7 @@ end
 -- de golpe si hay una activa. No hay mejora que lo baje (la hubo, "speed": el usuario la mandó quitar).
 function Stats.weaponCooldown(player: Player, copy): number
 	local _, kind = Stats.kind(copy)
-	return math.max(Config.BaseCooldown * kind.cooldown / Stats.potion(player, "attackSpeed"), Config.MinCooldown)
+	return math.max(Config.BaseCooldown * kind.cooldown, Config.MinCooldown)
 end
 
 -- Segundos entre golpes del arma del primer hueco.
@@ -340,7 +340,7 @@ end
 -- Monedas: la mejora "Fortuna", artefactos, los rasgos de las armas equipadas, renacimientos y los pases (ventaja
 -- "coins"). Los grados ya no dan monedas: multiplican el daño de su arma (Stats.swordDamage).
 function Stats.coins(player: Player): number
-	return upgrade(player, "fortune") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins")
+	return upgrade(player, "fortune") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins")
 end
 
 function Stats.gems(player: Player): number
