@@ -42,21 +42,60 @@ function Permanent.rarity(sword: number, metal: number?, size: number?): number
 	return base * (if metalEntry then metalEntry.odds else 1) * (if sizeEntry then sizeEntry.odds else 1)
 end
 
--- Lo difícil que era sacar esa arma con esa suerte ("1 entre N"). El arma, el metal y el tamaño se tiran por
--- separado con la misma suerte, así que cada uno cuenta lo que le faltaba a la suerte para llegar a él, y lo que la
--- suerte ya garantiza cuenta 1. (No vale rareza total / suerte: con suerte 100, el metal de 1 entre 100 sale
--- siempre, y esa cuenta diría que todas las tiradas son de 1 entre 100.) `sideLuck` = suerte del metal y del
--- tamaño, si no es la misma que la del arma (ver server/Gacha).
-function Permanent.odds(sword: number, metal: number?, size: number?, luck: number, sideLuck: number?): number
-	local side = sideLuck or luck
-	local metalEntry, sizeEntry = entry(Config.Metals, metal), entry(Config.Sizes, size)
-	return math.max((Config.Swords[sword].rarity or 1) / luck, 1)
-		* (if metalEntry then math.max(metalEntry.odds / side, 1) else 1)
-		* (if sizeEntry then math.max(sizeEntry.odds / side, 1) else 1)
+-- Lo difícil que era sacar esa arma con esa suerte ("1 entre N"): el arma con su metal y su tamaño es UN resultado
+-- (Permanent.rollWeapon), así que es su rareza total entre la suerte.
+function Permanent.odds(sword: number, metal: number?, size: number?, luck: number): number
+	return math.max(Permanent.rarity(sword, metal, size) / luck, 1)
+end
+
+-- Todos los resultados de una tirada de arma: cada arma del gacha con cada metal (o ninguno) y cada tamaño (o
+-- normal), de más rara a más común por su rareza total. { sword, metal, size, rarity }; 0 = sin metal / normal.
+local combos = nil
+function Permanent.combos()
+	if not combos then
+		combos = {}
+		for sword, def in Config.Swords do
+			if def.rarity then
+				for metal = 0, #Config.Metals do
+					for size = 0, #Config.Sizes do
+						table.insert(combos, { sword = sword, metal = metal, size = size, rarity = Permanent.rarity(sword, metal, size) })
+					end
+				end
+			end
+		end
+		table.sort(combos, function(a, b)
+			if a.rarity ~= b.rarity then
+				return a.rarity > b.rarity
+			elseif a.sword ~= b.sword then
+				return a.sword < b.sword
+			elseif a.metal ~= b.metal then
+				return a.metal < b.metal
+			end
+			return a.size < b.size
+		end)
+	end
+	return combos
+end
+
+-- Tirada de arma (decidido por el usuario): el arma sale ya con su metal y su tamaño, como un solo resultado con su
+-- rareza total, y la suerte se aplica UNA vez a esa rareza. Se prueba del resultado más raro al más común. Así un
+-- arma común con el mejor metal y el mejor tamaño es rarísima, y la suerte no llena la mochila de Cobre: con suerte
+-- xN salen cosas de alrededor de "1 entre N" en total, sea por el arma, por el metal o por el tamaño. (Antes el metal
+-- y el tamaño se tiraban aparte, después del arma: con suerte x10, el Cobre de 1 entre 10 salía siempre.)
+function Permanent.rollWeapon(luck: number): (number, number, number)
+	local list = Permanent.combos()
+	for _, combo in list do
+		if Chance.roll(luck / combo.rarity) then
+			return combo.sword, combo.metal, combo.size
+		end
+	end
+	local last = list[#list]
+	return last.sword, last.metal, last.size
 end
 
 -- Tira un modificador de la lista: se prueba del más raro al más común y la suerte multiplica cada
--- probabilidad (como con las armas). Devuelve su posición, o 0 si no sale ninguno.
+-- probabilidad (como con las armas). Devuelve su posición, o 0 si no sale ninguno. (Las armas ya no tiran así su
+-- metal y su tamaño: ver Permanent.rollWeapon. Lo usa la calidad de la armadura.)
 function Permanent.roll(list, luck: number): number
 	for index = #list, 1, -1 do
 		if Chance.roll(luck / list[index].odds) then

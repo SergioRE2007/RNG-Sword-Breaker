@@ -4,7 +4,6 @@
 -- el inventario (equipar, vender y venta automática). No hay nada suyo en el mapa.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Chance = require(ReplicatedStorage.Shared.Chance)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local ObjectSpec = require(ReplicatedStorage.Shared.ObjectSpec)
@@ -18,26 +17,6 @@ local Index = require(script.Parent.Index)
 
 local Gacha = {}
 
--- Armas que salen en el gacha, de la más rara a la más común (Config.Swords no va ordenada por rareza).
-local pool = {}
-for index, sword in Config.Swords do
-	if sword.rarity then
-		table.insert(pool, index)
-	end
-end
-table.sort(pool, function(a, b)
-	return Config.Swords[a].rarity > Config.Swords[b].rarity
-end)
-
--- Prueba de la más rara a la más común; la suerte multiplica cada probabilidad.
-local function roll(luck: number): number
-	for _, index in pool do
-		if Chance.roll(luck / Config.Swords[index].rarity) then
-			return index
-		end
-	end
-	return 2
-end
 
 local pendingReveals = {} -- [player] = { { index, odds } } tiradas raras que aún no ha destapado
 
@@ -105,14 +84,12 @@ local function draw(player: Player, boost: number, source: string, info)
 		return
 	end
 	local base = Stats.gachaLuck(player)
-	-- La suerte del objeto se aplica UNA vez, al arma. El metal y el tamaño (permanentes, Config.Metals y Sizes) se
-	-- tiran a la vez, pero con su probabilidad de siempre (solo la suerte de armas propia del jugador la sube): ni el
-	-- objeto ni la mejora de suerte los abaratan. Con la suerte del objeto en las tres tiradas, un objeto de x4 sacaba
-	-- armas con metal y tamaño 4 x 4 x 4 veces más, y uno de x7T daba armas de "1 entre decillones".
+	-- El arma sale ya con su metal y su tamaño (Config.Metals y Sizes), como un solo resultado con su rareza total, y
+	-- la suerte se aplica UNA vez a esa rareza (Permanent.rollWeapon, decidido por el usuario): un objeto de xN da
+	-- armas de alrededor de "1 entre N" en total. Tirados aparte, con la suerte en las tres tiradas, un objeto de x4
+	-- sacaba metal y tamaño 4 x 4 x 4 veces más; y con la suerte propia sola, a partir de x10 todo salía de Cobre.
 	local luck = base * boost
-	local index = roll(luck)
-	local metal = Permanent.roll(Config.Metals, base)
-	local size = Permanent.roll(Config.Sizes, base)
+	local index, metal, size = Permanent.rollWeapon(luck)
 	local rarity = Permanent.rarity(index, metal, size)
 	Index.record(player, index, metal, size) -- al Índice va todo lo que sale, se quede o se venda solo
 	-- Lo difícil que era para el jugador ("1 entre N"): es lo que mide el espectáculo, el aura y el aviso. La menor
@@ -124,7 +101,7 @@ local function draw(player: Player, boost: number, source: string, info)
 	-- (`usual` solo mide: no cambia lo que sale.)
 	local usual = if source == "object" then base * ObjectSpec.usualLuck(Stats.luck(player)) else base
 	local objectOdds = if info and type(info.objectOdds) == "number" then math.max(info.objectOdds, 1) else 1
-	local odds = math.min(Permanent.odds(index, metal, size, usual, base), Permanent.odds(index, metal, size, luck, base) * objectOdds)
+	local odds = math.min(Permanent.odds(index, metal, size, usual), Permanent.odds(index, metal, size, luck) * objectOdds)
 	-- Con la mochila llena, un arma más rara que la peor copia que el jugador no ha tocado se queda con su sitio.
 	local full = #data.swords >= Config.MaxSwords
 	local spare = if full and rarity >= data.autoSell then worstSpare(data, rarity) else nil

@@ -270,6 +270,10 @@ Config.Grades = {
 	{ name = "X", damage = 40, chance = 0.0057, color = Color3.fromRGB(230, 40, 40), rainbow = true },
 	{ name = "∞", damage = 100, chance = 0.0016, color = Color3.fromRGB(190, 150, 255), rainbow = true },
 }
+-- Pity de rasgos y grados (Modifiers.rollWithPity): solo lo tienen los resultados de "1 entre MinOdds" o más raros
+-- (pedido por el usuario: de S+ para arriba en grados, que en rasgos es de Shogun para arriba). Los fáciles no: su
+-- garantía se comía tiradas en las que podía haber salido algo mejor.
+Config.ModifierPity = { MinOdds = 400 }
 Config.GradeCost = 1 -- Cristales de grado por tirada de grado
 Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grado
 
