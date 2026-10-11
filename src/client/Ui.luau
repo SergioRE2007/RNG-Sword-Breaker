@@ -1438,7 +1438,7 @@ local POTION_GLYPHS = {
 }
 
 -- Poción: frasco de cristal con corcho, el líquido del color de la familia y un símbolo encima (`glyph`: sword = daño,
--- bolt = velocidad de golpe, heart = vida, box = suerte de cajas, star = suerte de armas, chevron = grado, spark = rasgo; sin él, solo el frasco).
+-- heart = vida, box = suerte de cajas, star = suerte de armas, chevron = grado, spark = rasgo; sin él, solo el frasco).
 function Ui.potionIcon(parent: Instance, color: Color3, glyph: string?)
 	-- El frasco ocupa todo su hueco y siempre es cuadrado (si el hueco no lo es, se ajusta al lado menor).
 	local holder = iconHolder(parent, 0)

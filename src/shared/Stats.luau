@@ -213,7 +213,7 @@ end
 -- de golpe si hay una activa. No hay mejora que lo baje (la hubo, "speed": el usuario la mandó quitar).
 function Stats.weaponCooldown(player: Player, copy): number
 	local _, kind = Stats.kind(copy)
-	return math.max(Config.BaseCooldown * kind.cooldown / Stats.potion(player, "attackSpeed"), Config.MinCooldown)
+	return math.max(Config.BaseCooldown * kind.cooldown, Config.MinCooldown)
 end
 
 -- Segundos entre golpes del arma del primer hueco.
