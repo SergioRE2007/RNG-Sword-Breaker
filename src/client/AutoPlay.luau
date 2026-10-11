@@ -1,8 +1,8 @@
 -- Los dos botones de los lados de las casillas de las armas (Hud.HudRoot.WeaponSlot):
 --   AutoClick, a la izquierda: manda solo las armas a lo más cercano de tu círculo, sin andar. Gratis para quien
 --     esté en el grupo del juego; si no, sale el cartel Hud.AutoUnlock (dale like y únete al grupo) con el botón de unirse.
---   AutoFarm, a la derecha: pase de juego (ventaja "autoFarm"). En tu parcela, el personaje va al objeto más
---     cercano y lo rompe; sin el pase, abre la Tienda.
+--   AutoFarm, a la derecha: pase de juego (ventaja "autoFarm"). En tu parcela, las armas llegan solas a
+--     cualquier objeto sin que el personaje se mueva (Stats.reach); sin el pase, abre la Tienda.
 -- El servidor (server/AutoPlay) decide si se pueden encender y lo publica en "AutoClick" y "AutoFarm". Los ataques
 -- son los de un clic (SwordController.attack), así que el servidor los valida igual. Un solo bucle, que solo vive
 -- mientras hay alguno encendido.
@@ -37,8 +37,6 @@ local BUTTON = 70 -- lado de cada botón, en unidades del HUD
 local GAP = 14 -- separación con la casilla del arma
 local SLOT = WeaponSlot.SIZE -- lado de las casillas de las armas
 local STEP = 0.1 -- segundos entre dos vueltas del bucle
-local GIVE_UP = 6 -- segundos intentando llegar a un objeto antes de probar con otro
-local FARM_CLOSE = 0.6 -- el Auto se acerca hasta tener el objeto a esta parte del radio del círculo
 local MARGIN = 2 -- studs por dentro del círculo desde los que ya se piden objetivos (por el retraso con el servidor)
 
 -- Bucle -----------------------------------------------------------------------------------
@@ -54,73 +52,23 @@ local function run()
 	end
 	running = true
 	local radius = Config.Loadout.Radius
-	local target: BasePart? = nil
-	local since = 0
-	local moving = false
-	-- Objetos que se han dado por imposibles, hasta la hora que llevan apuntada.
-	local skip: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
 	while on("AutoClick") or on("AutoFarm") do
 		task.wait(STEP)
-		local root = Targeting.root()
-		local humanoid = root and (root.Parent :: Model):FindFirstChildOfClass("Humanoid")
-		if not root or not humanoid then
-			moving = false
+		if not Targeting.root() then
 			continue
 		end
 		-- Dentro de una mazmorra manda su propio Auto (client/Dungeons).
-		local farm = on("AutoFarm") and (player:GetAttribute("Dungeon") or 0) == 0
-		if farm then
-			-- Si las armas ya tienen objetivo (el servidor las pasa solas al siguiente del círculo), ese es el suyo:
-			-- pedir otro las haría dar la vuelta.
-			local current = Targeting.current()
-			if current and current ~= target then
-				target = current
-				since = os.clock()
-			elseif not target or not Targeting.valid(target) then
-				target = Targeting.nearest(nil, skip)
-				since = os.clock()
-			end
-			if target then
-				-- Se acerca hasta tenerlo bien dentro del círculo (el servidor ve al personaje con algo de retraso).
-				if Targeting.inCircle(target, radius * FARM_CLOSE) then
-					if moving then
-						moving = false
-						humanoid:MoveTo(root.Position)
-					end
-					since = os.clock()
-				else
-					moving = true
-					humanoid:MoveTo(Vector3.new(target.Position.X, root.Position.Y, target.Position.Z))
-					if os.clock() - since > GIVE_UP then
-						-- No llega (algo en medio): se deja un rato y se va a por otro.
-						skip[target] = os.clock() + GIVE_UP
-						target = nil
-						continue
-					end
-				end
-				if Targeting.inCircle(target, radius - MARGIN) then
-					SwordController.attack(target)
-				end
-			elseif moving then
-				moving = false
-				humanoid:MoveTo(root.Position)
-			end
-		else
-			if moving then
-				moving = false
-				humanoid:MoveTo(root.Position)
-			end
-			target = nil
-			-- El autoclicker no anda: manda las armas a lo más cercano del círculo cuando se quedan sin objetivo.
-			if on("AutoClick") and not Targeting.current() then
-				SwordController.attack(Targeting.nearest(radius - MARGIN))
-			end
+		if Targeting.current() then
+			continue -- ya tienen objetivo: el servidor las pasa solas al siguiente
 		end
-	end
-	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if moving and humanoid and root then
-		humanoid:MoveTo(root.Position)
+		if on("AutoFarm") and (player:GetAttribute("Dungeon") or 0) == 0 then
+			-- El Auto no mueve al personaje (pedido por el usuario: antes iba andando de objeto en objeto): con él
+			-- encendido el círculo cubre la parcela entera (Stats.reach), así que vale el objeto más cercano, esté donde esté.
+			SwordController.attack(Targeting.nearest(Stats.reach(player) - MARGIN))
+		elseif on("AutoClick") then
+			-- El autoclicker tampoco anda: manda las armas a lo más cercano de su círculo.
+			SwordController.attack(Targeting.nearest(radius - MARGIN))
+		end
 	end
 	running = false
 end

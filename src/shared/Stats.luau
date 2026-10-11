@@ -151,6 +151,15 @@ function Stats.passMult(player: Player, name: string): number
 	return total
 end
 
+-- Radio de su círculo de ataque: el de Config o, con el Auto de la parcela encendido (atributo "AutoFarm", que solo
+-- pone el servidor a quien tiene el pase y está en su parcela), uno que cubre la parcela entera.
+function Stats.reach(player: Player): number
+	if player:GetAttribute("AutoFarm") == true and (player:GetAttribute("Dungeon") or 0) == 0 then
+		return Config.Loadout.FarmRadius
+	end
+	return Config.Loadout.Radius
+end
+
 -- Armas que puede llevar equipadas: las de Config más la ventaja "extraSlots" de los pases (Arsenal doble).
 function Stats.loadoutSlots(player: Player): number
 	return math.min(Config.Loadout.Slots + (Stats.perk(player, "extraSlots") or 0), Config.Loadout.MaxSlots)

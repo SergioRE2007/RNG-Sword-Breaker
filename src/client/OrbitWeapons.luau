@@ -574,7 +574,8 @@ local function stepCircle(now: number)
 	local radius = Config.Loadout.Radius
 	if now - checked > CHECK then
 		checked = now
-		circleShown = Targeting.nearest(radius + CIRCLE_NEAR) ~= nil
+		-- Con el Auto de la parcela las armas llegan a todo: no hay círculo que enseñar.
+		circleShown = Stats.reach(player) <= radius and Targeting.nearest(radius + CIRCLE_NEAR) ~= nil
 	end
 	local ground = root.Position.Y - standing(humanoid, root)
 	local denied = now < deniedUntil
