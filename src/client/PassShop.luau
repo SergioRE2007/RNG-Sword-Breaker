@@ -32,6 +32,8 @@ local GOLD = Color3.fromRGB(255, 225, 90)
 local COLUMNS = 3
 local GAP = 12
 local CARD_HEIGHT = 306
+local SHOWN_ROWS = 2 -- filas de tarjetas a la vista; las demás, deslizando
+local PEEK = 46 -- lo que asoma de la fila siguiente cuando hay más
 local PAD = 8 -- margen de la tarjeta
 local ART_HEIGHT = 116 -- alto del escaparate
 local ART_RADIUS = 10
@@ -277,8 +279,11 @@ end
 
 function PassShop.start()
 	local rows = math.ceil(#Config.GamepassOrder / COLUMNS)
-	-- Alto justo para ver todas las filas sin arrastrar: cabecera y márgenes de Ui.window (78), la nota (34) y la rejilla.
-	local window, body = Ui.window("PassShop", "Tienda", Vector2.new(900, 78 + 34 + rows * (CARD_HEIGHT + GAP) + 16), function(parent)
+	-- Como mucho se ven SHOWN_ROWS filas y el resto se alcanza deslizando (pedido por el usuario: con una tercera fila
+	-- la ventana entera se encogía para caber y quedaba diminuta); si hay más, asoma un trozo de la siguiente para que
+	-- se vea que sigue. Alto: cabecera y márgenes de Ui.window (78), la nota (34) y la rejilla.
+	local shown = math.min(rows, SHOWN_ROWS)
+	local window, body = Ui.window("PassShop", "Tienda", Vector2.new(900, 78 + 34 + shown * (CARD_HEIGHT + GAP) + 16 + (if rows > shown then PEEK else 0)), function(parent)
 		Ui.image(parent, "tienda_robux")
 	end)
 
@@ -296,7 +301,8 @@ function PassShop.start()
 	list.Size = UDim2.new(1, -16, 1, -40)
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
-	list.ScrollBarThickness = 6
+	list.ScrollBarThickness = 10
+	list.ScrollingDirection = Enum.ScrollingDirection.Y
 	list.ScrollBarImageColor3 = Color3.fromRGB(150, 130, 255)
 	list.CanvasSize = UDim2.new()
 	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -305,7 +311,7 @@ function PassShop.start()
 	-- Margen para que la tarjeta que crece con el ratón no se corte contra el borde de la lista.
 	padding.PaddingTop = UDim.new(0, 8)
 	padding.PaddingLeft = UDim.new(0, 8)
-	padding.PaddingRight = UDim.new(0, 8)
+	padding.PaddingRight = UDim.new(0, 14) -- y sitio para la barra de deslizar
 	padding.PaddingBottom = UDim.new(0, 8)
 	padding.Parent = list
 	local grid = Instance.new("UIGridLayout")
