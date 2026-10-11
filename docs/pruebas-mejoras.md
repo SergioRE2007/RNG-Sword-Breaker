@@ -69,12 +69,12 @@ Probado en Studio el 11-10-2026, con un jugador: las armas giran y no hay arma e
 - [ ] **Colmillo astral**: varias copias girando a la vez (dos jugadores con él) siguen dibujándose con su malla.
 - [ ] **Ritmo**: espadas y dobles ya solo pegan a un objetivo y hay 0,25 s de vuelo por objeto; medir objetos por minuto y duración de mazmorra para la parte 3.
 
-## Bolsa de oro (parte 1)
+## Bolsa de oro
 
-Lo cubren las pruebas de Lune (cuentas de `BagInfo` con el freno y la continuación de la tabla, depositar, sacar y sustituir, que una depositada no se venda, no se comercie ni se equipe a la vez, cobro de cada segundo, lo ganado fuera entre dos servidores con el mismo DataStore y un `bag` guardado roto). Probado en Studio el 11-10-2026 con una partida nueva (`Config.Test.Progress = 0.01`): los ocho sacos detrás de las parcelas y el paso en el muro; la única equipada no se deposita; con dos armas depositadas las monedas suben cada segundo y el freno limita la primera bolsa ("MÁX" en el cartel); equipar una depositada la saca; vender una depositada no hace nada; `BagOfflineTest` de 2 h cobra de golpe y pasa de la bolsa 2 a la 6. Sin errores de scripts.
+Lo cubren las pruebas de Lune (lo que saca un golpe según su daño, tamaño de las bolsas y paso de una a otra, depositar, sacar y sustituir, que una depositada no se venda, no se comercie ni se equipe a la vez, cobro de cada segundo, lo ganado fuera entre dos servidores con el mismo DataStore y un `bag` guardado roto). Probado en Studio el 11-10-2026 con una partida nueva (`Config.Test.Progress = 0.01`): los ocho sacos de Blender detrás de las parcelas, el paso en el muro y un farolillo a cada lado; la única equipada no se deposita; con cuatro armas depositadas (111,8 / 4,0 / 3,3 / 2,2 de daño) cada golpe saca 53 / 8 / 7 / 5 monedas y entran 73 por segundo; las armas cruzan el saco por el centro (a menos de 1,3 studs) y con cada cruce saltan monedas, sale su "+N" y suenan el tajo y la moneda; el saco se encoge según se vacía; equipar una depositada la saca y vender una depositada no hace nada. Con la primera versión de la fórmula se probó también `BagOfflineTest` (2 h cobradas de golpe). Sin errores de scripts.
 
 - [ ] **Juego publicado**: depositar, salir y volver al cabo de un rato: siguen depositadas, la bolsa ha avanzado y sale el aviso de lo ganado fuera; lo mismo tras una reconexión por inactividad (ahí no debe avisar: son segundos).
-- [ ] **Dos jugadores**: cada uno ve el cartel y las armas del saco del otro; el saco de una parcela libre no enseña nada.
-- [ ] **Trato**: recibir un arma muy superior y depositarla: la bolsa va "MÁX" y las bolsas caen cada `seconds / 10`.
-- [ ] **De vista**: el cartel en móvil y en pantalla pequeña, y que ningún árbol ni farol del decorado pise el patio del saco en las ocho parcelas.
-- [ ] **Ritmo**: nadie ha jugado una partida larga con la bolsa; lo que supone para quien juega una hora al día (la bolsa pega las 24) está sin ver.
+- [ ] **Dos jugadores**: cada uno ve el cartel, las armas atacando y las monedas del saco del otro (sin números ni sonido); el saco de una parcela libre no enseña nada.
+- [ ] **De vista**: el cartel en móvil y en pantalla pequeña; que ningún árbol ni farol del decorado pise el patio del saco en las ocho parcelas; armas enormes (Universal) y dobles atacando al saco; modo Rendimiento (sin monedas ni estelas, solo tus armas).
+- [ ] **De oído**: cuatro golpes por segundo junto al saco (tajo y moneda): el volumen y si cansa lo decide el usuario.
+- [ ] **Ritmo**: la fórmula está sin equilibrar a propósito; nadie ha jugado una partida larga con la bolsa.

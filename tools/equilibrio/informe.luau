@@ -139,9 +139,9 @@ end))}`)
 print(`Tramo más largo sin ningún hito: {tiempo(mediana(huecos))} (empieza hacia {tiempo(mediana(donde))})`)
 print(`Bolsa de oro: {string.format("%.0f", med(function(run)
 	return run.bolsa.ganado / math.max(run.ganado, 1)
-end) * 100)} % de las monedas ganadas (objetivo {objetivo.bolsa.parte * 100} %), acaba en la bolsa nº {med(function(run)
+end) * 100)} % de las monedas ganadas (sin equilibrar), acaba en la bolsa nº {med(function(run)
 	return run.bolsa.stage
-end)} de {#Config.GoldBag.Bags} de la tabla`)
+end)}`)
 
 print("\n-- Ritmo --")
 parts = {}

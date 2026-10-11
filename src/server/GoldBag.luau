@@ -1,9 +1,10 @@
 -- Bolsa de oro (Config.GoldBag, cuentas en shared/BagInfo): detrás de cada parcela hay un saco al que pegan solas
--- las armas que su dueño deposita. Cada segundo sale de la bolsa lo que le toca a ese daño; vacía una, sigue la
--- siguiente. Al volver al juego se cobra de golpe el tiempo que las armas han estado pegando sin su dueño.
+-- las armas que su dueño deposita. Cada golpe saca las monedas que tocan a su daño (BagInfo.coins): aquí se cobran
+-- juntas cada segundo y el cliente enseña los golpes uno a uno. Vacía una bolsa, sigue la siguiente. Al volver al
+-- juego se cobra de golpe el tiempo que las armas han estado pegando sin su dueño.
 -- El estado (data.bag) solo vive aquí y en PlayerData; el cliente lo lee de los atributos del jugador:
--- "Bag" (ids depositados, lo publica PlayerData), "BagStage" (bolsa por la que va), "BagDamage" (daño hecho a esa
--- bolsa en el momento "BagAt", hora de GetServerTimeNow) y "BagRate" (daño por segundo que le entra, ya con el freno).
+-- "Bag" (ids depositados, lo publica PlayerData), "BagStage" (bolsa por la que va), "BagTaken" (monedas sacadas de
+-- esa bolsa en el momento "BagAt", hora de GetServerTimeNow) y "BagRate" (monedas por segundo que salen).
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -115,7 +116,8 @@ local function build(plot, parent: Instance)
 		stone.CastShadow = false
 	end
 
-	local body = part(model, "Body", Vector3.one, center, STONE)
+	-- Mide lo que el saco: de su tamaño sacan las armas la distancia a la que lo rondan.
+	local body = part(model, "Body", Vector3.new(radius * 2, 10, radius * 2), center, STONE)
 	body.Transparency = 1
 	body.CanCollide = false
 	body.CanQuery = false
@@ -131,14 +133,14 @@ end
 -- Publica cómo va la bolsa si la bolsa o el ritmo han cambiado (o siempre con `force`).
 local function publish(player: Player, data, force: boolean?)
 	local bag = data.bag
-	local rate = if #bag.slots > 0 then BagInfo.speed(bag.stage, Stats.bagDamage(player)) else 0
+	local rate = Stats.bagRate(player)
 	local last = sent[player]
 	if not force and last and last.stage == bag.stage and math.abs(last.rate - rate) <= math.abs(rate) * 1e-6 then
 		return
 	end
 	sent[player] = { stage = bag.stage, rate = rate }
 	player:SetAttribute("BagStage", bag.stage)
-	player:SetAttribute("BagDamage", bag.damage)
+	player:SetAttribute("BagTaken", bag.taken)
 	player:SetAttribute("BagAt", workspace:GetServerTimeNow())
 	player:SetAttribute("BagRate", rate)
 end
@@ -146,16 +148,16 @@ end
 -- `seconds` segundos de golpes de sus armas depositadas. Devuelve las monedas que han salido y las bolsas vaciadas.
 local function hit(player: Player, data, seconds: number, noPotion: boolean?): (number, number)
 	local bag = data.bag
-	local stage, damage, coins, emptied = BagInfo.advance(bag.stage, bag.damage, Stats.bagDamage(player, noPotion), seconds)
-	bag.stage, bag.damage = stage, damage
 	-- Se pagan monedas enteras: el pico se guarda para el siguiente cobro (con números enormes ya no hay pico).
-	local total = coins + (carry[player] or 0)
+	local total = Stats.bagRate(player, noPotion) * seconds + (carry[player] or 0)
 	local whole = if total < 1e15 then math.floor(total) else total
 	carry[player] = if total < 1e15 then total - whole else 0
+	local emptied = 0
 	if whole > 0 then
+		bag.stage, bag.taken, emptied = BagInfo.advance(bag.stage, bag.taken, whole)
 		PlayerData.addCoins(player, whole)
 	end
-	return coins, emptied
+	return whole, emptied
 end
 
 -- Lo que han sacado sus armas mientras no estaba (`seconds` segundos): se cobra de golpe y se le avisa.

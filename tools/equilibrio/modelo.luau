@@ -388,7 +388,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		local calibrar = opts.calibrar
 		local huecos = Config.Loadout.Slots
 		-- Bolsa de oro: detrás de las equipadas guarda las que deja en la bolsa, que le pegan todo el tiempo de reloj
-		-- (`reales` segundos por cada segundo de sesión). opts.bolsa = false: sin cobrarla (su daño se apunta igual).
+		-- (`reales` segundos por cada segundo de sesión). opts.bolsa = false: sin cobrarla.
 		local guardadas = huecos + Config.GoldBag.Slots
 		local conBolsa = opts.bolsa ~= false
 		local reales = objetivo.bolsa.reales
@@ -475,26 +475,23 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		for slot = 1, guardadas do
 			ids[slot] = slot
 		end
-		-- BOLSA DE ORO: por qué bolsa va, lo que lleva sacado de ella y el daño que le ha hecho en total. El tiempo se
-		-- junta en `bolsaPend` y se cobra de vez en cuando (y antes de cada cambio de daño y de cada cita de la agenda).
-		local bolsa = { stage = 1, damage = 0 }
-		local bolsaDps, bolsaPend = 0, 0
-		res.bolsa = { ganado = 0, dano = 0, stage = 1, curva = {} }
+		-- BOLSA DE ORO: por qué bolsa va y lo que lleva sacado de ella. Sus armas sacan `bolsaRate` monedas por segundo
+		-- (Stats.bagRate); el tiempo se junta en `bolsaPend` y se cobra de vez en cuando (y antes de cada cambio de daño
+		-- y de cada cita de la agenda).
+		local bolsa = { stage = 1, taken = 0 }
+		local bolsaRate, bolsaPend = 0, 0
+		res.bolsa = { ganado = 0, stage = 1 }
 		local function cobrarBolsa()
-			local seconds = bolsaPend * reales
+			local coins = bolsaRate * bolsaPend * reales
 			bolsaPend = 0
-			if seconds <= 0 or bolsaDps <= 0 then
+			if coins <= 0 or not conBolsa then
 				return
 			end
-			res.bolsa.dano += bolsaDps * seconds
-			if conBolsa then
-				local stage, hecho, coins = BagInfo.advance(bolsa.stage, bolsa.damage, bolsaDps, seconds)
-				bolsa.stage, bolsa.damage = stage, hecho
-				estado.coins += coins
-				res.ganado += coins
-				res.bolsa.ganado += coins
-				res.bolsa.stage = stage
-			end
+			bolsa.stage, bolsa.taken = BagInfo.advance(bolsa.stage, bolsa.taken, coins)
+			estado.coins += coins
+			res.ganado += coins
+			res.bolsa.ganado += coins
+			res.bolsa.stage = bolsa.stage
 		end
 		local parte = objetivo.golpes.parte
 		local nextTipo, habitual = 2, 2
@@ -555,7 +552,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			coinMult = Stats.coins(player)
 			gacha = Stats.gachaLuck(player)
 			spawnTime = Stats.spawnTime(player)
-			bolsaDps = Stats.bagDamage(player, true)
+			bolsaRate = Stats.bagRate(player, true)
 			local otros = math.max(Upgrades.value("capacity", estado.upgrades.capacity or 0) - 1, 0)
 			armas, andanada, ritmo = {}, 0, 0
 			for slot, copy in Stats.loadout(player) do
@@ -812,18 +809,6 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			a(hour * H, function()
 				table.insert(res.ritmo, { hora = hour, objetos = res.objetos, monedas = res.ganado })
 			end)
-		end
-		-- Curva de la bolsa, en una rejilla de tiempos cada vez más separados: el daño que le lleva hecho y las monedas
-		-- que lleva ganadas rompiendo objetos (sin las de la bolsa). De ella saca generar.luau la tabla de bolsas.
-		do
-			local at = 20
-			while at < fin do
-				local grid = at
-				a(grid, function()
-					table.insert(res.bolsa.curva, { t = grid, dano = res.bolsa.dano, monedas = res.ganado - res.bolsa.ganado })
-				end)
-				at *= 1.12
-			end
 		end
 		if forzado then
 			local function compra(at: number, pista: string, apply)

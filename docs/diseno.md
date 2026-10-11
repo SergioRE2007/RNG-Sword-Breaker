@@ -278,20 +278,20 @@ Mazmorra, vuelta a medir sin el empujón (misma prueba, 3 o 4 partidas de cada):
 - `BalanceSnapshots`: lista `swords` por foto, y `applyProgress` las equipa todas (hasta `Config.Loadout.Slots`).
 - El informe enseña además las armas con las que acaba la partida de daño mediano, con el rasgo y el grado de cada una.
 
-## Bolsa de oro (parte 1) — octubre de 2026
+## Bolsa de oro — octubre de 2026
 
 Rama `bolsa-de-oro`.
 
 - **El problema**: las monedas salían solo de los objetos (`premio × Stats.coins`) y el daño no entraba en la cuenta. En cuanto todo caía de una andanada, un arma mejor no daba nada: ni la que sacabas ni la que te daban en un trato.
-- **Qué es**: detrás de cada parcela hay un saco. Se dejan en él hasta cuatro armas, aparte de las equipadas, y le pegan solas: cada punto de daño saca monedas. Vacía una bolsa, sale otra más gorda, sin fin. Pega igual conectado que desconectado.
-- **Decidido por el usuario**: las armas de la bolsa son aparte de las equipadas; el saco va en su zona pero fuera de la parcela, detrás; la bolsa se vacía (no se llena) y cada una es mayor que la anterior, sin fin; desconectado no hay tope de tiempo; cada bolsa vaciada dará una "moneda de bolsa" para más huecos o más monedas, **más adelante**.
-- **Decidido por Claude (se puede cambiar)**:
-  - Freno: nadie vacía una bolsa más de 10 veces más rápido que el jugador normal (`Config.GoldBag.MaxSpeed`). Sin él, unas armas de final de partida regaladas a un novato se llevaban todas las bolsas en un momento, que es regalar el progreso (por eso se quitaron las monedas del comercio).
-  - Cada bolsa lleva unas 4 veces más monedas que la anterior (`objetivo.bolsa.crece`), no 10: con x10 las últimas durarían semanas.
-  - La bolsa no pasa por los multiplicadores de monedas (rasgos, accesorios, VIP): da lo que pone su cartel.
-  - Todas las armas pegan a la bolsa una vez por segundo, sean del tipo que sean.
-  - Fuera no cuentan ni la poción de daño ni el clima.
-  - La bolsa es el 25 % de lo que ingresa un jugador que juega unas 3 h al día (`objetivo.bolsa`). Como pega las 24 h, quien juega menos saca más de ella en proporción.
-- **Números** (generados el 11-10-2026): 37 bolsas, de 6.500 monedas la primera a 3,1e25 la última (hacia la hora 183 del jugador tipo), cada una entre 32 minutos y 6 días de reloj. Los precios se regeneraron con la bolsa dentro: las compras caen a menos de un 10 % de su hora salvo el último renacimiento (129 h por 120) y el último nivel de suerte (181 h por 170). El jugador del informe, que juega sus mazmorras, saca de la bolsa un 34 % de sus monedas y lo completa todo hacia las 157 h (antes, 145).
-- **El saco**: modelo de Blender (`gold_sack()` en `tools/blender/crear_mapa_japones.py`; el primero, de piezas, no le gustó al usuario). Falta importarlo en Studio y pasar sus mallas a `MapMeshesPatch`; hasta entonces se ve el de piezas.
-- **Sin probar / pendiente**: guardar y volver en el juego publicado; dos jugadores; móvil; una partida larga. Las armas van quietas y sin sonido: eso, la ventana de "mientras no estabas", el aviso al jugador nuevo y el uso de las monedas de bolsa son la parte 2. Queda por ver si conviene que el jugador tipo del simulador deje en la bolsa sus mejores armas en vez de las que le sobran.
+- **Qué es**: detrás de cada parcela hay un saco. Se dejan en él hasta cuatro armas, aparte de las equipadas, y le pegan solas: cada golpe saca monedas. Vacía una bolsa, sale otra más gorda, sin fin. Pega igual conectado que desconectado.
+- **Decidido por el usuario**:
+  - Las armas de la bolsa son aparte de las equipadas; el saco va en su zona pero fuera de la parcela, detrás.
+  - La bolsa se vacía (no se llena) y cada una es mayor que la anterior, sin fin; desconectado no hay tope de tiempo.
+  - Cada bolsa vaciada dará una "moneda de bolsa" para más huecos o más monedas, **más adelante**.
+  - **Lo que saca cada golpe**: con 100 de daño, 50 monedas, y cada vez que el daño se dobla, x1,5 (200 = 75, 400 = 112). Sin equilibrar por ahora, a propósito.
+  - Las armas atacan al saco con la misma animación que en la parcela y se ve salir monedas con cada golpe; nada de un contador de "monedas/s".
+  - El saco es un modelo de Blender: el primero, hecho con piezas, le pareció feísimo.
+- **Decidido por Claude (se puede cambiar)**: cada bolsa lleva 4 veces más monedas que la anterior y la primera, 1.000; la bolsa no pasa por los multiplicadores de monedas (rasgos, accesorios, VIP); todas las armas pegan a la bolsa una vez por segundo, sean del tipo que sean; fuera no cuentan ni la poción de daño ni el clima; el saco se encoge según se vacía.
+- **Lo que supone la fórmula** (avisado al usuario): las monedas crecen mucho más despacio que el daño, así que la bolsa da mucho al empezar (medido en una partida nueva: con las primeras armas que salen, una de 112 de daño y tres de 2 a 4, saca 73 monedas por segundo, cuando romper cajas da una o dos) y casi nada después: a la hora 5 del jugador tipo, unas 8.000 por segundo frente a decenas de millones de la parcela. Unas armas de final de partida regaladas a un novato le dan unos 1e11 por segundo: se salta las primeras horas, no el juego.
+- **Lo que se probó y se quitó**: una primera versión pagaba por una tabla de bolsas generada por `tools/equilibrio` (37 bolsas, la bolsa un 25 % del ingreso, con un freno de x10 sobre el ritmo del jugador tipo) y los precios se regeneraron con ella. Al fijar el usuario su fórmula, la tabla y el freno se quitaron y los precios volvieron a ser los de antes de la bolsa.
+- **Sin probar / pendiente**: guardar y volver en el juego publicado; dos jugadores; móvil; una partida larga. Faltan la ventana de "mientras no estabas", el aviso al jugador nuevo cuando le sobra su primera arma, el uso de las monedas de bolsa y equilibrarla cuando el usuario lo pida (el simulador ya la cobra; queda por ver si el jugador tipo debería dejar en ella sus mejores armas).

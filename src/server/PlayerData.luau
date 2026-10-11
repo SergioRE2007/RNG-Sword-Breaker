@@ -451,7 +451,7 @@ local function load(player: Player)
 	-- armor = piezas de armadura (ver shared/ArmorStats); armorWorn = { [hueco] = id de la pieza equipada }.
 	-- potions = pociones activas { [familia de Config.Potions.Families] = { tier, seconds = tiempo de juego que queda } }.
 	-- index = Índice de armas: códigos de shared/IndexInfo de lo que le ha salido (nil hasta que server/Index lo estrena).
-	-- bag = Bolsa de oro: { stage, damage, slots = ids de las copias depositadas, seen } (ver shared/BagInfo).
+	-- bag = Bolsa de oro: { stage, taken, slots = ids de las copias depositadas, seen } (ver shared/BagInfo).
 	local data = {
 		coins = Config.StartCoins,
 		gems = 0,
