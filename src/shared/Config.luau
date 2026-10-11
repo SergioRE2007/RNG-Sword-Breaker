@@ -281,7 +281,7 @@ Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grad
 -- multiplica para siempre (por cada renacimiento, ese número elevado a los renacimientos que lleve).
 -- "costs" = precio de cada renacimiento. NÚMEROS GENERADOS por tools/equilibrio/generar.luau para que caigan hacia las
 -- 2, 6,5, 20, 55 y 120 h de juego (objetivo.luau): no los retoques a mano.
-Config.Rebirth = { max = 5, costs = { 1.6e8, 9e10, 1.1e15, 6.5e18, 9.2e22 }, coins = 2, damage = 2, luck = 1.5, gachaLuck = 1.5 }
+Config.Rebirth = { max = 5, costs = { 3.5e7, 1e11, 3.5e15, 1.9e20, 2.2e25 }, coins = 2, damage = 2, luck = 1.5, gachaLuck = 1.5 }
 
 -- Artefactos (equipo). Pueden caer al romper cualquier objeto ("rarity" = 1 entre N, la
 -- suerte de destructibles multiplica la probabilidad). "stat": damage, luck (suerte de destructibles),
@@ -291,16 +291,16 @@ Config.Rebirth = { max = 5, costs = { 1.6e8, 9e10, 1.1e15, 6.5e18, 9.2e22 }, coi
 -- NÚMEROS GENERADOS por tools/equilibrio para que cada uno caiga a su hora (de los 5 min a las 155 h): no los retoques.
 Config.GearSlots = 3
 Config.Artifacts = {
-	{ name = "Amuleto de cobre", stat = "coins", mult = 1.5, rarity = 5700, color = Color3.fromRGB(200, 120, 70) },
-	{ name = "Anillo afilado", stat = "damage", mult = 2, rarity = 160000, color = Color3.fromRGB(200, 205, 210) },
-	{ name = "Trébol", stat = "luck", mult = 1.5, rarity = 8.4e6, color = Color3.fromRGB(90, 200, 100) },
-	{ name = "Colgante de gemas", stat = "gems", mult = 2, rarity = 6.4e8, color = Color3.fromRGB(190, 110, 255) },
-	{ name = "Guantelete", stat = "damage", mult = 4, rarity = 1.7e11, color = Color3.fromRGB(120, 160, 200) },
-	{ name = "Corona dorada", stat = "coins", mult = 4, rarity = 1.5e14, color = Color3.fromRGB(255, 200, 50) },
-	{ name = "Ojo de la fortuna", stat = "luck", mult = 3, rarity = 5.3e17, color = Color3.fromRGB(60, 255, 170) },
-	{ name = "Corazón estelar", stat = "damage", mult = 10, rarity = 1.5e21, color = Color3.fromRGB(255, 240, 150) },
-	{ name = "Reliquia del vacío", stat = "luck", mult = 6, rarity = 3.1e24, color = Color3.fromRGB(130, 50, 255) },
-	{ name = "Núcleo del infinito", stat = "damage", mult = 25, rarity = 1.6e27, color = Color3.fromRGB(255, 40, 60) },
+	{ name = "Amuleto de cobre", stat = "coins", mult = 1.5, rarity = 1100, color = Color3.fromRGB(200, 120, 70) },
+	{ name = "Anillo afilado", stat = "damage", mult = 2, rarity = 46000, color = Color3.fromRGB(200, 205, 210) },
+	{ name = "Trébol", stat = "luck", mult = 1.5, rarity = 1.7e6, color = Color3.fromRGB(90, 200, 100) },
+	{ name = "Colgante de gemas", stat = "gems", mult = 2, rarity = 2.3e8, color = Color3.fromRGB(190, 110, 255) },
+	{ name = "Guantelete", stat = "damage", mult = 4, rarity = 2.1e10, color = Color3.fromRGB(120, 160, 200) },
+	{ name = "Corona dorada", stat = "coins", mult = 4, rarity = 2e13, color = Color3.fromRGB(255, 200, 50) },
+	{ name = "Ojo de la fortuna", stat = "luck", mult = 3, rarity = 8.3e16, color = Color3.fromRGB(60, 255, 170) },
+	{ name = "Corazón estelar", stat = "damage", mult = 10, rarity = 5.9e20, color = Color3.fromRGB(255, 240, 150) },
+	{ name = "Reliquia del vacío", stat = "luck", mult = 6, rarity = 9e23, color = Color3.fromRGB(130, 50, 255) },
+	{ name = "Núcleo del infinito", stat = "damage", mult = 25, rarity = 4.3e26, color = Color3.fromRGB(255, 40, 60) },
 }
 Config.StatNames = { damage = "daño", luck = "suerte", coins = "monedas", gems = "gemas" }
 
@@ -367,20 +367,20 @@ Config.Plot = {
 Config.Destructibles = {
 	{ name = "Caja", rarity = 1, hp = 2, reward = 2, gems = 0, size = Vector3.new(3, 3, 3), color = Color3.fromRGB(170, 125, 75), material = Enum.Material.WoodPlanks },
 	{ name = "Barril", rarity = 4, hp = 2.4, reward = 5.7, gems = 0, size = Vector3.new(3, 4.5, 3), color = Color3.fromRGB(120, 75, 45), material = Enum.Material.Wood },
-	{ name = "Roca", rarity = 20, hp = 31, reward = 19, gems = 1, size = Vector3.new(5, 4, 5), color = Color3.fromRGB(110, 110, 115), material = Enum.Material.Slate },
-	{ name = "Pilar", rarity = 120, hp = 270, reward = 73, gems = 8, size = Vector3.new(4, 12, 4), color = Color3.fromRGB(225, 220, 205), material = Enum.Material.Marble },
-	{ name = "Cristal", rarity = 800, hp = 870, reward = 300, gems = 60, size = Vector3.new(7, 11, 7), color = Color3.fromRGB(110, 220, 255), material = Enum.Material.Glass },
-	{ name = "Roca de armas", rarity = 2000, hp = 3800, reward = 0, gems = 0, luck = 3, rolls = 1, size = Vector3.new(6, 6, 6), color = Color3.fromRGB(255, 120, 40), material = Enum.Material.Neon },
-	{ name = "Monolito", rarity = 5000, hp = 6200, reward = 1200, gems = 500, size = Vector3.new(11, 20, 11), color = Color3.fromRGB(45, 40, 60), material = Enum.Material.Basalt },
+	{ name = "Roca", rarity = 20, hp = 37, reward = 19, gems = 1, size = Vector3.new(5, 4, 5), color = Color3.fromRGB(110, 110, 115), material = Enum.Material.Slate },
+	{ name = "Pilar", rarity = 120, hp = 310, reward = 73, gems = 8, size = Vector3.new(4, 12, 4), color = Color3.fromRGB(225, 220, 205), material = Enum.Material.Marble },
+	{ name = "Cristal", rarity = 800, hp = 1300, reward = 300, gems = 60, size = Vector3.new(7, 11, 7), color = Color3.fromRGB(110, 220, 255), material = Enum.Material.Glass },
+	{ name = "Roca de armas", rarity = 2000, hp = 2600, reward = 0, gems = 0, luck = 3, rolls = 1, size = Vector3.new(6, 6, 6), color = Color3.fromRGB(255, 120, 40), material = Enum.Material.Neon },
+	{ name = "Monolito", rarity = 5000, hp = 6400, reward = 1200, gems = 500, size = Vector3.new(11, 20, 11), color = Color3.fromRGB(45, 40, 60), material = Enum.Material.Basalt },
 	{ name = "Obelisco", rarity = 5e4, hp = 31000, reward = 6700, gems = 4000, size = Vector3.new(6, 22, 6), color = Color3.fromRGB(230, 190, 70), material = Enum.Material.Foil },
-	{ name = "Meteorito", rarity = 1e6, hp = 71000, reward = 63000, gems = 5e4, size = Vector3.new(12, 10, 12), color = Color3.fromRGB(200, 70, 30), material = Enum.Material.CrackedLava },
-	{ name = "Núcleo", rarity = 5e7, hp = 4.9e6, reward = 1.2e6, gems = 1.5e6, size = Vector3.new(9, 9, 9), color = Color3.fromRGB(60, 255, 140), material = Enum.Material.Neon },
-	{ name = "Estrella", rarity = 5e9, hp = 3e8, reward = 3.8e7, gems = 1e8, size = Vector3.new(12, 12, 12), color = Color3.fromRGB(255, 240, 150), material = Enum.Material.Neon },
-	{ name = "Agujero negro", rarity = 1e12, hp = 6.8e9, reward = 2e9, gems = 1e10, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(5, 5, 10), material = Enum.Material.Glass, sound = "energy" },
-	{ name = "Fragmento del vacío", rarity = 1e15, hp = 2.8e11, reward = 3.6e11, gems = 5e12, size = Vector3.new(8, 24, 8), color = Color3.fromRGB(130, 50, 255), material = Enum.Material.ForceField },
-	{ name = "Singularidad", rarity = 1e18, hp = 5.9e13, reward = 6.3e13, gems = 3e15, size = Vector3.new(10, 10, 10), color = Color3.fromRGB(255, 60, 200), material = Enum.Material.Neon },
-	{ name = "Origen", rarity = 1e21, hp = 2e15, reward = 1.1e16, gems = 1e18, size = Vector3.new(14, 18, 14), color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
-	{ name = "Infinito", rarity = 1e24, hp = 2.7e17, reward = 2e18, gems = 5e20, size = Vector3.new(14, 26, 14), color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
+	{ name = "Meteorito", rarity = 1e6, hp = 48000, reward = 63000, gems = 5e4, size = Vector3.new(12, 10, 12), color = Color3.fromRGB(200, 70, 30), material = Enum.Material.CrackedLava },
+	{ name = "Núcleo", rarity = 5e7, hp = 1e6, reward = 1.2e6, gems = 1.5e6, size = Vector3.new(9, 9, 9), color = Color3.fromRGB(60, 255, 140), material = Enum.Material.Neon },
+	{ name = "Estrella", rarity = 5e9, hp = 1.1e8, reward = 3.8e7, gems = 1e8, size = Vector3.new(12, 12, 12), color = Color3.fromRGB(255, 240, 150), material = Enum.Material.Neon },
+	{ name = "Agujero negro", rarity = 1e12, hp = 1e9, reward = 2e9, gems = 1e10, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(5, 5, 10), material = Enum.Material.Glass, sound = "energy" },
+	{ name = "Fragmento del vacío", rarity = 1e15, hp = 5.5e10, reward = 3.6e11, gems = 5e12, size = Vector3.new(8, 24, 8), color = Color3.fromRGB(130, 50, 255), material = Enum.Material.ForceField },
+	{ name = "Singularidad", rarity = 1e18, hp = 5.2e12, reward = 6.3e13, gems = 3e15, size = Vector3.new(10, 10, 10), color = Color3.fromRGB(255, 60, 200), material = Enum.Material.Neon },
+	{ name = "Origen", rarity = 1e21, hp = 9.9e13, reward = 1.1e16, gems = 1e18, size = Vector3.new(14, 18, 14), color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
+	{ name = "Infinito", rarity = 1e24, hp = 1.1e16, reward = 2e18, gems = 5e20, size = Vector3.new(14, 26, 14), color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
 }
 
 -- Gemas de los objetos de la parcela: cada objeto con "gems" las suelta con probabilidad "gemChance" (1 si no
@@ -413,7 +413,7 @@ Config.ObjectRolls = {
 	-- NÚMERO GENERADO por tools/equilibrio/generar.luau: es el que hace que el arma más rara de Config.Swords salga de
 	-- media 1 vez cada 500 h (objetivo.horasArmaTope, decidido por el usuario) con TODA la suerte al máximo. Con 2/3,
 	-- que es lo que hubo, un Infinito daba x1e16 y el Colmillo astral salía cada 12 s.
-	TypeLuckPower = 0.417,
+	TypeLuckPower = 0.411,
 	SizeLuckPower = 4, -- el tamaño cuenta de verdad: al 70 % x0.24, al 115 % x1.75, al 150 % x5, al 200 % x16, al 250 % x39
 	SizeHpPower = 2,
 	SizeRewardPower = 2,
@@ -459,19 +459,22 @@ Config.ObjectSizes = {
 -- del nodo, "icon" su dibujo (box, orb, sword, gem) y "color" el de la rama; "desc" (opcional) explica lo que hace.
 -- No hay mejora de suerte de armas (la hubo, "gachaLuck", pagada con gemas): esa suerte sale de los objetos.
 -- Tampoco de velocidad de golpe (la hubo, "speed": el usuario la mandó quitar): el golpe solo se acelera con su poción.
-Config.UpgradeOrder = { "capacity", "luck", "rollSpeed" }
+Config.UpgradeOrder = { "capacity", "luck", "rollSpeed", "fortune" }
 Config.Upgrades = {
 	-- Pocos niveles y cada uno da mucho (pedido por el usuario: el árbol era demasiado largo).
-	capacity = { name = "Más objetos", short = "Objetos", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, costs = { 54, 400, 2000, 27000, 61000, 420000, 7.5e6, 2.4e7 }, display = "%d" },
+	capacity = { name = "Más objetos", short = "Objetos", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, costs = { 33, 490, 9600, 100000, 930000, 5.6e6, 1.7e7, 3.5e7 }, display = "%d" },
 	-- Suerte de destructibles (misma clave de siempre, "luck": lo comprado se conserva). x2,5 por nivel, x79Qi al máximo:
 	-- lo que falta hasta la rareza del objeto más raro (1e24) lo ponen renacer, el rasgo, los accesorios y la armadura
 	-- (con x3 por nivel la mejora sola ya los agotaba y todo lo demás sobraba). Multiplica la probabilidad
 	-- de los tipos raros de Config.Destructibles, que son los que dan más monedas, gemas y suerte de armas.
-	luck = { name = "Suerte de destructibles", short = "Suerte", desc = "Aumenta la probabilidad de encontrar destructibles raros, que dan mejores armas.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 2.5, maxLevel = 50, costs = { 25, 190, 400, 2000, 16000, 39000, 77000, 140000, 640000, 5.2e6, 1e7, 2.3e7, 6.6e7, 2.3e8, 1.3e9, 3.2e9, 8.2e9, 2.9e10, 9.6e10, 4.4e11, 2.1e12, 7.6e12, 2.1e13, 5e13, 1.5e14, 4.7e14, 1.4e15, 6.8e15, 1.5e16, 3.2e16, 1.3e17, 6.7e17, 1.9e18, 2.3e18, 2.9e18, 6.6e18, 3.6e19, 1.3e20, 3.7e20, 1.5e21, 3.4e21, 7.4e21, 2e22, 4.3e22, 1e23, 4.8e23, 1.9e24, 3.7e24, 8e24, 2.2e25 }, display = "x%s" },
+	luck = { name = "Suerte de destructibles", short = "Suerte", desc = "Aumenta la probabilidad de encontrar destructibles raros, que dan mejores armas.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 2.5, maxLevel = 50, costs = { 21, 240, 1100, 5400, 27000, 96000, 420000, 2.1e6, 4.9e6, 1.1e7, 1.4e7, 3.2e7, 6.6e8, 2.6e9, 3e9, 7.4e9, 2.4e10, 7.8e10, 2.1e11, 1.6e12, 1.2e13, 3e13, 1.2e14, 4.5e14, 1.4e15, 1.4e16, 1.2e17, 2.9e17, 4.7e17, 1.2e18, 4.5e18, 1.7e19, 5.3e19, 1e20, 1.8e20, 8.1e20, 4e21, 1.2e22, 4.6e22, 1.5e23, 3.9e23, 9.7e23, 2.4e24, 5.1e24, 2.4e25, 3e26, 7.9e26, 1.2e27, 3.5e27, 1e28 }, display = "x%s" },
 	-- Segundos entre apariciones de objetos en la parcela (lo lee Stats.spawnTime): cada objeto trae tiradas de arma, así
 	-- que es la antigua "Velocidad de tirada" (misma clave, para no perder lo comprado). 1,5 s al principio, -12 % por
 	-- nivel, ~0,42 s al final. Con Config.Gacha.FreeRoll también acorta la tirada gratis (Stats.rollTime).
-	rollSpeed = { name = "Velocidad de aparición", short = "Aparición", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, costs = { 7600, 62000, 480000, 2.9e7, 3.4e9, 8.3e11, 8.9e13, 1.8e16, 1.9e18, 1.4e20 }, display = "%.2fs" },
+	rollSpeed = { name = "Velocidad de aparición", short = "Aparición", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, costs = { 4800, 180000, 4.4e6, 2.5e7, 2.8e9, 7.2e11, 4.9e14, 6.7e17, 2e20, 2.3e23 }, display = "%.2fs" },
+	-- Monedas (pedido por el usuario): multiplica las que dan los objetos (Stats.coins; la Bolsa de oro no) y se paga con
+	-- gemas, que hasta ahora no se gastaban en nada. Sus compras caen entre las de suerte, para que siempre haya algo cerca.
+	fortune = { name = "Fortuna", short = "Fortuna", desc = "Multiplica las monedas que dan los objetos. Se paga con gemas.", icon = "gem", color = Color3.fromRGB(190, 110, 255), mode = "mul", base = 1, perLevel = 1.5, maxLevel = 20, currency = "gems", costs = { 13000, 270000, 880000, 5.9e6, 1.4e8, 9.4e8, 6.9e9, 1.2e11, 8.4e11, 5.5e12, 9.5e13, 1.6e15, 2e16, 2.8e17, 4.7e18, 9.6e19, 1.4e21, 2e22, 3.7e23, 4.1e24 }, display = "x%s" },
 }
 
 -- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Lo que suma un jugador a cada hora
@@ -628,19 +631,19 @@ Config.DungeonLobby = {
 -- "color" = acento de la zona. "minDamage" (opcional) = daño mínimo para entrar (si no llega, la sala sale cerrada).
 -- No cambies el orden: las piezas de armadura guardan la posición. Lo nuevo, al final.
 Config.Dungeons = {
-	{ id = "forest", name = "Bosque de los Susurros", difficulty = "Fácil", tagline = "Raíces viejas que murmuran tu nombre.", hp = 400, power = 1, bonus = 1, count = 1, loot = 1, qualityLuck = 1, color = Color3.fromRGB(90, 210, 110), set = "de cuero", armorColor = Color3.fromRGB(150, 105, 65), armorMaterial = Enum.Material.Leather },
-	{ id = "mines", name = "Minas Abandonadas", difficulty = "Normal", tagline = "Galerías olvidadas donde algo sigue picando.", hp = 10000, power = 4, bonus = 1.3, count = 1.25, loot = 1.3, qualityLuck = 1.4, color = Color3.fromRGB(240, 170, 70), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
+	{ id = "forest", name = "Bosque de los Susurros", difficulty = "Fácil", tagline = "Raíces viejas que murmuran tu nombre.", hp = 1000, power = 1, bonus = 1, count = 1, loot = 1, qualityLuck = 1, color = Color3.fromRGB(90, 210, 110), set = "de cuero", armorColor = Color3.fromRGB(150, 105, 65), armorMaterial = Enum.Material.Leather },
+	{ id = "mines", name = "Minas Abandonadas", difficulty = "Normal", tagline = "Galerías olvidadas donde algo sigue picando.", hp = 20000, power = 4, bonus = 1.3, count = 1.25, loot = 1.3, qualityLuck = 1.4, color = Color3.fromRGB(240, 170, 70), set = "de hierro", armorColor = Color3.fromRGB(175, 180, 192), armorMaterial = Enum.Material.Metal },
 	{ id = "crypt", name = "Cripta del Rey Caído", difficulty = "Difícil", tagline = "Un rey sin descanso y su corte de huesos.", hp = 200000, power = 16, bonus = 1.65, count = 1.5, loot = 1.6, qualityLuck = 2, color = Color3.fromRGB(160, 125, 225), set = "de obsidiana", armorColor = Color3.fromRGB(58, 50, 82), armorMaterial = Enum.Material.Slate },
-	{ id = "temple", name = "Templo de las Cenizas", difficulty = "Pesadilla", tagline = "Brasas, incienso y fieles que no se rinden.", hp = 8e6, power = 64, bonus = 2.1, count = 1.75, loot = 2, qualityLuck = 2.8, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
-	{ id = "abyss", name = "Abismo Sumergido", difficulty = "Abismo", tagline = "Aguas hundidas donde la luz ya no llega.", hp = 3e8, power = 256, bonus = 2.6, count = 2, loot = 2.4, qualityLuck = 4, color = Color3.fromRGB(50, 200, 210), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
+	{ id = "temple", name = "Templo de las Cenizas", difficulty = "Pesadilla", tagline = "Brasas, incienso y fieles que no se rinden.", hp = 3e6, power = 64, bonus = 2.1, count = 1.75, loot = 2, qualityLuck = 2.8, color = Color3.fromRGB(235, 70, 80), set = "carmesí", armorColor = Color3.fromRGB(165, 40, 52), armorMaterial = Enum.Material.Metal },
+	{ id = "abyss", name = "Abismo Sumergido", difficulty = "Abismo", tagline = "Aguas hundidas donde la luz ya no llega.", hp = 8e7, power = 256, bonus = 2.6, count = 2, loot = 2.4, qualityLuck = 4, color = Color3.fromRGB(50, 200, 210), set = "abisal", armorColor = Color3.fromRGB(88, 62, 200), armorMaterial = Enum.Material.Foil },
 	-- Endgame.
-	{ id = "inferno", name = "Caldera del Infierno", difficulty = "Infierno", tagline = "Una caldera viva: todo arde, todo golpea.", hp = 6e9, power = 1024, bonus = 3.1, count = 2, loot = 2.9, qualityLuck = 5.5, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
-	{ id = "void", name = "Páramo del Vacío", difficulty = "Vacío", tagline = "El suelo se acaba. El silencio, no.", hp = 7e10, power = 4096, bonus = 3.7, count = 2, loot = 3.4, qualityLuck = 7.5, color = Color3.fromRGB(130, 70, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
-	{ id = "nebula", name = "Jardín de la Nebulosa", difficulty = "Nebulosa", tagline = "Un jardín de polvo de estrellas… con dientes.", hp = 1e12, power = 16384, bonus = 4.3, count = 2.25, loot = 3.9, qualityLuck = 10, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
-	{ id = "galaxy", name = "Observatorio Galáctico", difficulty = "Galaxia", tagline = "Mira las estrellas. Ellas te miran a ti.", hp = 2e13, power = 65536, bonus = 5, count = 2.25, loot = 4.5, qualityLuck = 14, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
-	{ id = "cosmos", name = "Bastión del Cosmos", difficulty = "Cosmos", tagline = "Torres de cristal que giran con el cosmos.", hp = 3e14, power = 262144, bonus = 6.2, count = 2.5, loot = 5.1, qualityLuck = 18, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
-	{ id = "origin", name = "Santuario del Origen", difficulty = "Origen", tagline = "Donde todo empezó, y donde todo se mide.", hp = 3e15, power = 1048576, bonus = 8.2, count = 2.5, loot = 5.8, qualityLuck = 24, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
-	{ id = "infinity", name = "Trono del Infinito", difficulty = "Infinito", tagline = "El último trono. Nadie ha vuelto a sentarse.", hp = 3e16, power = 4194304, bonus = 10.5, count = 3, loot = 6.5, qualityLuck = 30, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
+	{ id = "inferno", name = "Caldera del Infierno", difficulty = "Infierno", tagline = "Una caldera viva: todo arde, todo golpea.", hp = 2e9, power = 1024, bonus = 3.1, count = 2, loot = 2.9, qualityLuck = 5.5, color = Color3.fromRGB(255, 110, 40), set = "infernal", armorColor = Color3.fromRGB(200, 70, 30), armorMaterial = Enum.Material.CrackedLava },
+	{ id = "void", name = "Páramo del Vacío", difficulty = "Vacío", tagline = "El suelo se acaba. El silencio, no.", hp = 2e10, power = 4096, bonus = 3.7, count = 2, loot = 3.4, qualityLuck = 7.5, color = Color3.fromRGB(130, 70, 255), set = "del vacío", armorColor = Color3.fromRGB(60, 40, 110), armorMaterial = Enum.Material.Metal },
+	{ id = "nebula", name = "Jardín de la Nebulosa", difficulty = "Nebulosa", tagline = "Un jardín de polvo de estrellas… con dientes.", hp = 3e11, power = 16384, bonus = 4.3, count = 2.25, loot = 3.9, qualityLuck = 10, color = Color3.fromRGB(230, 90, 160), set = "de nebulosa", armorColor = Color3.fromRGB(205, 85, 150), armorMaterial = Enum.Material.Foil },
+	{ id = "galaxy", name = "Observatorio Galáctico", difficulty = "Galaxia", tagline = "Mira las estrellas. Ellas te miran a ti.", hp = 5e12, power = 65536, bonus = 5, count = 2.25, loot = 4.5, qualityLuck = 14, color = Color3.fromRGB(60, 110, 255), set = "de galaxia", armorColor = Color3.fromRGB(45, 70, 190), armorMaterial = Enum.Material.Metal },
+	{ id = "cosmos", name = "Bastión del Cosmos", difficulty = "Cosmos", tagline = "Torres de cristal que giran con el cosmos.", hp = 4e13, power = 262144, bonus = 6.2, count = 2.5, loot = 5.1, qualityLuck = 18, color = Color3.fromRGB(60, 255, 170), set = "del cosmos", armorColor = Color3.fromRGB(30, 60, 80), armorMaterial = Enum.Material.Slate },
+	{ id = "origin", name = "Santuario del Origen", difficulty = "Origen", tagline = "Donde todo empezó, y donde todo se mide.", hp = 2e14, power = 1048576, bonus = 8.2, count = 2.5, loot = 5.8, qualityLuck = 24, color = Color3.fromRGB(240, 245, 255), set = "del origen", armorColor = Color3.fromRGB(240, 240, 250), armorMaterial = Enum.Material.Marble },
+	{ id = "infinity", name = "Trono del Infinito", difficulty = "Infinito", tagline = "El último trono. Nadie ha vuelto a sentarse.", hp = 9e14, power = 4194304, bonus = 10.5, count = 3, loot = 6.5, qualityLuck = 30, color = Color3.fromRGB(255, 40, 60), set = "del infinito", armorColor = Color3.fromRGB(215, 35, 55), armorMaterial = Enum.Material.Foil },
 }
 
 -- Aspecto de cada zona de Config.Dungeons, por su "id" (lo construye server/DungeonThemes y lo viste client/DungeonFx):

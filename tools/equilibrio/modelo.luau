@@ -428,6 +428,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		}
 		local estado = {
 			coins = 0,
+			gems = 0,
 			upgrades = {},
 			rebirths = 0,
 			artifacts = {},
@@ -477,7 +478,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			accesorios = {}, -- [índice] = segundo
 			armas = {}, -- [umbral de rareza] = segundo de la primera
 			cuenta = {}, -- [índice de arma] = cuántas (solo las de 1 entre 1e15 o más)
-			eventos = {}, -- (forzado) { t, pista, monedas ganadas hasta entonces }
+			eventos = {}, -- (forzado) { t, pista, monedas y gemas ganadas hasta entonces }
 			danoTipo = {}, -- [tipo] = daño de una andanada de sus armas cuando empieza a salir a menudo (objetivo.golpes.parte)
 			horaTipo = {},
 			lambda = {}, -- (forzado) [accesorio] = suma de suerte de los objetos rotos hasta su hora
@@ -834,13 +835,13 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		end
 		for hour = 1, opts.horas do
 			a(hour * H, function()
-				table.insert(res.ritmo, { hora = hour, objetos = res.objetos, monedas = res.ganado })
+				table.insert(res.ritmo, { hora = hour, objetos = res.objetos, monedas = res.ganado, bolsa = res.bolsa.ganado })
 			end)
 		end
 		if forzado then
 			local function compra(at: number, pista: string, apply)
 				a(at, function()
-					table.insert(res.eventos, { t = at, pista = pista, monedas = res.ganado })
+					table.insert(res.eventos, { t = at, pista = pista, monedas = res.ganado, gemas = res.gemas })
 					apply()
 				end)
 			end
@@ -889,16 +890,23 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		mundo.Weather = nil
 
 		res.objetos, res.saltados, res.tiradas, res.ganado, res.sumaSuerte = 0, 0, 0, 0, 0
+		res.gemas = 0 -- gemas ganadas (las de los objetos de la parcela: server/Destructibles)
+		local gemMedia = (Config.GemDrop.min + Config.GemDrop.max) / 2
 		res.esperadoTope, res.esperadoClima = 0, {} -- armas tope esperadas en toda la partida y con cada clima puesto
 		local topRarity = Config.Swords[pool[1]].rarity
 		local umbrales = { 1e4, 1e6, 1e9, 1e12, 1e15 }
-		local minCost = 0
+		-- Lo más barato que le queda por comprar con monedas y con gemas (las mejoras con currency = "gems").
+		local minCost, minGems = 0, 0
 		local function precioMinimo()
-			minCost = math.huge
+			minCost, minGems = math.huge, math.huge
 			for _, name in Config.UpgradeOrder do
 				local level = estado.upgrades[name]
 				if level < Config.Upgrades[name].maxLevel and not (opts.sinSuerte and name == "luck") then
-					minCost = math.min(minCost, Upgrades.cost(name, level))
+					if Config.Upgrades[name].currency == "gems" then
+						minGems = math.min(minGems, Upgrades.cost(name, level))
+					else
+						minCost = math.min(minCost, Upgrades.cost(name, level))
+					end
 				end
 			end
 			if estado.rebirths < Config.Rebirth.max then
@@ -1003,6 +1011,12 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				estado.coins += coins
 				res.ganado += coins
 			end
+			if def.gems > 0 then
+				-- La cuenta media, sin tirar el azar de la cantidad ni el de "gemChance".
+				local gems = math.max(1, def.gems * ObjectSpec.reward(quality, scale) * Stats.gems(player) * gemMedia) * (def.gemChance or 1)
+				estado.gems += gems
+				res.gemas += gems
+			end
 
 			-- Tiradas de arma (server/Gacha): la suerte se aplica una vez, a la rareza total del arma con su metal y tamaño.
 			local objLuck = gacha * ObjectSpec.luck(def, quality, scale)
@@ -1060,7 +1074,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 					end
 				end
 				-- Compras ("Mejorar todo" de server/Shop, y renacer en cuanto llega).
-				if estado.coins >= minCost then
+				if estado.coins >= minCost or estado.gems >= minGems then
 					local bought = true
 					while bought do
 						bought = false
@@ -1068,8 +1082,9 @@ function Modelo.nuevo(shared, mundo, objetivo)
 							local level = estado.upgrades[name]
 							if level < Config.Upgrades[name].maxLevel and not (opts.sinSuerte and name == "luck") then
 								local cost = Upgrades.cost(name, level)
-								if estado.coins >= cost then
-									estado.coins -= cost
+								local wallet = if Config.Upgrades[name].currency == "gems" then "gems" else "coins"
+								if estado[wallet] >= cost then
+									estado[wallet] -= cost
 									estado.upgrades[name] = level + 1
 									res.compras[name][level + 1] = t
 									bought = true
@@ -1091,7 +1106,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 					precioMinimo()
 				end
 				-- Completado: todas las mejoras, todos los renacimientos y todos los accesorios.
-				if not res.completo and minCost == math.huge and #estado.artifacts >= #Config.Artifacts then
+				if not res.completo and minCost == math.huge and minGems == math.huge and #estado.artifacts >= #Config.Artifacts then
 					res.completo = t
 					if opts.parar then
 						break
@@ -1181,6 +1196,24 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			hours[position] = 1 / total[position] / H
 		end
 		return hours
+	end
+
+	-- Consumible de Robux (objetivo.consumible): da x`suerte` a la suerte de armas de UN objeto. Con todo al máximo
+	-- (objeto del tipo más raro, todos los renacimientos y las mejores pociones de suerte de armas y de cajas; cielo
+	-- despejado y sin pases): cuántos consumibles hacen falta de media por cada arma de la más rara.
+	function M.usosConsumible(suerte: number, samples: number): number
+		local def = tipos[#tipos]
+		local pociones = Config.Potions.Families
+		local armas = pociones.weaponLuck.values[#pociones.weaponLuck.values]
+		local cajas = pociones.boxLuck.values[#pociones.boxLuck.values]
+		local gacha = Config.Rebirth.gachaLuck ^ Config.Rebirth.max * armas * suerte
+		local top = Config.Swords[pool[1]].rarity
+		local expected = 0
+		for _ = 1, samples do
+			local quality, _, scale, rolls = tirarObjeto(def, cajas)
+			expected += rolls * math.min(1, gacha * ObjectSpec.luck(def, quality, scale) / top)
+		end
+		return samples / expected
 	end
 
 	return M
