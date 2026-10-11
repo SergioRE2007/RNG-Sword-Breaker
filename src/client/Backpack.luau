@@ -641,8 +641,53 @@ function Backpack.start()
 	potionHint.TextXAlignment = Enum.TextXAlignment.Left
 	potionHint.Text = `<font color="{Ui.SOFT}">Pulsa una poción para usarla.</font>`
 
+	-- Orden de las pociones (pedido por el usuario): por tipo (familia y, dentro, de la mejor a la peor) o por tier (de la
+	-- mejor a la peor y, dentro, por familia). Botones a la derecha de la barra; solo para esta sesión.
+	local potionSort = "family"
+	local function potionOrder(family: string, tier: number): number
+		local index = table.find(Config.Potions.Order, family) :: number
+		return if potionSort == "family" then 100 + index * 10 + (9 - tier) else 100 + (9 - tier) * 10 + index
+	end
+	local sortBox = Instance.new("Frame")
+	sortBox.Name = "Sort"
+	sortBox.AnchorPoint = Vector2.new(1, 0.5)
+	sortBox.Position = UDim2.new(1, -6, 0.5, 0)
+	sortBox.Size = UDim2.fromOffset(250, 30)
+	sortBox.BackgroundTransparency = 1
+	sortBox.Parent = potionBar
+	local sortLayout = Instance.new("UIListLayout")
+	sortLayout.FillDirection = Enum.FillDirection.Horizontal
+	sortLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	sortLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	sortLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	sortLayout.Padding = UDim.new(0, 6)
+	sortLayout.Parent = sortBox
+	local sortLabel = Ui.label(sortBox, 16)
+	sortLabel.Size = UDim2.fromOffset(70, 30)
+	sortLabel.TextXAlignment = Enum.TextXAlignment.Right
+	sortLabel.Text = `<font color="{Ui.SOFT}">Ordenar:</font>`
+	local sortButtons = {}
+	for order, entry in { { "family", "Tipo", Ui.COLORS.blue }, { "tier", "Tier", Ui.COLORS.purple } } do
+		local button = Ui.button(sortBox, entry[2], entry[3])
+		button.Name = "Sort_" .. entry[1]
+		button.LayoutOrder = order
+		button.Size = UDim2.fromOffset(76, 28)
+		button.TextSize = 16
+		sortButtons[entry[1]] = button
+		Ui.setSelected(button, entry[1] == potionSort)
+		button.Activated:Connect(function()
+			potionSort = entry[1]
+			for mode, other in sortButtons do
+				Ui.setSelected(other, mode == potionSort)
+			end
+			for key, cell in potionCells do
+				local potion = Config.Items[key].potion
+				cell.LayoutOrder = potionOrder(potion.family, potion.tier)
+			end
+		end)
+	end
+
 	local function refreshPotions()
-		local order = Config.Potions.Order
 		for _, key in Config.Potions.ItemKeys do
 			local count = player:GetAttribute("Item_" .. key) or 0
 			local cell = potionCells[key]
@@ -651,7 +696,7 @@ function Backpack.start()
 			if count > 0 and not cell then
 				cell = Ui.cell(itemGrid, item.color, tier)
 				cell.Name = "Potion_" .. key
-				cell.LayoutOrder = 100 + (table.find(order, family) :: number) * 10 + (9 - tier)
+				cell.LayoutOrder = potionOrder(family, tier)
 				Potions.icon(cell, family, tier)
 				Potions.addTag(cell, tier, true)
 				Ui.cellLabel(cell, "")
