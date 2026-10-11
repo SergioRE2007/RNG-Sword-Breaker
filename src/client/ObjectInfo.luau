@@ -167,7 +167,7 @@ local function buildTag(part: BasePart, quality: number, class): BillboardGui
 	gui.StudsOffsetWorldSpace = lift(part, 0.8, TAG_HEIGHT)
 	gui.SizeOffset = Vector2.new(0, 0.5) -- se apoya en ese punto en vez de centrarse en él
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 260
+	gui.MaxDistance = 90 -- solo de cerca: desde lejos la etiqueta mide lo mismo en pantalla y se veía enorme
 	gui.LightInfluence = 0
 	gui.Parent = part
 

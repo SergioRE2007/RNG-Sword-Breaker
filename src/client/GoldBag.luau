@@ -29,7 +29,7 @@ local GOLD = Color3.fromRGB(255, 205, 70)
 
 local TAG = "GoldBag"
 local TICK = 0.25 -- cada cuánto se ponen al día los carteles
-local RANGE = 230 -- studs: más lejos no se ve el cartel
+local RANGE = 70 -- studs: más lejos no se ve el cartel (pedido por el usuario: desde lejos mide lo mismo en pantalla y tapaba la parcela)
 local FAR = 170 -- studs de la cámara desde los que las armas de un saco no se mueven
 local NEAR = 75 -- y desde los que sus golpes no suenan
 local TOAST_EVERY = 15 -- segundos entre avisos de bolsa vaciada (con armas muy fuertes caen seguidas)
