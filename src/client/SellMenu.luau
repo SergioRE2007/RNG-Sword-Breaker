@@ -104,8 +104,14 @@ function SellMenu.start()
 	paint = function()
 		local count = 0
 		for id, cell in cells do
-			cell.Select.Visible = selected[id] == true
+			-- Elegida: fondo rojo y la X, sin el borde blanco de seleccionado (pedido por el usuario).
 			cell.SellMark.Visible = selected[id] == true
+			local base = if selected[id] then MARK_COLOR else cell:GetAttribute("Base")
+			cell.BackgroundColor3 = base
+			local glow = cell:FindFirstChild("Glow") :: Frame? -- el círculo de luz de WeaponPreview, detrás del arma
+			if glow then
+				glow.BackgroundColor3 = base
+			end
 			if selected[id] then count += 1 end
 		end
 		if count == 0 then confirming = false end
@@ -126,6 +132,7 @@ function SellMenu.start()
 			local cell = Ui.cell(stock, tier.color, table.find(Config.RarityTiers, tier))
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = copy.id
+			cell:SetAttribute("Base", tier.color) -- color de su fondo sin elegir
 			sellMark(cell)
 			WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
 			Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
