@@ -46,6 +46,9 @@ local METRICS = {
 		title = "Dinero ganado",
 		color = Color3.fromRGB(255, 200, 60),
 		glyph = "$",
+		-- A los lados, el logo de las monedas del juego (el mismo id que Ui.IMAGES.monedas, que es del cliente; pedido por
+		-- el usuario) en vez del disco con "$".
+		image = "rbxassetid://134320261318517",
 		store = "LB_Coins",
 		score = function(data)
 			local coins = data.totalCoins
@@ -320,8 +323,19 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 	titlePad.PaddingTop = UDim.new(0, 36)
 	titlePad.PaddingBottom = UDim.new(0, 36)
 	titlePad.Parent = title
-	-- Dos monedas doradas (mon) a los lados con la letra de la clasificación.
+	-- Dos monedas doradas (mon) a los lados con la letra de la clasificación, o el logo `image` si la clasificación lo trae.
 	for _, side in { 0, 1 } do
+		if metric.image then
+			local logo = Instance.new("ImageLabel")
+			logo.AnchorPoint = Vector2.new(0.5, 0.5)
+			logo.Position = UDim2.new(side, if side == 0 then 110 else -110, 0.5, 0)
+			logo.Size = UDim2.fromOffset(150, 150)
+			logo.BackgroundTransparency = 1
+			logo.ScaleType = Enum.ScaleType.Fit
+			logo.Image = metric.image
+			logo.Parent = bannerBack
+			continue
+		end
 		local disc = Instance.new("Frame")
 		disc.AnchorPoint = Vector2.new(0.5, 0.5)
 		disc.Position = UDim2.new(side, if side == 0 then 110 else -110, 0.5, 0)
