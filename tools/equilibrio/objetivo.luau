@@ -62,21 +62,23 @@ Objetivo.jugador = {
 -- { hora, índice de Config.Traits }, { hora, índice de Config.Grades } y { hora, suerte, ataque, aparición } de la armadura.
 -- El rasgo y el grado son los de su primera arma: la segunda, la tercera y la cuarta llevan cada uno cuando las tiradas
 -- acumuladas llegan a 2, 3 y 4 veces su pity (el modelo saca la curva de tiradas de estas mismas tablas).
--- De aquí salen los precios (generar.luau). El informe juega las mazmorras de verdad y dice cuánto se cumple.
--- PRIMERA APROXIMACIÓN (11 oct 2026): son las tablas de antes adelantadas a la hora en la que se llevaba la mitad de
--- tiradas, porque el bucle (abajo) pasa a dar el doble de cristales. Falta subir las caídas de Config y comprobarlo
--- con el informe.
-Objetivo.rasgo = { { 0.4, 3 }, { 0.9, 6 }, { 2.2, 9 }, { 2.8, 10 }, { 10, 11 }, { 34, 12 }, { 95, 13 } }
-Objetivo.grado = { { 0.5, 3 }, { 1.7, 5 }, { 5.5, 6 }, { 20, 7 }, { 42, 8 }, { 100, 9 } }
+-- De aquí salen los precios (generar.luau). El informe juega las mazmorras de verdad y dice cuánto se cumple: estas
+-- tablas son lo que saca su jugador (11 oct 2026) con las caídas de Config puestas para el bucle de abajo. Los
+-- primeros escalones de rasgo le salen antes, por suerte y no por pity; se dejan en la hora de su pity porque de
+-- ellos sale la curva de tiradas de las otras armas. La armadura va a escalones y la de verdad sube poco a poco, así
+-- que quien juega sus mazmorras va algo por delante del calendario: lo completa todo hacia las 145 h y no a las 175
+-- (visto bueno del usuario, 11 oct 2026). Para acercarlos habría que interpolar la tabla en modelo.partida.
+Objetivo.rasgo = { { 0.2, 3 }, { 0.5, 6 }, { 1.8, 9 }, { 2.6, 10 }, { 10, 11 }, { 34, 12 }, { 85, 13 }, { 165, 14 } }
+Objetivo.grado = { { 0.5, 3 }, { 1.4, 5 }, { 3.2, 6 }, { 14, 7 }, { 35, 8 }, { 78, 9 }, { 180, 10 } }
 Objetivo.armadura = {
-	{ 0.5, 0.05, 0.03, 0 },
-	{ 2, 0.2, 0.15, 0.04 },
-	{ 6, 0.5, 0.4, 0.06 },
-	{ 15, 1, 0.8, 0.08 },
-	{ 36, 2, 1.5, 0.12 },
-	{ 70, 3.5, 2.5, 0.16 },
-	{ 110, 5, 4, 0.2 },
-	{ 175, 9, 7, 0.25 },
+	{ 0.5, 0.07, 0, 0 },
+	{ 2, 0.25, 0.07, 0.05 },
+	{ 6, 0.5, 0.28, 0.06 },
+	{ 15, 1, 0.7, 0.09 },
+	{ 36, 1.6, 1.5, 0.12 },
+	{ 70, 2.4, 2.3, 0.17 },
+	{ 110, 3.7, 4.4, 0.18 },
+	{ 175, 8.6, 7.6, 0.25 },
 }
 
 -- MAZMORRAS: cómo las juega el jugador tipo. Con esto el simulador juega también sus partidas de mazmorra (cristales,
@@ -91,7 +93,7 @@ Objetivo.armadura = {
 -- depende de lo que haya durado la pelea con el anterior: si cae al momento hay que esperar a que llegue el siguiente
 -- (`salto`: 0,53 s de media con espadas); si aguanta, los demás ya están en el círculo y solo es el vuelo (`cadena`);
 -- entre medias, cadena + (salto − cadena) · e^(−pelea / `calma`) (tras un esbirro de 0,37 s, 0,34 s de media).
--- Con eso modelo.duracionMazmorra da 23,1 / 38,2 / 30,9 s para las tres medidas.
+-- Con eso modelo.duracionMazmorra da 23,1 / 38,3 / 31,0 s para las tres medidas.
 -- Los martillos salpican poco: 0,035 enemigos de más por golpe y por cada otro enemigo vivo, con 9,7 de alcance (de
 -- ahí `salpica`, con la misma cuenta que en la parcela). Sin medir: la salpicadura de hachas y lanzas (se cuenta con
 -- esa misma constante), las zonas con más enemigos y si aguanta vivo.

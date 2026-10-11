@@ -194,18 +194,22 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	-- Medido en Studio con el personaje en Auto (ver objetivo.mazmorra): las armas cogen a los enemigos de uno en uno.
 	-- Al llegar pega cada una cuando le toca (su reloj sigue de un enemigo a otro). De un enemigo muerto al primer golpe
 	-- al siguiente pasa `salto` si cayó al momento (hay que esperar a que llegue el siguiente) y solo `cadena` si la
-	-- pelea fue larga (los demás ya están en el círculo). Las que salpican gastan además a los que esperan (de media,
-	-- a todos lo mismo).
+	-- pelea fue larga (los demás ya están en el círculo). Las que salpican gastan además a los que esperan: de media a
+	-- todos lo mismo (`gastado`), pero a cada uno como mucho su vida por las veces que le ha llegado un golpe
+	-- (`impactos`): con armas de sobra un golpe no vacía la oleada, se lleva solo a los que pilla al lado.
 	function M.duracionMazmorra(index: number, armas, vida: number?): number?
 		local mult = vida or zonas[index].hp
 		local count = #armas
-		local andanada, ritmo, ritmoExtra = 0, 0, 0
-		local extra = table.create(count, 0) -- vida que le quita cada golpe del arma a cada uno de los demás
+		local andanada, ritmo, ritmoExtra, ritmoAlcance = 0, 0, 0, 0
+		local alcance = table.create(count, 0) -- parte de los demás a los que llega cada golpe del arma
+		local extra = table.create(count, 0) -- vida que le quita, de media, a cada uno de los demás
 		for slot, arma in armas do
-			extra[slot] = arma.dano * salpica(arma, maz.salpica)
+			alcance[slot] = salpica(arma, maz.salpica)
+			extra[slot] = arma.dano * alcance[slot]
 			andanada += arma.dano
 			ritmo += arma.dano / arma.cooldown
 			ritmoExtra += extra[slot] / arma.cooldown
+			ritmoAlcance += alcance[slot] / arma.cooldown
 		end
 		local listo = table.create(count, 0)
 		local limite = Config.Dungeon.TimeLimit
@@ -213,7 +217,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		for _, wave in oleadas[index] do
 			pelea += Config.Dungeon.WaveDelay + maz.oleada
 			-- `t` cuenta desde el primer golpe de la oleada, al que las armas llegan descansadas.
-			local t, gastado = 0, 0
+			local t, gastado, impactos = 0, 0, 0
 			local anterior: number? = nil -- lo que duró la pelea con el enemigo anterior
 			for slot = 1, count do
 				listo[slot] = 0
@@ -221,10 +225,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			for _, entry in wave do
 				local total = entry.def.hp * mult * (1 - 1e-9)
 				for _ = 1, entry.n do
-					local hp = total - gastado
-					if hp <= 0 then
-						continue -- se lo ha llevado la salpicadura antes de que le tocara
-					end
+					local hp = total - math.min(gastado, total * (1 - math.exp(-impactos)))
 					if anterior then
 						t += maz.cadena + (maz.salto - maz.cadena) * math.exp(-anterior / maz.calma)
 					end
@@ -233,6 +234,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 						local dt = hp / ritmo
 						t += dt
 						gastado += dt * ritmoExtra
+						impactos += dt * ritmoAlcance
 						for slot = 1, count do
 							listo[slot] = t
 						end
@@ -253,6 +255,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 							listo[pick] = at + armas[pick].cooldown
 							hp -= armas[pick].dano
 							gastado += extra[pick]
+							impactos += alcance[pick]
 						until hp <= 0
 					end
 					anterior = t - llegada
