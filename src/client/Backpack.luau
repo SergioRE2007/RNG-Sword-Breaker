@@ -170,16 +170,18 @@ local function swordTip(copy): (string, Color3, boolean)
 	local lines = { sword.name, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
 	local grade = Config.Grades[copy.grade]
 	local border = tier.color
-	-- Metal y tamaño (permanentes, salen con el arma): lo que son y lo que multiplican.
+	-- Metal y tamaño (permanentes, salen con el arma): solo el nombre, en una línea. Pedido por el usuario: el cartel
+	-- es para niños, sin lo que multiplica cada uno ni su probabilidad por separado.
 	local metal, size = Permanent.metal(copy), Permanent.size(copy)
+	local extras = {}
 	if metal then
-		table.insert(lines, `<font color="{hex(metal.color)}">Metal: {metal.name}</font> (x{Format.multiplier(Permanent.damage(metal.odds))} daño · 1 entre {Format.short(metal.odds)})`)
+		table.insert(extras, `<font color="{hex(metal.color)}">{metal.name}</font>`)
 	end
 	if size then
-		table.insert(lines, `<font color="{hex(size.color)}">Tamaño: {size.name}</font> (x{Format.multiplier(Permanent.damage(size.odds))} daño, x{size.scale} de largo · 1 entre {Format.short(size.odds)})`)
+		table.insert(extras, `<font color="{hex(size.color)}">{size.name}</font>`)
 	end
-	if trait or grade then
-		table.insert(lines, "") -- aparte: rasgo y grado forman su propio bloque
+	if #extras > 0 then
+		table.insert(lines, table.concat(extras, " · "))
 	end
 	if trait then
 		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo:</font> {animatedName(trait)} ({Modifiers.effect(trait)})`)
@@ -193,19 +195,11 @@ local function swordTip(copy): (string, Color3, boolean)
 			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
-	if trait or grade then
-		table.insert(lines, "")
-	end
 	table.insert(lines, `Daño {Format.multiplier(Stats.swordDamage(copy))}`)
 	if not sword.rarity then
 		table.insert(lines, `<font color="{Ui.SOFT}">Espada inicial</font>`)
-	elseif metal or size then
-		-- La rareza total multiplica la del arma por las de su metal y su tamaño: se enseñan las dos, para que se vea
-		-- de dónde sale un número tan grande (un arma de 1 entre 5Qa con Etherio y Universal es de 1 entre 5Dc).
-		local extras = if metal and size then "metal y tamaño" elseif metal then "metal" else "tamaño"
-		table.insert(lines, `<font color="{Ui.SOFT}">Arma: 1 entre {Format.short(sword.rarity)}</font>`)
-		table.insert(lines, `<font color="{Ui.SOFT}">Con {extras}: 1 entre {Format.short(rarity)}</font>`)
 	else
+		-- Una sola probabilidad: la del arma entera, con su metal y su tamaño.
 		table.insert(lines, `<font color="{Ui.SOFT}">1 entre {Format.short(rarity)}</font>`)
 	end
 	return table.concat(lines, "\n"), border, trait ~= nil or grade ~= nil

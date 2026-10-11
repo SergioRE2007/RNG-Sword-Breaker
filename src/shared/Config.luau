@@ -897,7 +897,7 @@ Config.Gamepasses = {
 		icon = "monedas", tag = "VIP", ribbon = "POPULAR",
 		price = 449,
 		color = Color3.fromRGB(255, 205, 70),
-		perksText = { "x1,5 de monedas", "x1,5 de suerte de destructibles", "x2 de velocidad al andar", "Etiqueta [VIP] en el chat" },
+		perksText = { "Monedas y suerte x1,5", "Velocidad x2 y etiqueta [VIP]" },
 		perks = { coins = 1.5, luck = 1.5, walkSpeed = 2 },
 		chatTag = "VIP",
 	},
@@ -907,7 +907,7 @@ Config.Gamepasses = {
 		icon = "suerte", tag = "x2",
 		price = 299,
 		color = Color3.fromRGB(90, 220, 130),
-		perksText = { "x2 de suerte en todas las tiradas de arma", "Se multiplica con el x5: juntos, x10" },
+		perksText = { "¡El doble de suerte al tirar!" },
 		perks = { weaponLuck = 2 },
 	},
 	weaponLuck5 = {
@@ -916,7 +916,7 @@ Config.Gamepasses = {
 		icon = "suerte", tag = "x5", ribbon = "MEJOR OFERTA",
 		price = 999,
 		color = Color3.fromRGB(255, 110, 200),
-		perksText = { "x5 de suerte en todas las tiradas de arma", "Se multiplica con el x2: juntos, x10" },
+		perksText = { "¡5 veces más suerte al tirar!" },
 		perks = { weaponLuck = 5 },
 	},
 	dungeonLoot = {
@@ -925,7 +925,7 @@ Config.Gamepasses = {
 		icon = "mazmorras", tag = "x2",
 		price = 349,
 		color = Color3.fromRGB(170, 120, 255),
-		perksText = { "El doble de cristales, armadura y pociones en las mazmorras" },
+		perksText = { "¡El doble de premios!" },
 		perks = { dungeonLoot = 2 },
 	},
 	auto = {
@@ -934,7 +934,7 @@ Config.Gamepasses = {
 		icon = "espada", tag = "AUTO",
 		price = 249,
 		color = Color3.fromRGB(255, 200, 60),
-		perksText = { "Botón Auto junto al arma: en tu parcela, tus armas llegan solas a todos los objetos", "No hace falta moverse ni hacer clic" },
+		perksText = { "Tus armas rompen solas", "toda tu parcela" },
 		perks = { autoFarm = 1 },
 	},
 	arsenal = {
@@ -943,7 +943,7 @@ Config.Gamepasses = {
 		icon = "espada", tag = "+4",
 		price = 799,
 		color = Color3.fromRGB(240, 80, 90),
-		perksText = { "Equipa 4 armas más: 8 atacando a la vez", "4 huecos más en la Bolsa de oro: 8 armas sacando monedas" },
+		perksText = { "4 armas más equipadas", "4 armas más en la bolsa" },
 		perks = { extraSlots = 4 },
 	},
 	forge = {
@@ -952,7 +952,7 @@ Config.Gamepasses = {
 		icon = "mejora", tag = "x10",
 		price = 199,
 		color = Color3.fromRGB(255, 150, 60),
-		perksText = { "Tira 10 rasgos a la vez (se queda el mejor)", "Tiradas de grado al 400 % de velocidad" },
+		perksText = { "10 rasgos a la vez", "Grados x4 de rápido" },
 		perks = { traitCount = 10, gradeSpeed = 4 },
 	},
 }

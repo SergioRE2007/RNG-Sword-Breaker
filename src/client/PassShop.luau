@@ -31,14 +31,14 @@ local GOLD = Color3.fromRGB(255, 225, 90)
 -- Medidas de la tarjeta (píxeles de diseño: la ventana entera se encoge con su UIScale).
 local COLUMNS = 3
 local GAP = 12
-local CARD_HEIGHT = 306
+local CARD_HEIGHT = 300
 local SHOWN_ROWS = 2 -- filas de tarjetas a la vista; las demás, deslizando
 local PEEK = 46 -- lo que asoma de la fila siguiente cuando hay más
 local PAD = 8 -- margen de la tarjeta
-local ART_HEIGHT = 116 -- alto del escaparate
+local ART_HEIGHT = 130 -- alto del escaparate
 local ART_RADIUS = 10
 local RIM = 3 -- canto claro del escaparate; el recorte de dentro va metido esto mismo
-local ICON = 104 -- lado del logo grande
+local ICON = 116 -- lado del logo grande
 local TILE = 40 -- periodo de los rombos del escaparate
 local DROPS = 7 -- logos pequeños que caen por tarjeta
 local HOVER = 1.04 -- lo que crece la tarjeta con el ratón encima
@@ -281,24 +281,18 @@ function PassShop.start()
 	local rows = math.ceil(#Config.GamepassOrder / COLUMNS)
 	-- Como mucho se ven SHOWN_ROWS filas y el resto se alcanza deslizando (pedido por el usuario: con una tercera fila
 	-- la ventana entera se encogía para caber y quedaba diminuta); si hay más, asoma un trozo de la siguiente para que
-	-- se vea que sigue. Alto: cabecera y márgenes de Ui.window (78), la nota (34) y la rejilla.
+	-- se vea que sigue. Alto: cabecera y márgenes de Ui.window (78) y la rejilla. Ancha y baja a propósito (pedido por
+	-- el usuario: se veía muy pequeña): Ui.window la escala hasta que toca el alto o el ancho de la pantalla, y con
+	-- una ventana casi cuadrada mandaba el alto y las tarjetas quedaban diminutas.
 	local shown = math.min(rows, SHOWN_ROWS)
-	local window, body = Ui.window("PassShop", "Tienda", Vector2.new(900, 78 + 34 + shown * (CARD_HEIGHT + GAP) + 16 + (if rows > shown then PEEK else 0)), function(parent)
+	local window, body = Ui.window("PassShop", "Tienda", Vector2.new(1200, 78 + 4 + shown * (CARD_HEIGHT + GAP) + 16 + (if rows > shown then PEEK else 0)), function(parent)
 		Ui.image(parent, "tienda_robux")
 	end)
 
-	local note = Ui.label(body, 17)
-	note.Name = "Note"
-	note.Position = UDim2.fromOffset(16, 4)
-	note.Size = UDim2.new(1, -32, 0, 28)
-	note.TextXAlignment = Enum.TextXAlignment.Left
-	note.TextColor3 = Color3.fromRGB(190, 195, 215)
-	note.Text = "Pases de juego: se compran una vez y son para siempre."
-
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "Passes"
-	list.Position = UDim2.fromOffset(8, 34)
-	list.Size = UDim2.new(1, -16, 1, -40)
+	list.Position = UDim2.fromOffset(8, 4)
+	list.Size = UDim2.new(1, -16, 1, -10)
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.ScrollBarThickness = 10
@@ -345,14 +339,14 @@ function PassShop.start()
 
 		local art = buildArt(card, pass)
 
-		local name = Ui.label(card, 24)
+		local name = Ui.label(card, 30)
 		name.Name = "Title"
 		name.Position = UDim2.fromOffset(PAD, PAD + ART_HEIGHT + 6)
-		name.Size = UDim2.new(1, -PAD * 2, 0, 28)
+		name.Size = UDim2.new(1, -PAD * 2, 0, 34)
 		name.TextScaled = true
 		name.Text = pass.name
 		local nameLimit = Instance.new("UITextSizeConstraint")
-		nameLimit.MaxTextSize = 24
+		nameLimit.MaxTextSize = 30
 		nameLimit.MinTextSize = 14
 		nameLimit.Parent = name
 		Ui.gradient(name, WHITE, pass.color:Lerp(WHITE, 0.4), 90)
@@ -362,9 +356,9 @@ function PassShop.start()
 		for _, text in pass.perksText do
 			table.insert(lines, `<font color="#{ROBUX:ToHex()}">+</font> {text}`)
 		end
-		local buyHeight = 50
-		local perksTop = PAD + ART_HEIGHT + 38
-		local perks = Ui.label(card, 16)
+		local buyHeight = 54
+		local perksTop = PAD + ART_HEIGHT + 44
+		local perks = Ui.label(card, 20)
 		perks.Name = "Perks"
 		perks.Position = UDim2.fromOffset(PAD + 4, perksTop)
 		perks.Size = UDim2.new(1, -PAD * 2 - 8, 1, -perksTop - buyHeight - PAD - 8)
@@ -374,7 +368,7 @@ function PassShop.start()
 		perks.TextScaled = true
 		perks.Text = table.concat(lines, "\n")
 		local perksLimit = Instance.new("UITextSizeConstraint")
-		perksLimit.MaxTextSize = 16
+		perksLimit.MaxTextSize = 20
 		perksLimit.MinTextSize = 10
 		perksLimit.Parent = perks
 
@@ -383,7 +377,7 @@ function PassShop.start()
 		buy.AnchorPoint = Vector2.new(0.5, 1)
 		buy.Position = UDim2.new(0.5, 0, 1, -PAD - 2)
 		buy.Size = UDim2.new(1, -PAD * 2 - 4, 0, buyHeight)
-		buy.TextSize = 26
+		buy.TextSize = 30
 		Ui.sparkle(buy, 3)
 
 		local entry = { key = key, pass = pass, card = card, scale = scale, border = border, art = art, buy = buy, price = pass.price }

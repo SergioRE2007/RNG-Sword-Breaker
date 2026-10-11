@@ -9,7 +9,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Format = require(ReplicatedStorage.Shared.Format)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
@@ -27,23 +26,6 @@ local LOW_COLOR = Color3.fromRGB(255, 110, 100)
 
 local function hex(color: Color3): string
 	return "#" .. color:ToHex()
-end
-
--- Parte un texto en líneas de como mucho `width` letras (los carteles no se ajustan solos).
-local function wrap(text: string, width: number): string
-	local lines, line = {}, ""
-	for word in string.gmatch(text, "%S+") do
-		if line ~= "" and (utf8.len(line) or #line) + 1 + (utf8.len(word) or #word) > width then
-			table.insert(lines, line)
-			line = word
-		else
-			line = if line == "" then word else line .. " " .. word
-		end
-	end
-	if line ~= "" then
-		table.insert(lines, line)
-	end
-	return table.concat(lines, "\n")
 end
 
 -- Icono de la poción de esa familia (frasco del color de la familia con su símbolo).
@@ -74,23 +56,16 @@ function Potions.addTag(cell: Instance, tier: number, large: boolean?)
 	return tag
 end
 
--- Cartel de una poción: nombre y tier, qué hace, cuánto dura y, si se pasan, cuántas se tienen y cuánto le queda a la
--- activa. Devuelve el texto y el color del borde.
-function Potions.tip(family: string, tier: number, count: number?, remaining: number?): (string, Color3)
+-- Cartel de una poción: nombre y tier, qué hace y cuánto dura (cuántas hay y cuánto le queda ya lo dice su casilla).
+-- Devuelve el texto y el color del borde.
+function Potions.tip(family: string, tier: number): (string, Color3)
 	local info = cfg.Families[family]
 	local color = PotionInfo.color(tier)
 	local lines = {
 		`{info.name} <font color="{hex(color)}">{PotionInfo.tierName(tier)}</font>`,
-		`<font color="{Ui.SOFT}">{wrap(info.desc, 42)}</font>`,
-		`Efecto: <font color="{hex(info.color:Lerp(Color3.new(1, 1, 1), 0.3))}">{PotionInfo.effect(family, tier)}</font>`,
-		`Dura {PotionInfo.minutes(PotionInfo.duration(tier))} de juego <font color="{Ui.SOFT}">(hasta {PotionInfo.minutes(PotionInfo.cap(tier))} sumando)</font>`,
+		`<font color="{hex(info.color:Lerp(Color3.new(1, 1, 1), 0.3))}">{PotionInfo.effect(family, tier)}</font>`,
+		`<font color="{Ui.SOFT}">Dura {PotionInfo.minutes(PotionInfo.duration(tier))}</font>`,
 	}
-	if count then
-		table.insert(lines, `Tienes: x{Format.short(count)}`)
-	end
-	if remaining then
-		table.insert(lines, `Quedan: <font color="{hex(color)}">{PotionInfo.clock(remaining)}</font>`)
-	end
 	return table.concat(lines, "\n"), color
 end
 

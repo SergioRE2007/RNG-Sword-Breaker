@@ -103,7 +103,7 @@ local function empty(holder: Frame): TextButton
 	plus.TextTransparency = 0.35
 	plus.ZIndex = LAYER.detail
 	Ui.tip(cell, function()
-		return "<b>Hueco libre</b>\nAbre la mochila y equipa otra arma:\ntodas las equipadas atacan a la vez.", Ui.COLORS.gray
+		return "<b>Hueco libre</b>\nPulsa para equipar un arma", Ui.COLORS.gray
 	end, true)
 	return cell
 end

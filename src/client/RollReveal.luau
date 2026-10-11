@@ -697,9 +697,6 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 				trail.Enabled = false
 			end
 			collect(roll, level, color)
-			if level >= 4 then
-		Ui.toast(`¡{Permanent.name(roll.index, roll.metal, roll.size)}!\n{Permanent.describeOdds(roll.index, roll.metal, roll.size)}`, color)
-			end
 		end
 		alive = false
 		connection:Disconnect()
@@ -762,7 +759,7 @@ local function shortcut(roll)
 		collect(roll, level, tier.color)
 	end
 	if level >= 3 then
-		Ui.toast(`¡{Permanent.name(roll.index, roll.metal, roll.size)}!\n{Permanent.describeOdds(roll.index, roll.metal, roll.size)}`, tier.color)
+		Ui.toast(`¡{Permanent.name(roll.index, roll.metal, roll.size)}!`, tier.color)
 	end
 end
 

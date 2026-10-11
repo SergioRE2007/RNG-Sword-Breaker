@@ -207,7 +207,7 @@ function Index.start()
 		end)
 	end
 
-	-- Cartel de una casilla: nombre completo, rareza, tipo, daño y de dónde sale su probabilidad.
+	-- Cartel de una casilla: nombre completo, rareza y tipo.
 	local function tipText(sword: number, tipMetal: number, tipSize: number, unlocked: boolean): (string, Color3)
 		local entry = Config.Swords[sword]
 		local copy = { sword = sword, metal = tipMetal, size = tipSize }
@@ -216,24 +216,14 @@ function Index.start()
 		local lines = {
 			Permanent.name(sword, tipMetal, tipSize),
 			`<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[entry.kind or "sword"].name}`,
-			`Daño {Format.multiplier(Stats.swordDamage(copy))}`,
 		}
-		local metalDef, sizeDef = Permanent.metal(copy), Permanent.size(copy)
+		-- El daño y el "1 entre N" ya van en la casilla: aquí no se repiten ni se desglosan (pedido por el usuario).
 		if not entry.rarity then
 			table.insert(lines, `<font color="{Ui.SOFT}">Espada inicial</font>`)
-		elseif metalDef or sizeDef then
-			table.insert(lines, `<font color="{Ui.SOFT}">Arma: 1 entre {Format.short(entry.rarity)}</font>`)
-			if metalDef then
-				table.insert(lines, `<font color="{hex(metalDef.color)}">{metalDef.name}:</font> <font color="{Ui.SOFT}">1 entre {Format.short(metalDef.odds)} · x{Format.multiplier(Permanent.damage(metalDef.odds))} daño</font>`)
-			end
-			if sizeDef then
-				table.insert(lines, `<font color="{hex(sizeDef.color)}">{sizeDef.name}:</font> <font color="{Ui.SOFT}">1 entre {Format.short(sizeDef.odds)} · x{Format.multiplier(Permanent.damage(sizeDef.odds))} daño</font>`)
-			end
-			table.insert(lines, `En total: 1 entre {Format.short(rarity)}`)
-		else
-			table.insert(lines, `<font color="{Ui.SOFT}">1 entre {Format.short(rarity)}</font>`)
 		end
-		table.insert(lines, if unlocked then `<font color="#6fe07a">Descubierta</font>` else `<font color="#ff8a8a">Sin descubrir</font>`)
+		if not unlocked then
+			table.insert(lines, `<font color="#ff8a8a">Sin descubrir</font>`)
+		end
 		return table.concat(lines, "\n"), if unlocked then tier.color else LOCKED
 	end
 

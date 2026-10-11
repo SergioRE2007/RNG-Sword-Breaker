@@ -35,7 +35,7 @@ local function broadcast(player: Player, entry)
 		Remotes.GachaAura:FireAllClients(player, entry.index, entry.odds)
 	end
 	if entry.odds >= Config.Gacha.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)}! {Permanent.describeOdds(entry.index, entry.metal, entry.size)}`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
+		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)} ({Permanent.describeOdds(entry.index, entry.metal, entry.size)})!`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
 	end
 end
 
@@ -66,7 +66,7 @@ local function warnFull(player: Player)
 		return
 	end
 	fullNotice[player] = now
-	Remotes.Notice:FireClient(player, `Mochila llena ({Config.MaxSwords}/{Config.MaxSwords}): las armas nuevas ocupan el sitio de las menos raras.\nLas que no mejoran ninguna se venden solas.`, Color3.fromRGB(255, 170, 60))
+	Remotes.Notice:FireClient(player, "Mochila llena: las peores armas se venden solas.", Color3.fromRGB(255, 170, 60))
 end
 
 -- Saca una espada con la suerte `boost` del objeto que da la tirada (1 si no hay) por la suerte de armas propia

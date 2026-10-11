@@ -191,7 +191,7 @@ local function buildTag(part: BasePart, quality: number, class): BillboardGui
 	local text = Ui.label(chip, 17)
 	text.Size = UDim2.fromScale(1, 1)
 	text.ZIndex = Z.text
-	text.Text = `<font color="#{rarity.color:Lerp(WHITE, 0.35):ToHex()}">{upper(name)}</font>  x{Format.multiplier(part:GetAttribute("Luck") or 1)}`
+	text.Text = `<font color="#{rarity.color:Lerp(WHITE, 0.35):ToHex()}">{upper(name)}</font>`
 	return gui
 end
 
@@ -335,20 +335,13 @@ local function buildCard()
 	refs.sizeName.Size = UDim2.fromScale(1, 1)
 	refs.sizeName.ZIndex = Z.text
 
-	-- Rareza a la izquierda y tamaño exacto a la derecha.
+	-- Rareza (el tamaño ya va en la cabecera: su tanto por ciento exacto se quitó, sobraba).
 	local line = row(content, 2, 26)
 	refs.rarity = Ui.label(line, 21)
 	refs.rarity.Name = "Rarity"
-	refs.rarity.Size = UDim2.fromScale(0.58, 1)
+	refs.rarity.Size = UDim2.fromScale(1, 1)
 	refs.rarity.TextXAlignment = Enum.TextXAlignment.Left
 	refs.rarity.ZIndex = Z.text
-	refs.scale = Ui.label(line, 17)
-	refs.scale.Name = "Scale"
-	refs.scale.AnchorPoint = Vector2.new(1, 0)
-	refs.scale.Position = UDim2.fromScale(1, 0)
-	refs.scale.Size = UDim2.fromScale(0.42, 1)
-	refs.scale.TextXAlignment = Enum.TextXAlignment.Right
-	refs.scale.ZIndex = Z.text
 
 	-- Lo que da al romperse: suerte de armas y tiradas.
 	local stats = row(content, 3, 31)
@@ -412,7 +405,6 @@ local function fill(part: BasePart)
 	refs.sizeName.Text = upper(class.name)
 	refs.rarity.Text = upper(rarity.name)
 	refs.rarity.TextColor3 = color:Lerp(WHITE, 0.25)
-	refs.scale.Text = `<font color="{Ui.SOFT}">Tamaño</font> {math.round((part:GetAttribute("Scale") or 1) * 100)} %`
 	refs.luck.Text = `<font color="{Ui.SOFT}">Suerte</font> x{Format.multiplier(part:GetAttribute("Luck") or 1)}`
 	refs.rolls.Text = `<font color="{Ui.SOFT}">Tiradas</font> <font color="#{(if rolls > 1 then Ui.COLORS.coins else WHITE):ToHex()}">{rolls}</font>`
 	refs.hpFill.Size, refs.hpText.Text = hpGoal(part)

@@ -184,13 +184,13 @@ local function onUse(player: Player, requestedFamily: unknown, requestedTier: un
 	elseif tier == active.tier then
 		local cap = PotionInfo.cap(tier)
 		if active.seconds >= cap - 0.5 then
-			Remotes.Notice:FireClient(player, `{name} ya está al máximo de tiempo ({PotionInfo.minutes(cap)}).\nNo se ha gastado.`, RED)
+			Remotes.Notice:FireClient(player, `{name} ya está al máximo.`, RED)
 			return
 		end
 		seconds = math.min(active.seconds + base, cap)
 		message = `{name}: +{PotionInfo.minutes(base)}`
 	else
-		Remotes.Notice:FireClient(player, `Ya tienes una poción mejor activa: {PotionInfo.name(family, active.tier)}.\nNo se ha gastado la {name}.`, RED)
+		Remotes.Notice:FireClient(player, "Ya tienes una poción mejor activa.", RED)
 		return
 	end
 
@@ -200,7 +200,7 @@ local function onUse(player: Player, requestedFamily: unknown, requestedTier: un
 	end)
 	publish(player, family, data.potions[family])
 	ticking[player] = ticking[player] or os.clock()
-	Remotes.Notice:FireClient(player, `{message}\n{PotionInfo.effect(family, tier)} · quedan {PotionInfo.clock(seconds)}`, color)
+	Remotes.Notice:FireClient(player, message, color)
 end
 
 function Potions.start()

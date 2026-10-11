@@ -98,7 +98,15 @@ function SellMenu.start()
 			WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
 			Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
 			Ui.tip(cell, function()
-				return `{Permanent.name(copy.sword, copy.metal, copy.size)}\n{Permanent.describeOdds(copy.sword, copy.metal, copy.size)}\nRasgo: {if Config.Traits[copy.trait] then Config.Traits[copy.trait].name else "ninguno"} · Grado: {if Config.Grades[copy.grade] then Config.Grades[copy.grade].name else "ninguno"}`, tier.color
+				local lines = { Permanent.name(copy.sword, copy.metal, copy.size), Permanent.describeOdds(copy.sword, copy.metal, copy.size) }
+				local trait, grade = Config.Traits[copy.trait], Config.Grades[copy.grade]
+				if trait then
+					table.insert(lines, `Rasgo: {trait.name}`)
+				end
+				if grade then
+					table.insert(lines, `Grado: {grade.name}`)
+				end
+				return table.concat(lines, "\n"), tier.color
 			end, true)
 			cell.Activated:Connect(function()
 				confirming = false
