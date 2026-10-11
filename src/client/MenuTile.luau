@@ -192,6 +192,7 @@ function MenuTile.new(
 	label.Size = layout.label.size
 	label.TextScaled = true
 	label.Text = text
+	Ui.caps(label)
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = layout.label.text
 	limit.MinTextSize = 12
