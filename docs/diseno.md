@@ -230,3 +230,35 @@ Pedido por el usuario: el juego se completaba en minutos y las mejores armas sal
 - **Decidido por el usuario**: se desbloquea cada combinación exacta de arma + metal + tamaño (1436 casillas) y solo cuentan las tiradas propias, aunque la venta automática las venda; el comercio no cuenta. Lo que hubiera en la mochila al estrenarlo cuenta una vez.
 - **Probado en Studio**: vista base y vistas con metal y tamaño, cartel de las casillas, y que al romper objetos se apuntan las armas de Cobre que salen y su casilla se enciende con la ventana abierta. Sin errores de scripts.
 - **Sin probar / pendiente**: guardar y volver a entrar (los modos de prueba no guardan; lo cubre el test de `sanitize`), pantallas pequeñas (los botones laterales sobresalen de la ventana lo mismo que las pestañas de la mochila) y móvil. El logo del botón es el de la espada hasta que haya uno propio. No da premios por completarlo.
+
+## Equilibrio con cuatro armas (parte 3) — en curso, octubre de 2026
+
+Rama `equilibrio-4-armas`. Va en tres trozos, uno por conversación:
+
+- **3a (hecho, 11 oct)**: medidas en Studio con Auto y decisión del bucle. No se ha tocado código.
+- **3b (pendiente)**: adaptar `tools/equilibrio` (modelo, objetivo, informe, generar) y `BalanceSnapshots` / `applyProgress` a las 4 armas, sin regenerar. Comprobar que `informe.luau` corre.
+- **3c (pendiente)**: `generar.luau 9 aplicar` y `... 9 mazmorras aplicar`, retocar a mano las caídas de cristales hasta el bucle nuevo, informe, `tests/regressions.luau`, actualizar `CLAUDE.md` y PR.
+
+**Decidido por el usuario (11 oct)**: `objetivo.bucle` pasa a 30 000 cristales de rasgo y 30 000 de grado en 24 h (antes 15 000): Paradoja en la 1.ª arma en ~1,75 días de bucle y en las 4 en ~7. Hay que subir las caídas (`loot`, `chance` de `Config.Enemies` y `ClearDrops`) y adelantar las tablas `rasgo` y `grado` de `objetivo.luau`, porque el jugador normal también acumula el doble.
+
+### Medidas (Studio, Auto, sin VIP, 30 de velocidad al andar)
+
+Parcela:
+- Todo de un golpe: rompe lo que aparece. 40,7 objetos/min recién empezado (1,5 s de aparición) y 130–150/min con la parcela al máximo (30 huecos, 0,42 s), con unos 10 objetos esperando. El límite es la aparición, no el jugador.
+- Objetos de varias andanadas (parcela llena, 4 espadas): cada arma pega a su ritmo sin perder golpes (11,4 golpes/s con cuatro espadas) y entre un objeto roto y el primer golpe al siguiente pasan 0,20 s (`Chain` + un tick del servidor). No anda apenas ni se queda sin objetivo.
+- Salpicadura con la parcela llena (30 objetos; contado sobre la geometría, objetos de más por golpe según el alcance R = `area` × largo): R 5,6 → 0,40 · 7 → 0,67 · 8,4 → 0,97 · 9,7 → 1,20 · 11 → 1,47 · 12,8 → 1,97 · 13,6 → 2,37. Ajusta `(N − 1) · π · (R + 0,5)² / 7600`. Lanza (largo L): 9 → 0,20 · 11 → 0,28 · 13 → 0,39 · 14 → 0,45 · 16 → 0,56; ajusta `(N − 1) · 0,5 · (L + 1)² / 7600`.
+- El Auto no suelta un objeto durísimo (estuvo 2 min con un Obelisco): la `paciencia` del modelo sigue haciendo falta, en segundos.
+
+Mazmorra (zona 1, en solitario, Auto y Repetir; oleadas de 4, 5, 7 y 4 enemigos):
+- Todo de un golpe (4 espadas): 21,8–23,5 s de una partida a la siguiente. Cuatro espadas con 5 / 17 / 97 golpes para esbirro, bruto y jefe: 44,2 s. Cuatro martillos con 2 / 6 / 35 golpes: 32,5 s.
+- Cada oleada: 2 s de `WaveDelay`, ~0,7 s hasta el primer golpe y la pelea; al final, los 4 s de `ExitDelay`. La pelea son los golpes a ritmo de cada arma más ~0,58 s por cada enemigo después del primero (vuelo, lo que tarda en llegar y el empujón de abajo). Con eso salen 24,1 / 42,3 / 32,5 s (medido 22,8 / 44,2 / 32,5).
+- Ya no se echan encima en piña: las armas los cogen de uno en uno según entran en el círculo. Los martillos salpican poco: 0,035 enemigos de más por golpe y por cada otro enemigo vivo (alcance 9,7).
+- **Efecto a revisar**: cada golpe que no mata empuja al enemigo hacia fuera (`Dungeons.hit`, impulso de masa × 28). Con 4 armas pegando desde lejos, a los que aguantan varios golpes los sacan del círculo y las armas se quedan sin objetivo hasta que vuelven (2,4 s parados en una oleada de 9 s). Venía del arma en la mano; con las armas volando igual conviene quitarlo o bajarlo. Si se cambia, volver a medir la mazmorra.
+
+### Cómo va a quedar el modelo (3b)
+
+- El jugador lleva sus 4 armas de más daño (arma × metal × tamaño); rasgo y grado van por hueco. Las tablas `rasgo` y `grado` del calendario son las del arma 1; el arma j lleva cada uno cuando las tiradas acumuladas llegan a j veces su pity (la curva de tiradas sale de las propias tablas, interpolando en logaritmos). Con el equipo de las mazmorras, lleva los 4 mejores resultados que ha sacado.
+- Vida de un tipo = `golpes` × daño total: un golpe del calendario es una andanada de las 4.
+- Tiempo por objeto = máx(aparición, 0,20 s + lo que tardan los golpes, con el reloj de cada arma seguido de un objeto a otro) / eficiencia. Fuera `paseo` y `densidad`; la salpicadura multiplica el daño de hachas, martillos y lanzas con las fórmulas de arriba (N = huecos de la parcela).
+- Mazmorra: enemigo a enemigo con los relojes de las armas y los tiempos medidos. El daño recomendado de cada zona pasa a ser el que la deja en `comoda` segundos al jugador tipo a su hora (con la suma de 4 armas, a daño igual a la vida tardaría de 2 a 4 min).
+- `BalanceSnapshots`: lista de armas por foto, y `applyProgress` las equipa todas.
