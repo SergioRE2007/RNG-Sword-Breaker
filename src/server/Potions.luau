@@ -127,6 +127,11 @@ function Potions.give(player: Player, family: string, tier: number): string?
 	return key
 end
 
+-- Solo decide qué poción cae (familia y tier), sin darla: lo usa el botín retenido de las mazmorras (server/DropMenu).
+function Potions.choose(source: string, level: number): (string?, number?)
+	return pick(source, level)
+end
+
 -- Tira una poción de esa fuente y nivel de contenido y se la da al jugador. Devuelve la clave del objeto, o nil.
 function Potions.drop(player: Player, source: string, level: number): string?
 	local family, tier = pick(source, level)

@@ -615,9 +615,9 @@ function SceneryJapan.start()
 			mountain(folder, position + side * peak * size * 0.55 + position.Unit * rng:NextNumber(-40, 60), size, height)
 		end
 		for _ = 1, 3 do
-			local fog = decor(part(folder, "Fog", Vector3.new(rng:NextNumber(260, 380), rng:NextNumber(30, 44), rng:NextNumber(90, 130)), CFrame.lookAt(position, Vector3.zero) * CFrame.new(rng:NextNumber(-120, 120), rng:NextNumber(14, 26), rng:NextNumber(-60, -10)), Color3.fromRGB(255, 226, 236), Enum.Material.SmoothPlastic))
+			local fog = decor(part(folder, "Fog", Vector3.new(rng:NextNumber(260, 380), rng:NextNumber(30, 44), rng:NextNumber(90, 130)), CFrame.lookAt(position, Vector3.zero) * CFrame.new(rng:NextNumber(-120, 120), rng:NextNumber(230, 290), rng:NextNumber(-240, -200)), Color3.fromRGB(255, 226, 236), Enum.Material.SmoothPlastic))
 			fog.Shape = Enum.PartType.Ball
-			fog.Transparency = 0.2
+			fog.Transparency = 0.4
 			CollectionService:AddTag(fog, "FogBank")
 		end
 	end)
