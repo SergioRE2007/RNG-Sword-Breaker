@@ -178,6 +178,28 @@ function Ui.label(parent: Instance, textSize: number): TextLabel
 	return text
 end
 
+-- Mayúsculas (pedido por el usuario: el texto de todos los botones y menús). string.upper no toca las vocales con tilde,
+-- la ü ni la ñ, y las etiquetas de RichText (<font ...>) tienen que quedarse como están.
+local ACCENTS = { ["á"] = "Á", ["é"] = "É", ["í"] = "Í", ["ó"] = "Ó", ["ú"] = "Ú", ["ü"] = "Ü", ["ñ"] = "Ñ" }
+function Ui.upper(text: string): string
+	local result = string.gsub(">" .. text, ">([^<]*)", function(plain)
+		return ">" .. string.gsub(string.upper(plain), "\195[\161\169\173\179\186\188\177]", ACCENTS)
+	end)
+	return string.sub(result, 2)
+end
+
+-- Deja el texto de `item` en mayúsculas, también cada vez que se cambie.
+function Ui.caps(item: TextLabel | TextButton)
+	local function apply()
+		local upper = Ui.upper(item.Text)
+		if upper ~= item.Text then
+			item.Text = upper
+		end
+	end
+	apply()
+	item:GetPropertyChangedSignal("Text"):Connect(apply)
+end
+
 function Ui.button(parent: Instance, text: string, color: Color3): TextButton
 	local item = Instance.new("TextButton")
 	item.BackgroundColor3 = color
@@ -194,6 +216,13 @@ function Ui.button(parent: Instance, text: string, color: Color3): TextButton
 	Ui.stroke(item, BLACK, Ui.STYLE.border)
 	Ui.textStroke(item, 2)
 	Ui.pressable(item)
+	-- En mayúsculas el botón y los textos que se le pongan dentro (nombres de pestaña, precios...).
+	Ui.caps(item)
+	item.DescendantAdded:Connect(function(child)
+		if child:IsA("TextLabel") or child:IsA("TextButton") then
+			Ui.caps(child)
+		end
+	end)
 	return item
 end
 
@@ -952,6 +981,7 @@ function Ui.window(name: string, title: string, size: Vector2, icon: ((Frame) ->
 	heading.Size = UDim2.new(1, -90, 1, 0)
 	heading.TextXAlignment = Enum.TextXAlignment.Left
 	heading.Text = title
+	Ui.caps(heading)
 	heading.ZIndex = 3
 	local shine = Instance.new("UIGradient")
 	shine.Color = ColorSequence.new({
