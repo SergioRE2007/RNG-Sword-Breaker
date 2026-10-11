@@ -35,6 +35,8 @@ local BADGE = 38
 local PAD = 9
 local CLOCK_WIDTH = 74
 local TEXT_ROOM = 320 -- ancho máximo del nombre y de lo que da
+local ROW_GAP = 14 -- separación de la fila de botones pequeños (Ui.topButtons), y mínima con la barra de transporte
+local BELOW = 66 -- altura de la tarjeta cuando no cabe en la fila: justo debajo de sus botones (44 de alto a 14 del borde)
 -- Capas (la interfaz ordena el ZIndex globalmente): la tarjeta va con el resto del HUD y el cartel por encima de las
 -- ventanas y por debajo de los avisos (50).
 local Z_BANNER = 40
@@ -233,10 +235,39 @@ end
 -- Tarjeta --------------------------------------------------------------------------------------------------
 
 -- Ancho de la tarjeta según el texto más largo: el reloj tiene su hueco fijo, así que no baila con los segundos.
+-- Sitio de la tarjeta: en la fila de botones pequeños si cabe al lado de la barra de transporte; en pantallas estrechas
+-- no cabe y baja a su propia línea, debajo de esos botones y pegada al borde derecho.
+local function place()
+	if not outer then
+		return
+	end
+	local hud = Ui.hud()
+	local row = Ui.topButtons()
+	local travel = hud:FindFirstChild("Travel") :: GuiObject?
+	local hudScale = hud:FindFirstChildOfClass("UIScale")
+	local s = if hudScale then hudScale.Scale else 1
+	local rowLeft = row.AbsolutePosition.X -- borde izquierdo de la fila sin la tarjeta
+	if outer.Parent == row and outer.Visible then
+		rowLeft += outer.AbsoluteSize.X + ROW_GAP * s
+	end
+	local cardLeft = rowLeft - (outer.Size.X.Offset + ROW_GAP) * s
+	local fits = not travel or cardLeft >= travel.AbsolutePosition.X + travel.AbsoluteSize.X + ROW_GAP * s
+	if fits and outer.Parent ~= row then
+		outer.AnchorPoint = Vector2.zero
+		outer.Position = UDim2.new()
+		outer.Parent = row
+	elseif not fits and outer.Parent == row then
+		outer.AnchorPoint = Vector2.new(1, 0)
+		outer.Position = UDim2.new(1, -ROW_GAP, 0, BELOW)
+		outer.Parent = hud
+	end
+end
+
 local function fit()
 	if outer then
 		local text = math.min(math.max(title.TextBounds.X, detail.TextBounds.X), TEXT_ROOM)
 		outer.Size = UDim2.fromOffset(PAD + BADGE + 8 + math.ceil(text) + 14 + CLOCK_WIDTH + PAD, HEIGHT)
+		task.defer(place)
 	end
 end
 
@@ -315,6 +346,9 @@ function WeatherHud.build()
 		return table.concat(lines, "\n"), def.color
 	end, true)
 
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+		task.defer(place)
+	end)
 	WeatherHud.show(nil)
 end
 
@@ -371,10 +405,13 @@ function WeatherHud.tick(seconds: number, now: number)
 	clockPulse.Scale = if low and not Performance.get() then 1 + 0.1 * (0.5 + 0.5 * math.sin(now * 6)) else 1
 end
 
--- Esconde la tarjeta mientras ese hueco es de otro panel (mazmorra, forja).
+-- Esconde la tarjeta (cielo despejado para quien no es administrador, mazmorra, forja). También el marco de fuera, para
+-- que no deje su hueco en la fila de botones.
 function WeatherHud.setHidden(hidden: boolean)
 	if outer and card.Visible == hidden then
 		card.Visible = not hidden
+		outer.Visible = not hidden
+		task.defer(place)
 	end
 end
 

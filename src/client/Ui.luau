@@ -499,7 +499,7 @@ function Ui.topButtons(): Frame
 		local layout = Instance.new("UIListLayout")
 		layout.FillDirection = Enum.FillDirection.Horizontal
 		layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-		layout.Padding = UDim.new(0, 8)
+		layout.Padding = UDim.new(0, 14)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.Parent = row
 		topRow = row
