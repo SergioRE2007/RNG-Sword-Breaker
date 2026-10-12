@@ -344,6 +344,9 @@ function PassShop.start()
 		return "Tickets: los dan las misiones diarias y semanales", TICKET
 	end, true)
 
+	-- Lo que se mueve fuera de los escaparates de los pases (pedido por el usuario: quieto se veía tieso): los rayos de
+	-- cada medallón de trébol y del panel de códigos giran, y su logo flota y se balancea. Lo mueve el bucle de abajo.
+	local movers = {} -- { rays, logo, base = posición del logo, phase, over }
 	-- Todo va en una lista que se desliza, por secciones: los tréboles, los pases y los códigos.
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "Passes"
@@ -527,13 +530,17 @@ function PassShop.start()
 			end
 			MarketplaceService:PromptProductPurchase(player, product.id)
 		end)
+		local mover = { rays = rays, logo = logo, base = logo.Position, phase = order * 1.7, over = false }
+		table.insert(movers, mover)
 		tile.MouseEnter:Connect(function()
+			mover.over = true
 			if not Performance.get() then
 				ease(scale, 0.2, Enum.EasingStyle.Back, { Scale = HOVER })
 			end
 			ease(border, 0.15, Enum.EasingStyle.Quad, { Color = color:Lerp(WHITE, 0.55) })
 		end)
 		tile.MouseLeave:Connect(function()
+			mover.over = false
 			ease(scale, 0.2, Enum.EasingStyle.Quad, { Scale = 1 })
 			ease(border, 0.2, Enum.EasingStyle.Quad, { Color = BLACK })
 		end)
@@ -605,6 +612,7 @@ function PassShop.start()
 	codeIcon.BackgroundTransparency = 1
 	codeIcon.Parent = codes
 	Ui.ticketIcon(codeIcon, TICKET)
+	table.insert(movers, { rays = codeGlow, logo = codeIcon, base = codeIcon.Position, phase = 0, over = false })
 
 	local codeTitle = Ui.label(codes, 52)
 	codeTitle.Name = "Title"
@@ -858,6 +866,13 @@ function PassShop.start()
 				end
 				for _, entry in cards do
 					stepArt(entry.art, dt)
+				end
+				for _, mover in movers do
+					-- Con el ratón encima, todo más deprisa.
+					mover.phase += dt * (if mover.over then 2.4 else 1)
+					mover.rays.Rotation = mover.phase * 26
+					mover.logo.Position = mover.base + UDim2.fromOffset(0, math.sin(mover.phase * 2.6) * 3)
+					mover.logo.Rotation = math.sin(mover.phase * 1.9) * 6
 				end
 			end)
 		elseif not on and loop then
