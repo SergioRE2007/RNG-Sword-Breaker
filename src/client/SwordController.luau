@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local BagMenu = require(script.Parent.BagMenu)
+local Clover = require(script.Parent.Clover)
 local ForgeScene = require(script.Parent.ForgeScene)
 local OrbitWeapons = require(script.Parent.OrbitWeapons)
 local Targeting = require(script.Parent.Targeting)
@@ -105,7 +106,7 @@ local function pickNear(): BasePart?
 end
 
 local function busy(): boolean
-	return ForgeScene.isActive() or Ui.anyOpen() or UserInputService:GetFocusedTextBox() ~= nil
+	return ForgeScene.isActive() or Clover.isActive() or Ui.anyOpen() or UserInputService:GetFocusedTextBox() ~= nil
 end
 
 function SwordController.start()

@@ -598,7 +598,9 @@ local function buildTrade()
 	allowedRow("Monedas", Ui.COLORS.coins, "coins")
 	allowedRow("Gemas", Ui.COLORS.purple, "gems")
 	for _, key in Config.ItemOrder do
-		allowedRow(Config.Items[key].name, Config.Items[key].color, "items", key)
+		if not Config.Items[key].noTrade then
+			allowedRow(Config.Items[key].name, Config.Items[key].color, "items", key)
+		end
 	end
 
 	-- Pestañas.

@@ -34,6 +34,9 @@ require(script.Rebirth).start()
 require(script.Leaderboards).start()
 require(script.BestRoll).start()
 require(script.Missions).start()
+require(script.TicketShop).start() -- lo que se compra con tickets en el puesto de Misiones
+require(script.Clover).start() -- Trébol de la suerte: después de Destructibles
+require(script.Products).start() -- productos de Robux (ProcessReceipt)
 require(script.AutoPlay).start() -- autoclicker y Auto de la parcela: después de Plots y Passes
 require(script.Rejoin).start() -- reconexión antes de la expulsión por inactividad: después de Party, Dungeons y AutoPlay
 require(script.Admin).start() -- antes de quien obedece órdenes de admin

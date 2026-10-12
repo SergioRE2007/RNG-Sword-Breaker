@@ -1,5 +1,5 @@
 -- Misiones diarias y semanales (ver shared/MissionList): cuenta el progreso, lo publica en el atributo
--- "Missions" del jugador (JSON) y paga la recompensa en Fichas de misión al cobrar. También construye el
+-- "Missions" del jugador (JSON) y paga la recompensa en tickets (Config.Items.missionToken) al cobrar. También construye el
 -- puesto "Misiones" del hub (el mismo que las tiendas de Rasgos y Grados). El progreso se guarda en
 -- PlayerData (data.missions) y se reinicia solo al cambiar el día o la semana.
 local HttpService = game:GetService("HttpService")

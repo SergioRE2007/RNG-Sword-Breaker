@@ -1,36 +1,43 @@
 -- Misiones diarias y semanales: la lista de posibles y cómo se eligen. Cada día (y cada semana) todos los
 -- jugadores tienen las mismas tres misiones, elegidas con una semilla fija a partir del número de día (o de
 -- semana, empezando en lunes, hora UTC), así que servidor y cliente calculan lo mismo sin mandarse la lista.
--- La recompensa son Fichas de misión (Config.Items.missionToken), la moneda gratuita del juego.
+-- La recompensa son tickets (Config.Items.missionToken), la moneda gratuita del juego, con la que se compran los pases
+-- de la Tienda. Lo que paga cada misión no va con ella sino con su puesto del día (REWARDS): así, salgan las que salgan,
+-- un día da 50 tickets como mucho y una semana 200 (pedido por el usuario).
 local MissionList = {}
 
 local DAY = 86400
 
 -- kind = qué cuenta (lo suma server/Missions.add): "breaks" objetos rotos, "gacha" tiradas de arma (las dan los objetos),
--- "traitRolls" rasgos tirados, "upgrades" mejoras compradas, "minutes" minutos jugados, "rebirth"
--- renacimientos y "rareSword" espadas de 1 entre 1M o más.
+-- "traitRolls" rasgos tirados, "gradeRolls" grados tirados, "minutes" minutos jugados, "dungeons" mazmorras superadas,
+-- "enemies" enemigos de mazmorra derrotados y "rareSword" armas de 1 entre 1M o más.
+-- Pedido por el usuario: que sean de jugar de verdad (las primeras se hacían en un rato). No hay de comprar mejoras ni
+-- de renacer: quien ya lo tiene todo no podría cumplirlas.
 MissionList.pool = {
 	daily = {
-		{ id = "d_breaks60", kind = "breaks", goal = 60, reward = 2, text = "Rompe 60 objetos" },
-		{ id = "d_breaks150", kind = "breaks", goal = 150, reward = 3, text = "Rompe 150 objetos" },
-		{ id = "d_gacha15", kind = "gacha", goal = 15, reward = 2, text = "Consigue 15 tiradas de arma" },
-		{ id = "d_gacha40", kind = "gacha", goal = 40, reward = 3, text = "Consigue 40 tiradas de arma" },
-		{ id = "d_upgrades3", kind = "upgrades", goal = 3, reward = 2, text = "Compra 3 mejoras" },
-		{ id = "d_minutes20", kind = "minutes", goal = 20, reward = 3, text = "Juega 20 minutos" },
-		{ id = "d_traits5", kind = "traitRolls", goal = 5, reward = 3, text = "Tira 5 rasgos" },
+		{ id = "d_minutes30", kind = "minutes", goal = 30, text = "Juega 30 minutos" },
+		{ id = "d_breaks1000", kind = "breaks", goal = 1000, text = "Rompe 1000 objetos" },
+		{ id = "d_gacha1000", kind = "gacha", goal = 1000, text = "Consigue 1000 tiradas de arma" },
+		{ id = "d_dungeons10", kind = "dungeons", goal = 10, text = "Supera 10 mazmorras" },
+		{ id = "d_enemies300", kind = "enemies", goal = 300, text = "Derrota 300 enemigos" },
+		{ id = "d_traits15", kind = "traitRolls", goal = 15, text = "Tira 15 rasgos" },
+		{ id = "d_grades15", kind = "gradeRolls", goal = 15, text = "Forja 15 grados" },
 	},
 	weekly = {
-		{ id = "w_breaks1000", kind = "breaks", goal = 1000, reward = 10, text = "Rompe 1000 objetos" },
-		{ id = "w_gacha250", kind = "gacha", goal = 250, reward = 10, text = "Consigue 250 tiradas de arma" },
-		{ id = "w_minutes180", kind = "minutes", goal = 180, reward = 12, text = "Juega 3 horas" },
-		{ id = "w_upgrades25", kind = "upgrades", goal = 25, reward = 10, text = "Compra 25 mejoras" },
-		{ id = "w_traits50", kind = "traitRolls", goal = 50, reward = 12, text = "Tira 50 rasgos" },
-		{ id = "w_rebirth1", kind = "rebirth", goal = 1, reward = 15, text = "Renace una vez" },
-		{ id = "w_rare3", kind = "rareSword", goal = 3, reward = 15, text = "Saca 3 espadas de 1 entre 1M o más" },
+		{ id = "w_dungeons100", kind = "dungeons", goal = 100, text = "Supera 100 mazmorras" },
+		{ id = "w_breaks20000", kind = "breaks", goal = 20000, text = "Rompe 20.000 objetos" },
+		{ id = "w_gacha20000", kind = "gacha", goal = 20000, text = "Consigue 20.000 tiradas de arma" },
+		{ id = "w_minutes600", kind = "minutes", goal = 600, text = "Juega 10 horas" },
+		{ id = "w_enemies3000", kind = "enemies", goal = 3000, text = "Derrota 3000 enemigos" },
+		{ id = "w_traits150", kind = "traitRolls", goal = 150, text = "Tira 150 rasgos" },
+		{ id = "w_grades150", kind = "gradeRolls", goal = 150, text = "Forja 150 grados" },
+		{ id = "w_rare100", kind = "rareSword", goal = 100, text = "Saca 100 armas de 1 entre 1M o más" },
 	},
 }
 
 MissionList.PER_PERIOD = 3
+-- Tickets de cada puesto: 50 al día y 200 a la semana entre las tres.
+MissionList.REWARDS = { daily = { 15, 15, 20 }, weekly = { 60, 60, 80 } }
 
 -- Números de día y de semana (UTC) del instante `now` (segundos Unix).
 function MissionList.dayId(now: number): number
@@ -65,7 +72,9 @@ function MissionList.pick(period: string, id: number)
 	end
 	local result = {}
 	for index = 1, MissionList.PER_PERIOD do
-		result[index] = pool[index]
+		local mission = table.clone(pool[index])
+		mission.reward = MissionList.REWARDS[period][index]
+		result[index] = mission
 	end
 	return result
 end

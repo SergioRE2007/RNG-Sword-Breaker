@@ -9,6 +9,7 @@ require(script.Index).start()
 require(script.Settings).start()
 require(script.Rebirth).start()
 require(script.Missions).start()
+require(script.Clover).start() -- Trébol de la suerte: elegir objeto y brillo de los que ya lo llevan
 require(script.PassShop).start()
 require(script.ChatTags).start() -- etiqueta de los pases (VIP) delante del nombre en el chat
 require(script.Trade).start()

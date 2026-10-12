@@ -21,6 +21,7 @@ local DungeonLobby = require(script.Parent.DungeonLobby)
 local DungeonThemes = require(script.Parent.DungeonThemes)
 local Loot = require(script.Parent.Loot)
 local DropMenu = require(script.Parent.DropMenu)
+local Missions = require(script.Parent.Missions)
 
 local Dungeons = {}
 
@@ -398,6 +399,7 @@ local function win(run)
 	for _, member in run.order do
 		if member.player then
 			Loot.roll(member.player, cfg.ClearDrops, run.context, member.summary)
+			Missions.add(member.player, "dungeons")
 			result(run, member, true, "clear")
 		end
 	end
@@ -441,6 +443,7 @@ local function kill(run, body: BasePart, killer: Player)
 	for _, member in table.clone(run.order) do
 		if member.player and member.player.Parent then
 			Loot.roll(member.player, enemy.def.drops, run.context, member.summary)
+			Missions.add(member.player, "enemies") -- cuenta para todo el grupo, lo mate quien lo mate
 		end
 	end
 	publish(run)

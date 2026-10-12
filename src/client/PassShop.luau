@@ -4,7 +4,10 @@
 -- etiqueta gorda "x2", "VIP"...), el nombre, lo que da y el botón de compra. Al pasar el ratón la tarjeta crece, el
 -- logo salta y todo se acelera; al comprar, la tarjeta da un bote y suelta destellos.
 -- La compra la hace Roblox (MarketplaceService); el servidor (server/Passes) publica cuáles tiene el jugador en los
--- atributos "Pass_<clave>".
+-- atributos "Pass_<clave>". Al lado del botón de Robux va el de tickets de misión (Stats.ticketPrice; BuyPassTickets):
+-- pide confirmar con un segundo toque, y los tickets que se tienen salen en la cabecera (Header.Tickets).
+-- Delante de los pases van los productos de Config.Products (packs de Trébol de la suerte), con la misma tarjeta
+-- (Product_<clave>): se compran las veces que se quiera, solo con Robux (server/Products), y no llevan botón de tickets.
 -- Capas: todo va en la capa por defecto (la interfaz ordena el ZIndex globalmente), así que manda el orden en que
 -- se crean las piezas de cada tarjeta: fondo, escaparate (rombos, lluvia, rayos, canto, logo, etiqueta, cinta),
 -- textos y botón.
@@ -15,6 +18,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Format = require(ReplicatedStorage.Shared.Format)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
@@ -27,6 +32,8 @@ local WHITE = Color3.new(1, 1, 1)
 local BLACK = Color3.new(0, 0, 0)
 local ROBUX = Color3.fromRGB(70, 215, 120)
 local GOLD = Color3.fromRGB(255, 225, 90)
+local TICKET = Color3.fromRGB(255, 170, 40) -- botón y contador de tickets
+local CONFIRM_TIME = 3 -- segundos que dura el "¿Seguro?" del botón de tickets
 
 -- Medidas de la tarjeta (píxeles de diseño: la ventana entera se encoge con su UIScale).
 local COLUMNS = 3
@@ -42,6 +49,21 @@ local ICON = 116 -- lado del logo grande
 local TILE = 40 -- periodo de los rombos del escaparate
 local DROPS = 7 -- logos pequeños que caen por tarjeta
 local HOVER = 1.04 -- lo que crece la tarjeta con el ratón encima
+
+-- Tickets con todas sus cifras ("2.997"): abreviado ("2.99K") no se sabe cuántos faltan.
+local function count(amount: number): string
+	if amount ~= amount or amount >= 1e9 then
+		return Format.short(amount)
+	end
+	local text = tostring(math.floor(amount))
+	while true do
+		local grouped, changed = string.gsub(text, "^(%d+)(%d%d%d)", "%1.%2")
+		text = grouped
+		if changed == 0 then
+			return text
+		end
+	end
+end
 
 local function ease(target: Instance, time: number, style: Enum.EasingStyle, goal)
 	TweenService:Create(target, TweenInfo.new(time, style, Enum.EasingDirection.Out), goal):Play()
@@ -278,7 +300,15 @@ local function celebrate(entry)
 end
 
 function PassShop.start()
-	local rows = math.ceil(#Config.GamepassOrder / COLUMNS)
+	-- Lo que se vende, en orden: primero los productos y luego los pases.
+	local offers = {}
+	for _, key in Config.ProductOrder do
+		table.insert(offers, { key = key, def = Config.Products[key], product = true })
+	end
+	for _, key in Config.GamepassOrder do
+		table.insert(offers, { key = key, def = Config.Gamepasses[key], product = false })
+	end
+	local rows = math.ceil(#offers / COLUMNS)
 	-- Como mucho se ven SHOWN_ROWS filas y el resto se alcanza deslizando (pedido por el usuario: con una tercera fila
 	-- la ventana entera se encogía para caber y quedaba diminuta); si hay más, asoma un trozo de la siguiente para que
 	-- se vea que sigue. Alto: cabecera y márgenes de Ui.window (78) y la rejilla. Ancha y baja a propósito (pedido por
@@ -288,6 +318,32 @@ function PassShop.start()
 	local window, body = Ui.window("PassShop", "Tienda", Vector2.new(1200, 78 + 4 + shown * (CARD_HEIGHT + GAP) + 16 + (if rows > shown then PEEK else 0)), function(parent)
 		Ui.image(parent, "tienda_robux")
 	end)
+
+	-- Tickets que tiene el jugador, en la cabecera, a la izquierda de la X.
+	local wallet = Instance.new("Frame")
+	wallet.Name = "Tickets"
+	wallet.AnchorPoint = Vector2.new(1, 0.5)
+	wallet.Position = UDim2.new(1, -72, 0.5, 0)
+	wallet.Size = UDim2.fromOffset(190, 42)
+	wallet.Parent = window.Header
+	Ui.pill(wallet, Color3.fromRGB(34, 36, 66), 12)
+	local walletIcon = Instance.new("Frame")
+	walletIcon.Name = "Icon"
+	walletIcon.AnchorPoint = Vector2.new(0, 0.5)
+	walletIcon.Position = UDim2.new(0, 6, 0.5, 0)
+	walletIcon.Size = UDim2.fromOffset(34, 34)
+	walletIcon.BackgroundTransparency = 1
+	walletIcon.Parent = wallet
+	Ui.ticketIcon(walletIcon, TICKET)
+	local walletText = Ui.label(wallet, 24)
+	walletText.Name = "Amount"
+	walletText.Position = UDim2.fromOffset(44, 0)
+	walletText.Size = UDim2.new(1, -54, 1, 0)
+	walletText.TextXAlignment = Enum.TextXAlignment.Right
+	walletText.TextColor3 = GOLD
+	Ui.tip(wallet, function()
+		return "Tickets: los dan las misiones diarias y semanales", TICKET
+	end, true)
 
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "Passes"
@@ -315,11 +371,11 @@ function PassShop.start()
 	grid.Parent = list
 
 	local cards = {}
-	for order, key in Config.GamepassOrder do
-		local pass = Config.Gamepasses[key]
+	for order, offer in offers do
+		local key, pass, product = offer.key, offer.def, offer.product
 		-- La casilla de la rejilla es un hueco; la tarjeta va dentro, centrada, para poder crecer desde su centro.
 		local slot = Instance.new("Frame")
-		slot.Name = "Pass_" .. key
+		slot.Name = (if product then "Product_" else "Pass_") .. key
 		slot.LayoutOrder = order
 		slot.BackgroundTransparency = 1
 		slot.Parent = list
@@ -374,13 +430,29 @@ function PassShop.start()
 
 		local buy = Ui.button(card, "", ROBUX)
 		buy.Name = "Buy"
-		buy.AnchorPoint = Vector2.new(0.5, 1)
-		buy.Position = UDim2.new(0.5, 0, 1, -PAD - 2)
-		buy.Size = UDim2.new(1, -PAD * 2 - 4, 0, buyHeight)
+		buy.AnchorPoint = Vector2.new(0, 1)
+		buy.Position = UDim2.new(0, PAD + 2, 1, -PAD - 2)
+		buy.Size = UDim2.new(0.5, -PAD - 5, 0, buyHeight)
 		buy.TextSize = 30
 		Ui.sparkle(buy, 3)
 
-		local entry = { key = key, pass = pass, card = card, scale = scale, border = border, art = art, buy = buy, price = pass.price }
+		-- Lo mismo con tickets de misión, a la derecha: el icono y el precio.
+		local tickets = Ui.button(card, "", TICKET)
+		tickets.Name = "Tickets"
+		tickets.AnchorPoint = Vector2.new(1, 1)
+		tickets.Position = UDim2.new(1, -PAD - 2, 1, -PAD - 2)
+		tickets.Size = buy.Size
+		tickets.TextSize = 26
+		local ticketIcon = Instance.new("Frame")
+		ticketIcon.Name = "Icon"
+		ticketIcon.AnchorPoint = Vector2.new(0, 0.5)
+		ticketIcon.Position = UDim2.new(0, 8, 0.5, 0)
+		ticketIcon.Size = UDim2.fromOffset(32, 32)
+		ticketIcon.BackgroundTransparency = 1
+		ticketIcon.Parent = tickets
+		Ui.ticketIcon(ticketIcon, TICKET)
+
+		local entry = { key = key, pass = pass, card = card, scale = scale, border = border, art = art, buy = buy, price = pass.price, product = product, tickets = tickets, ticketIcon = ticketIcon, confirm = 0 }
 		cards[key] = entry
 
 		-- Ratón encima: la tarjeta crece, el borde se enciende del color del pase y el escaparate se acelera.
@@ -401,7 +473,7 @@ function PassShop.start()
 		-- El precio de verdad lo dice Roblox (el de Config es solo el que se enseña mientras llega).
 		if pass.id > 0 then
 			task.spawn(function()
-				local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, pass.id, Enum.InfoType.GamePass)
+				local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, pass.id, if product then Enum.InfoType.Product else Enum.InfoType.GamePass)
 				if ok and type(info) == "table" and info.PriceInRobux then
 					entry.price = info.PriceInRobux
 					if buy.Parent and not Stats.pass(player, key) then
@@ -416,16 +488,58 @@ function PassShop.start()
 			end
 			if pass.id <= 0 then
 				Sfx.play("error")
-				Ui.toast("Este pase aún no está a la venta", Ui.COLORS.orange)
+				Ui.toast("Aún no está a la venta", Ui.COLORS.orange)
 				return
 			end
-			MarketplaceService:PromptGamePassPurchase(player, pass.id)
+			if product then
+				MarketplaceService:PromptProductPurchase(player, pass.id)
+			else
+				MarketplaceService:PromptGamePassPurchase(player, pass.id)
+			end
 		end)
 	end
 
-	local function refresh()
+	local refresh
+	for key, entry in cards do
+		entry.tickets.Activated:Connect(function()
+			if entry.product or Stats.pass(player, key) then
+				return
+			end
+			local missing = Stats.ticketPrice(key) - (player:GetAttribute("Item_missionToken") or 0)
+			if missing > 0 then
+				Sfx.play("error")
+				Ui.toast(`Te faltan {count(missing)} tickets: los dan las misiones`, Ui.COLORS.orange)
+				return
+			end
+			-- Primer toque: pregunta. El segundo, antes de CONFIRM_TIME s, compra.
+			local now = os.clock()
+			if now - entry.confirm <= CONFIRM_TIME then
+				entry.confirm = 0
+				Remotes.BuyPassTickets:FireServer(key)
+			else
+				entry.confirm = now
+				task.delay(CONFIRM_TIME + 0.05, refresh)
+			end
+			refresh()
+		end)
+	end
+
+	function refresh()
+		local owns = player:GetAttribute("Item_missionToken") or 0
+		walletText.Text = count(owns)
 		for key, entry in cards do
-			local owned = Stats.pass(player, key)
+			local owned = not entry.product and Stats.pass(player, key)
+			local asking = os.clock() - entry.confirm <= CONFIRM_TIME
+			local cost = if entry.product then 0 else Stats.ticketPrice(key)
+			local enough = owns >= cost
+			local alone = owned or entry.product -- sin botón de tickets: el de Robux ocupa todo el ancho
+			entry.buy.Size = if alone then UDim2.new(1, -PAD * 2 - 4, 0, entry.buy.Size.Y.Offset) else entry.tickets.Size
+			entry.tickets.Visible = not alone
+			entry.ticketIcon.Visible = not asking
+			entry.tickets.Text = if asking then "¿Seguro?" else `      {count(cost)}`
+			entry.tickets.TextSize = if asking then 22 else 26
+			entry.tickets.BackgroundColor3 = if asking then Ui.COLORS.green elseif enough then TICKET else TICKET:Lerp(Color3.fromRGB(70, 72, 90), 0.7)
+			entry.tickets.TextColor3 = if enough then WHITE else Color3.fromRGB(190, 192, 205)
 			entry.buy.Text = if owned then "¡Lo tienes!" elseif entry.pass.id <= 0 then "Pronto" else `R$ {entry.price}`
 			entry.buy.BackgroundColor3 = if owned then Ui.COLORS.blue elseif entry.pass.id <= 0 then Ui.COLORS.gray else ROBUX
 			entry.buy.TextSize = if owned then 22 else 26
@@ -440,6 +554,8 @@ function PassShop.start()
 					celebrate(entry)
 				end
 			end
+			refresh()
+		elseif attribute == "Item_missionToken" then
 			refresh()
 		end
 	end)

@@ -61,10 +61,8 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 		return
 	end
 	lastRoll[player] = now
-	if kind == "traits" then
-		-- Se pide aquí y no arriba: Missions usa ModifierShops para construir su puesto.
-		require(script.Parent.Missions).add(player, "traitRolls", tries)
-	end
+	-- Se pide aquí y no arriba: Missions usa ModifierShops para construir su puesto.
+	require(script.Parent.Missions).add(player, if kind == "traits" then "traitRolls" else "gradeRolls", tries)
 
 	local order = Modifiers.priority(data.traitPriority)
 	if kind == "traits" and type(priority) == "string" and #priority <= 200 then -- el orden de verdad son unas pocas palabras
