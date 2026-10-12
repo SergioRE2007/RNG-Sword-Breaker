@@ -34,6 +34,7 @@ local ROBUX = Color3.fromRGB(70, 215, 120)
 local GOLD = Color3.fromRGB(255, 225, 90)
 local TICKET = Color3.fromRGB(255, 170, 40) -- botón y contador de tickets
 local CONFIRM_TIME = 3 -- segundos que dura el "¿Seguro?" del botón de tickets
+local ROBUX_SIGN = "\u{E002}" -- el símbolo de Robux: un carácter propio de Roblox, que pintan todas sus fuentes
 
 -- Medidas de la tarjeta (píxeles de diseño: la ventana entera se encoge con su UIScale).
 local COLUMNS = 3
@@ -477,7 +478,7 @@ function PassShop.start()
 				if ok and type(info) == "table" and info.PriceInRobux then
 					entry.price = info.PriceInRobux
 					if buy.Parent and not Stats.pass(player, key) then
-						buy.Text = `R$ {entry.price}`
+						buy.Text = `{ROBUX_SIGN} {entry.price}`
 					end
 				end
 			end)
@@ -540,7 +541,7 @@ function PassShop.start()
 			entry.tickets.TextSize = if asking then 22 else 26
 			entry.tickets.BackgroundColor3 = if asking then Ui.COLORS.green elseif enough then TICKET else TICKET:Lerp(Color3.fromRGB(70, 72, 90), 0.7)
 			entry.tickets.TextColor3 = if enough then WHITE else Color3.fromRGB(190, 192, 205)
-			entry.buy.Text = if owned then "¡Lo tienes!" elseif entry.pass.id <= 0 then "Pronto" else `R$ {entry.price}`
+			entry.buy.Text = if owned then "¡Lo tienes!" elseif entry.pass.id <= 0 then "Pronto" else `{ROBUX_SIGN} {entry.price}`
 			entry.buy.BackgroundColor3 = if owned then Ui.COLORS.blue elseif entry.pass.id <= 0 then Ui.COLORS.gray else ROBUX
 			entry.buy.TextSize = if owned then 22 else 26
 		end
