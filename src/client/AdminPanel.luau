@@ -2,7 +2,8 @@
 -- pone server/Admin: el dueño y los de Config.Admins; en Studio, con Config.Test.Admin). A los demás no se les crea
 -- ni el botón ni la ventana, y aunque alguien se la fabricara, el servidor comprueba cada orden.
 -- La ventana `Hud.Admin` lleva un panel por pestaña (como la mochila): `TabWeather` y `Body.Weather`, y los de
--- client/AdminTools (`TabPlayers` y `TabServer`: regalar, ir, traer, echar y avisar). Un
+-- client/AdminTools (`TabPlayers` y `TabServer`: regalar, ir, traer, echar y avisar) y el de client/AdminWeapons
+-- (`TabWeapons`: dar armas a medida). Un
 -- panel nuevo = una entrada en PANELS con su función, que recibe el marco donde montarse. El botón es pequeño y va
 -- arriba a la derecha, junto al de Ajustes: `Hud.HudRoot.TopButtons.Admin`.
 -- Panel del clima: una casilla por clima de Config.Weather (pulsarla lo pone ya en este servidor, para todos y con
@@ -22,6 +23,7 @@ local WeatherInfo = require(ReplicatedStorage.Shared.WeatherInfo)
 local Performance = require(script.Parent.Performance)
 local Ui = require(script.Parent.Ui)
 local AdminTools = require(script.Parent.AdminTools)
+local AdminWeapons = require(script.Parent.AdminWeapons)
 local WeatherHud = require(script.Parent.WeatherHud)
 
 local AdminPanel = {}
@@ -219,6 +221,13 @@ local PANELS = {
 			Ui.image(parent, "grupo")
 		end,
 		build = AdminTools.players,
+	},
+	{
+		key = "Weapons", name = Lang.t(nil, "Weapons"), color = Color3.fromRGB(215, 70, 90),
+		icon = function(parent: Frame)
+			Ui.image(parent, "espada")
+		end,
+		build = AdminWeapons.build,
 	},
 	{
 		key = "Server", name = Lang.t(nil, "Server"), color = Color3.fromRGB(150, 110, 235),
