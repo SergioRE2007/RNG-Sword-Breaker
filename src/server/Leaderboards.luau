@@ -415,7 +415,7 @@ local function localEntries(metric)
 	local entries = {}
 	for _, player in Players:GetPlayers() do
 		local data = PlayerData.read(player)
-		local score = data and metric.score(data)
+		local score = data and not table.find(Config.Unranked, player.UserId) and metric.score(data)
 		if score then
 			table.insert(entries, { userId = player.UserId, name = player.DisplayName, score = score })
 		end
@@ -431,8 +431,9 @@ local function refresh(metric)
 	if store then
 		-- Sube las puntuaciones de los jugadores de este servidor y lee el top.
 		for _, player in Players:GetPlayers() do
+			-- Los de Config.Unranked van aparte: ni se suben ni se enseñan.
 			local data = PlayerData.read(player)
-			local score = data and metric.score(data)
+			local score = data and not table.find(Config.Unranked, player.UserId) and metric.score(data)
 			if score and score > 0 then
 				pcall(store.SetAsync, store, tostring(player.UserId), score)
 			end
@@ -443,7 +444,7 @@ local function refresh(metric)
 			local entries = {}
 			for _, item in page do
 				local userId = tonumber(item.key)
-				if userId then
+				if userId and not table.find(Config.Unranked, userId) then
 					table.insert(entries, { userId = userId, name = nameOf(userId), score = item.value })
 				end
 			end

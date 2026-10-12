@@ -300,6 +300,10 @@ end
 -- Un arma que un jugador acaba de sacar y se ha quedado (desde Gacha): si es la más rara de la historia, sube al
 -- pedestal y se avisa a todos.
 function BestRoll.submit(player: Player, sword: number, metal: number?, size: number?)
+	-- Los de Config.Unranked van aparte: sus tiradas no cuentan para el récord.
+	if table.find(Config.Unranked, player.UserId) then
+		return
+	end
 	local record = {
 		userId = player.UserId,
 		name = player.DisplayName,
