@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local ObjectModel = require(ReplicatedStorage.Shared.ObjectModel)
+local Shards = require(script.Parent.Shards)
 
 local ObjectBreak = {}
 
@@ -226,7 +227,6 @@ function ObjectBreak.play(cframe: CFrame, size: Vector3, index: number)
 			piece.Transparency = transparency
 			piece.TopSurface = Enum.SurfaceType.Smooth
 			piece.BottomSurface = Enum.SurfaceType.Smooth
-			piece.CollisionGroup = "Debris"
 			local offset = Vector3.new(
 				rng:NextNumber(-0.4, 0.4) * size.X,
 				rng:NextNumber(-0.4, 0.4) * size.Y,
@@ -239,9 +239,13 @@ function ObjectBreak.play(cframe: CFrame, size: Vector3, index: number)
 			outward = Vector3.new(outward.X, 0, outward.Z)
 			local direction = if outward.Magnitude > 0.01 then outward.Unit else Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)).Unit
 			local small = math.clamp(1.4 - relative, 0.7, 1.3) -- los trozos pequeños salen más lejos
-			piece.AssemblyLinearVelocity = direction * force * rng:NextNumber(0.5, 1.2) * small
-				+ Vector3.new(0, force * rng:NextNumber(0.6, 1.5), 0)
-			piece.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-12, 12), rng:NextNumber(-12, 12), rng:NextNumber(-12, 12))
+			-- Sin físicas ni choque (client/Shards): un trozo sólido que se cruza acerca la cámara al personaje.
+			Shards.launch(
+				piece,
+				direction * force * rng:NextNumber(0.5, 1.2) * small + Vector3.new(0, force * rng:NextNumber(0.6, 1.5), 0),
+				Vector3.new(rng:NextNumber(-12, 12), rng:NextNumber(-12, 12), rng:NextNumber(-12, 12)),
+				cframe.Y - size.Y / 2
+			)
 			-- La luz se apaga antes que la piedra.
 			fade(piece, if role == "Glow" then LIFETIME * 0.6 else LIFETIME)
 		end

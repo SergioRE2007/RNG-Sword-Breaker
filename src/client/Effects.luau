@@ -14,6 +14,7 @@ local FloatText = require(script.Parent.FloatText)
 local ObjectBreak = require(script.Parent.ObjectBreak)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
+local Shards = require(script.Parent.Shards)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Effects = {}
@@ -139,16 +140,19 @@ local function shatter(cframe: CFrame, size: Vector3, color: Color3, material: E
 				piece.Material = material
 				piece.TopSurface = Enum.SurfaceType.Smooth
 				piece.BottomSurface = Enum.SurfaceType.Smooth
-				piece.CollisionGroup = "Debris"
 				piece.CFrame = cframe * CFrame.new(offset)
 				piece.Parent = workspace
 
 				local outward = cframe:VectorToWorldSpace(offset)
 				outward = Vector3.new(outward.X, 0, outward.Z)
 				local direction = if outward.Magnitude > 0.01 then outward.Unit else Vector3.zero
-				piece.AssemblyLinearVelocity = direction * force * rng:NextNumber(0.5, 1.2)
-					+ Vector3.new(0, force * rng:NextNumber(0.6, 1.4), 0)
-				piece.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-12, 12), rng:NextNumber(-12, 12), rng:NextNumber(-12, 12))
+				-- Sin físicas ni choque (client/Shards): un trozo sólido que se cruza acerca la cámara al personaje.
+				Shards.launch(
+					piece,
+					direction * force * rng:NextNumber(0.5, 1.2) + Vector3.new(0, force * rng:NextNumber(0.6, 1.4), 0),
+					Vector3.new(rng:NextNumber(-12, 12), rng:NextNumber(-12, 12), rng:NextNumber(-12, 12)),
+					cframe.Y - size.Y / 2
+				)
 
 				task.delay(FRAGMENT_LIFETIME, function()
 					TweenService:Create(piece, TweenInfo.new(FRAGMENT_FADE), { Transparency = 1 }):Play()

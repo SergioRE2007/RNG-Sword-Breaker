@@ -60,12 +60,14 @@ end
 
 -- Aura por rareza (posición en Config.ObjectRarities; la 1, Común, no lleva): `pad` = transparencia de la base de
 -- luz, `sparks` = chispas por segundo, `light` = brillo de la luz, `outline` = contorno, `beam` = grosor del rayo.
+-- Todo flojo (pedido por el usuario: los objetos brillaban demasiado): el neón y las luces de varios objetos juntos
+-- se suman y, con el brillo de pantalla, quemaban la parcela.
 local QUALITY_FX = {
-	[2] = { pad = 0.86, sparks = 3 },
-	[3] = { pad = 0.8, sparks = 6, light = 0.5 },
-	[4] = { pad = 0.74, sparks = 10, light = 0.8, outline = true },
-	[5] = { pad = 0.68, sparks = 16, light = 1.1, outline = true, beam = 1.1 },
-	[6] = { pad = 0.62, sparks = 26, light = 1.4, outline = true, beam = 1.8 },
+	[2] = { pad = 0.93, sparks = 2 },
+	[3] = { pad = 0.9, sparks = 4, light = 0.2 },
+	[4] = { pad = 0.87, sparks = 6, light = 0.3, outline = true },
+	[5] = { pad = 0.84, sparks = 9, light = 0.4, outline = true, beam = 0.9 },
+	[6] = { pad = 0.8, sparks = 14, light = 0.5, outline = true, beam = 1.4 },
 }
 
 local decorated: { [BasePart]: { tag: BillboardGui? } } = {}
@@ -104,7 +106,7 @@ local function aura(part: BasePart, color: Color3, fx)
 	sparks.Name = "RaritySparks"
 	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 	sparks.Color = ColorSequence.new(color:Lerp(WHITE, 0.5), color)
-	sparks.LightEmission = 0.8
+	sparks.LightEmission = 0.35
 	sparks.Rate = fx.sparks
 	sparks.Lifetime = NumberRange.new(1, 1.8)
 	sparks.Speed = NumberRange.new(1.5, 4)
@@ -142,11 +144,11 @@ local function aura(part: BasePart, color: Color3, fx)
 		outline.Parent = part
 	end
 	if fx.beam then
-		local beam = glowPart("RarityBeam", color:Lerp(WHITE, 0.3), 0.65)
+		local beam = glowPart("RarityBeam", color, 0.82)
 		beam.Size = Vector3.new(BEAM_HEIGHT, fx.beam, fx.beam)
 		beam.CFrame = CFrame.new(ground + Vector3.new(0, BEAM_HEIGHT / 2, 0)) * upright
 		beam.Parent = part
-		TweenService:Create(beam, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.88 }):Play()
+		TweenService:Create(beam, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.94 }):Play()
 	end
 end
 

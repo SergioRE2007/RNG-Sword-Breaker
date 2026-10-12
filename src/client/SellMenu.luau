@@ -4,13 +4,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
-local Permanent = require(ReplicatedStorage.Shared.Permanent)
+
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
-local WeaponPreview = require(script.Parent.WeaponPreview)
 
 local SellMenu = {}
 local player = Players.LocalPlayer
@@ -19,7 +18,7 @@ local selected, cells = {}, {}
 local confirming = false
 
 -- X roja y medio transparente encima de las armas elegidas (pedido por el usuario: es un menú de vender, que se vea
--- que se van). Dos barras cruzadas, por encima de la vista 3D (2) y del daño (3).
+-- que se van). Dos barras cruzadas, por encima de todo lo de la casilla (vista 3D, daño, rasgo y grado: hasta 4).
 local MARK_COLOR = Color3.fromRGB(235, 45, 55)
 local MARK_ALPHA = 0.4 -- transparencia de la X
 local function sellMark(cell: GuiObject): Frame
@@ -28,7 +27,7 @@ local function sellMark(cell: GuiObject): Frame
 	mark.Size = UDim2.fromScale(1, 1)
 	mark.BackgroundTransparency = 1
 	mark.Visible = false
-	mark.ZIndex = 4
+	mark.ZIndex = 5
 	mark.Parent = cell
 	for _, turn in { 45, -45 } do
 		local bar = Instance.new("Frame")
@@ -39,7 +38,7 @@ local function sellMark(cell: GuiObject): Frame
 		bar.BackgroundColor3 = MARK_COLOR
 		bar.BackgroundTransparency = MARK_ALPHA
 		bar.BorderSizePixel = 0
-		bar.ZIndex = 4
+		bar.ZIndex = 5
 		bar.Parent = mark
 		Ui.round(bar, 6)
 	end
@@ -127,28 +126,26 @@ function SellMenu.start()
 		for _, cell in cells do cell:Destroy() end
 		cells = {}
 		local eligible = {}
-		for _, copy in Stats.swords(player) do
+		-- Pedido por el usuario: mismo orden (de más a menos daño) y misma casilla y cartel que en la mochila; antes
+		-- iban por orden de llegada y con otra información. Backpack se pide aquí porque él ya pide este módulo.
+		local swordCell = (require(script.Parent.Backpack) :: any).swordCell
+		local copies = table.clone(Stats.swords(player))
+		table.sort(copies, function(a, b)
+			local left, right = Stats.swordDamage(a), Stats.swordDamage(b)
+			if left ~= right then
+				return left > right
+			end
+			return a.id < b.id
+		end)
+		for position, copy in copies do
 			if Stats.isEquipped(player, copy.id) or Stats.isDeposited(player, copy.id) then continue end
 			eligible[copy.id] = true
 			local tier = Rarity.tier(Stats.rarity(copy))
-			local cell = Ui.cell(stock, tier.color, table.find(Config.RarityTiers, tier))
+			local cell = swordCell(stock, copy, false, false)
 			cell.Name = "Sword" .. copy.id
-			cell.LayoutOrder = copy.id
+			cell.LayoutOrder = position
 			cell:SetAttribute("Base", tier.color) -- color de su fondo sin elegir
 			sellMark(cell)
-			WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
-			Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
-			Ui.tip(cell, function()
-				local lines = { Permanent.name(copy.sword, copy.metal, copy.size), Permanent.describeOdds(copy.sword, copy.metal, copy.size) }
-				local trait, grade = Config.Traits[copy.trait], Config.Grades[copy.grade]
-				if trait then
-					table.insert(lines, Lang.t(nil, "Trait: {name}", { name = Lang.t(nil, trait.name) }))
-				end
-				if grade then
-					table.insert(lines, Lang.t(nil, "Grade: {name}", { name = Lang.t(nil, grade.name) }))
-				end
-				return table.concat(lines, "\n"), tier.color
-			end, true)
 			cell.Activated:Connect(function()
 				confirming = false
 				selected[copy.id] = if selected[copy.id] then nil else true
