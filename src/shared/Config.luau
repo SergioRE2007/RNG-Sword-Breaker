@@ -913,7 +913,7 @@ Config.Trade = {
 Config.Tickets = {
 	PerRobux = 1.5,
 	Shop = {
-		{ item = "luckClover", price = 100 },
+		{ item = "luckClover", price = 150 },
 		{ item = "potion_weaponLuck_5", price = 20 },
 		{ item = "potion_boxLuck_5", price = 20 },
 		{ item = "potion_coins_5", price = 20 },
