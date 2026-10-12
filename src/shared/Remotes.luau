@@ -30,6 +30,8 @@ local NAMES = {
 	"BuyTicketItem", -- cliente -> servidor: (posición en Config.Tickets.Shop) comprar ese objeto con tickets de misión
 	"UseClover", -- cliente -> servidor: (objeto de tu parcela) gastar un Trébol de la suerte en él
 	"RedeemCode", -- cliente -> servidor: (texto) canjear un código de regalo de Config.Codes
+	"TutorialCheck", -- cliente -> servidor: (id del paso, opcional) "creo que ya he cumplido el paso del tutorial": el servidor lo comprueba
+	"TutorialSkip", -- cliente -> servidor: dar el tutorial por terminado, sin premio
 	"ClaimMission", -- cliente -> servidor: (periodo "daily" o "weekly", id de la misión) cobrar la recompensa de una misión cumplida
 	"AdminSetModifier", -- cliente -> servidor: (kind "traits" o "grades", id de la copia, índice o 0 = quitar) modo admin de pruebas, solo en Studio
 	"TradeRequest", -- cliente -> servidor: (userId) invitar a comerciar a ese jugador (0 = bot de pruebas, solo en Studio)

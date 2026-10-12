@@ -62,7 +62,7 @@ local function testNoSave(): boolean
 	if not RunService:IsStudio() then
 		return false
 	end
-	return (test.Progress or 0) > 0 or (test.AllPotions or 0) > 0 or (test.Tickets or 0) > 0 or (test.InfiniteMoney or test.AllWeapons or test.AllGear) and true or false
+	return (test.Progress or 0) > 0 or (test.AllPotions or 0) > 0 or (test.Tickets or 0) > 0 or test.Tutorial == true or (test.InfiniteMoney or test.AllWeapons or test.AllGear) and true or false
 end
 
 -- Lee lo guardado y deja puesto el candado de esta sesión. Devuelve si fue bien, lo guardado (nil = partida nueva) y si
@@ -461,6 +461,7 @@ local function load(player: Player)
 		totalCoins = 0, -- monedas ganadas en total, sin descontar lo gastado (clasificaciones)
 		robuxSpent = 0, -- Robux gastados en el juego (clasificaciones)
 		receipts = {}, -- últimas compras de productos ya entregadas (PurchaseId), para no dar una dos veces (server/Products)
+		tutorial = 1, -- paso del tutorial por el que va (0 = terminado; server/Tutorial)
 		codes = {}, -- códigos de regalo ya canjeados: { [código] = true } (server/Codes)
 		passes = {}, -- pases comprados con tickets de misión: { [clave de Config.Gamepasses] = true } (ver server/Passes)
 		missions = {}, -- misiones: { daily = { id, progress, claimed }, weekly = { ... } } (ver server/Missions)
@@ -516,6 +517,9 @@ local function load(player: Player)
 						end
 					end
 				end
+				-- Quien ya tenía partida antes de existir el tutorial (sin el dato) no lo ve.
+				local step = if type(saved.tutorial) == "number" then math.floor(saved.tutorial) else 0
+				data.tutorial = if step >= 1 and step <= #Config.Tutorial.Steps then step else 0
 				if type(saved.codes) == "table" then
 					local kept = 0
 					for key, value in saved.codes do

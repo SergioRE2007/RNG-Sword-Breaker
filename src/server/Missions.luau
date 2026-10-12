@@ -19,6 +19,13 @@ local TOKEN = "missionToken"
 local GOLD = Color3.fromRGB(255, 200, 60)
 
 local dirty: { [Player]: boolean } = {}
+local listeners = {} -- funciones a las que se avisa de cada cosa que cuenta (Missions.listen)
+
+-- Avisa con callback(jugador, tipo, cantidad) de todo lo que cuenta para las misiones (objetos rotos, mejoras...),
+-- haya o no una misión de ese tipo hoy: lo usa el tutorial.
+function Missions.listen(callback: (Player, string, number) -> ())
+	table.insert(listeners, callback)
+end
 
 -- Deja data.missions con el periodo actual (reinicia el progreso si ha cambiado el día o la semana).
 local function ensure(data)
@@ -48,6 +55,9 @@ end
 
 -- Suma progreso a las misiones de ese tipo que estén activas hoy o esta semana.
 function Missions.add(player: Player, kind: string, amount: number?)
+	for _, callback in listeners do
+		task.spawn(callback, player, kind, amount or 1)
+	end
 	local data = PlayerData.read(player)
 	if not data then
 		return

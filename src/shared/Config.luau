@@ -20,6 +20,7 @@ Config.Test = {
 	PartyBots = 0, -- compañeros "fantasma" que se unen a tu grupo de mazmorra (cuentan para el tamaño y el escalado, no pelean): para probar con un solo jugador
 	Progress = 0, -- horas de juego con las que se empieza (0 = partida nueva): deja al jugador como estaría a esa hora según el calendario de tools/equilibrio (mejoras, renacimientos, armas equipadas, accesorios y armadura de shared/BalanceSnapshots), para probar cada etapa sin jugarla entera. Mientras vale más de 0 los demás modos de arriba que dan cosas (dinero, armas, accesorios, pociones) no actúan; con 0.01 es una partida nueva de verdad
 	Tickets = 0, -- tickets (Config.Items.missionToken) que se dan al entrar, para probar la compra de pases con tickets (con AllGamepasses en false); 0 = ninguno
+	Tutorial = false, -- el tutorial de los primeros minutos (Config.Tutorial) desde el paso 1 al entrar; en Studio no sale sin esto
 	Weather = "", -- id de un clima de Config.Weather.Events para tenerlo puesto al entrar ("" = el que toque por la hora)
 }
 -- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
@@ -914,6 +915,25 @@ Config.Tickets = {
 		{ item = "potion_coins_5", price = 20 },
 		{ item = "potion_damage_5", price = 20 },
 		{ item = "potion_health_5", price = 20 },
+	},
+}
+-- TUTORIAL de los primeros minutos (server/Tutorial decide cuándo se cumple cada paso; client/Tutorial pone la tarjeta y
+-- la flecha). Los pasos van en orden. text = lo que se le pide; kind = cómo se cumple: "breaks" (romper `goal` objetos) y
+-- "upgrades" (comprar una mejora) se cuentan solos; "equip" (tener 2 armas equipadas), "bag" (un arma en la Bolsa de oro)
+-- y "lobby" (estar en el lobby de mazmorras) los comprueba el servidor; "seen" = abrir la ventana `window` de la interfaz.
+-- point = a qué señala la flecha: "object" (un objeto de tu parcela), "bag" (tu saco), "stall:<tienda>" (un puesto del
+-- hub) o "button:<ruta dentro de Hud.HudRoot>". Reward = lo que da al acabar (clave de Config.Items). El id de cada paso no
+-- se guarda (se guarda su posición): los pasos nuevos, al final.
+Config.Tutorial = {
+	Reward = { item = "luckClover", amount = 1 },
+	Steps = {
+		{ id = "break", kind = "breaks", goal = 1, text = "Haz clic en un objeto de tu parcela para romperlo", point = "object" },
+		{ id = "break10", kind = "breaks", goal = 10, text = "Rompe 10 objetos: sueltan monedas y armas", point = "object" },
+		{ id = "equip", kind = "equip", text = "Abre la Mochila y equipa otra arma", point = "button:Menu.Backpack" },
+		{ id = "upgrade", kind = "upgrades", goal = 1, text = "Compra una mejora con tus monedas", point = "button:Menu.Upgrades" },
+		{ id = "bag", kind = "bag", text = "Toca el saco de detrás de tu parcela y deja un arma: te dará monedas sola", point = "bag" },
+		{ id = "missions", kind = "seen", window = "Missions", text = "Ve al puesto de Misiones del centro y míralas", point = "stall:missions" },
+		{ id = "dungeon", kind = "lobby", text = "Baja a las Mazmorras", point = "button:Travel.Travel_dungeon" },
 	},
 }
 -- CÓDIGOS DE REGALO (server/Codes; se escriben abajo del todo en la Tienda). La clave es el código, en MAYÚSCULAS y sin

@@ -34,6 +34,7 @@ require(script.Rebirth).start()
 require(script.Leaderboards).start()
 require(script.BestRoll).start()
 require(script.Missions).start()
+require(script.Tutorial).start() -- tutorial de los primeros minutos: después de Missions
 require(script.TicketShop).start() -- lo que se compra con tickets en el puesto de Misiones
 require(script.Clover).start() -- Trébol de la suerte: después de Destructibles
 require(script.Codes).start() -- códigos de regalo de la Tienda
