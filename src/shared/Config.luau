@@ -274,8 +274,10 @@ Config.Grades = {
 	{ name = "S+", damage = 8, chance = 0.2, color = Color3.fromRGB(50, 80, 255) },
 	{ name = "Z", damage = 12, chance = 0.063, color = Color3.fromRGB(40, 210, 190) },
 	{ name = "Z+", damage = 20, chance = 0.019, color = Color3.fromRGB(200, 90, 255), rainbow = true },
-	{ name = "X", damage = 40, chance = 0.0057, color = Color3.fromRGB(230, 40, 40), rainbow = true },
-	{ name = "∞", damage = 100, chance = 0.0016, color = Color3.fromRGB(190, 150, 255), rainbow = true },
+	-- "tones" (con rainbow): en vez del arcoíris, un degradado de esos dos colores que gira (Modifiers.tones). Pedido por
+	-- el usuario: el X en verde y el ∞ en blanco y negro.
+	{ name = "X", damage = 40, chance = 0.0057, color = Color3.fromRGB(70, 235, 120), rainbow = true, tones = { Color3.fromRGB(190, 255, 90), Color3.fromRGB(0, 190, 110) } },
+	{ name = "∞", damage = 100, chance = 0.0016, color = Color3.fromRGB(240, 240, 245), rainbow = true, tones = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(30, 30, 36) } },
 }
 -- Pity de rasgos y grados (Modifiers.rollWithPity): solo lo tienen los resultados de "1 entre MinOdds" o más raros
 -- (pedido por el usuario: de S+ para arriba en grados, que en rasgos es de Shogun para arriba). Los fáciles no: su

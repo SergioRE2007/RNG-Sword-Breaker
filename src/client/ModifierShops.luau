@@ -81,9 +81,10 @@ local SHINE_EVERY = 4.5 -- segundos entre dos brillos de la misma fila
 local SHINE_TIME = 0.7 -- lo que tarda el brillo en cruzar
 local SPARKLE_EVERY = 1.6 -- segundos entre chispas de una fila rara
 
-local function rainbow(parent: Instance)
+-- Con `entry`, si la entrada trae sus dos tonos (Config: tones) van esos en vez del arcoíris.
+local function rainbow(parent: Instance, entry: any?)
 	local gradient = Instance.new("UIGradient")
-	gradient.Color = rainbowColors()
+	gradient.Color = Modifiers.tones(entry) or rainbowColors()
 	gradient.Parent = parent
 	spinning[gradient] = true
 end
@@ -146,7 +147,7 @@ local function traitBadge(parent: GuiObject, entry)
 		local _, pieces = Ui.hex(badge, 22, if entry.rainbow then WHITE else entry.color)
 		for _, piece in pieces do
 			if entry.rainbow then
-				rainbow(piece)
+				rainbow(piece, entry)
 			end
 		end
 	end
@@ -185,12 +186,13 @@ end
 -- Icono de una entrada: la letra del grado, o la insignia del rasgo.
 local function entryIcon(parent: GuiObject, kind: string, entry)
 	if kind == "grades" then
-		local letter = Ui.label(parent, 34)
+		-- El ∞ de la fuente es un dibujo pequeño: va más grande para pesar lo mismo que las letras.
+		local letter = Ui.label(parent, if entry.name == "∞" then 72 else 48)
 		letter.Size = UDim2.fromScale(1, 1)
 		letter.Text = entry.name
 		letter.TextColor3 = if entry.rainbow then WHITE else entry.color
 		if entry.rainbow then
-			rainbow(letter)
+			rainbow(letter, entry)
 		end
 		return
 	end
@@ -211,7 +213,7 @@ local function paintName(label: TextLabel, entry)
 	label.Text = entry.name
 	label.TextColor3 = if entry.rainbow then WHITE else entry.color
 	if entry.rainbow then
-		rainbow(label)
+		rainbow(label, entry)
 	end
 end
 
@@ -598,7 +600,7 @@ local function buildShop(kind: string)
 		Ui.panel(row, Color3.fromRGB(46, 46, 62), if entry.rainbow then WHITE else entry.color)
 		local stroke = Ui.stroke(row, if entry.rainbow then WHITE else entry.color, 3)
 		if entry.rainbow then
-			rainbow(stroke)
+			rainbow(stroke, entry)
 		elseif Modifiers.percent(kind, index) < 0.1 then
 			pulsing[stroke] = index
 		end
@@ -652,7 +654,7 @@ local function buildShop(kind: string)
 		Ui.round(pill, 10)
 		local pillStroke = Ui.stroke(pill, if entry.rainbow then WHITE else entry.color, 2)
 		if entry.rainbow then
-			rainbow(pillStroke)
+			rainbow(pillStroke, entry)
 		end
 		local percent = Ui.label(pill, 22)
 		percent.Size = UDim2.fromScale(1, 1)
@@ -1000,7 +1002,7 @@ local function buildShop(kind: string)
 		Ui.gradient(item, entry.color:Lerp(BLACK, 0.55), entry.color:Lerp(BLACK, 0.8), 90)
 		local edge = Ui.stroke(item, if entry.rainbow then WHITE else entry.color, 2)
 		if entry.rainbow then
-			rainbow(edge)
+			rainbow(edge, entry)
 		end
 		local name = Ui.label(item, 24)
 		name.Position = UDim2.fromScale(0, 0.04)

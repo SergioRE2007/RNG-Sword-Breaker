@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -155,7 +156,9 @@ local function animatedName(entry): string
 	for _, code in utf8.codes(entry.name) do
 		index += 1
 		local color
-		if entry.rainbow then
+		if entry.tones then
+			color = Modifiers.toneAt(entry, now * 4 + index * 0.9)
+		elseif entry.rainbow then
 			color = Color3.fromHSV((now * 0.6 + index * 0.09) % 1, 0.6, 1)
 		else
 			color = entry.color:Lerp(Color3.new(1, 1, 1), math.max(0, 1 - math.abs(index - shine) / 2.5) * 0.85)
@@ -209,13 +212,13 @@ local function swordTip(copy): (string, Color3, boolean)
 		table.insert(lines, (if logo then Ui.TIP_ICON_GAP else "") .. animatedName(trait))
 		icon = if logo then { image = logo, line = #lines } else nil
 		if trait.rainbow then
-			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
+			border = if trait.tones then Modifiers.toneAt(trait, os.clock() * 3) else Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
 	if grade then
 		table.insert(lines, `<font color="{hex(grade.color)}">Grado:</font> {animatedName(grade)}`)
 		if grade.rainbow then
-			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
+			border = if grade.tones then Modifiers.toneAt(grade, os.clock() * 3) else Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
 	-- El daño destaca (pedido por el usuario: no tan plano): la palabra en rojo cálido y el número más grande en dorado.
