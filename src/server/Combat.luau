@@ -95,6 +95,7 @@ local function hitObject(player: Player, part: BasePart, damage: number, slot: n
 	if not broken then
 		return false
 	end
+	PlayerData.addBroken(player)
 	PlayerData.addCoins(player, coins)
 	Missions.add(player, "breaks")
 	if gems > 0 then

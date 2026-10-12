@@ -50,9 +50,13 @@ local function load()
 	return templates
 end
 
--- Las mallas tienen mucha superficie: el neón del objeto solo se queda en la luz (Glow), el resto va liso.
+-- Las mallas tienen mucha superficie: el neón del objeto solo se queda en la luz (Glow), el resto va liso. ForceField
+-- tampoco: en una malla sin textura solo pinta el contorno y el objeto se ve hueco.
 local function calm(material: Enum.Material): Enum.Material
-	return if material == Enum.Material.Neon then Enum.Material.SmoothPlastic else material
+	if material == Enum.Material.Neon or material == Enum.Material.ForceField then
+		return Enum.Material.SmoothPlastic
+	end
+	return material
 end
 
 -- Color, material y transparencia de cada papel de las mallas.
@@ -62,7 +66,9 @@ local function roleLook(role: string, def): (Color3, Enum.Material, number)
 	elseif role == "Trim" then
 		return def.color:Lerp(GOLD, 0.65), Enum.Material.Metal, 0
 	elseif role == "Gem" then
-		return def.color, Enum.Material.Glass, 0.15
+		-- Opaco: el cristal es la pieza más grande de varios objetos y, medio transparente, se veía a través de él
+		-- (y el vidrio transparente esconde las partículas y lo translúcido que tenga detrás).
+		return def.color, Enum.Material.Glass, 0
 	elseif role == "Glow" then
 		return def.color:Lerp(Color3.new(1, 1, 1), 0.3), Enum.Material.Neon, 0.2
 	end

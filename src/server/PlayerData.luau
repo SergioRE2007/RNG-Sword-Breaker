@@ -10,6 +10,7 @@ local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local BagInfo = require(ReplicatedStorage.Shared.BagInfo)
 local BalanceSnapshots = require(ReplicatedStorage.Shared.BalanceSnapshots)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Format = require(ReplicatedStorage.Shared.Format)
 local IndexInfo = require(ReplicatedStorage.Shared.IndexInfo)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
@@ -198,7 +199,8 @@ local function publish(player: Player)
 	end
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
-		leaderstats.Coins.Value = math.floor(data.coins)
+		leaderstats.Coins.Value = Format.short(data.coins)
+		leaderstats.Broken.Value = Format.short(data.broken)
 	end
 end
 
@@ -461,6 +463,7 @@ local function load(player: Player)
 		playTime = 0, -- segundos jugados (clasificaciones)
 		totalCoins = 0, -- monedas ganadas en total, sin descontar lo gastado (clasificaciones)
 		robuxSpent = 0, -- Robux gastados en el juego (clasificaciones)
+		broken = 0, -- objetos de la parcela rotos en total (marcador de la lista de jugadores)
 		receipts = {}, -- últimas compras de productos ya entregadas (PurchaseId), para no dar una dos veces (server/Products)
 		tutorial = 1, -- paso del tutorial por el que va (0 = terminado; server/Tutorial)
 		codes = {}, -- códigos de regalo ya canjeados: { [código] = true } (server/Codes)
@@ -511,6 +514,7 @@ local function load(player: Player)
 				data.playTime = math.max(0, tonumber(saved.playTime) or 0)
 				data.totalCoins = math.max(0, tonumber(saved.totalCoins) or 0)
 				data.robuxSpent = math.max(0, math.floor(tonumber(saved.robuxSpent) or 0))
+				data.broken = math.max(0, math.floor(tonumber(saved.broken) or 0))
 				if type(saved.receipts) == "table" then
 					for _, id in saved.receipts do
 						if type(id) == "string" and #data.receipts < 100 then
@@ -647,9 +651,13 @@ local function load(player: Player)
 
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
-	local coins = Instance.new("NumberValue") -- un IntValue se desborda con cantidades enormes
-	coins.Name = "Coins"
-	coins.Parent = leaderstats
+	-- Marcador de Roblox (la lista de jugadores): monedas y objetos rotos, como texto ya abreviado con Format. Con un
+	-- número, la lista de Roblox pone sus propias abreviaturas, que se acaban mucho antes que las del juego.
+	for _, name in { "Coins", "Broken" } do
+		local value = Instance.new("StringValue")
+		value.Name = name
+		value.Parent = leaderstats
+	end
 	leaderstats.Parent = player
 
 	-- Una partida que no se va a guardar no retiene el candado.
@@ -826,6 +834,14 @@ function PlayerData.trySpendGems(player: Player, cost: number): boolean
 	session.data.gems -= cost
 	publish(player)
 	return true
+end
+
+-- Un objeto de la parcela roto: cuenta para el marcador. Va antes de addCoins, que es quien publica.
+function PlayerData.addBroken(player: Player)
+	local session = sessions[player]
+	if session then
+		session.data.broken += 1
+	end
 end
 
 -- Para las clasificaciones: segundos jugados y Robux gastados (el resto de números van en data).

@@ -950,7 +950,7 @@ do
 	}
 	local bootStats = { { stat = "health", value = armorStats.cap("health", 1, 1) / 2 } }
 	local full = {
-		coins = 1e30, gems = 2.5e33, rebirths = 3, playTime = 12345.5, totalCoins = 1e40, robuxSpent = 499, passes = { vip = true }, receipts = { "compra-1" }, codes = { HOLA = true }, tutorial = 3,
+		coins = 1e30, gems = 2.5e33, rebirths = 3, playTime = 12345.5, totalCoins = 1e40, robuxSpent = 499, broken = 1234, passes = { vip = true }, receipts = { "compra-1" }, codes = { HOLA = true }, tutorial = 3,
 		missions = missions, autoSell = 1e24, traitPriority = "damage,coins,luck", pity = pity,
 		swords = {
 			{ id = 10, sword = 1 },
@@ -976,7 +976,7 @@ do
 	for name in cfg.Items do items[name] = 0 end
 	items.traitCrystal, items.gradeCrystal, items[potionKey] = 1e30, 7, 3
 	local expected = {
-		coins = 1e30, gems = 2.5e33, rebirths = 3, playTime = 12345.5, totalCoins = 1e40, robuxSpent = 499, passes = { vip = true }, receipts = { "compra-1" }, codes = { HOLA = true }, tutorial = 3,
+		coins = 1e30, gems = 2.5e33, rebirths = 3, playTime = 12345.5, totalCoins = 1e40, robuxSpent = 499, broken = 1234, passes = { vip = true }, receipts = { "compra-1" }, codes = { HOLA = true }, tutorial = 3,
 		missions = missions, autoSell = 1e24, traitPriority = "damage,coins,luck", pity = pity,
 		swords = {
 			{ id = 1, sword = 1 },
