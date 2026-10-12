@@ -253,7 +253,7 @@ equal(config.damageFromRarity(2), 1, "rareza inicial")
 near(config.damageFromRarity(8), 2.25, "curva de daño")
 local label = permanent.describeOdds(4, 1, 1)
 -- Un solo número, sin desglose por metal y tamaño.
-assert(label:find("^1 entre ") and not label:find("·", 1, true) and not label:find(config.Metals[1].name, 1, true))
+assert(label:find("^1 in ") and not label:find("·", 1, true) and not label:find(config.Metals[1].name, 1, true))
 checks += 1
 
 -- Por mucha suerte de armas que haya siguen saliendo armas sin metal y de tamaño normal (con x10 el Cobre salía siempre).
@@ -1618,6 +1618,134 @@ do
 	equal(brokenBag.stage == 1 and brokenBag.taken == 0 and brokenBag.seen == nil, true, "bolsa guardada: números imposibles fuera")
 	equal(broken.data.isLocked(broken.data.read(broken.player), 2), true, "una depositada está en uso")
 	equal(broken.data.isLocked(broken.data.read(broken.player), 99), false, "una que no existe, no")
+end
+
+-- Idioma (shared/Lang): el código lleva los textos en inglés y LangEs los pasa a español para quien tiene Roblox en
+-- español. En el servidor el idioma es el de la cuenta del jugador; sin jugador, inglés.
+do
+	local lang = f.load("src/shared/Lang")
+	local format = f.load("src/shared/Format")
+	local spanish, english = { LocaleId = "es-mx" }, { LocaleId = "en-us" }
+	equal(lang.code(spanish), "es", "idioma: cualquier español")
+	equal(lang.code(english), "en", "idioma: inglés")
+	equal(lang.code({ LocaleId = "fr-fr" }), "en", "idioma: los demás, inglés")
+	equal(lang.code(nil), "en", "idioma: sin jugador, inglés")
+	equal(lang.t(spanish, "Minimum damage {n}", { n = 5 }), "Daño mínimo 5", "texto en español con huecos")
+	equal(lang.t(english, "Minimum damage {n}", { n = 5 }), "Minimum damage 5", "texto en inglés con huecos")
+	equal(lang.t(spanish, "Texto sin traducir {n}", { n = 1 }), "Texto sin traducir 1", "sin entrada sale el inglés")
+	equal(format.short(1500, spanish), "1,5K", "números con coma en español")
+	equal(format.short(1500, english), "1.5K", "números con punto en inglés")
+	equal(format.multiplier(2.25, spanish), "2,25", "multiplicador con coma en español")
+	equal(format.parse("1,5k"), 1500, "leer un número con coma")
+	equal(format.parse("1.5K"), 1500, "leer un número con punto")
+	equal(permanent.describeOdds(4, 1, 1, spanish):find("^1 entre ") ~= nil, true, "probabilidad en español")
+	equal(permanent.name(4, 2, 2, spanish), "Espada de acero (Hierro, Gigante)", "nombre de arma en español")
+	equal(permanent.name(4, 2, 2, english), "Steel Sword (Iron, Giant)", "nombre de arma en inglés")
+	local armorStats = f.load("src/shared/ArmorStats")
+	equal(armorStats.name({ slot = "helmet", level = 1 }, spanish), "Casco de cuero", "armadura en español")
+	equal(armorStats.name({ slot = "helmet", level = 1 }, english), "Leather Helmet", "armadura en inglés")
+	equal(modifiers.effect(config.Traits[#config.Traits], spanish), "x2 Monedas · x57,5 Daño · x2 Suerte", "efecto de rasgo en español")
+	equal(modifiers.effect(config.Traits[#config.Traits], english), "x2 Coins · x57.5 Damage · x2 Luck", "efecto de rasgo en inglés")
+	local potionInfo = f.load("src/shared/PotionInfo")
+	equal(potionInfo.name("damage", 3, spanish), "Poción de daño III", "poción en español")
+	equal(potionInfo.effect("health", 3, spanish), "Vida máxima +50 %", "efecto de poción en español")
+	equal(potionInfo.effect("health", 3, english), "Max Health +50%", "efecto de poción en inglés")
+
+	-- Cada frase de LangEs lleva los mismos huecos que su clave.
+	local function holes(text: string): string
+		local list = {}
+		for hole in text:gmatch("{%w+}") do table.insert(list, hole) end
+		table.sort(list)
+		return table.concat(list)
+	end
+	for key, value in lang.es do
+		equal(holes(value), holes(key), "huecos de LangEs: " .. key)
+	end
+
+	-- Todo texto de Config que se enseña tiene su español.
+	local function known(text: unknown, label: string)
+		if type(text) == "string" then equal(lang.es[text] ~= nil, true, "falta en LangEs: " .. label .. " = " .. text) end
+	end
+	local function each(list, label: string, fields: { string })
+		for key, entry in list do
+			for _, field in fields do known(entry[field], `{label}.{key}.{field}`) end
+			for _, perk in entry.perksText or {} do known(perk, `{label}.{key}.perksText`) end
+		end
+	end
+	each(config.Swords, "Swords", { "name" })
+	each(config.WeaponKinds, "WeaponKinds", { "name" })
+	each(config.RarityTiers, "RarityTiers", { "name" })
+	each(config.Metals, "Metals", { "name" })
+	each(config.Sizes, "Sizes", { "name" })
+	each(config.Items, "Items", { "name", "description" })
+	each(config.Traits, "Traits", { "name" })
+	each(config.Grades, "Grades", { "name" })
+	each(config.Artifacts, "Artifacts", { "name" })
+	each(config.StatNames, "StatNames", {})
+	for stat, name in config.StatNames do known(name, "StatNames." .. stat) end
+	each(config.Weather.Events, "Weather", { "name", "desc" })
+	each(config.Destructibles, "Destructibles", { "name" })
+	each(config.ObjectRarities, "ObjectRarities", { "name" })
+	each(config.ObjectSizes, "ObjectSizes", { "name" })
+	each(config.Upgrades, "Upgrades", { "name", "short", "desc" })
+	each(config.Armor.Slots, "Armor.Slots", { "name" })
+	each(config.Armor.Stats, "Armor.Stats", { "name" })
+	each(config.Armor.Qualities, "Armor.Qualities", { "name" })
+	each(config.Dungeons, "Dungeons", { "name", "tagline", "set" })
+	each(config.Enemies, "Enemies", { "name" })
+	for id, theme in config.DungeonThemes do each(theme.enemies, "DungeonThemes." .. id, { "name" }) end
+	each(config.Tutorial.Steps, "Tutorial", { "text" })
+	each(config.Products, "Products", { "name", "tag", "ribbon" })
+	each(config.Gamepasses, "Gamepasses", { "name", "tag", "ribbon" })
+	each(config.Potions.Families, "Potions", { "name", "effect", "desc" })
+	for _, tier in config.Potions.Tiers do known(tier, "Potions.Tiers") end
+	local missions = f.load("src/shared/MissionList")
+	each(missions.pool.daily, "Misiones", { "text" })
+	each(missions.pool.weekly, "Misiones", { "text" })
+
+	-- Ningún texto entre comillas del código lleva letras del español (fuera de LangEs y de los comentarios). De momento
+	-- se mira solo lo que ya está pasado a inglés (docs/plan-ingles.md): al acabar las partes 2 y 3, todo src.
+	local DONE = { "src/shared" }
+	local SKIP = { ["src/shared/LangEs.luau"] = true }
+	local SPANISH = { "á", "é", "í", "ó", "ú", "ñ", "Á", "É", "Í", "Ó", "Ú", "Ñ", "¿", "¡" }
+	local function strings(source: string): { string }
+		local found, position, length = {}, 1, #source
+		while position <= length do
+			local char = source:sub(position, position)
+			if char == "-" and source:sub(position, position + 1) == "--" then
+				local long = source:match("^%-%-%[(=*)%[", position)
+				local stop = if long then source:find("]" .. long .. "]", position, true) else source:find("\n", position, true)
+				position = (stop or length) + 1
+			elseif char == '"' or char == "'" or char == "`" then
+				local start = position
+				position += 1
+				while position <= length and source:sub(position, position) ~= char do
+					position += if source:sub(position, position) == "\\" then 2 else 1
+				end
+				table.insert(found, source:sub(start + 1, position - 1))
+				position += 1
+			else
+				position += 1
+			end
+		end
+		return found
+	end
+	local function scan(path: string)
+		for _, name in fs.readDir(path) do
+			local file = path .. "/" .. name
+			if fs.isDir(file) then
+				scan(file)
+			elseif name:match("%.luau$") and not SKIP[file] then
+				for _, text in strings(fs.readFile(file)) do
+					for _, letter in SPANISH do
+						assert(not text:find(letter, 1, true), `texto en español en {file}: {text}`)
+					end
+				end
+				checks += 1
+			end
+		end
+	end
+	for _, path in DONE do scan(path) end
 end
 
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)

@@ -12,26 +12,26 @@ local DAY = 86400
 -- "traitRolls" rasgos tirados, "gradeRolls" grados tirados, "minutes" minutos jugados, "dungeons" mazmorras superadas,
 -- "enemies" enemigos de mazmorra derrotados y "rareSword" armas de 1 entre 1M o más.
 -- Pedido por el usuario: que sean de jugar de verdad (las primeras se hacían en un rato). No hay de comprar mejoras ni
--- de renacer: quien ya lo tiene todo no podría cumplirlas.
+-- de renacer: quien ya lo tiene todo no podría cumplirlas. "text" va en inglés: quien lo enseña lo pasa por Lang.t.
 MissionList.pool = {
 	daily = {
-		{ id = "d_minutes30", kind = "minutes", goal = 30, text = "Juega 30 minutos" },
-		{ id = "d_breaks1000", kind = "breaks", goal = 1000, text = "Rompe 1000 objetos" },
-		{ id = "d_gacha1000", kind = "gacha", goal = 1000, text = "Consigue 1000 tiradas de arma" },
-		{ id = "d_dungeons10", kind = "dungeons", goal = 10, text = "Supera 10 mazmorras" },
-		{ id = "d_enemies300", kind = "enemies", goal = 300, text = "Derrota 300 enemigos" },
-		{ id = "d_traits15", kind = "traitRolls", goal = 15, text = "Tira 15 rasgos" },
-		{ id = "d_grades15", kind = "gradeRolls", goal = 15, text = "Forja 15 grados" },
+		{ id = "d_minutes30", kind = "minutes", goal = 30, text = "Play for 30 minutes" },
+		{ id = "d_breaks1000", kind = "breaks", goal = 1000, text = "Break 1000 objects" },
+		{ id = "d_gacha1000", kind = "gacha", goal = 1000, text = "Get 1000 weapon rolls" },
+		{ id = "d_dungeons10", kind = "dungeons", goal = 10, text = "Clear 10 dungeons" },
+		{ id = "d_enemies300", kind = "enemies", goal = 300, text = "Defeat 300 enemies" },
+		{ id = "d_traits15", kind = "traitRolls", goal = 15, text = "Roll 15 traits" },
+		{ id = "d_grades15", kind = "gradeRolls", goal = 15, text = "Forge 15 grades" },
 	},
 	weekly = {
-		{ id = "w_dungeons100", kind = "dungeons", goal = 100, text = "Supera 100 mazmorras" },
-		{ id = "w_breaks20000", kind = "breaks", goal = 20000, text = "Rompe 20.000 objetos" },
-		{ id = "w_gacha20000", kind = "gacha", goal = 20000, text = "Consigue 20.000 tiradas de arma" },
-		{ id = "w_minutes600", kind = "minutes", goal = 600, text = "Juega 10 horas" },
-		{ id = "w_enemies3000", kind = "enemies", goal = 3000, text = "Derrota 3000 enemigos" },
-		{ id = "w_traits150", kind = "traitRolls", goal = 150, text = "Tira 150 rasgos" },
-		{ id = "w_grades150", kind = "gradeRolls", goal = 150, text = "Forja 150 grados" },
-		{ id = "w_rare100", kind = "rareSword", goal = 100, text = "Saca 100 armas de 1 entre 1M o más" },
+		{ id = "w_dungeons100", kind = "dungeons", goal = 100, text = "Clear 100 dungeons" },
+		{ id = "w_breaks20000", kind = "breaks", goal = 20000, text = "Break 20,000 objects" },
+		{ id = "w_gacha20000", kind = "gacha", goal = 20000, text = "Get 20,000 weapon rolls" },
+		{ id = "w_minutes600", kind = "minutes", goal = 600, text = "Play for 10 hours" },
+		{ id = "w_enemies3000", kind = "enemies", goal = 3000, text = "Defeat 3000 enemies" },
+		{ id = "w_traits150", kind = "traitRolls", goal = 150, text = "Roll 150 traits" },
+		{ id = "w_grades150", kind = "gradeRolls", goal = 150, text = "Forge 150 grades" },
+		{ id = "w_rare100", kind = "rareSword", goal = 100, text = "Get 100 weapons of 1 in 1M or rarer" },
 	},
 }
 

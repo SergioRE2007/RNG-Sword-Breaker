@@ -3,14 +3,15 @@
 -- aquí se calcula su % real, se tira al azar y se describe su efecto. Vale en servidor y cliente.
 local Config = require(script.Parent.Config)
 local Format = require(script.Parent.Format)
+local Lang = require(script.Parent.Lang)
 
 local Modifiers = {}
 
 -- kind = "traits" o "grades".
 Modifiers.KINDS = {
-	-- "item" y "cost" = objeto de Config.Items que cuesta cada tirada y cuántos.
-	traits = { list = Config.Traits, field = "trait", title = "Rasgos", label = "RASGO", item = "traitCrystal", cost = 1 },
-	grades = { list = Config.Grades, field = "grade", title = "Grados", label = "GRADO", item = "gradeCrystal", cost = Config.GradeCost },
+	-- "title" y "label" van en inglés: quien los enseña los pasa por Lang.t. "item" y "cost" = objeto de Config.Items que cuesta cada tirada y cuántos.
+	traits = { list = Config.Traits, field = "trait", title = "Traits", label = "TRAIT", item = "traitCrystal", cost = 1 },
+	grades = { list = Config.Grades, field = "grade", title = "Grades", label = "GRADE", item = "gradeCrystal", cost = Config.GradeCost },
 	armorMods = { list = Config.Armor.Mods }, -- modificadores extra de la armadura (solo se usa la tirada por pesos)
 }
 
@@ -63,14 +64,14 @@ function Modifiers.odds(kind: string, index: number, luck: number?): number
 	return 100 / Modifiers.percent(kind, index, luck)
 end
 
--- 24.76 -> "24.8%", 0.0019 -> "0.0019%".
-function Modifiers.formatPercent(percent: number): string
+-- 24.76 -> "24.8%", 0.0019 -> "0.0019%" (con coma en español: `player` es quien lo lee).
+function Modifiers.formatPercent(percent: number, player: Player?): string
 	if percent >= 10 then
-		return string.format("%.1f%%", percent)
+		return Lang.decimal(player, string.format("%.1f%%", percent))
 	end
 	local decimals = math.clamp(math.ceil(-math.log10(percent)) + 1, 1, 6)
 	local text = string.format(`%.{decimals}f`, percent):gsub("0+$", ""):gsub("%.$", "")
-	return text .. "%"
+	return Lang.decimal(player, text) .. "%"
 end
 
 -- Entrada al azar según sus pesos (con la `luck` de una poción, si se le pasa).
@@ -171,14 +172,14 @@ function Modifiers.rollWithPity(kind: string, random: Random, luck: number, coun
 	return result
 end
 
--- "x1.5 Monedas · x1.5 Daño" (solo lo que sube).
-function Modifiers.effect(entry): string
+-- "x1.5 Coins · x1.5 Damage" (solo lo que sube), en el idioma de `player`.
+function Modifiers.effect(entry, player: Player?): string
 	local parts = {}
 	for _, stat in { "coins", "damage", "luck" } do
 		local value = entry[stat]
 		if value and value ~= 1 then
-			local name = Config.StatNames[stat]
-			table.insert(parts, `x{Format.multiplier(value)} {string.upper(string.sub(name, 1, 1))}{string.sub(name, 2)}`)
+			local name = Lang.t(player, Config.StatNames[stat])
+			table.insert(parts, `x{Format.multiplier(value, player)} {string.upper(string.sub(name, 1, 1))}{string.sub(name, 2)}`)
 		end
 	end
 	return table.concat(parts, " · ")

@@ -44,7 +44,19 @@ Estilo "gettext": en el código queda el texto en inglés y una tabla lo pasa a 
 
 ## Estado
 
-- [ ] Parte 1: sistema y datos
+- [x] Parte 1: sistema y datos (hecha el 12 de octubre de 2026; notas debajo)
 - [ ] Parte 2: ventanas
 - [ ] Parte 3: HUD, mundo y servidor
 - [ ] Parte 4: repaso
+
+## Notas de la parte 1 (para las siguientes)
+
+- `Lang.t(jugador, texto, huecos)`, `Lang.code(jugador)` y `Lang.decimal(jugador, número ya escrito)` están en `src/shared/Lang`; el español, en `src/shared/LangEs` (por secciones, en el orden de `Config`). En el cliente el idioma es siempre el del jugador local; en el servidor, sin jugador, sale inglés.
+- `Config` y `MissionList` ya están en inglés, pero quien enseña un `name`, `desc`, `text`, `tag`... tal cual lo saca en inglés para todos hasta que lo pase por `Lang.t(nil, entrada.name)`: es lo que toca en las partes 2 y 3. Ojo también con `Config.StatNames` (`Backpack`, `Trade`) y con `title` y `label` de `Modifiers.KINDS`.
+- Las funciones de `shared` que montan textos llevan un último argumento opcional, el jugador que lo va a leer: `Permanent.name` y `describeOdds`, `Modifiers.effect` y `formatPercent`, `ArmorStats.name`, `value` y `text`, `DungeonInfo.rewards` y `lock`, `PotionInfo.name` y `effect`, `WeatherInfo.oddsText`, `buffs` y `buffText`, `Format.short` y `multiplier`. En el cliente no hace falta pasarlo; en el servidor sí (parte 3), o el aviso sale en inglés.
+- Números: `Format` pone coma decimal a quien juega en español ("1,23K"; antes salía con punto) y `Format.parse` entiende las dos.
+- El "set" de armadura de `Config.Dungeons` es ahora la frase entera con hueco (`"Leather {slot}"` → `"{slot} de cuero"`), porque en inglés el orden cambia; se monta con `ArmorStats.name`.
+- El rasgo "Eterno" es "Timeless" en inglés: "Eternal" ya es la rareza "Eterna" y una clave no puede tener dos traducciones. Si dos textos españoles distintos piden el mismo inglés, hay que cambiar uno de los dos ingleses.
+- Los textos iguales en los dos idiomas ("VIP", "Aurora", "x2", los grados) también tienen su entrada en `LangEs`, para que no salte el aviso de texto sin traducir.
+- El código de regalo `LANZAMIENTO` se queda como está: es un código que ya vale.
+- `tests/regressions.luau`: la prueba de "ningún texto en español entre comillas" mira solo las carpetas de su lista `DONE` (de momento `src/shared`); al acabar las partes 2 y 3, poner `src` entero. También comprueba que todo texto de `Config` tiene su entrada en `LangEs`: una lista nueva de `Config` con textos se añade ahí.

@@ -2,6 +2,7 @@
 -- rareza, su tirada y el nombre completo. Vale en servidor y cliente.
 local Chance = require(script.Parent.Chance)
 local Config = require(script.Parent.Config)
+local Lang = require(script.Parent.Lang)
 
 local Permanent = {}
 
@@ -107,23 +108,23 @@ end
 
 -- Texto para resultados e inventario: un solo "1 entre N", el del arma con su metal y su tamaño (probabilidad base,
 -- independiente de cualquier suerte). Pedido por el usuario: sin desglose por arma, metal y tamaño, que el juego es
--- para niños y sobraban números.
-function Permanent.describeOdds(sword: number, metal: number?, size: number?): string
+-- para niños y sobraban números. "1 in 1.5K" / "1 entre 1,5K", según el idioma de `player`.
+function Permanent.describeOdds(sword: number, metal: number?, size: number?, player: Player?): string
 	local Format = require(script.Parent.Format)
-	return `1 entre {Format.short(Permanent.rarity(sword, metal, size))}`
+	return Lang.t(player, "1 in {n}", { n = Format.short(Permanent.rarity(sword, metal, size), player) })
 end
 
--- "Espada de acero (Oro, Gigante)": el nombre del arma con sus modificadores, si los tiene.
-function Permanent.name(sword: number, metal: number?, size: number?): string
+-- "Steel Sword (Gold, Giant)": el nombre del arma con sus modificadores, si los tiene, en el idioma de `player`.
+function Permanent.name(sword: number, metal: number?, size: number?, player: Player?): string
 	local parts = {}
 	local metalEntry, sizeEntry = entry(Config.Metals, metal), entry(Config.Sizes, size)
 	if metalEntry then
-		table.insert(parts, metalEntry.name)
+		table.insert(parts, Lang.t(player, metalEntry.name))
 	end
 	if sizeEntry then
-		table.insert(parts, sizeEntry.name)
+		table.insert(parts, Lang.t(player, sizeEntry.name))
 	end
-	local name = Config.Swords[sword].name
+	local name = Lang.t(player, Config.Swords[sword].name)
 	return if #parts > 0 then `{name} ({table.concat(parts, ", ")})` else name
 end
 

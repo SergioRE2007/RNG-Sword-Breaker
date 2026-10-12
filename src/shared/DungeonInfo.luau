@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local DungeonInfo = {}
 
@@ -24,8 +25,8 @@ end
 -- se vea la probabilidad de cada cosa). Sale de las mismas tablas que reparte server/Loot: los "drops" de cada
 -- enemigo de sus oleadas (con el "count" de la zona) y Config.Dungeon.ClearDrops. De los cristales, cuántos caen de
 -- media por partida (con el "loot" de la zona); de la armadura y las pociones, la probabilidad de que caiga al menos
--- una. En grupo hay más enemigos y sale algo más; el pase de botín no va contado.
-function DungeonInfo.rewards(index: number): { { text: string, color: Color3 } }
+-- una. En grupo hay más enemigos y sale algo más; el pase de botín no va contado. `player` = quien lo va a leer.
+function DungeonInfo.rewards(index: number, player: Player?): { { text: string, color: Color3 } }
 	local level = Config.Dungeons[index]
 	if not level then
 		return {}
@@ -57,17 +58,17 @@ function DungeonInfo.rewards(index: number): { { text: string, color: Color3 } }
 	local lines = {}
 	for _, key in { "traitCrystal", "gradeCrystal" } do
 		if average[key] then
-			table.insert(lines, { text = `{Config.Items[key].name}: ~{short(average[key])}`, color = Config.Items[key].color })
+			table.insert(lines, { text = `{Lang.t(player, Config.Items[key].name)}: ~{Lang.decimal(player, short(average[key]))}`, color = Config.Items[key].color })
 		end
 	end
 	local function percent(key: string): string
-		return short(math.min((1 - none[key]) * 100, 99)) .. " %"
+		return Lang.t(player, "{n}%", { n = Lang.decimal(player, short(math.min((1 - none[key]) * 100, 99))) })
 	end
 	if none.armor then
-		table.insert(lines, { text = `Armadura {level.set}: {percent("armor")}`, color = GOLD })
+		table.insert(lines, { text = `{Lang.t(player, level.set, { slot = Lang.t(player, "Armor") })}: {percent("armor")}`, color = GOLD })
 	end
 	if none.potion then
-		table.insert(lines, { text = `Poción: {percent("potion")}`, color = POTION })
+		table.insert(lines, { text = `{Lang.t(player, "Potion")}: {percent("potion")}`, color = POTION })
 	end
 	return lines
 end
@@ -79,10 +80,10 @@ function DungeonInfo.recommended(index: number): number
 end
 
 -- Por qué no se puede entrar con ese daño (texto corto), o nil si se puede. Solo cierra una zona si trae "minDamage".
-function DungeonInfo.lock(index: number, damage: number): string?
+function DungeonInfo.lock(index: number, damage: number, player: Player?): string?
 	local level = Config.Dungeons[index]
 	if level and level.minDamage and damage < level.minDamage then
-		return `Daño mínimo {Format.short(level.minDamage)}`
+		return Lang.t(player, "Minimum damage {n}", { n = Format.short(level.minDamage, player) })
 	end
 	return nil
 end
