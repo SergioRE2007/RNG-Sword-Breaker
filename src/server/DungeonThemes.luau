@@ -380,7 +380,7 @@ local function addProps(ctx, list)
 	for _, spec in list or {} do
 		local make = PROPS[spec.kind]
 		if not make then
-			warn(`DungeonThemes: adorno desconocido "{spec.kind}"`)
+			warn(`DungeonThemes: unknown prop "{spec.kind}"`)
 			continue
 		end
 		local zone = spec.zone or ZONES[spec.kind] or "edge"

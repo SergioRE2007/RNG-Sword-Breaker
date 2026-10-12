@@ -14,6 +14,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Missions = require(script.Parent.Missions)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Tutorial = {}
 
@@ -52,7 +54,7 @@ local function advance(player: Player)
 	publish(player, data)
 	if data.tutorial == DONE then
 		local item = Config.Items[cfg.Reward.item]
-		Remotes.Notice:FireClient(player, `¡Tutorial completado! +{cfg.Reward.amount} {item.name}`, GOLD)
+		Tell.notice(player, GOLD, "Tutorial complete! +{n} {item}", { n = cfg.Reward.amount, item = Lang.t(player, item.name) })
 	end
 end
 

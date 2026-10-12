@@ -20,6 +20,7 @@ local SwordController = require(script.Parent.SwordController)
 local Targeting = require(script.Parent.Targeting)
 local Ui = require(script.Parent.Ui)
 local WeaponSlot = require(script.Parent.WeaponSlot)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local AutoPlay = {}
 
@@ -106,8 +107,18 @@ end
 -- Cartel de lo que es gratis por estar en el grupo (el autoclicker y la pelea automática de mazmorra): lo que hay que
 -- hacer para tenerlo y el botón de unirse al grupo.
 local UNLOCKS = {
-	click = { attribute = "AutoClick", title = "AUTOCLICKER GRATIS", name = "el Autoclicker", done = "¡Autoclicker desbloqueado!" },
-	fight = { attribute = "AutoFight", title = "AUTO DE MAZMORRA GRATIS", name = "el Auto de mazmorra", done = "¡Auto de mazmorra desbloqueado!" },
+	click = {
+		attribute = "AutoClick",
+		title = "FREE AUTOCLICKER",
+		steps = "{a}1.{b} {c}LIKE{b} the game\n{a}2.{b} Join the {c}GROUP{b}\nand the Autoclicker is yours forever",
+		done = "Autoclicker unlocked!",
+	},
+	fight = {
+		attribute = "AutoFight",
+		title = "FREE DUNGEON AUTO",
+		steps = "{a}1.{b} {c}LIKE{b} the game\n{a}2.{b} Join the {c}GROUP{b}\nand the Dungeon Auto is yours forever",
+		done = "Dungeon Auto unlocked!",
+	},
 }
 local function buildUnlock()
 	local card = Instance.new("Frame")
@@ -138,14 +149,14 @@ local function buildUnlock()
 	steps.TextWrapped = true
 	steps.LineHeight = 1.2
 
-	local join = Ui.button(card, "Unirme al grupo", ROBUX)
+	local join = Ui.button(card, Lang.t(nil, "Join the group"), ROBUX)
 	join.Name = "Join"
 	join.AnchorPoint = Vector2.new(1, 1)
 	join.Position = UDim2.new(0.5, -6, 1, -14)
 	join.Size = UDim2.fromOffset(206, 56)
 	join.TextSize = 21
 	Ui.sparkle(join, 4)
-	local check = Ui.button(card, "¡Ya lo hice!", CLICK_COLOR)
+	local check = Ui.button(card, Lang.t(nil, "I did it!"), CLICK_COLOR)
 	check.Name = "Check"
 	check.AnchorPoint = Vector2.new(0, 1)
 	check.Position = UDim2.new(0.5, 6, 1, -14)
@@ -164,8 +175,9 @@ local function buildUnlock()
 	local asked = false -- lo último pedido ha salido de este cartel: si lo niegan, se dice en un aviso
 	local function paintText()
 		local unlock = UNLOCKS[mode]
-		title.Text = unlock.title
-		steps.Text = `<font color="#{ROBUX:ToHex()}">1.</font> Dale <font color="#ffd84a">ME GUSTA</font> al juego\n<font color="#{ROBUX:ToHex()}">2.</font> Únete al <font color="#ffd84a">GRUPO</font>\ny {unlock.name} es tuyo para siempre`
+		title.Text = Lang.t(nil, unlock.title)
+		-- Los huecos son las etiquetas de color: {a} los números, {c} lo que hay que hacer, {b} cierra.
+		steps.Text = Lang.t(nil, unlock.steps, { a = `<font color="#{ROBUX:ToHex()}">`, b = "</font>", c = '<font color="#ffd84a">' })
 	end
 	paintText()
 	local function retry()
@@ -180,7 +192,7 @@ local function buildUnlock()
 		if ok then
 			retry()
 		else
-			Ui.toast("Únete al grupo desde la página del juego", Ui.COLORS.orange)
+			Ui.toast(Lang.t(nil, "Join the group from the game's page"), Ui.COLORS.orange)
 		end
 	end)
 	check.Activated:Connect(retry)
@@ -192,7 +204,7 @@ local function buildUnlock()
 			if key == mode and on(unlock.attribute) and Ui.isOpen(card) then
 				Ui.close(card)
 				Sfx.play("win")
-				Ui.toast(unlock.done, ON_COLOR)
+				Ui.toast(Lang.t(nil, unlock.done), ON_COLOR)
 			end
 		end)
 	end
@@ -206,7 +218,7 @@ local function buildUnlock()
 		if Ui.isOpen(card) then
 			if asked then
 				Sfx.play("error")
-				Ui.toast("Aún no estás en el grupo", Ui.COLORS.orange)
+				Ui.toast(Lang.t(nil, "You're not in the group yet"), Ui.COLORS.orange)
 			end
 		else
 			Ui.open(card)
@@ -256,9 +268,9 @@ function AutoPlay.start()
 		end
 		Ui.tip(button, function()
 			if mode == "click" then
-				return "<b>Autoclicker</b>\nTus armas atacan solas", CLICK_COLOR
+				return Lang.t(nil, "<b>Autoclicker</b>\nYour weapons attack on their own"), CLICK_COLOR
 			end
-			return "<b>Auto</b>\nTus armas rompen toda tu parcela", FARM_COLOR
+			return Lang.t(nil, "<b>Auto</b>\nYour weapons break your whole plot"), FARM_COLOR
 		end, true)
 		paint()
 	end
@@ -270,7 +282,7 @@ function AutoPlay.start()
 			showUnlock(group, mode)
 		else
 			Sfx.play("error")
-			Ui.toast("El Auto es un pase de juego", FARM_COLOR)
+			Ui.toast(Lang.t(nil, "Auto is a game pass"), FARM_COLOR)
 			if not Ui.isOpen(Ui.screen():FindFirstChild("PassShop") :: GuiObject) then
 				Ui.toggle("PassShop")
 			end

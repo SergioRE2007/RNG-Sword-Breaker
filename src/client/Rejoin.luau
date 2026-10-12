@@ -11,6 +11,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Dungeons = require(script.Parent.Dungeons)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Rejoin = {}
 
@@ -50,7 +51,7 @@ function Rejoin.start()
 	detail.Size = UDim2.new(1, -32, 0, 42)
 	detail.TextWrapped = true
 	detail.TextColor3 = Color3.fromRGB(205, 212, 235)
-	detail.Text = "Así Roblox no te expulsa por estar quieto. Vuelves al mismo sitio y sigues igual. Toca algo para cancelar."
+	detail.Text = Lang.t(nil, "This keeps Roblox from kicking you for standing still. You come back to the same spot and carry on. Tap anything to cancel.")
 	Ui.layer(card, LAYER)
 
 	local token = 0 -- cada intento tiene el suyo: tocar algo lo cambia y el intento en marcha se da por cancelado
@@ -70,7 +71,7 @@ function Rejoin.start()
 		Sfx.play("toast")
 		-- En una mazmorra se espera a que acabe la partida (con Repetir, a que empiece la siguiente).
 		if zone > 0 then
-			title.Text = "Reconectando al acabar la partida…"
+			title.Text = Lang.t(nil, "Reconnecting when the run ends…")
 			local run = player:GetAttribute("DungeonRun")
 			local limit = os.clock() + cfg.DungeonWait
 			while mine == token and os.clock() < limit do
@@ -84,11 +85,11 @@ function Rejoin.start()
 			if mine ~= token then
 				break
 			end
-			title.Text = `Reconectando en {left} s…`
+			title.Text = Lang.t(nil, "Reconnecting in {n} s…", { n = left })
 			task.wait(1)
 		end
 		if mine == token then
-			title.Text = "Reconectando…"
+			title.Text = Lang.t(nil, "Reconnecting…")
 			Remotes.Rejoin:FireServer({ fight = Dungeons.autoFight(), dungeon = if zone > 0 then zone else nil })
 			-- Si el viaje sale, esta partida se acaba aquí. Si no, se quita el cartel y el siguiente aviso de Roblox lo reintenta.
 			local limit = os.clock() + RETRY

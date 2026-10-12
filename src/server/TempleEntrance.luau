@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local PropModel = require(ReplicatedStorage.Shared.PropModel)
+local Tell = require(script.Parent.Tell)
 
 local TempleEntrance = {}
 
@@ -106,7 +107,7 @@ local function plaque(parent: Instance, cframe: CFrame)
 	label.Font = Enum.Font.FredokaOne
 	label.TextScaled = true
 	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Text = "MAZMORRAS"
+	Tell.world(label, "Dungeons", nil, true)
 	label.Parent = gui
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0.12, 0)

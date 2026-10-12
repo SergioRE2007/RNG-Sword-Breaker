@@ -17,6 +17,7 @@ local WeatherInfo = require(ReplicatedStorage.Shared.WeatherInfo)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local WeatherHud = {}
 
@@ -226,7 +227,7 @@ end
 local function buffLine(def: { [string]: any }, long: boolean?): string
 	local parts = {}
 	for _, buff in WeatherInfo.buffs(def) do
-		local color = if buff.short == "Armas" then WEAPON else LUCK
+		local color = if buff.stat == "weaponLuck" then WEAPON else LUCK
 		table.insert(parts, `<font color="{color}">{if long then buff.name else buff.short} x{Format.multiplier(buff.value)}</font>`)
 	end
 	return table.concat(parts, `<font color="{Ui.SOFT}">  ·  </font>`)
@@ -335,12 +336,12 @@ function WeatherHud.build()
 	Ui.tip(card, function()
 		local id, def = WeatherInfo.current()
 		if not (id and def) then
-			return "<b>Cielo despejado</b>", CLEAR
+			return `<b>{Lang.t(nil, "Clear sky")}</b>`, CLEAR
 		end
 		local tier = WeatherInfo.tier(def)
 		local lines = {
-			`<font color="{hex(def.color:Lerp(WHITE, 0.3))}"><b>{def.name}</b></font>`,
-			`<font color="{hex(tier.color)}">{tier.name}  ·  {WeatherInfo.oddsText(id)}</font>`,
+			`<font color="{hex(def.color:Lerp(WHITE, 0.3))}"><b>{Lang.t(nil, def.name)}</b></font>`,
+			`<font color="{hex(tier.color)}">{Lang.t(nil, tier.name)}  ·  {WeatherInfo.oddsText(id)}</font>`,
 			buffLine(def),
 		}
 		return table.concat(lines, "\n"), def.color
@@ -366,15 +367,15 @@ function WeatherHud.show(id: string?, soon: boolean?)
 	drawBadge(badge, glyphBox, id)
 	accent.BackgroundColor3 = color
 	if def then
-		title.Text = `<font color="{hex(def.color:Lerp(WHITE, 0.45))}">{def.name}</font>`
+		title.Text = `<font color="{hex(def.color:Lerp(WHITE, 0.45))}">{Lang.t(nil, def.name)}</font>`
 		detail.Text = buffLine(def)
 	elseif shownSoon then
-		title.Text = "¡Se acerca un clima!"
-		detail.Text = `<font color="{Ui.SOFT}">Suerte para todos</font>`
+		title.Text = Lang.t(nil, "Weather incoming!")
+		detail.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Luck for everyone")}</font>`
 		Sfx.play("toast")
 	else
-		title.Text = "Próximo clima"
-		detail.Text = `<font color="{Ui.SOFT}">Cielo despejado</font>`
+		title.Text = Lang.t(nil, "Next weather")
+		detail.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Clear sky")}</font>`
 	end
 	fit()
 	-- Salto al cambiar (sin animaciones en modo rendimiento).
@@ -490,8 +491,8 @@ function WeatherHud.announce(id: string)
 		label.Text = text
 		return label
 	end
-	line("Kicker", 18, 20, 17, `<font color="{Ui.SOFT}">EVENTO DE CLIMA</font>`)
-	local name = line("Name", 38, 54, 46, upper(def.name))
+	line("Kicker", 18, 20, 17, `<font color="{Ui.SOFT}">{Lang.t(nil, "WEATHER EVENT")}</font>`)
+	local name = line("Name", 38, 54, 46, upper(Lang.t(nil, def.name)))
 	name.TextScaled = true
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = if grand then 50 else 44
@@ -502,7 +503,7 @@ function WeatherHud.announce(id: string)
 	paint.Rotation = 90
 	paint.Color = ColorSequence.new(def.color:Lerp(WHITE, 0.7), def.color:Lerp(WHITE, 0.15))
 	paint.Parent = name
-	line("Rarity", 94, 24, 20, `<font color="{hex(tier.color)}">{tier.name}  ·  {WeatherInfo.oddsText(id)}</font>`)
+	line("Rarity", 94, 24, 20, `<font color="{hex(tier.color)}">{Lang.t(nil, tier.name)}  ·  {WeatherInfo.oddsText(id)}</font>`)
 	line("Buffs", 120, 26, 21, buffLine(def, true))
 
 	if Performance.get() then

@@ -7,6 +7,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Destructibles = require(script.Parent.Destructibles)
 local PlayerData = require(script.Parent.PlayerData)
+local Tell = require(script.Parent.Tell)
 
 local Clover = {}
 
@@ -22,7 +23,7 @@ local function onUse(player: Player, part: unknown)
 		return
 	end
 	if part:GetAttribute("Clover") then
-		Remotes.Notice:FireClient(player, "Ese objeto ya tiene un trébol", BAD)
+		Tell.notice(player, BAD, "That object already has a clover")
 		return
 	end
 	-- Primero el objeto (puede haberse roto entre tanto) y luego el cobro.
@@ -32,7 +33,7 @@ local function onUse(player: Player, part: unknown)
 	PlayerData.edit(player, function(edited)
 		edited.items[cfg.Item] -= 1
 	end)
-	Remotes.Notice:FireClient(player, `¡Trébol puesto: x{cfg.Luck} de suerte de armas!`, Config.Items[cfg.Item].color)
+	Tell.notice(player, Config.Items[cfg.Item].color, "Clover placed: x{n} weapon luck!", { n = cfg.Luck })
 end
 
 function Clover.start()

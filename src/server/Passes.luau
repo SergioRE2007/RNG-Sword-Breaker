@@ -13,6 +13,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Passes = {}
 
@@ -36,7 +38,7 @@ local function onPlayer(player: Player)
 				if ok and owned and player.Parent then
 					grant(player, key, true)
 				elseif not ok then
-					warn(`[Passes] No se pudo comprobar el pase {key} de {player.Name}: {owned}`)
+					warn(`[Passes] Could not check the pass {key} of {player.Name}: {owned}`)
 				end
 			end)
 		end
@@ -77,7 +79,7 @@ local function onBuy(player: Player, key: unknown)
 		edited.passes[key] = true
 	end)
 	grant(player, key, true)
-	Remotes.Notice:FireClient(player, `¡Pase conseguido: {Config.Gamepasses[key].name}!`, GOLD)
+	Tell.notice(player, GOLD, "Pass unlocked: {name}!", { name = Lang.t(player, Config.Gamepasses[key].name) })
 	task.spawn(PlayerData.save, player) -- una compra no espera al guardado automático
 end
 

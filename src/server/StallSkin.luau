@@ -62,7 +62,7 @@ local function buildSeller(): Model?
 	end)
 	description:Destroy()
 	if not ok then
-		warn("StallSkin: no se pudo crear el vendedor", seller)
+		warn("StallSkin: could not create the seller", seller)
 		return nil
 	end
 	seller.Name = "Vendedor"

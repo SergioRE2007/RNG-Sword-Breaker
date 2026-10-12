@@ -6,6 +6,7 @@ local Chance = require(ReplicatedStorage.Shared.Chance)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Traits = {}
 
@@ -18,7 +19,7 @@ function Traits.onBroken(player: Player, def)
 		PlayerData.edit(player, function(data)
 			data.items[ITEM] += 1
 		end)
-		Remotes.Notice:FireClient(player, `+1 {item.name}`, item.color)
+		Remotes.Notice:FireClient(player, `+1 {Lang.t(player, item.name)}`, item.color)
 	end
 end
 

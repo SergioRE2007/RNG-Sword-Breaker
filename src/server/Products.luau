@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Products = {}
 
@@ -41,7 +42,7 @@ local function process(receipt)
 		end
 	end)
 	local item = Config.Items[product.item]
-	Remotes.Notice:FireClient(player, `+{product.amount} {item.name}`, item.color)
+	Remotes.Notice:FireClient(player, `+{product.amount} {Lang.t(player, item.name)}`, item.color)
 	task.spawn(PlayerData.save, player) -- una compra no espera al guardado automático
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
@@ -50,7 +51,7 @@ function Products.start()
 	MarketplaceService.ProcessReceipt = function(receipt)
 		local ok, decision = pcall(process, receipt)
 		if not ok then
-			warn(`[Products] Compra {receipt.PurchaseId} sin entregar: {decision}`)
+			warn(`[Products] Purchase {receipt.PurchaseId} not delivered: {decision}`)
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		return decision

@@ -19,6 +19,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Performance = require(script.Parent.Performance)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local ObjectInfo = {}
 
@@ -187,7 +188,7 @@ local function buildTag(part: BasePart, quality: number, class): BillboardGui
 	scale.Scale = factor
 	scale.Parent = chip
 
-	local name = if quality > 1 then rarity.name else class.name
+	local name = Lang.t(nil, if quality > 1 then rarity.name else class.name)
 	local text = Ui.label(chip, 17)
 	text.Size = UDim2.fromScale(1, 1)
 	text.ZIndex = Z.text
@@ -400,13 +401,13 @@ local function fill(part: BasePart)
 	local class = ObjectSpec.size(part:GetAttribute("Size"))
 	local rolls = part:GetAttribute("Rolls") or 1
 	local color = rarity.color
-	refs.name.Text = upper(part.Name)
+	refs.name.Text = upper(Lang.t(nil, part.Name))
 	refs.headerGradient.Color = ColorSequence.new(color:Lerp(WHITE, 0.2), color:Lerp(BLACK, 0.5))
-	refs.sizeName.Text = upper(class.name)
-	refs.rarity.Text = upper(rarity.name)
+	refs.sizeName.Text = upper(Lang.t(nil, class.name))
+	refs.rarity.Text = upper(Lang.t(nil, rarity.name))
 	refs.rarity.TextColor3 = color:Lerp(WHITE, 0.25)
-	refs.luck.Text = `<font color="{Ui.SOFT}">Suerte</font> x{Format.multiplier(part:GetAttribute("Luck") or 1)}`
-	refs.rolls.Text = `<font color="{Ui.SOFT}">Tiradas</font> <font color="#{(if rolls > 1 then Ui.COLORS.coins else WHITE):ToHex()}">{rolls}</font>`
+	refs.luck.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Luck")}</font> x{Format.multiplier(part:GetAttribute("Luck") or 1)}`
+	refs.rolls.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Rolls")}</font> <font color="#{(if rolls > 1 then Ui.COLORS.coins else WHITE):ToHex()}">{rolls}</font>`
 	refs.hpFill.Size, refs.hpText.Text = hpGoal(part)
 end
 

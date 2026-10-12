@@ -15,6 +15,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Armor = require(script.Parent.Armor)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Trade = {}
 
@@ -56,7 +58,7 @@ local function newSide(player: Player?)
 	return {
 		player = player,
 		bot = player == nil,
-		name = if player then player.DisplayName else "Bot de pruebas",
+		name = if player then player.DisplayName else "Test bot",
 		userId = if player then player.UserId else 0,
 		accepted = false,
 		confirmed = false,
@@ -151,14 +153,15 @@ local function push(session)
 	end
 end
 
--- Cierra el trato sin cambiar nada. `text` es el aviso que ven los dos.
-local function close(session, text: string, color: Color3)
+-- Cierra el trato sin cambiar nada. `text` es el aviso que ven los dos: la frase en inglés (con sus huecos en `args`)
+-- o una función (lector) -> texto (ver server/Tell).
+local function close(session, text: any, color: Color3, args: { [string]: any }?)
 	for _, side in session.sides do
 		local player = side.player
 		if player and sessions[player] == session then
 			sessions[player] = nil
 			Remotes.TradeState:FireClient(player, nil)
-			Remotes.Notice:FireClient(player, text, color)
+			Tell.notice(player, color, text, args)
 		end
 	end
 	session.state = "closed"
@@ -189,38 +192,45 @@ local function count(set): number
 	return total
 end
 
+-- El motivo de un trato que no se puede cerrar, para leerlo cada uno en su idioma: (lector) -> texto.
+local function why(text: string, side, item: string?)
+	return function(reader: Player?): string
+		return Lang.t(reader, text, { name = side.name, item = if item then Lang.t(reader, item) else nil })
+	end
+end
+
 -- ¿Sigue teniendo ese lado todo lo que ofrece, y le cabe lo que le da el otro? Devuelve nil si todo bien, o
 -- el motivo por el que no.
-local function problem(side, other): string?
+local function problem(side, other): any
 	if side.bot then
 		return nil
 	end
 	local data = PlayerData.read(side.player)
 	if not data then
-		return `{side.name} no tiene los datos cargados`
+		return why("{name}'s data isn't loaded", side)
 	end
 	local offer = side.offer
 	if data.coins < offer.coins or data.gems < offer.gems then
-		return `{side.name} ya no tiene esas monedas o gemas`
+		return why("{name} no longer has those coins or gems", side)
 	end
 	for name, amount in offer.items do
 		if (data.items[name] or 0) < amount then
-			return `{side.name} ya no tiene esos objetos`
+			return why("{name} no longer has those items", side)
 		end
 	end
 	for id in offer.swords do
 		if not PlayerData.findSword(data, id) or PlayerData.isLocked(data, id) then
-			return `{side.name} ya no tiene una de las espadas (o la lleva equipada o en su bolsa)`
+			return why("{name} no longer has one of the swords (or it's equipped or in their bag)", side)
 		end
 	end
 	for id in offer.armor do
 		if not findArmor(data, id) then
-			return `{side.name} ya no tiene una de las piezas de armadura`
+			return why("{name} no longer has one of the armor pieces", side)
 		end
 	end
 	for index in offer.artifacts do
 		if not table.find(data.artifacts, index) then
-			return `{side.name} ya no tiene uno de los accesorios`
+			return why("{name} no longer has one of the accessories", side)
 		end
 	end
 	-- Lo que recibe.
@@ -228,14 +238,14 @@ local function problem(side, other): string?
 	local swordsIn = if other.bot then #other.fake.swords else count(incoming.swords)
 	local armorIn = if other.bot then #other.fake.armor else count(incoming.armor)
 	if #data.swords - count(offer.swords) + swordsIn > Config.MaxSwords then
-		return `A {side.name} no le caben tantas espadas`
+		return why("{name} doesn't have room for that many swords", side)
 	end
 	if #data.armor - count(offer.armor) + armorIn > Config.Armor.MaxPieces then
-		return `A {side.name} no le cabe tanta armadura`
+		return why("{name} doesn't have room for that much armor", side)
 	end
 	for index in incoming.artifacts do
 		if table.find(data.artifacts, index) and not offer.artifacts[index] then
-			return `{side.name} ya tiene el accesorio {Config.Artifacts[index].name}`
+			return why("{name} already has the accessory {item}", side, Config.Artifacts[index].name)
 		end
 	end
 	return nil
@@ -320,7 +330,9 @@ local function complete(session)
 	local a, b = session.sides[1], session.sides[2]
 	local reason = problem(a, b) or problem(b, a)
 	if reason then
-		close(session, "Trato cancelado: " .. reason, BAD)
+		close(session, function(reader)
+			return Lang.t(reader, "Trade cancelled: {reason}", { reason = reason(reader) })
+		end, BAD)
 		return
 	end
 	local fromA, fromB = take(a), take(b)
@@ -333,7 +345,7 @@ local function complete(session)
 			task.spawn(PlayerData.save, side.player)
 		end
 	end
-	close(session, "¡Intercambio completado!", GOOD)
+	close(session, "Trade complete!", GOOD)
 end
 
 -- Sugerencias (definidas más abajo, con las peticiones del cliente): las usa también el bot de pruebas.
@@ -494,10 +506,8 @@ end
 
 -- Sugerencias: "want" (quiero eso tuyo) o "give" (te doy eso mío). Se guardan fuera de la oferta, así que por sí
 -- solas no mueven nada: aceptar una solo cambia una oferta, y el trato sigue pidiendo Aceptar, Confirmar y la cuenta atrás.
-local function notice(side, text: string, color: Color3)
-	if side.player then
-		Remotes.Notice:FireClient(side.player, text, color)
-	end
+local function notice(side, text: string, color: Color3, args: { [string]: any }?)
+	Tell.notice(side.player, color, text, args)
 end
 
 -- Quita la sugerencia `suggest` de `side` si sigue siendo la suya (puede haberla sustituido otra).
@@ -531,19 +541,19 @@ function respondSuggest(session, side, other, accept: boolean)
 		end
 		local value = math.min(suggest.amount, owned)
 		if value < 1 then
-			notice(side, "No tienes nada de eso", BAD)
+			notice(side, "You don't have any of that", BAD)
 			push(session)
 			return
 		end
 		if value < suggest.amount then
-			notice(side, "No tienes tanto: se pone lo que tienes", BAD)
+			notice(side, "You don't have that many: what you have was added", BAD)
 		end
 		if not applyOffer(session, side, other, suggest.category, suggest.key, value) then
 			push(session)
 		end
 	elseif not applyOffer(session, other, side, suggest.category, suggest.key, suggest.amount) then
 		-- "Te doy": a la oferta de quien la mandó, si sigue teniéndolo.
-		notice(side, `{other.name} ya no tiene eso`, BAD)
+		notice(side, "{name} no longer has that", BAD, { name = other.name })
 		push(session)
 	end
 end
@@ -670,7 +680,7 @@ end
 local function onCancel(player: Player)
 	local session, side = sideOf(player)
 	if session then
-		close(session, `{side.name} ha cancelado el trato`, BAD)
+		close(session, "{name} cancelled the trade", BAD, { name = side.name })
 	end
 end
 
@@ -691,13 +701,13 @@ local function onRequest(player: Player, userId: unknown)
 		return
 	end
 	if sessions[target] then
-		Remotes.Notice:FireClient(player, `{target.DisplayName} ya está en otro trato`, BAD)
+		Tell.notice(player, BAD, "{name} is already in another trade", { name = target.DisplayName })
 		return
 	end
 	invites[target] = invites[target] or {}
 	invites[target][player] = now + cfg.InviteTime
 	Remotes.TradeInvite:FireClient(target, player.UserId, player.DisplayName)
-	Remotes.Notice:FireClient(player, `Invitación enviada a {target.DisplayName}`, GOOD)
+	Tell.notice(player, GOOD, "Invite sent to {name}", { name = target.DisplayName })
 end
 
 local function onRespond(player: Player, userId: unknown, accept: unknown)
@@ -709,11 +719,11 @@ local function onRespond(player: Player, userId: unknown, accept: unknown)
 	end
 	pending[from] = nil
 	if accept ~= true then
-		Remotes.Notice:FireClient(from, `{player.DisplayName} ha rechazado el trato`, BAD)
+		Tell.notice(from, BAD, "{name} declined the trade", { name = player.DisplayName })
 		return
 	end
 	if os.clock() > expires or sessions[player] or sessions[from] or not PlayerData.read(player) or not PlayerData.read(from) then
-		Remotes.Notice:FireClient(player, "La invitación ya no vale", BAD)
+		Tell.notice(player, BAD, "The invite is no longer valid")
 		return
 	end
 	start(from, player)
@@ -739,7 +749,7 @@ function Trade.start()
 	Players.PlayerRemoving:Connect(function(player)
 		local session = sessions[player]
 		if session then
-			close(session, `{player.DisplayName} se ha ido: trato cancelado`, BAD)
+			close(session, "{name} left: trade cancelled", BAD, { name = player.DisplayName })
 		end
 		invites[player] = nil
 		for _, pending in invites do

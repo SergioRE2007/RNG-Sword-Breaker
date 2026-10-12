@@ -15,6 +15,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Potions = {}
 
@@ -50,7 +52,7 @@ local function settle(player: Player, data)
 			data.potions[family] = nil
 			publish(player, family, nil)
 			local key = PotionInfo.key(family, potion.tier)
-			Remotes.Notice:FireClient(player, `Se ha acabado: {Config.Items[key].name}`, Config.Items[key].color)
+			Tell.notice(player, Config.Items[key].color, "Ran out: {name}", { name = Lang.t(player, Config.Items[key].name) })
 		end
 	end
 	if not anyLeft then
@@ -120,9 +122,11 @@ function Potions.give(player: Player, family: string, tier: number): string?
 	PlayerData.edit(player, function(data)
 		data.items[key] += 1
 	end)
-	Remotes.Notice:FireClient(player, `+1 {item.name}`, item.color)
+	Remotes.Notice:FireClient(player, `+1 {Lang.t(player, item.name)}`, item.color)
 	if tier >= cfg.AnnounceFrom then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {item.name}!`, item.color)
+		Tell.all(item.color, function(reader)
+			return Lang.t(reader, "{player} got {item}!", { player = player.DisplayName, item = Lang.t(reader, item.name) })
+		end)
 	end
 	return key
 end
@@ -171,26 +175,26 @@ local function onUse(player: Player, requestedFamily: unknown, requestedTier: un
 	end
 
 	settle(player, data)
-	local name = Config.Items[key].name
+	local name = Lang.t(player, Config.Items[key].name)
 	local color = Config.Items[key].color
 	local active = data.potions[family]
 	local base = PotionInfo.duration(tier)
 	local seconds = base
 	local message
 	if not active then
-		message = `Poción activada: {name}`
+		message = Lang.t(player, "Potion active: {name}", { name = name })
 	elseif tier > active.tier then
-		message = `¡Poción mejorada! {name}`
+		message = Lang.t(player, "Potion upgraded! {name}", { name = name })
 	elseif tier == active.tier then
 		local cap = PotionInfo.cap(tier)
 		if active.seconds >= cap - 0.5 then
-			Remotes.Notice:FireClient(player, `{name} ya está al máximo.`, RED)
+			Tell.notice(player, RED, "{name} is already maxed.", { name = name })
 			return
 		end
 		seconds = math.min(active.seconds + base, cap)
 		message = `{name}: +{PotionInfo.minutes(base)}`
 	else
-		Remotes.Notice:FireClient(player, "Ya tienes una poción mejor activa.", RED)
+		Tell.notice(player, RED, "You already have a better potion active.")
 		return
 	end
 

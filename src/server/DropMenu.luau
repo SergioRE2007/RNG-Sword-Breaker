@@ -13,6 +13,8 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Armor = require(script.Parent.Armor)
 local PlayerData = require(script.Parent.PlayerData)
 local Potions = require(script.Parent.Potions)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local DropMenu = {}
 
@@ -30,7 +32,7 @@ local function grant(player: Player, drop)
 		PlayerData.edit(player, function(data)
 			data.items[drop.key] += drop.amount
 		end)
-		Remotes.Notice:FireClient(player, `+{Format.short(drop.amount)} {item.name}`, item.color)
+		Remotes.Notice:FireClient(player, `+{Format.short(drop.amount, player)} {Lang.t(player, item.name)}`, item.color)
 	elseif drop.kind == "potion" then
 		if PotionInfo.valid(drop.family, drop.tier) then
 			for _ = 1, drop.amount do
@@ -58,7 +60,7 @@ local function resolve(player: Player, discard: { [number]: boolean }?)
 		end
 	end
 	if thrown > 0 and player.Parent then
-		Remotes.Notice:FireClient(player, `Has tirado {thrown} {if thrown == 1 then "botín" else "botines"}`, Color3.fromRGB(200, 205, 225))
+		Tell.notice(player, Color3.fromRGB(200, 205, 225), if thrown == 1 then "You threw away {n} drop" else "You threw away {n} drops", { n = thrown })
 	end
 end
 

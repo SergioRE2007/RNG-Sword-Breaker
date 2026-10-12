@@ -16,6 +16,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Plots = require(script.Parent.Plots)
+local Tell = require(script.Parent.Tell)
 
 local AutoPlay = {}
 
@@ -39,7 +40,7 @@ end
 local function inGroup(player: Player, id: number): boolean
 	local ok, groups = pcall(GroupService.GetGroupsAsync, GroupService, player.UserId)
 	if not ok then
-		warn(`[AutoPlay] No se pudo mirar el grupo de {player.Name}: {groups}`)
+		warn(`[AutoPlay] Could not read the groups of {player.Name}: {groups}`)
 		return false
 	end
 	for _, group in groups do
@@ -87,7 +88,7 @@ local function setFarm(player: Player)
 	if not Stats.perk(player, "autoFarm") then
 		Remotes.AutoDenied:FireClient(player, "farm")
 	elseif not inPlot(player) then
-		Remotes.Notice:FireClient(player, "Ve a tu parcela para activar el Auto", ORANGE)
+		Tell.notice(player, ORANGE, "Go to your plot to turn Auto on")
 	else
 		player:SetAttribute("AutoFarm", true)
 	end

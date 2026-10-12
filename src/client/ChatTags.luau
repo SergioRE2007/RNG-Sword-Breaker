@@ -7,6 +7,7 @@ local TextChatService = game:GetService("TextChatService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Stats = require(ReplicatedStorage.Shared.Stats)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local ChatTags = {}
 
@@ -16,7 +17,7 @@ local function tags(speaker: Player): string
 	for _, key in Config.GamepassOrder do
 		local pass = Config.Gamepasses[key]
 		if pass.chatTag and Stats.pass(speaker, key) then
-			text ..= `<font color="#{pass.color:ToHex()}"><b>[{pass.chatTag}]</b></font> `
+			text ..= `<font color="#{pass.color:ToHex()}"><b>[{Lang.t(nil, pass.chatTag)}]</b></font> `
 		end
 	end
 	return text

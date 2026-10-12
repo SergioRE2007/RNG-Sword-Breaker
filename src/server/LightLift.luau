@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Tell = require(script.Parent.Tell)
 
 local LightLift = {}
 
@@ -100,8 +101,7 @@ local function platform(parent: Instance, name: string, y: number, text: string,
 		CollectionService:AddTag(light, "NightLight")
 	end
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = text
-	prompt.ObjectText = "Ascensor de luz"
+	Tell.prompt(prompt, text, "Light lift")
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 9
 	prompt.RequiresLineOfSight = false
@@ -122,8 +122,8 @@ function LightLift.start()
 
 	-- Tapa de cristal sobre la boca: sólida (no se cae por ella) y translúcida, con un anillo de runas al borde.
 	disc(folder, "Lid", Vector3.new(0, topY - 0.25, 0), cfg.HoleRadius + 0.4, 0.5, VIOLET:Lerp(DARK, 0.6), Enum.Material.Glass, 0.7)
-	platform(folder, "LiftTop", topY, "Bajar", bottomY + STAND)
-	platform(folder, "LiftBottom", bottomY, "Subir", topY + STAND)
+	platform(folder, "LiftTop", topY, "Go down", bottomY + STAND)
+	platform(folder, "LiftBottom", bottomY, "Go up", topY + STAND)
 
 	-- Columna de luz de arriba a abajo del pozo (cristal translúcido, sin Neon).
 	local column = decor(part(folder, "LightColumn", Vector3.new(topY - bottomY, 9, 9), CFrame.new(0, (topY + bottomY) / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), CYAN, Enum.Material.Glass, 0.97))

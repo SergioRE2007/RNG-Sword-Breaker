@@ -945,7 +945,7 @@ function WeatherFx.build(layers: { { [string]: any } })
 			if ok then
 				table.insert(items, item)
 			else
-				warn(`[WeatherFx] No se pudo montar la capa "{def.kind}": {item}`)
+				warn(`[WeatherFx] Could not build the layer "{def.kind}": {item}`)
 			end
 		end
 	end

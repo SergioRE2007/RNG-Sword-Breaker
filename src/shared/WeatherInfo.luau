@@ -75,13 +75,13 @@ function WeatherInfo.tier(def: { [string]: any })
 end
 
 -- Lo que da ese clima: { { name = "Destructible Luck", short = "Luck", value = 2 }, ... }, ya en el idioma de `player`.
-function WeatherInfo.buffs(def: { [string]: any }, player: Player?): { { name: string, short: string, value: number } }
+function WeatherInfo.buffs(def: { [string]: any }, player: Player?): { { stat: string, name: string, short: string, value: number } }
 	local list = {}
 	if def.luck and def.luck ~= 1 then
-		table.insert(list, { name = Lang.t(player, "Destructible Luck"), short = Lang.t(player, "Luck"), value = def.luck })
+		table.insert(list, { stat = "luck", name = Lang.t(player, "Destructible Luck"), short = Lang.t(player, "Luck"), value = def.luck })
 	end
 	if def.weaponLuck and def.weaponLuck ~= 1 then
-		table.insert(list, { name = Lang.t(player, "Weapon Luck"), short = Lang.t(player, "Weapons"), value = def.weaponLuck })
+		table.insert(list, { stat = "weaponLuck", name = Lang.t(player, "Weapon Luck"), short = Lang.t(player, "Weapons"), value = def.weaponLuck })
 	end
 	return list
 end

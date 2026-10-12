@@ -341,8 +341,8 @@ local function buildWindow()
 			return
 		end
 		headGradient.Color = ColorSequence.new(level.color:Lerp(WHITE, 0.25), level.color:Lerp(BLACK, 0.4))
-		zoneName.Text = string.upper(Lang.t(nil, level.name))
-		tagline.Text = level.tagline or ""
+		zoneName.Text = Ui.upper(Lang.t(nil, level.name))
+		tagline.Text = if level.tagline then Lang.t(nil, level.tagline) else ""
 		local theme = Config.DungeonThemes[level.id]
 		if zoneShown ~= zone then
 			zoneShown = zone

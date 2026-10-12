@@ -24,6 +24,7 @@ local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local RollReveal = {}
 
@@ -64,7 +65,7 @@ local LEVELS = {
 	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.2, fly = 0.85, turns = 1.5, sparks = 80, aura = 34, shock = 3, light = 1.6, beam = 2.6, punch = 9, shake = 0.7, absorb = true, rays = true, flash = true, grow = 1.7, sounds = { "reveal_5" } },
 }
 -- Frase encima del cartel en los niveles altos.
-local LINES = { [3] = "¡Buena tirada!", [4] = "¡El destino te ha elegido!", [5] = "¡Los cielos se abren ante ti!" }
+local LINES = { [3] = "Nice roll!", [4] = "Fate has chosen you!", [5] = "The heavens open before you!" }
 
 -- Capas del cartel (la interfaz ordena el ZIndex globalmente).
 local Z = { chip = 2, text = 3 }
@@ -294,11 +295,11 @@ local function buildLabel(folder: Instance, anchor: BasePart, roll, level: numbe
 	local color = tier.color
 	local texts = {}
 	if LINES[level] then
-		table.insert(texts, textLine(root, 1, 17, 20, LINES[level], GOLD))
+		table.insert(texts, textLine(root, 1, 17, 20, Lang.t(nil, LINES[level]), GOLD))
 	end
 
 	-- Rareza: una chapa con el color de la rareza, que es lo primero que se lee.
-	local rarityText = string.upper(tier.name)
+	local rarityText = Ui.upper(Lang.t(nil, tier.name))
 	local chip = Instance.new("Frame")
 	chip.Name = "Rarity"
 	chip.LayoutOrder = 2
@@ -335,7 +336,7 @@ local function buildLabel(folder: Instance, anchor: BasePart, roll, level: numbe
 	local detail = {}
 	table.insert(detail, `<font color="{Ui.SOFT}">{Permanent.describeOdds(roll.index, roll.metal, roll.size)}</font>`)
 	if not roll.kept then
-		table.insert(detail, `<font color="#{Ui.COLORS.orange:ToHex()}">vendida</font>`)
+		table.insert(detail, `<font color="#{Ui.COLORS.orange:ToHex()}">{Lang.t(nil, "sold")}</font>`)
 	end
 	if #detail > 0 then
 		table.insert(texts, textLine(root, 4, if level >= 4 then 19 else 15, if level >= 4 then 22 else 18, table.concat(detail, "  ·  "), WHITE))
@@ -759,7 +760,7 @@ local function shortcut(roll)
 		collect(roll, level, tier.color)
 	end
 	if level >= 3 then
-		Ui.toast(`¡{Permanent.name(roll.index, roll.metal, roll.size)}!`, tier.color)
+		Ui.toast(Lang.t(nil, "{name}!", { name = Permanent.name(roll.index, roll.metal, roll.size) }), tier.color)
 	end
 end
 

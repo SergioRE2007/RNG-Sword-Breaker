@@ -17,6 +17,7 @@ local Dungeons = require(script.Parent.Dungeons)
 local Party = require(script.Parent.Party)
 local PlayerData = require(script.Parent.PlayerData)
 local Plots = require(script.Parent.Plots)
+local Tell = require(script.Parent.Tell)
 
 local Rejoin = {}
 
@@ -141,7 +142,7 @@ local function restore(player: Player, data)
 		AutoPlay.set(player, "farm", true)
 	end
 	if player.Parent then
-		Remotes.Notice:FireClient(player, "¡Reconectado! Sigues donde estabas", GREEN)
+		Tell.notice(player, GREEN, "Reconnected! You're right where you were")
 	end
 end
 
@@ -169,7 +170,7 @@ local function travel(player: Player, data, sameServer: boolean): boolean
 	end
 	local ok, problem = pcall(TeleportService.TeleportAsync, TeleportService, game.PlaceId, { player }, options)
 	if not ok then
-		warn(`[Rejoin] No se pudo reconectar a {player.Name}: {problem}`)
+		warn(`[Rejoin] Could not reconnect {player.Name}: {problem}`)
 	end
 	return ok
 end
