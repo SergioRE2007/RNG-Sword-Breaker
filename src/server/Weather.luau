@@ -134,6 +134,15 @@ local function force(value: unknown)
 	update()
 end
 
+-- Para las órdenes que llegan de otros servidores (server/AdminCommands): un id de clima, "none" o "auto".
+function Weather.force(action: unknown)
+	if action == "auto" then
+		force(nil)
+	elseif action == "none" or (type(action) == "string" and cfg.Events[action]) then
+		force(action)
+	end
+end
+
 function Weather.start()
 	if STUDIO then
 		local initial = Config.Test.Weather

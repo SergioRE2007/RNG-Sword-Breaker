@@ -45,6 +45,7 @@ require(script.PotionFx).start()
 require(script.JapanFx).start()
 require(script.Weather).start() -- después de DayCycle, DungeonFx y JapanFx: mezcla su luz y amaina sus pétalos
 require(script.Soundscape).start() -- ambiente de fondo; después de DayCycle y DungeonFx: suena según la hora y la zona
+require(script.BoostHud).start() -- pastillas de los eventos de admin y mensaje grande; después de Hud
 require(script.AdminPanel).start() -- menú de admin (solo para administradores); después de Hud y de Weather
 require(script.StationFx).start()
 require(script.HitboxDebug).start() -- opción "Ver hitbox" de Ajustes

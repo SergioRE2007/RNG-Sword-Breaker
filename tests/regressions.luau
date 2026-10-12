@@ -616,6 +616,25 @@ near(stats.gachaLuck(f.player) / gachaBefore, 1, "la lluvia no da suerte de arma
 f.workspace:SetAttribute("Weather", "")
 near(stats.spawnLuck(f.player) / spawnBefore, 1, "despejado: la suerte vuelve a ser la de antes")
 
+-- Eventos de admin (Stats.boost): el multiplicador entra solo en su stat y se va al caducar.
+roblox.implementMethod("Workspace", "GetServerTimeNow", function() return 0 end)
+local damageBefore, coinsBefore = stats.damage(f.player), stats.coins(f.player)
+f.workspace:SetAttribute("Boost_luck", 3)
+f.workspace:SetAttribute("BoostEnd_luck", 60)
+f.workspace:SetAttribute("Boost_damage", 2)
+f.workspace:SetAttribute("BoostEnd_damage", 60)
+near(stats.spawnLuck(f.player) / spawnBefore, 3, "el evento de admin da suerte de cajas")
+near(stats.gachaLuck(f.player) / gachaBefore, 1, "el evento de suerte de cajas no toca la suerte de armas")
+near(stats.damage(f.player) / damageBefore, 2, "el evento de admin multiplica el daño")
+near(stats.coins(f.player) / coinsBefore, 1, "y no toca las monedas")
+near(stats.boost("gradeLuck"), 1, "sin evento de grados, su suerte es 1")
+f.workspace:SetAttribute("BoostEnd_luck", -1)
+near(stats.spawnLuck(f.player) / spawnBefore, 1, "un evento caducado ya no cuenta")
+for _, name in { "Boost_luck", "BoostEnd_luck", "Boost_damage", "BoostEnd_damage" } do
+	f.workspace:SetAttribute(name, nil)
+end
+near(stats.damage(f.player) / damageBefore, 1, "sin eventos, el daño es el de antes")
+
 -- Equilibrio de progresión (tools/equilibrio): lo que no debe romperse al tocar Config.
 local upgrades = f.load("src/shared/Upgrades")
 local objectSpec = f.load("src/shared/ObjectSpec")
@@ -1487,7 +1506,6 @@ end
 
 -- Bolsa de oro (server/GoldBag, shared/BagInfo): las cuentas de las bolsas, depositar y sacar armas, que una
 -- depositada no se venda ni se equipe a la vez, el cobro de cada segundo, lo ganado mientras no estaba y lo guardado.
-roblox.implementMethod("Workspace", "GetServerTimeNow", function() return 0 end)
 do
 	local store = dataStore(nil)
 	local bf = fixture(nil, store)
