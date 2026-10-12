@@ -196,6 +196,13 @@ function Hud.start()
 		button.LayoutOrder = order
 		Ui.sparkle(button, 5)
 		button.Activated:Connect(function()
+			if entry[1] == "dungeon" then
+				-- Las mazmorras se eligen en su menú (client/DungeonMenu); dentro de una partida no se abre.
+				if (player:GetAttribute("Dungeon") or 0) == 0 then
+					Ui.toggle("DungeonMenu")
+				end
+				return
+			end
 			Remotes.Teleport:FireServer(entry[1])
 		end)
 	end
