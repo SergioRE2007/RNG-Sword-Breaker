@@ -826,7 +826,7 @@ return {
 	["Luck (weapons)"] = "Suerte armas",
 	["maxed"] = "al máximo",
 	-- Parte 3: reconexión y tutorial
-	["This keeps Roblox from kicking you for standing still. You come back to the same spot and carry on. Tap anything to cancel."] = "Así Roblox no te expulsa por estar quieto. Vuelves al mismo sitio y sigues igual. Toca algo para cancelar.",
+	["Keeps Roblox from kicking you for being idle. You return to the same spot. Tap anything to cancel."] = "Así Roblox no te expulsa por estar quieto. Vuelves al mismo sitio y sigues igual. Toca algo para cancelar.",
 	["Reconnecting when the run ends…"] = "Reconectando al acabar la partida…",
 	["Reconnecting in {n} s…"] = "Reconectando en {n} s…",
 	["Reconnecting…"] = "Reconectando…",

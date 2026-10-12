@@ -47,7 +47,7 @@ Estilo "gettext": en el código queda el texto en inglés y una tabla lo pasa a 
 - [x] Parte 1: sistema y datos (hecha el 12 de octubre de 2026; notas debajo)
 - [x] Parte 2: ventanas (hecha el 12 de octubre de 2026; notas al final)
 - [x] Parte 3: HUD, mundo y servidor (hecha el 12 de octubre de 2026; notas al final)
-- [ ] Parte 4: repaso
+- [x] Parte 4: repaso (hecha el 12 de octubre de 2026; notas al final)
 
 ## Notas de la parte 1 (para las siguientes)
 
@@ -82,3 +82,12 @@ Estilo "gettext": en el código queda el texto en inglés y una tabla lo pasa a 
 - `tests/regressions.luau`: la prueba de "ningún texto en español" mira ya todo `src`; solo deja pasar las letras sueltas (las tablas que suben las tildes a mayúsculas).
 - Probado en Studio con `Config.Test.Lang` en `"en"` y en `"es"`: menú, transporte, estadísticas, cartel del objeto, carteles del mundo, avisos (código, poción, renacer, mejor tirada, trato cancelado) y panel de mazmorra, sin avisos de textos que falten. Sin mirar con capturas: si algún texto en inglés no cabe (parte 4). Tampoco se han visto en marcha el cartel de reconexión, el del autoclicker ni la tirada gratis antigua (`GachaRoll`).
 - Para la parte 4, además de lo que ya dice: `CLAUDE.md` habla de `Remotes.Announce:FireAllClients`, de textos en español en ejemplos de prueba ("Quiero 5 Cristal de rasgo", "Botín añadido a tu inventario") y de `Hud.Rasgos`/`Hud.Grados`; añadir allí `Tell` y `WorldText`. El nombre del bot de comercio es "Test bot".
+
+## Notas de la parte 4
+
+- Repaso en Studio con `Config.Test.Lang` en `"en"` y en `"es"`: HUD, las ventanas (mochila, tienda, renacer, ajustes, comercio con el bot, misiones, rasgos, grados, índice, grupo, bolsa, venta, admin, carteles de autoclicker y reconexión), carteles y avisos de E del mundo y una mazmorra entera con su cartel y su menú de botín. Con capturas las de más texto y, todas, con un recorrido por código de los textos de `PlayerGui` (`TextFits`, palabras del otro idioma) y `LogService`: ni mezclas de idioma ni entradas que falten.
+- Lo único que no cabía: el detalle del cartel de reconexión en inglés (tres líneas en sitio para dos). Se acortó el inglés ("Keeps Roblox from kicking you for being idle...").
+- Roblox: los ocho pases y los tres productos tienen ya nombre y descripción en inglés (Open Cloud, `PATCH` con `name` y `description`).
+- Pendiente, del usuario en el Creator Hub: nombre y descripción del juego en inglés, la traducción al español de juego, pases y productos en la tabla de localización de Roblox, y activar la captura y la traducción automáticas para los demás idiomas (sin el español).
+- Sin ver en marcha: la tirada gratis antigua (`GachaRoll`, apagada con `FreeRoll = false`) y los textos del juego publicado con una cuenta de verdad en inglés (en Studio el idioma se fuerza).
+- `CLAUDE.md` tiene una sección "Idioma" con las reglas; los textos de pantalla que cita en otras secciones siguen siendo los españoles.
