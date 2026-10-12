@@ -67,7 +67,7 @@ local function testNoSave(): boolean
 	if not RunService:IsStudio() then
 		return false
 	end
-	return (test.Progress or 0) > 0 or (test.AllPotions or 0) > 0 or (test.Tickets or 0) > 0 or test.Tutorial == true or (test.InfiniteMoney or test.AllWeapons or test.AllGear) and true or false
+	return (test.Progress or 0) > 0 or (test.AllPotions or 0) > 0 or (test.Tickets or 0) > 0 or (test.BestWeapons or 0) > 0 or test.Tutorial == true or (test.InfiniteMoney or test.AllWeapons or test.AllGear) and true or false
 end
 
 -- Lee lo guardado y deja puesto el candado de esta sesión. Devuelve si fue bien, lo guardado (nil = partida nueva) y si
@@ -658,6 +658,35 @@ local function load(player: Player)
 				data.nextSwordId += 1
 			end
 		end
+		canSave = false
+	end
+
+	-- Modo de pruebas (solo en Studio): copias del arma de más daño que existe (mejor arma, metal, tamaño, rasgo y
+	-- grado), con las primeras ya equipadas. También sin guardar.
+	local best = if RunService:IsStudio() and not progress then Config.Test.BestWeapons or 0 else 0
+	if best > 0 then
+		-- Índice de la entrada de más `field` de una lista de Config.
+		local function top(list, field: string): number?
+			local pick = nil
+			for index, entry in list do
+				if entry[field] and (not pick or entry[field] > list[pick][field]) then
+					pick = index
+				end
+			end
+			return pick
+		end
+		local sword, metal, size = top(Config.Swords, "damage"), top(Config.Metals, "odds"), top(Config.Sizes, "odds")
+		local trait, grade = top(Config.Traits, "damage"), top(Config.Grades, "damage")
+		local loadout = {}
+		for _ = 1, best do
+			local id = data.nextSwordId
+			data.nextSwordId += 1
+			table.insert(data.swords, { id = id, sword = sword, metal = metal, size = size, trait = trait, grade = grade })
+			if #loadout < Config.Loadout.Slots then
+				table.insert(loadout, id)
+			end
+		end
+		data.loadout = loadout
 		canSave = false
 	end
 
