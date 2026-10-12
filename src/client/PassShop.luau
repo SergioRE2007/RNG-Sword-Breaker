@@ -322,6 +322,7 @@ function PassShop.start()
 	-- Tickets que tiene el jugador, en la cabecera, a la izquierda de la X.
 	local wallet = Instance.new("Frame")
 	wallet.Name = "Tickets"
+	wallet.Visible = false -- el contador de tickets no sale en la Tienda (pedido por el usuario: ahí no pintaba nada); se ven en la mochila y en el puesto de Misiones
 	wallet.AnchorPoint = Vector2.new(1, 0.5)
 	wallet.Position = UDim2.new(1, -72, 0.5, 0)
 	wallet.Size = UDim2.fromOffset(190, 42)

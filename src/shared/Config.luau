@@ -24,7 +24,7 @@ Config.Test = {
 	Lang = "", -- "en" o "es": idioma forzado de los textos (shared/Lang); "" = el de la cuenta de Roblox
 	Weather = "", -- id de un clima de Config.Weather.Events para tenerlo puesto al entrar ("" = el que toque por la hora)
 }
--- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
+-- Administradores en el juego publicado: solo estas cuentas (ni el dueño del grupo); UserId de Roblox de cada uno (server/Admin). Ven el menú
 -- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
 Config.Admins = { 4490621018 }
 -- Jugadores que van aparte (pedido por el usuario, para su propia cuenta): juegan y guardan como todos, pero no salen en
@@ -913,7 +913,7 @@ Config.Trade = {
 Config.Tickets = {
 	PerRobux = 1.5,
 	Shop = {
-		{ item = "luckClover", price = 50 },
+		{ item = "luckClover", price = 150 },
 		{ item = "potion_weaponLuck_5", price = 20 },
 		{ item = "potion_boxLuck_5", price = 20 },
 		{ item = "potion_coins_5", price = 20 },
@@ -940,17 +940,8 @@ Config.Tutorial = {
 		{ id = "dungeon", kind = "lobby", text = "Head down to the Dungeons", point = "button:Travel.Travel_dungeon" },
 	},
 }
--- CÓDIGOS DE REGALO (server/Codes; se escriben abajo del todo en la Tienda). La clave es el código, en MAYÚSCULAS y sin
--- espacios (el jugador puede escribirlo como quiera). Cada jugador lo canjea una sola vez. Opcionales: maxUses = cuántos
--- jugadores en total pueden canjearlo (los primeros que lleguen) y expires = "AAAA-MM-DD", último día en que vale (hora
--- UTC). rewards = lo que da, una lista con { coins = N }, { gems = N } o { item = clave de Config.Items, amount = N }
--- (missionToken = tickets, luckClover = tréboles, traitCrystal, gradeCrystal, potion_<familia>_<tier>...). Ejemplos:
---	SOLO10 = { maxUses = 10, rewards = { { item = "luckClover", amount = 3 } } },
---	SEMANA = { expires = "2026-10-19", rewards = { { gems = 500 }, { item = "missionToken", amount = 25 } } },
--- Quitar un código de aquí lo deja sin valer; quien ya lo canjeó se queda con lo que le dio.
-Config.Codes = {
-	LANZAMIENTO = { rewards = { { item = "luckClover", amount = 1 }, { item = "potion_coins_5", amount = 1 } } },
-}
+-- CÓDIGOS DE REGALO: la lista (y cómo se escribe cada uno) está en server/CodeList, no aquí: lo de shared lo puede leer
+-- cualquier cliente con trampas.
 -- TRÉBOL DE LA SUERTE: Luck = por cuánto multiplica la suerte de armas del objeto elegido (una sola vez por objeto).
 Config.Clover = { Item = "luckClover", Luck = 999 }
 -- PRODUCTOS DE ROBUX que se compran las veces que se quiera (server/Products; salen los primeros en la Tienda). "id" =

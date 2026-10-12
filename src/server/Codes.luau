@@ -1,4 +1,4 @@
--- Códigos de regalo (Config.Codes; se escriben en la Tienda, sección "Códigos"). Cada jugador canjea cada código una
+-- Códigos de regalo (server/CodeList; se escriben en la Tienda, sección "Códigos"). Cada jugador canjea cada código una
 -- sola vez (data.codes, guardado). Un código puede caducar (`expires`, "AAAA-MM-DD": vale hasta que acaba ese día, hora
 -- UTC) y tener un tope de usos entre todos los jugadores (`maxUses`): ese contador es global, en el DataStore
 -- "<DataStoreName>_Codes", y se pide con UpdateAsync para que dos servidores no den el último a la vez. En Studio o sin
@@ -15,6 +15,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerData = require(script.Parent.PlayerData)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Tell = require(script.Parent.Tell)
+local CodeList = require(script.Parent.CodeList)
 
 local Codes = {}
 
@@ -108,7 +109,7 @@ local function onRedeem(player: Player, text: unknown)
 	end
 	last[player] = now
 	local key = Codes.normalize(text)
-	local code = Config.Codes[key]
+	local code = CodeList[key]
 	local data = PlayerData.read(player)
 	if not data or key == "" then
 		return
