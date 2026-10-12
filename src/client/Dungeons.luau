@@ -48,7 +48,7 @@ end
 
 -- Pelea automática ------------------------------------------------------------------------
 
--- Lo pide el botón "Auto" del panel (SetAuto "fight") y lo decide el servidor, que lo publica en "AutoFight": gratis
+-- Ya no tiene botón (se quitó del panel, pedido por el usuario). Lo decide el servidor (SetAuto "fight"), que lo publica en "AutoFight": gratis
 -- para quien esté en el grupo, como el autoclicker (server/AutoPlay). Se queda puesto entre partidas.
 local function autoFight(): boolean
 	return player:GetAttribute("AutoFight") == true
@@ -111,13 +111,13 @@ local function buildRunPanel()
 	local title = Ui.label(panel, 26)
 	title.Name = "Title"
 	title.Position = UDim2.fromOffset(20, 6)
-	title.Size = UDim2.new(1, -390, 0, 32)
+	title.Size = UDim2.new(1, -274, 0, 32)
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.TextTruncate = Enum.TextTruncate.AtEnd
 	local detail = Ui.label(panel, 18)
 	detail.Name = "Detail"
 	detail.Position = UDim2.fromOffset(20, 38)
-	detail.Size = UDim2.new(1, -390, 0, 24)
+	detail.Size = UDim2.new(1, -274, 0, 24)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.TextTruncate = Enum.TextTruncate.AtEnd
 
@@ -131,33 +131,22 @@ local function buildRunPanel()
 		Remotes.LeaveDungeon:FireServer()
 	end)
 
-	-- Auto (el personaje pelea solo) y Repetir (al superarla empieza otra): para dejarlo sin tocar.
-	local autoButton = Ui.button(panel, "", Ui.COLORS.gray)
-	autoButton.Name = "Auto"
-	autoButton.AnchorPoint = Vector2.new(1, 0)
-	autoButton.Position = UDim2.new(1, -124, 0, 10)
-	autoButton.Size = UDim2.fromOffset(108, 48)
-	autoButton.TextSize = 19
+	-- Repetir (al superarla empieza otra). El botón "Auto" de pelea automática se quitó (pedido por el usuario): la
+	-- pelea automática sigue en el código (atributo "AutoFight"), pero ya nada la enciende desde aquí.
 	local loopButton = Ui.button(panel, "", Ui.COLORS.gray)
 	loopButton.Name = "Loop"
 	loopButton.AnchorPoint = Vector2.new(1, 0)
-	loopButton.Position = UDim2.new(1, -240, 0, 10)
+	loopButton.Position = UDim2.new(1, -124, 0, 10)
 	loopButton.Size = UDim2.fromOffset(118, 48)
 	loopButton.TextSize = 19
 	local function paintToggles()
 		local loop = player:GetAttribute("DungeonLoop") == true
-		autoButton.Text = Lang.t(nil, if autoFight() then "Auto: ON" else "Auto: OFF")
-		autoButton.BackgroundColor3 = if autoFight() then Ui.COLORS.green else Ui.COLORS.gray
 		loopButton.Text = Lang.t(nil, if loop then "Loop: ON" else "Loop: OFF")
 		loopButton.BackgroundColor3 = if loop then Ui.COLORS.green else Ui.COLORS.gray
 		-- Repetir lo decide el líder del grupo.
 		loopButton.Visible = Party.isLeader()
 	end
 	Party.Changed:Connect(paintToggles)
-	autoButton.Activated:Connect(function()
-		Remotes.SetAuto:FireServer("fight", not autoFight())
-	end)
-	player:GetAttributeChangedSignal("AutoFight"):Connect(paintToggles)
 	loopButton.Activated:Connect(function()
 		Remotes.SetDungeonLoop:FireServer(player:GetAttribute("DungeonLoop") ~= true)
 	end)
