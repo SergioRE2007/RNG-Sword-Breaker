@@ -52,6 +52,7 @@ Estos los toca cualquier zona, así que es donde pueden chocar dos personas:
 - `shared/Config` — todos los números. Tocar solo la sección de tu zona.
 - `shared/Stats` — daño y suertes finales. Cualquier bonus nuevo se suma aquí.
 - `shared/Remotes` — lista de RemoteEvents.
+- `shared/LangEs` — el español de cada texto. En el código los textos van en inglés por `Lang.t`; cada texto nuevo añade aquí su línea, en la sección de su zona.
 - `server/PlayerData` — datos y guardado del jugador.
 - `client/Ui` y `client/Hud` — estilo de la interfaz y contadores.
 - `init.server.luau` e `init.client.luau` — una línea por cada módulo nuevo.

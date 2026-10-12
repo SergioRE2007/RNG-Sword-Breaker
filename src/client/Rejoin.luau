@@ -51,7 +51,7 @@ function Rejoin.start()
 	detail.Size = UDim2.new(1, -32, 0, 42)
 	detail.TextWrapped = true
 	detail.TextColor3 = Color3.fromRGB(205, 212, 235)
-	detail.Text = Lang.t(nil, "This keeps Roblox from kicking you for standing still. You come back to the same spot and carry on. Tap anything to cancel.")
+	detail.Text = Lang.t(nil, "Keeps Roblox from kicking you for being idle. You return to the same spot. Tap anything to cancel.")
 	Ui.layer(card, LAYER)
 
 	local token = 0 -- cada intento tiene el suyo: tocar algo lo cambia y el intento en marcha se da por cancelado
