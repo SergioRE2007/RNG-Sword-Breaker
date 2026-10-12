@@ -448,8 +448,9 @@ local function applyOffer(session, side, other, category: unknown, key: unknown,
 		end
 		offer[category] = value
 	elseif category == "items" then
-		-- Las pociones no se comercian de momento: la ventana no las enseña (no están en Config.ItemOrder).
-		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].potion then
+		-- Las pociones no se comercian de momento: la ventana no las enseña (no están en Config.ItemOrder). Los tickets
+		-- de misión tampoco (noTrade): compran pases.
+		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].potion or Config.Items[key].noTrade then
 			return false
 		end
 		local value = validAmount(amount, if side.bot then math.huge else data.items[key] or 0)

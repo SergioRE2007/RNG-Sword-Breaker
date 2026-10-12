@@ -1,5 +1,5 @@
 -- Ventana de Misiones (el puesto "Misiones" del hub): tres misiones diarias y tres semanales con su
--- barra de progreso y su recompensa en Fichas de misión. El servidor cuenta el progreso y lo publica en
+-- barra de progreso y su recompensa en tickets (con los que se compran pases en la Tienda). El servidor cuenta el progreso y lo publica en
 -- el atributo "Missions" (JSON); las misiones del día se calculan igual aquí con shared/MissionList.
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -62,7 +62,7 @@ function Missions.start()
 	note.Size = UDim2.fromOffset(320, 34)
 	note.TextXAlignment = Enum.TextXAlignment.Left
 	note.TextColor3 = Color3.fromRGB(190, 195, 215)
-	note.Text = "Las fichas servirán para comprar cosas difíciles."
+	note.Text = "Con los tickets se compran pases en la Tienda."
 
 	local sections = {} -- [periodo] = { header, countdown, rows = { [n] = fila } }
 	local y = 46
@@ -157,7 +157,7 @@ function Missions.start()
 	end
 
 	local function refresh()
-		tokens.Text = `Fichas: <font color="#{GOLD:ToHex()}">{Format.short(player:GetAttribute("Item_missionToken") or 0)}</font>`
+		tokens.Text = `Tickets: <font color="#{GOLD:ToHex()}">{Format.short(player:GetAttribute("Item_missionToken") or 0)}</font>`
 		local state = readState()
 		local now = os.time()
 		for _, period in PERIODS do

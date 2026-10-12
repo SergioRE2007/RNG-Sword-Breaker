@@ -19,6 +19,7 @@ Config.Test = {
 	RevealSlow = 1, -- por cuánto se alargan los tiempos de la presentación de las tiradas (client/RollReveal): con 4 se ve a cámara lenta para revisarla en capturas
 	PartyBots = 0, -- compañeros "fantasma" que se unen a tu grupo de mazmorra (cuentan para el tamaño y el escalado, no pelean): para probar con un solo jugador
 	Progress = 0, -- horas de juego con las que se empieza (0 = partida nueva): deja al jugador como estaría a esa hora según el calendario de tools/equilibrio (mejoras, renacimientos, armas equipadas, accesorios y armadura de shared/BalanceSnapshots), para probar cada etapa sin jugarla entera. Mientras vale más de 0 los demás modos de arriba que dan cosas (dinero, armas, accesorios, pociones) no actúan; con 0.01 es una partida nueva de verdad
+	Tickets = 0, -- tickets (Config.Items.missionToken) que se dan al entrar, para probar la compra de pases con tickets (con AllGamepasses en false); 0 = ninguno
 	Weather = "", -- id de un clima de Config.Weather.Events para tenerlo puesto al entrar ("" = el que toque por la hora)
 }
 -- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
@@ -190,8 +191,10 @@ Config.Gacha = {
 Config.ItemOrder = { "traitCrystal", "missionToken", "gradeCrystal" }
 Config.Items = {
 	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.007, color = Color3.fromRGB(90, 230, 255) },
-	-- Moneda gratuita (f2p) que dan las misiones diarias y semanales. De momento no se gasta en nada: en el futuro servirá para comprar cosas difíciles o pases. No cae de los objetos (sin dropChance).
-	missionToken = { name = "Ficha de misión", description = "La dan las misiones diarias y semanales. Más adelante servirá para comprar cosas difíciles de conseguir.", color = Color3.fromRGB(255, 190, 60) },
+	-- Moneda gratuita (f2p) que dan las misiones diarias y semanales (el usuario los llama "tickets"): con ellos se compran
+	-- los pases de la Tienda (Config.Tickets). No cae de los objetos (sin dropChance) y no se comercia (noTrade: si no,
+	-- con cuentas de más haciendo misiones se le pasarían todos a una sola).
+	missionToken = { name = "Ticket", description = "Los dan las misiones diarias y semanales. Con ellos se compran los pases de la Tienda.", color = Color3.fromRGB(255, 190, 60), noTrade = true },
 	-- Lo sueltan los enemigos de las mazmorras y se saca al desmontar armadura. No cae de los objetos (sin dropChance).
 	gradeCrystal = { name = "Cristal de grado", description = "Se gasta en la tienda de Grados del hub: da un grado al azar a la espada que elijas. Lo sueltan los enemigos de las mazmorras.", color = Color3.fromRGB(200, 120, 255) },
 }
@@ -889,6 +892,10 @@ Config.Trade = {
 -- Ui.IMAGES (el grande y los que caen por detrás), "tag" = texto gordo de la esquina y "ribbon" (opcional) = cinta.
 -- extraSlots = armas de más que se pueden equipar y, otras tantas, dejar en la Bolsa de oro (Stats.loadoutSlots y
 -- Stats.bagSlots; pedido por el usuario).
+-- Con tickets (los de las misiones) se compra cualquier pase: cuesta su "price" en Robux por PerRobux (pedido por el
+-- usuario: 100 Robux = 300 tickets). La cuenta es Stats.ticketPrice y la compra, server/Passes. Lo que dan las misiones
+-- (50 al día y 200 a la semana como mucho) está en shared/MissionList.
+Config.Tickets = { PerRobux = 3 }
 Config.GamepassOrder = { "vip", "coins2", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }
 Config.Gamepasses = {
 	vip = {

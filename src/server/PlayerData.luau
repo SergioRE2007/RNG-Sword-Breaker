@@ -62,7 +62,7 @@ local function testNoSave(): boolean
 	if not RunService:IsStudio() then
 		return false
 	end
-	return (test.Progress or 0) > 0 or (test.AllPotions or 0) > 0 or (test.InfiniteMoney or test.AllWeapons or test.AllGear) and true or false
+	return (test.Progress or 0) > 0 or (test.AllPotions or 0) > 0 or (test.Tickets or 0) > 0 or (test.InfiniteMoney or test.AllWeapons or test.AllGear) and true or false
 end
 
 -- Lee lo guardado y deja puesto el candado de esta sesión. Devuelve si fue bien, lo guardado (nil = partida nueva) y si
@@ -460,6 +460,7 @@ local function load(player: Player)
 		playTime = 0, -- segundos jugados (clasificaciones)
 		totalCoins = 0, -- monedas ganadas en total, sin descontar lo gastado (clasificaciones)
 		robuxSpent = 0, -- Robux gastados en el juego (clasificaciones)
+		passes = {}, -- pases comprados con tickets de misión: { [clave de Config.Gamepasses] = true } (ver server/Passes)
 		missions = {}, -- misiones: { daily = { id, progress, claimed }, weekly = { ... } } (ver server/Missions)
 		swords = { { id = 1, sword = 1 } },
 		nextSwordId = 2,
@@ -506,6 +507,13 @@ local function load(player: Player)
 				data.playTime = math.max(0, tonumber(saved.playTime) or 0)
 				data.totalCoins = math.max(0, tonumber(saved.totalCoins) or 0)
 				data.robuxSpent = math.max(0, math.floor(tonumber(saved.robuxSpent) or 0))
+				if type(saved.passes) == "table" then
+					for key in Config.Gamepasses do
+						if saved.passes[key] == true then
+							data.passes[key] = true
+						end
+					end
+				end
 				if type(saved.missions) == "table" then
 					data.missions = loadMissions(saved.missions)
 				end

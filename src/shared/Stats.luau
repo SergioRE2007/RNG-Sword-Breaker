@@ -126,6 +126,11 @@ function Stats.pass(player: Player, key: string): boolean
 	return player:GetAttribute("Pass_" .. key) == true
 end
 
+-- Tickets de misión que cuesta ese pase (su precio en Robux por Config.Tickets.PerRobux).
+function Stats.ticketPrice(key: string): number
+	return math.ceil(Config.Gamepasses[key].price * Config.Tickets.PerRobux)
+end
+
 -- Valor de una ventaja de pase ("traitCount", "gradeSpeed"...): el mayor entre los pases que tiene, o nil.
 function Stats.perk(player: Player, name: string): number?
 	local best = nil
