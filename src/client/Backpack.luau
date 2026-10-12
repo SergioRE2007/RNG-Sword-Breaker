@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
@@ -80,7 +81,7 @@ local function markNew(cell: GuiObject)
 	banner.BackgroundTransparency = 0
 	banner.BackgroundColor3 = Color3.fromRGB(255, 190, 30)
 	banner.TextColor3 = Color3.new(1, 1, 1)
-	banner.Text = "NUEVA"
+	banner.Text = Lang.t(nil, "NEW")
 	banner.ZIndex = 7
 	Ui.round(banner, 6)
 	Ui.stroke(banner, Color3.new(0, 0, 0), 2)
@@ -149,11 +150,11 @@ end
 -- fotograma (el cartel lo hace solo si swordTip devuelve `true` como tercer valor).
 local function animatedName(entry): string
 	local now = os.clock()
-	local count = utf8.len(entry.name) or #entry.name
-	local shine = (now * 7) % (count + 10) - 5
+	local name = Lang.t(nil, entry.name)
+	local shine = (now * 7) % ((utf8.len(name) or #name) + 10) - 5
 	local letters = {}
 	local index = 0
-	for _, code in utf8.codes(entry.name) do
+	for _, code in utf8.codes(name) do
 		index += 1
 		local color
 		if entry.tones then
@@ -186,7 +187,7 @@ local function swordTip(copy): (string, Color3, boolean)
 	-- Pedido por el usuario: el nombre más grande que el resto y con la animación de su rareza, y la probabilidad más
 	-- pequeña y en gris tenue.
 	-- Sin el tipo de arma (pedido por el usuario): debajo del nombre, solo la rareza.
-	local lines = { `<font size="{TIP_TITLE}">{Ui.rarityText(sword.name, tier.color, table.find(Config.RarityTiers, tier))}</font>`, `<font color="{hex(tier.color)}">{tier.name}</font>` }
+	local lines = { `<font size="{TIP_TITLE}">{Ui.rarityText(Lang.t(nil, sword.name), tier.color, table.find(Config.RarityTiers, tier))}</font>`, `<font color="{hex(tier.color)}">{Lang.t(nil, tier.name)}</font>` }
 	local icon = nil -- logo del rasgo, al principio de su línea (Ui.tip)
 	local grade = Config.Grades[copy.grade]
 	local border = tier.color
@@ -195,10 +196,10 @@ local function swordTip(copy): (string, Color3, boolean)
 	local metal, size = Permanent.metal(copy), Permanent.size(copy)
 	local extras = {}
 	if metal then
-		table.insert(extras, `<font color="{hex(metal.color)}">{metal.name}</font>`)
+		table.insert(extras, `<font color="{hex(metal.color)}">{Lang.t(nil, metal.name)}</font>`)
 	end
 	if size then
-		table.insert(extras, `<font color="{hex(size.color)}">{size.name}</font>`)
+		table.insert(extras, `<font color="{hex(size.color)}">{Lang.t(nil, size.name)}</font>`)
 	end
 	if #extras > 0 then
 		table.insert(lines, table.concat(extras, " · "))
@@ -216,20 +217,20 @@ local function swordTip(copy): (string, Color3, boolean)
 		end
 	end
 	if grade then
-		table.insert(lines, `<font color="{hex(grade.color)}">Grado:</font> {animatedName(grade)}`)
+		table.insert(lines, `<font color="{hex(grade.color)}">{Lang.t(nil, "Grade:")}</font> {animatedName(grade)}`)
 		if grade.rainbow then
 			border = if grade.tones then Modifiers.toneAt(grade, os.clock() * 3) else Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
 	-- El daño destaca (pedido por el usuario: no tan plano): la palabra en rojo cálido y el número más grande en dorado.
 	table.insert(lines, TIP_SEPARATOR)
-	table.insert(lines, `<font color="{TIP_DAMAGE}">Daño</font> <font size="{TIP_VALUE}" color="{TIP_GOLD}">{Format.multiplier(Stats.swordDamage(copy))}</font>`)
+	table.insert(lines, `<font color="{TIP_DAMAGE}">{Lang.t(nil, "Damage")}</font> <font size="{TIP_VALUE}" color="{TIP_GOLD}">{Format.multiplier(Stats.swordDamage(copy))}</font>`)
 	table.insert(lines, TIP_SEPARATOR)
 	if not sword.rarity then
-		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">Espada inicial</font>`)
+		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">{Lang.t(nil, "Starter sword")}</font>`)
 	else
 		-- Una sola probabilidad: la del arma entera, con su metal y su tamaño.
-		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">1 entre {Format.short(rarity)}</font>`)
+		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">{Lang.t(nil, "1 in {n}", { n = Format.short(rarity) })}</font>`)
 	end
 	return table.concat(lines, "\n"), border, true, icon -- animado: el nombre lleva el brillo de su rareza
 end
@@ -237,12 +238,12 @@ end
 local function artifactTip(index: number): (string, Color3)
 	local artifact = Config.Artifacts[index]
 	local tier = Rarity.tier(artifact.rarity)
-	return `{artifact.name}\n<font color="{hex(tier.color)}">{tier.name}</font>\n{Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}\n<font color="{Ui.SOFT}">1 entre {Format.short(artifact.rarity)}</font>`,
+	return `{Lang.t(nil, artifact.name)}\n<font color="{hex(tier.color)}">{Lang.t(nil, tier.name)}</font>\n{Lang.t(nil, Config.StatNames[artifact.stat])} x{Format.multiplier(artifact.mult)}\n<font color="{Ui.SOFT}">{Lang.t(nil, "1 in {n}", { n = Format.short(artifact.rarity) })}</font>`,
 		tier.color
 end
 
 function Backpack.start()
-	local window, body = Ui.window("Backpack", "Mochila", Vector2.new(740, 560), function(parent)
+	local window, body = Ui.window("Backpack", Lang.t(nil, "Backpack"), Vector2.new(740, 560), function(parent)
 		Ui.image(parent, "mochila")
 	end)
 
@@ -285,7 +286,7 @@ function Backpack.start()
 			Ui.image(parent, "armadura")
 		end,
 	}
-	for order, entry in { { "Swords", "Espadas", Ui.COLORS.red }, { "Items", "Objetos", Ui.COLORS.blue }, { "Gear", "Accesorios", Ui.COLORS.purple }, { "Armor", "Armadura", Ui.COLORS.orange } } do
+	for order, entry in { { "Swords", Lang.t(nil, "Swords"), Ui.COLORS.red }, { "Items", Lang.t(nil, "Items"), Ui.COLORS.blue }, { "Gear", Lang.t(nil, "Accessories"), Ui.COLORS.purple }, { "Armor", Lang.t(nil, "Armor"), Ui.COLORS.orange } } do
 		local name = entry[1]
 		panes[name] = pane(body, name)
 		local tab = Ui.button(window, "", entry[3])
@@ -329,7 +330,7 @@ function Backpack.start()
 	swordsTitle.TextXAlignment = Enum.TextXAlignment.Right
 	swordsTitle.TextTruncate = Enum.TextTruncate.AtEnd
 	swordsTitle.RichText = true
-	swordsTitle.Text = "Tus espadas"
+	swordsTitle.Text = Lang.t(nil, "Your swords")
 
 	local count = Ui.label(swordsPane, 24)
 	count.Name = "Count"
@@ -388,8 +389,8 @@ function Backpack.start()
 		item.Size = UDim2.fromOffset(width, 62)
 		return item
 	end
-	local bestButton = action("Best", "Equipar mejores", Ui.COLORS.green, 12, 176)
-	local sellButton = action("Sell", "Vender armas", Ui.COLORS.red, 198, 100)
+	local bestButton = action("Best", Lang.t(nil, "Equip best"), Ui.COLORS.green, 12, 176)
+	local sellButton = action("Sell", Lang.t(nil, "Sell weapons"), Ui.COLORS.red, 198, 100)
 	bestButton.TextSize = 23
 	sellButton.TextSize = 17
 
@@ -429,7 +430,7 @@ function Backpack.start()
 			local sword = Config.Swords[chosen.sword]
 			local trait = Config.Traits[chosen.trait]
 			local grade = Config.Grades[chosen.grade]
-			detail.Text = `{sword.name}{if trait then ` <font color="{hex(trait.color)}">[{trait.name}]</font>` else ""}{if grade then ` <font color="{hex(grade.color)}">[{grade.name}]</font>` else ""}\n<font color="{Ui.SOFT}">Daño {Format.multiplier(Stats.swordDamage(chosen))}</font>`
+			detail.Text = `{Lang.t(nil, sword.name)}{if trait then ` <font color="{hex(trait.color)}">[{Lang.t(nil, trait.name)}]</font>` else ""}{if grade then ` <font color="{hex(grade.color)}">[{Lang.t(nil, grade.name)}]</font>` else ""}\n<font color="{Ui.SOFT}">{Lang.t(nil, "Damage {n}", { n = Format.multiplier(Stats.swordDamage(chosen)) })}</font>`
 		end
 	end
 
@@ -467,7 +468,7 @@ function Backpack.start()
 			Ui.stroke(dot, Color3.new(0, 0, 0), 2)
 		end
 		if sizeDef then
-			Ui.cellTag(cell, string.sub(sizeDef.name, 1, 1), sizeDef.color).Position = UDim2.fromOffset(4, if metalDef then 52 else 30)
+			Ui.cellTag(cell, string.sub(Lang.t(nil, sizeDef.name), 1, 1), sizeDef.color).Position = UDim2.fromOffset(4, if metalDef then 52 else 30)
 		end
 		-- Rasgo arriba a la derecha (su logo) y grado abajo a la derecha (su nombre en su color), pedido por el usuario.
 		local logo = trait and Ui.traitLogo(trait)
@@ -491,7 +492,7 @@ function Backpack.start()
 			tag.BackgroundTransparency = 0
 			tag.BackgroundColor3 = Ui.COLORS.dark
 			tag.TextColor3 = gradeDef.color
-			tag.Text = gradeDef.name
+			tag.Text = Lang.t(nil, gradeDef.name)
 			tag.ZIndex = 4
 			Ui.round(tag, 6)
 			Ui.stroke(tag, gradeDef.color, 2)
@@ -666,7 +667,7 @@ function Backpack.start()
 			end)
 		end
 		Ui.tip(cell, function()
-			return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>`, item.color
+			return `{Lang.t(nil, item.name)}\n<font color="{Ui.SOFT}">{Lang.t(nil, item.description)}</font>`, item.color
 		end)
 	end
 
@@ -691,7 +692,7 @@ function Backpack.start()
 	potionHint.Position = UDim2.new(0, 14, 1, -6)
 	potionHint.Size = UDim2.new(1, -28, 0, 28)
 	potionHint.TextXAlignment = Enum.TextXAlignment.Left
-	potionHint.Text = `<font color="{Ui.SOFT}">Pulsa una poción para usarla.</font>`
+	potionHint.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Click a potion to use it.")}</font>`
 
 	-- Orden de las pociones (pedido por el usuario): por tipo (familia y, dentro, de la mejor a la peor) o por tier (de la
 	-- mejor a la peor y, dentro, por familia). Botones a la derecha de la barra; solo para esta sesión.
@@ -717,9 +718,9 @@ function Backpack.start()
 	local sortLabel = Ui.label(sortBox, 16)
 	sortLabel.Size = UDim2.fromOffset(70, 30)
 	sortLabel.TextXAlignment = Enum.TextXAlignment.Right
-	sortLabel.Text = `<font color="{Ui.SOFT}">Ordenar:</font>`
+	sortLabel.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Sort:")}</font>`
 	local sortButtons = {}
-	for order, entry in { { "family", "Tipo", Ui.COLORS.blue }, { "tier", "Tier", Ui.COLORS.purple } } do
+	for order, entry in { { "family", Lang.t(nil, "Type"), Ui.COLORS.blue }, { "tier", Lang.t(nil, "Tier"), Ui.COLORS.purple } } do
 		local button = Ui.button(sortBox, entry[2], entry[3])
 		button.Name = "Sort_" .. entry[1]
 		button.LayoutOrder = order
@@ -779,13 +780,13 @@ function Backpack.start()
 		cell.Name = "Slot" .. slot
 		cell.Position = UDim2.fromOffset(16, 16 + (slot - 1) * 128)
 		cell.Size = UDim2.fromOffset(112, 112)
-		slots[slot] = { cell = cell, stroke = cell:FindFirstChildOfClass("UIStroke"), label = Ui.cellLabel(cell, "Ranura " .. slot), index = nil }
+		slots[slot] = { cell = cell, stroke = cell:FindFirstChildOfClass("UIStroke"), label = Ui.cellLabel(cell, Lang.t(nil, "Slot {n}", { n = slot })), index = nil }
 		Ui.tip(cell, function()
 			local index = slots[slot].index
 			if index then
 				return artifactTip(index)
 			end
-			return `Ranura {slot}\n<font color="{Ui.SOFT}">Vacía</font>`, Ui.COLORS.gray
+			return `{Lang.t(nil, "Slot {n}", { n = slot })}\n<font color="{Ui.SOFT}">{Lang.t(nil, "Nothing equipped")}</font>`, Ui.COLORS.gray
 		end)
 		cell.Activated:Connect(function()
 			if slots[slot].index then
@@ -854,7 +855,7 @@ function Backpack.start()
 		cell.Name = "Artifact" .. index
 		cell.LayoutOrder = -index
 		Ui.artifactIcon(cell, artifact)
-		Ui.cellLabel(cell, `{Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}`)
+		Ui.cellLabel(cell, `{Lang.t(nil, Config.StatNames[artifact.stat])} x{Format.multiplier(artifact.mult)}`)
 		Ui.tip(cell, function()
 			return artifactTip(index)
 		end)
@@ -875,7 +876,7 @@ function Backpack.start()
 		local copies = Stats.swords(player)
 
 		count.Text = `{#copies}/{Config.MaxSwords}`
-		swordsTitle.Text = `Equipadas {#worn}/{Stats.loadoutSlots(player)}`
+		swordsTitle.Text = Lang.t(nil, "Equipped {n}/{max}", { n = #worn, max = Stats.loadoutSlots(player) })
 		syncSlots(copies, worn)
 		local key = `{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Bag")}`
 		if key ~= swordsKey then
@@ -891,8 +892,8 @@ function Backpack.start()
 		local artifacts = Stats.list(player, "Artifacts")
 		local worn = Stats.list(player, "Gear")
 		gearHint.Text = if #artifacts == 0
-			then "Rompe objetos para conseguir accesorios."
-			else `Equipados {#worn}/{Config.GearSlots}`
+			then Lang.t(nil, "Break objects to get accessories.")
+			else Lang.t(nil, "Wearing {n}/{max}", { n = #worn, max = Config.GearSlots })
 		for index, cell in gearCells do
 			cell.Visible = table.find(artifacts, index) ~= nil
 			cell.Select.Visible = table.find(worn, index) ~= nil
@@ -913,7 +914,7 @@ function Backpack.start()
 			local color = if artifact then Rarity.tier(artifact.rarity).color else Ui.COLORS.gray
 			entry.cell.BackgroundColor3 = color
 			entry.stroke.Color = color
-			entry.label.Text = if artifact then artifact.name else "Ranura " .. slot
+			entry.label.Text = if artifact then Lang.t(nil, artifact.name) else Lang.t(nil, "Slot {n}", { n = slot })
 		end
 		armorPane.refresh()
 	end

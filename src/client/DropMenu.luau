@@ -9,6 +9,7 @@ local ArmorModel = require(ReplicatedStorage.Shared.ArmorModel)
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Potions = require(script.Parent.Potions)
@@ -97,12 +98,12 @@ local function info(drop)
 		end
 		local level = Config.Dungeons[piece.level]
 		if level then
-			table.insert(lines, `<font color="{Ui.SOFT}">{level.name}</font>`)
+			table.insert(lines, `<font color="{Ui.SOFT}">{Lang.t(nil, level.name)}</font>`)
 		end
 		return {
 			name = ArmorStats.name(piece),
 			color = quality.color,
-			rarity = quality.name,
+			rarity = Lang.t(nil, quality.name),
 			tier = piece.quality,
 			stats = table.concat(lines, "\n"),
 			amount = nil,
@@ -114,11 +115,11 @@ local function info(drop)
 		local family = Config.Potions.Families[drop.family]
 		local color = PotionInfo.color(drop.tier)
 		return {
-			name = family.name,
+			name = Lang.t(nil, family.name),
 			color = color,
 			rarity = PotionInfo.tierName(drop.tier),
 			tier = drop.tier,
-			stats = `<font color="{hex(family.color:Lerp(WHITE, 0.3))}">{PotionInfo.effect(drop.family, drop.tier)}</font>\n<font color="{Ui.SOFT}">Dura {PotionInfo.minutes(PotionInfo.duration(drop.tier))}</font>`,
+			stats = `<font color="{hex(family.color:Lerp(WHITE, 0.3))}">{PotionInfo.effect(drop.family, drop.tier)}</font>\n<font color="{Ui.SOFT}">{Lang.t(nil, "Lasts {time}", { time = PotionInfo.minutes(PotionInfo.duration(drop.tier)) })}</font>`,
 			amount = drop.amount,
 			icon = function(cell)
 				Potions.icon(cell, drop.family, drop.tier)
@@ -132,11 +133,11 @@ local function info(drop)
 		missing[tostring(drop.key)] = true
 	end
 	return {
-		name = if item then item.name else tostring(drop.key),
+		name = if item then Lang.t(nil, item.name) else tostring(drop.key),
 		color = if item then item.color else Ui.COLORS.gray,
-		rarity = "Material",
+		rarity = Lang.t(nil, "Material"),
 		tier = 1,
-		stats = if item then `<font color="{Ui.SOFT}">{item.description}</font>` else "",
+		stats = if item then `<font color="{Ui.SOFT}">{Lang.t(nil, item.description)}</font>` else "",
 		amount = drop.amount,
 		icon = function(cell)
 			if isCrystal then
@@ -198,11 +199,11 @@ local function refresh()
 			card.Stroke.Thickness = if chosen then 6 else 4
 		end
 	end
-	throwButton.Text = if count > 0 then `Tirar seleccionados ({count})` else "Tirar seleccionados"
+	throwButton.Text = if count > 0 then Lang.t(nil, "Trash selected ({n})", { n = count }) else Lang.t(nil, "Trash selected")
 	throwButton.Active = count > 0
 	throwButton.BackgroundTransparency = if count > 0 then 0 else 0.55
 	notice.Text = if flagged > 0
-		then `<font color="{hex(Ui.COLORS.orange)}">⚠ Mochila de armadura llena: {flagged} {if flagged == 1 then "pieza se desmontará" else "piezas se desmontarán"} a cambio de cristales. Tira otra cosa para hacer sitio.</font>`
+		then `<font color="{hex(Ui.COLORS.orange)}">⚠ {Lang.t(nil, if flagged == 1 then "Armor backpack full: {n} piece will be salvaged for crystals. Trash something else to make room." else "Armor backpack full: {n} pieces will be salvaged for crystals. Trash something else to make room.", { n = flagged })}</font>`
 		else ""
 end
 
@@ -275,7 +276,7 @@ local function buildCard(drop, order: number)
 	Ui.round(throw, 12)
 	local mark = Ui.label(throw, 34)
 	mark.Size = UDim2.fromScale(1, 1)
-	mark.Text = "TIRAR"
+	mark.Text = Lang.t(nil, "TRASH")
 	mark.Rotation = -12
 	mark.ZIndex = 11
 
@@ -286,7 +287,7 @@ local function buildCard(drop, order: number)
 	salvage.Size = UDim2.new(1, -12, 0, 22)
 	salvage.BackgroundTransparency = 0
 	salvage.BackgroundColor3 = Ui.COLORS.orange
-	salvage.Text = "Se desmontará"
+	salvage.Text = Lang.t(nil, "Will be salvaged")
 	salvage.Visible = false
 	salvage.ZIndex = 12
 	Ui.round(salvage, 6)
@@ -303,13 +304,13 @@ end
 
 -- Confirmación extra al tirar algo de rareza alta.
 local function askConfirm(names: { string })
-	confirmText.Text = `¿Seguro que quieres tirar esto?\n\n{table.concat(names, "\n")}`
+	confirmText.Text = Lang.t(nil, "Are you sure you want to trash this?") .. `\n\n{table.concat(names, "\n")}`
 	confirm.Visible = true
 end
 
 local function build()
 	local body
-	window, body = Ui.window("DropMenu", "¡BOTÍN!", Vector2.new(780, 580))
+	window, body = Ui.window("DropMenu", Lang.t(nil, "LOOT!"), Vector2.new(780, 580))
 
 	head = Ui.label(body, 24)
 	head.Name = "Head"
@@ -355,11 +356,11 @@ local function build()
 	bar.Size = UDim2.new(1, -16, 0, 70)
 	bar.BackgroundTransparency = 1
 	bar.Parent = body
-	keepButton = Ui.button(bar, "Quedarme todo", Ui.COLORS.green)
+	keepButton = Ui.button(bar, Lang.t(nil, "Keep all"), Ui.COLORS.green)
 	keepButton.Name = "KeepAll"
 	keepButton.Size = UDim2.new(0.5, -6, 1, 0)
 	keepButton.TextSize = 24
-	throwButton = Ui.button(bar, "Tirar seleccionados", Ui.COLORS.red)
+	throwButton = Ui.button(bar, Lang.t(nil, "Trash selected"), Ui.COLORS.red)
 	throwButton.Name = "ThrowSelected"
 	throwButton.AnchorPoint = Vector2.new(1, 0)
 	throwButton.Position = UDim2.fromScale(1, 0)
@@ -372,7 +373,7 @@ local function build()
 	throwButton.Activated:Connect(function()
 		local ids = selectedIds()
 		if #ids == 0 then
-			Ui.toast("Marca primero lo que quieras tirar", Ui.COLORS.orange)
+			Ui.toast(Lang.t(nil, "First mark what you want to trash"), Ui.COLORS.orange)
 			return
 		end
 		local names = {}
@@ -414,19 +415,19 @@ local function build()
 	local title = Ui.label(box, 26)
 	title.Position = UDim2.fromOffset(0, 10)
 	title.Size = UDim2.new(1, 0, 0, 34)
-	title.Text = "¡Es de rareza alta!"
+	title.Text = Lang.t(nil, "It's high rarity!")
 	title.TextColor3 = GOLD
 	confirmText = Ui.label(box, 18)
 	confirmText.Position = UDim2.fromOffset(16, 50)
 	confirmText.Size = UDim2.new(1, -32, 1, -130)
 	confirmText.TextWrapped = true
 	confirmText.TextYAlignment = Enum.TextYAlignment.Top
-	local yes = Ui.button(box, "Sí, tirar", Ui.COLORS.red)
+	local yes = Ui.button(box, Lang.t(nil, "Yes, trash"), Ui.COLORS.red)
 	yes.AnchorPoint = Vector2.new(0, 1)
 	yes.Position = UDim2.new(0, 16, 1, -14)
 	yes.Size = UDim2.new(0.5, -22, 0, 52)
 	yes.TextSize = 22
-	local no = Ui.button(box, "No, volver", Ui.COLORS.gray)
+	local no = Ui.button(box, Lang.t(nil, "No, go back"), Ui.COLORS.gray)
 	no.AnchorPoint = Vector2.new(1, 1)
 	no.Position = UDim2.new(1, -16, 1, -14)
 	no.Size = UDim2.new(0.5, -22, 0, 52)
@@ -467,7 +468,7 @@ function DropMenu.show(data, title: string, color: Color3, levelName: string?)
 	task.spawn(function()
 		while state == current and current.active do
 			local left = math.max(0, math.ceil(current.expires - workspace:GetServerTimeNow()))
-			keepButton.Text = `Quedarme todo ({left} s)`
+			keepButton.Text = Lang.t(nil, "Keep all ({n} s)", { n = left })
 			task.wait(0.5)
 		end
 	end)

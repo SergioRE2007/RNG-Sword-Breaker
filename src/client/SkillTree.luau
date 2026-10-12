@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
@@ -331,7 +332,7 @@ function SkillTree.start()
 	heading.Parent = titleBack
 	heading.Position = UDim2.new(0.5, 0, 0, 6)
 	heading.Size = UDim2.new(1, -24, 0, 34)
-	heading.Text = "Árbol de mejoras"
+	heading.Text = Lang.t(nil, "Upgrade tree")
 	heading.ZIndex = Z_FRONT
 	Ui.gradient(heading, WHITE, Color3.fromRGB(170, 190, 255), 90)
 	local hint = Ui.label(titleBack, 16)
@@ -342,7 +343,7 @@ function SkillTree.start()
 	local hintLimit = Instance.new("UITextSizeConstraint")
 	hintLimit.MaxTextSize = 16
 	hintLimit.Parent = hint
-	hint.Text = `<font color="{Ui.SOFT}">Arrastra para moverte · rueda para acercar</font>`
+	hint.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Drag to move · scroll to zoom")}</font>`
 	hint.ZIndex = Z_FRONT
 
 	-- Con Mejoras abierta el resto del HUD se esconde: solo quedan las estadísticas, "Mejorar todo" y la X.
@@ -354,7 +355,7 @@ function SkillTree.start()
 	actions.BackgroundTransparency = 1
 	actions.Visible = false
 	actions.Parent = Ui.hud()
-	local buyAll = Ui.button(actions, "Mejorar todo", Ui.COLORS.green)
+	local buyAll = Ui.button(actions, Lang.t(nil, "Upgrade all"), Ui.COLORS.green)
 	buyAll.Name = "BuyAll"
 	buyAll.Size = UDim2.fromScale(1, 1)
 	buyAll.TextSize = 24
@@ -600,7 +601,7 @@ function SkillTree.start()
 		setColor(start.core, Ui.COLORS.green:Lerp(WHITE, 0.28))
 		setColor(start.halo, Ui.COLORS.green)
 		start.haloHolder.Visible = true
-		start.label.Text = "Inicio"
+		start.label.Text = Lang.t(nil, "Start")
 		start.label.TextSize = 22
 
 		for branch, name in Config.UpgradeOrder do
@@ -613,17 +614,17 @@ function SkillTree.start()
 				ends[name][level] = { from = fromPoint, to = points[level] }
 				lines[name][level] = line(canvas, fromPoint, points[level])
 				local node = buildNode(canvas, `{name}{level}`, points[level], if milestone then BIG else 1, upgrade.icon, upgrade.color)
-				node.label.Text = `{upgrade.short} {roman(level)}`
+				node.label.Text = `{Lang.t(nil, upgrade.short)} {roman(level)}`
 				nodes[name][level] = node
 
 				Ui.tip(node.button, function()
 					local owned = (player:GetAttribute("Upgrade_" .. name) or 0) >= level
-					local currency = if upgrade.currency == "gems" then "gemas" else "monedas"
+					local currency = Lang.t(nil, if upgrade.currency == "gems" then "gems" else "coins")
 					local state = if owned
-						then `<font color="#6fe07a">Comprada</font>`
+						then `<font color="#6fe07a">{Lang.t(nil, "Bought")}</font>`
 						else `{Format.short(Upgrades.cost(name, level - 1))} {currency}`
 					-- Tres líneas (pedido por el usuario: carteles cortos): nombre, lo que cambia y el precio.
-					return `{upgrade.name} {roman(level)}\n<font color="{Ui.SOFT}">{Upgrades.display(name, level - 1)} → {Upgrades.display(name, level)}</font>\n{state}`,
+					return `{Lang.t(nil, upgrade.name)} {roman(level)}\n<font color="{Ui.SOFT}">{Upgrades.display(name, level - 1)} → {Upgrades.display(name, level)}</font>\n{state}`,
 						upgrade.color
 				end)
 				node.button.Activated:Connect(function()

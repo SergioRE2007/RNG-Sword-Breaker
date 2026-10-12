@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -47,9 +48,9 @@ local BAR = 84 -- barra de abajo (estado y botones)
 local FOOT = 34 -- línea de ayuda bajo el inventario
 
 local STEPS = {
-	editing = "1 de 3 · Elegid qué dais y pulsad Aceptar",
-	confirming = "2 de 3 · Revisad bien las dos ofertas y pulsad CONFIRMAR",
-	countdown = "3 de 3 · Se va a completar: aún se puede cancelar",
+	editing = Lang.t(nil, "1 of 3 · Choose what you give and press Accept"),
+	confirming = Lang.t(nil, "2 of 3 · Check both offers carefully and press CONFIRM"),
+	countdown = Lang.t(nil, "3 of 3 · About to complete: you can still cancel"),
 }
 
 local function hex(color: Color3): string
@@ -113,7 +114,7 @@ local function artifactCell(parent: Instance, index: number): TextButton
 	local cell = Ui.cell(parent, color)
 	Ui.artifactIcon(cell, artifact)
 	Ui.tip(cell, function()
-		return `{artifact.name}\n<font color="{Ui.SOFT}">Accesorio · {Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}</font>`, color
+		return `{Lang.t(nil, artifact.name)}\n<font color="{Ui.SOFT}">{Lang.t(nil, "Accessory")} · {Lang.t(nil, Config.StatNames[artifact.stat])} x{Format.multiplier(artifact.mult)}</font>`, color
 	end, true)
 	return cell
 end
@@ -138,32 +139,32 @@ local function amountCell(parent: Instance, name: string, color: Color3, amount:
 end
 
 -- Sugerencias: cómo se llama lo sugerido y su casilla.
-local INTENTS = { want = { "QUIERO", Ui.COLORS.orange }, give = { "TE DOY", Ui.COLORS.green } }
+local INTENTS = { want = { Lang.t(nil, "I WANT"), Ui.COLORS.orange }, give = { Lang.t(nil, "I GIVE"), Ui.COLORS.green } }
 
 local function suggestName(suggest): string
 	local category = suggest.category
 	if category == "coins" or category == "gems" then
-		return `{Format.short(suggest.amount)} {if category == "coins" then "monedas" else "gemas"}`
+		return `{Format.short(suggest.amount)} {Lang.t(nil, if category == "coins" then "coins" else "gems")}`
 	elseif category == "items" then
-		return `{Format.short(suggest.amount)} {Config.Items[suggest.key].name}`
+		return `{Format.short(suggest.amount)} {Lang.t(nil, Config.Items[suggest.key].name)}`
 	elseif category == "swords" then
 		local sword = suggest.sword and Config.Swords[suggest.sword.sword]
-		return if sword then sword.name else "Espada"
+		return Lang.t(nil, if sword then sword.name else "Sword")
 	elseif category == "artifacts" then
-		return Config.Artifacts[suggest.key].name
+		return Lang.t(nil, Config.Artifacts[suggest.key].name)
 	end
-	return "Armadura"
+	return Lang.t(nil, "Armor")
 end
 
 local function suggestCell(parent: Instance, suggest): TextButton?
 	local category = suggest.category
 	if category == "coins" then
-		return amountCell(parent, "monedas", Ui.COLORS.coins, suggest.amount, "coins")
+		return amountCell(parent, Lang.t(nil, "coins"), Ui.COLORS.coins, suggest.amount, "coins")
 	elseif category == "gems" then
-		return amountCell(parent, "gemas", Ui.COLORS.purple, suggest.amount, "gems")
+		return amountCell(parent, Lang.t(nil, "gems"), Ui.COLORS.purple, suggest.amount, "gems")
 	elseif category == "items" then
 		local item = Config.Items[suggest.key]
-		return amountCell(parent, item.name, item.color, suggest.amount, suggest.key)
+		return amountCell(parent, Lang.t(nil, item.name), item.color, suggest.amount, suggest.key)
 	elseif category == "swords" and suggest.sword then
 		return swordCell(parent, suggest.sword)
 	elseif category == "armor" and suggest.piece then
@@ -204,7 +205,7 @@ end
 -- Lista de jugadores ----------------------------------------------------------------------
 
 local function buildList()
-	local window, body = Ui.window("TradeList", "Comercio", Vector2.new(560, 470), function(parent)
+	local window, body = Ui.window("TradeList", Lang.t(nil, "Trading"), Vector2.new(560, 470), function(parent)
 		Ui.image(parent, "trade")
 	end)
 	local note = Ui.label(body, 17)
@@ -212,7 +213,7 @@ local function buildList()
 	note.Size = UDim2.new(1, -32, 0, 28)
 	note.TextXAlignment = Enum.TextXAlignment.Left
 	note.TextColor3 = SOFT
-	note.Text = "Invita a un jugador de este servidor a comerciar."
+	note.Text = Lang.t(nil, "Invite a player on this server to trade.")
 
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "Players"
@@ -238,7 +239,7 @@ local function buildList()
 	empty.Position = UDim2.fromScale(0, 0.4)
 	empty.Size = UDim2.new(1, 0, 0, 30)
 	empty.TextColor3 = SOFT
-	empty.Text = "No hay nadie más en el servidor."
+	empty.Text = Lang.t(nil, "There's no one else on the server.")
 
 	local function row(order: number, name: string, userId: number, color: Color3)
 		local frame = Instance.new("Frame")
@@ -257,7 +258,7 @@ local function buildList()
 		label.TextXAlignment = Enum.TextXAlignment.Left
 		label.TextTruncate = Enum.TextTruncate.AtEnd
 		label.Text = name
-		local invite = Ui.button(frame, "Invitar", Ui.COLORS.green)
+		local invite = Ui.button(frame, Lang.t(nil, "Invite"), Ui.COLORS.green)
 		invite.Name = "Invite"
 		invite.AnchorPoint = Vector2.new(1, 0.5)
 		invite.Position = UDim2.new(1, -10, 0.5, 0)
@@ -284,7 +285,7 @@ local function buildList()
 		end
 		if player:GetAttribute("TradeBot") == true then
 			total += 1
-			row(total, "Bot de pruebas", 0, GOLD)
+			row(total, Lang.t(nil, "Test bot"), 0, GOLD)
 		end
 		empty.Visible = total == 0
 	end
@@ -323,13 +324,13 @@ local function buildInvite()
 	text.Position = UDim2.fromOffset(12, 8)
 	text.Size = UDim2.new(1, -24, 0, 44)
 	text.TextWrapped = true
-	local accept = Ui.button(card, "Aceptar", Ui.COLORS.green)
+	local accept = Ui.button(card, Lang.t(nil, "Accept"), Ui.COLORS.green)
 	accept.Name = "Accept"
 	accept.AnchorPoint = Vector2.new(1, 1)
 	accept.Position = UDim2.new(0.5, -6, 1, -12)
 	accept.Size = UDim2.fromOffset(170, 48)
 	accept.TextSize = 22
-	local decline = Ui.button(card, "Rechazar", Ui.COLORS.red)
+	local decline = Ui.button(card, Lang.t(nil, "Decline"), Ui.COLORS.red)
 	decline.Name = "Decline"
 	decline.AnchorPoint = Vector2.new(0, 1)
 	decline.Position = UDim2.new(0.5, 6, 1, -12)
@@ -354,7 +355,7 @@ local function buildInvite()
 	end)
 	Remotes.TradeInvite.OnClientEvent:Connect(function(userId: number, name: string)
 		from = userId
-		text.Text = `<font color="{hex(GOLD)}">{name}</font> quiere comerciar contigo`
+		text.Text = Lang.t(nil, "{name} wants to trade with you", { name = `<font color="{hex(GOLD)}">{name}</font>` })
 		Ui.open(card)
 		Sfx.play("toast")
 		token += 1
@@ -371,7 +372,7 @@ end
 -- Ventana del trato -----------------------------------------------------------------------
 
 local function buildTrade()
-	local window, body = Ui.window("Trade", "Trato", Vector2.new(1160, 700), function(parent)
+	local window, body = Ui.window("Trade", Lang.t(nil, "Trade"), Vector2.new(1160, 700), function(parent)
 		Ui.image(parent, "trade")
 	end)
 	local current = nil -- último estado que mandó el servidor, o nil si no hay trato
@@ -411,7 +412,7 @@ local function buildTrade()
 		empty.Size = UDim2.new(1, -24, 0, 70)
 		empty.TextWrapped = true
 		empty.TextColor3 = SOFT
-		empty.Text = if left then "Pulsa algo de tu inventario para ofrecerlo" else "Nada todavía"
+		empty.Text = Lang.t(nil, if left then "Click something in your inventory to offer it" else "Nothing yet")
 		return { panel = panel, stroke = stroke, title = title, badge = badge, grid = grid, empty = empty, shown = nil }
 	end
 	local mine = offerPanel("Mine", true)
@@ -438,7 +439,7 @@ local function buildTrade()
 	hint.TextXAlignment = Enum.TextXAlignment.Left
 	hint.TextTruncate = Enum.TextTruncate.AtEnd
 	hint.TextColor3 = SOFT
-	hint.Text = "Pulsa algo tuyo para ofrecerlo; en tu oferta, púlsalo para quitarlo."
+	hint.Text = Lang.t(nil, "Click something of yours to offer it; in your offer, click it to remove it.")
 
 	local stockArea = Instance.new("Frame")
 	stockArea.Name = "Stock"
@@ -528,8 +529,8 @@ local function buildTrade()
 			label = label,
 			minus = small("Minus", "-", Ui.COLORS.gray, 30),
 			plus = small("Plus", "+", Ui.COLORS.gray, 30),
-			want = small("Want", "Quiero", Ui.COLORS.orange, 64),
-			give = small("Give", "Te doy", Ui.COLORS.green, 64),
+			want = small("Want", Lang.t(nil, "I want"), Ui.COLORS.orange, 64),
+			give = small("Give", Lang.t(nil, "I give"), Ui.COLORS.green, 64),
 			name = name,
 			value = 1,
 			touching = false,
@@ -595,11 +596,11 @@ local function buildTrade()
 			amountRow(rowCount, name, color, category, key)
 		end
 	end
-	allowedRow("Monedas", Ui.COLORS.coins, "coins")
-	allowedRow("Gemas", Ui.COLORS.purple, "gems")
+	allowedRow(Lang.t(nil, "Coins"), Ui.COLORS.coins, "coins")
+	allowedRow(Lang.t(nil, "Gems"), Ui.COLORS.purple, "gems")
 	for _, key in Config.ItemOrder do
 		if not Config.Items[key].noTrade then
-			allowedRow(Config.Items[key].name, Config.Items[key].color, "items", key)
+			allowedRow(Lang.t(nil, Config.Items[key].name), Config.Items[key].color, "items", key)
 		end
 	end
 
@@ -608,7 +609,7 @@ local function buildTrade()
 	local tabButtons = {}
 	local stockCells = {} -- [id o índice] = casilla de la pestaña que se ve
 	local stockKey: string? = nil
-	local TABS = { { "swords", "Espadas", Ui.COLORS.red }, { "armor", "Armadura", Ui.COLORS.orange }, { "artifacts", "Accesorios", Ui.COLORS.purple }, { "amounts", if allow.coins or allow.gems then "Monedas y objetos" else "Objetos", Ui.COLORS.blue } }
+	local TABS = { { "swords", Lang.t(nil, "Swords"), Ui.COLORS.red }, { "armor", Lang.t(nil, "Armor"), Ui.COLORS.orange }, { "artifacts", Lang.t(nil, "Accessories"), Ui.COLORS.purple }, { "amounts", Lang.t(nil, if allow.coins or allow.gems then "Coins and items" else "Items"), Ui.COLORS.blue } }
 
 	local function locked(): boolean
 		return current == nil or current.state ~= "editing"
@@ -636,7 +637,7 @@ local function buildTrade()
 			row.box.Position = UDim2.new(1, -right - 34, 0.5, 0)
 			row.minus.Position = UDim2.new(1, -right - 38 - AMOUNT_BOX, 0.5, 0)
 			row.label.Size = UDim2.new(1, -right - 94 - AMOUNT_BOX, 1, 0)
-			row.label.Text = if suggesting then row.name else `{row.name} <font color="{Ui.SOFT}">(tienes {Format.short(row.owned())})</font>`
+			row.label.Text = if suggesting then row.name else `{row.name} <font color="{Ui.SOFT}">{Lang.t(nil, "(you have {n})", { n = Format.short(row.owned()) })}</font>`
 			if not row.box:IsFocused() and not row.touching then
 				local value = if suggesting then row.value else row.offered()
 				row.box.Text = if value > 0 then Format.short(value) else ""
@@ -717,26 +718,26 @@ local function buildTrade()
 	status.Size = UDim2.new(1, -550, 0, 56)
 	status.TextXAlignment = Enum.TextXAlignment.Left
 	status.TextWrapped = true
-	local mainButton = Ui.button(body, "Aceptar", Ui.COLORS.green)
+	local mainButton = Ui.button(body, Lang.t(nil, "Accept"), Ui.COLORS.green)
 	mainButton.Name = "Main"
 	mainButton.AnchorPoint = Vector2.new(1, 1)
 	mainButton.Position = UDim2.new(1, -12, 1, -12)
 	mainButton.Size = UDim2.fromOffset(230, 60)
 	mainButton.TextSize = 26
-	local backButton = Ui.button(body, "Volver", Ui.COLORS.orange)
+	local backButton = Ui.button(body, Lang.t(nil, "Back"), Ui.COLORS.orange)
 	backButton.Name = "Back"
 	backButton.AnchorPoint = Vector2.new(1, 1)
 	backButton.Position = UDim2.new(1, -252, 1, -12)
 	backButton.Size = UDim2.fromOffset(110, 60)
 	backButton.TextSize = 20
-	local cancelButton = Ui.button(body, "Cancelar", Ui.COLORS.red)
+	local cancelButton = Ui.button(body, Lang.t(nil, "Cancel"), Ui.COLORS.red)
 	cancelButton.Name = "Cancel"
 	cancelButton.AnchorPoint = Vector2.new(1, 1)
 	cancelButton.Position = UDim2.new(1, -372, 1, -12)
 	cancelButton.Size = UDim2.fromOffset(110, 60)
 	cancelButton.TextSize = 20
 	-- "Sugerir": bocadillo con puntos y el texto a su derecha.
-	local suggestButton = Ui.button(body, "Sugerir ", Ui.COLORS.blue)
+	local suggestButton = Ui.button(body, Lang.t(nil, "Suggest") .. " ", Ui.COLORS.blue)
 	suggestButton.Name = "Suggest"
 	suggestButton.AnchorPoint = Vector2.new(1, 1)
 	suggestButton.Position = UDim2.new(1, -372, 1, -12)
@@ -811,13 +812,13 @@ local function buildTrade()
 	what.TextXAlignment = Enum.TextXAlignment.Left
 	what.TextWrapped = true
 	what.TextColor3 = GOLD
-	local acceptSuggest = Ui.button(card, "Aceptar", Ui.COLORS.green)
+	local acceptSuggest = Ui.button(card, Lang.t(nil, "Accept"), Ui.COLORS.green)
 	acceptSuggest.Name = "Accept"
 	acceptSuggest.AnchorPoint = Vector2.new(1, 0)
 	acceptSuggest.Position = UDim2.new(1, -12, 0, 54)
 	acceptSuggest.Size = UDim2.fromOffset(156, 50)
 	acceptSuggest.TextSize = 24
-	local ignoreSuggest = Ui.button(card, "Ignorar", Ui.COLORS.red)
+	local ignoreSuggest = Ui.button(card, Lang.t(nil, "Ignore"), Ui.COLORS.red)
 	ignoreSuggest.Name = "Ignore"
 	ignoreSuggest.AnchorPoint = Vector2.new(1, 0)
 	ignoreSuggest.Position = UDim2.new(1, -12, 0, 110)
@@ -868,7 +869,7 @@ local function buildTrade()
 	chipText.Size = UDim2.new(1, -92 - 86, 1, 0)
 	chipText.TextXAlignment = Enum.TextXAlignment.Left
 	chipText.TextTruncate = Enum.TextTruncate.AtEnd
-	local removeSuggest = Ui.button(chip, "Quitar", Ui.COLORS.red)
+	local removeSuggest = Ui.button(chip, Lang.t(nil, "Remove"), Ui.COLORS.red)
 	removeSuggest.Name = "Remove"
 	removeSuggest.AnchorPoint = Vector2.new(1, 0.5)
 	removeSuggest.Position = UDim2.new(1, -8, 0.5, 0)
@@ -887,7 +888,7 @@ local function buildTrade()
 			local intent = INTENTS[mineSuggest.intent]
 			chipRibbon.Text = intent[1]
 			chipRibbon.BackgroundColor3 = intent[2]
-			chipText.Text = if mineSuggest.ignored then "Ignorada" else suggestName(mineSuggest)
+			chipText.Text = if mineSuggest.ignored then Lang.t(nil, "Ignored") else suggestName(mineSuggest)
 			chipText.TextColor3 = if mineSuggest.ignored then Ui.COLORS.red:Lerp(WHITE, 0.3) else WHITE
 		end
 		-- La que el otro ha visto ignorar ya no se le enseña.
@@ -907,7 +908,7 @@ local function buildTrade()
 		local intent = INTENTS[theirSuggest.intent]
 		ribbon.Text = intent[1]
 		ribbon.BackgroundColor3 = intent[2]
-		from.Text = `{current.them.name} {if theirSuggest.intent == "want" then "te lo pide" else "te lo ofrece"}`
+		from.Text = Lang.t(nil, if theirSuggest.intent == "want" then "{name} asks you for it" else "{name} offers it to you", { name = current.them.name })
 		what.Text = suggestName(theirSuggest)
 		local cell = suggestCell(slot, theirSuggest)
 		if cell then
@@ -943,7 +944,7 @@ local function buildTrade()
 			end
 		end
 		if current then
-			hint.Text = if current.state ~= "editing" then "Ofertas bloqueadas." elseif suggesting then "Sugerir: pulsa algo tuyo, o pide una cantidad." else "Pulsa algo tuyo para ofrecerlo; en tu oferta, púlsalo para quitarlo."
+			hint.Text = Lang.t(nil, if current.state ~= "editing" then "Offers locked." elseif suggesting then "Suggest: click something of yours, or ask for an amount." else "Click something of yours to offer it; in your offer, click it to remove it.")
 			paintStock()
 		end
 	end
@@ -992,7 +993,7 @@ local function buildTrade()
 			end
 		end
 		local done = if confirming then side.confirmed else side.accepted
-		panel.badge.Text = if not done then (if confirming then "Sin confirmar" else "Eligiendo...") elseif confirming then "CONFIRMADO" else "ACEPTADO"
+		panel.badge.Text = Lang.t(nil, if not done then (if confirming then "Not confirmed" else "Choosing...") elseif confirming then "CONFIRMED" else "ACCEPTED")
 		panel.badge.TextColor3 = if done then Ui.COLORS.green:Lerp(WHITE, 0.3) else SOFT
 		panel.stroke.Color = if done then Ui.COLORS.green else BLACK
 		local key = HttpService:JSONEncode({ side.coins == math.huge and "inf" or side.coins, side.gems == math.huge and "inf" or side.gems, side.items, side.swords, side.armor, side.artifacts })
@@ -1022,15 +1023,15 @@ local function buildTrade()
 			end)
 		end
 		if side.coins > 0 then
-			place(amountCell(panel.grid, "monedas", Ui.COLORS.coins, side.coins, "coins"), "coins", nil)
+			place(amountCell(panel.grid, Lang.t(nil, "coins"), Ui.COLORS.coins, side.coins, "coins"), "coins", nil)
 		end
 		if side.gems > 0 then
-			place(amountCell(panel.grid, "gemas", Ui.COLORS.purple, side.gems, "gems"), "gems", nil)
+			place(amountCell(panel.grid, Lang.t(nil, "gems"), Ui.COLORS.purple, side.gems, "gems"), "gems", nil)
 		end
 		for _, name in Config.ItemOrder do
 			local amount = side.items[name]
 			if amount and amount > 0 then
-				place(amountCell(panel.grid, Config.Items[name].name, Config.Items[name].color, amount, name), "items", name)
+				place(amountCell(panel.grid, Lang.t(nil, Config.Items[name].name), Config.Items[name].color, amount, name), "items", name)
 			end
 		end
 		for _, copy in side.swords do
@@ -1050,8 +1051,8 @@ local function buildTrade()
 		if not current then
 			return
 		end
-		paintOffer(mine, current.you, "Tu oferta")
-		paintOffer(theirs, current.them, `Oferta de {current.them.name}`)
+		paintOffer(mine, current.you, Lang.t(nil, "Your offer"))
+		paintOffer(theirs, current.them, Lang.t(nil, "{name}'s offer", { name = current.them.name }))
 		buildStock()
 		local state = current.state
 		status.Text = STEPS[state] or ""
@@ -1062,15 +1063,15 @@ local function buildTrade()
 		paintSuggests()
 		backButton.Visible = state == "confirming"
 		mainButton.Visible = state ~= "countdown"
-		cancelButton.Text = if state == "countdown" then "¡CANCELAR!" else "Cancelar"
+		cancelButton.Text = Lang.t(nil, if state == "countdown" then "CANCEL!" else "Cancel")
 		cancelButton.TextSize = if state == "countdown" then 28 else 20
 		cancelButton.Size = UDim2.fromOffset(if state == "countdown" then 300 else 110, 60)
 		cancelButton.Position = UDim2.new(1, if state == "countdown" then -12 else (if state == "confirming" then -372 else -252), 1, -12)
 		if state == "editing" then
-			mainButton.Text = if current.you.accepted then "Quitar aceptar" else "Aceptar"
+			mainButton.Text = Lang.t(nil, if current.you.accepted then "Undo accept" else "Accept")
 			mainButton.BackgroundColor3 = if current.you.accepted then Ui.COLORS.orange else Ui.COLORS.green
 		elseif state == "confirming" then
-			mainButton.Text = if current.you.confirmed then "Esperando..." else "CONFIRMAR"
+			mainButton.Text = Lang.t(nil, if current.you.confirmed then "Waiting..." else "CONFIRM")
 			mainButton.BackgroundColor3 = if current.you.confirmed then Ui.COLORS.gray else Ui.COLORS.green
 		end
 		countdown.Visible = state == "countdown"
@@ -1078,7 +1079,7 @@ local function buildTrade()
 			lastState = state
 			if state == "confirming" then
 				Sfx.play("rare")
-				Ui.toast("Revisa bien la oferta antes de confirmar", GOLD)
+				Ui.toast(Lang.t(nil, "Check the offer carefully before confirming"), GOLD)
 			elseif state == "countdown" then
 				Sfx.play("roll")
 			end

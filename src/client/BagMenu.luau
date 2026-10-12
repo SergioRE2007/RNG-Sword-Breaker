@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 local BagInfo = require(ReplicatedStorage.Shared.BagInfo)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -106,7 +107,7 @@ end
 
 local function swordTip(copy, line: string)
 	local text, color, animated, icon = Backpack.swordTip(copy)
-	return `{text}\n<font color="{GOLD_HEX}">+{Format.short(coinsPerHit(copy))} monedas por golpe</font>\n<font color="{Ui.SOFT}">{line}</font>`, color, animated, icon
+	return `{text}\n<font color="{GOLD_HEX}">{Lang.t(nil, "+{n} coins per hit", { n = Format.short(coinsPerHit(copy)) })}</font>\n<font color="{Ui.SOFT}">{line}</font>`, color, animated, icon
 end
 
 -- Casilla de un arma: vista 3D, lo que saca por golpe abajo y sus marcas (metal, tamaño y rasgo, como en la mochila).
@@ -133,7 +134,7 @@ local function swordCell(parent: Instance, copy): TextButton
 		Ui.stroke(dot, BLACK, 2)
 	end
 	if size then
-		local tag = Ui.cellTag(cell, string.sub(size.name, 1, 1), size.color)
+		local tag = Ui.cellTag(cell, string.sub(Lang.t(nil, size.name), 1, 1), size.color)
 		tag.AnchorPoint = Vector2.new(1, 0)
 		tag.Position = UDim2.new(1, -4, 0, if metal then 26 else 4)
 	end
@@ -159,7 +160,7 @@ local function emptySlot(parent: Instance): Frame
 	free.Name = "Free"
 	free.Position = UDim2.fromScale(0, 0.68)
 	free.Size = UDim2.fromScale(1, 0.24)
-	free.Text = "Libre"
+	free.Text = Lang.t(nil, "Free")
 	free.TextColor3 = Color3.fromRGB(190, 170, 136)
 	return frame
 end
@@ -203,7 +204,7 @@ local function syncSlots(deposited)
 		if copy then
 			local cell = swordCell(slotRow, copy)
 			Ui.tip(cell, function()
-				return swordTip(copy, "Pulsa para sacarla de la bolsa")
+				return swordTip(copy, Lang.t(nil, "Click to take it out of the bag"))
 			end, true)
 			cell.Activated:Connect(function()
 				ask(copy.id)
@@ -248,9 +249,9 @@ local function syncStock(copies, worn: { number }, deposited)
 			Ui.cellTag(cell, "E", Ui.COLORS.green)
 		end
 		Ui.tip(cell, function()
-			local line = if Stats.isEquipped(player, copy.id) then "Equipada: dejará de estarlo"
-				elseif #Stats.list(player, "Bag") >= Stats.bagSlots(player) then "Bolsa llena: cambia a la peor"
-				else "Pulsa: a la bolsa"
+			local line = if Stats.isEquipped(player, copy.id) then Lang.t(nil, "Equipped: it will be unequipped")
+				elseif #Stats.list(player, "Bag") >= Stats.bagSlots(player) then Lang.t(nil, "Bag full: it replaces the worst one")
+				else Lang.t(nil, "Click: into the bag")
 			return swordTip(copy, line)
 		end, true)
 		cell.Activated:Connect(function()
@@ -280,7 +281,7 @@ local function syncStock(copies, worn: { number }, deposited)
 			cell.LayoutOrder = position
 		end
 	end
-	stockTitle.Text = `Tus armas <font color="{Ui.SOFT}">· {if full then "bolsa llena" else "pulsa una para dejarla"}</font>`
+	stockTitle.Text = `{Lang.t(nil, "Your weapons")} <font color="{Ui.SOFT}">· {Lang.t(nil, if full then "bag full" else "click one to leave it")}</font>`
 end
 
 -- Cómo va la bolsa: por cuál vas, lo que le queda (lo calcula el cliente entre aviso y aviso) y lo que sacan tus armas.
@@ -290,15 +291,15 @@ local function syncProgress(deposited)
 	local rate = player:GetAttribute("BagRate") or 0
 	local elapsed = math.max(workspace:GetServerTimeNow() - (player:GetAttribute("BagAt") or 0), 0)
 	local taken = math.clamp((player:GetAttribute("BagTaken") or 0) + rate * elapsed, 0, full)
-	stageTitle.Text = `BOLSA Nº {stage}`
+	stageTitle.Text = Lang.t(nil, "BAG No. {n}", { n = stage })
 	barFill.Size = UDim2.fromScale(math.clamp(1 - taken / full, 0, 1), 1)
 	barAmount.Text = Format.short(math.ceil(full - taken))
 	local perHit = 0
 	for _, copy in deposited do
 		perHit += coinsPerHit(copy)
 	end
-	rateLabel.Text = if #deposited == 0 then `<font color="{Ui.SOFT}">Sin armas: no saca nada</font>`
-		else `Golpes: <font color="{GOLD_HEX}">+{Format.short(perHit)}</font>`
+	rateLabel.Text = if #deposited == 0 then `<font color="{Ui.SOFT}">{Lang.t(nil, "No weapons: it earns nothing")}</font>`
+		else Lang.t(nil, "Hits: {n}", { n = `<font color="{GOLD_HEX}">+{Format.short(perHit)}</font>` })
 end
 
 -- Crear una casilla puede esperar (la vista 3D carga su arma): un refresco que llega a medias se apunta y se hace
@@ -333,7 +334,7 @@ end
 
 local function build()
 	local body
-	window, body = Ui.window(NAME, "Bolsa de oro", Vector2.new(720, 560), function(parent)
+	window, body = Ui.window(NAME, Lang.t(nil, "Gold Bag"), Vector2.new(720, 560), function(parent)
 		Ui.image(parent, "bolsa")
 	end)
 
@@ -367,7 +368,7 @@ local function build()
 	hint.Size = UDim2.fromOffset(slotRow.Size.X.Offset, 24)
 	hint.TextXAlignment = Enum.TextXAlignment.Left
 	hint.TextColor3 = Color3.fromRGB(232, 214, 180)
-	hint.Text = "Estas armas pegan al saco solas, también cuando no estás"
+	hint.Text = Lang.t(nil, "These weapons hit the sack on their own, even while you're away")
 	hint.TextScaled = true
 	local hintLimit = Instance.new("UITextSizeConstraint")
 	hintLimit.MaxTextSize = 15
@@ -450,8 +451,8 @@ local function build()
 		item.TextSize = 19
 		return item
 	end
-	bestButton = action("Best", "Poner las mejores", Ui.COLORS.green, 10, 186)
-	clearButton = action("Clear", "Vaciar", Ui.COLORS.red, 204, 100)
+	bestButton = action("Best", Lang.t(nil, "Add the best"), Ui.COLORS.green, 10, 186)
+	clearButton = action("Clear", Lang.t(nil, "Take all out"), Ui.COLORS.red, 204, 100)
 	bestButton.Activated:Connect(function()
 		ask("best") -- las de más daño sin equipar: lo decide el servidor
 	end)
@@ -495,8 +496,8 @@ local function tend(pointer: Vector2?)
 	if body and not prompt then
 		local item = Instance.new("ProximityPrompt")
 		item.Name = "BagPrompt"
-		item.ObjectText = "Bolsa de oro"
-		item.ActionText = "Elegir armas"
+		item.ObjectText = Lang.t(nil, "Gold Bag")
+		item.ActionText = Lang.t(nil, "Pick weapons")
 		item.KeyboardKeyCode = Enum.KeyCode.E
 		item.GamepadKeyCode = Enum.KeyCode.ButtonX
 		item.HoldDuration = 0

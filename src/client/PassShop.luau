@@ -21,6 +21,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Performance = require(script.Parent.Performance)
@@ -192,7 +193,7 @@ local function buildArt(card: Frame, pass)
 	tag.Size = UDim2.fromOffset(110, 44)
 	tag.TextXAlignment = Enum.TextXAlignment.Right
 	tag.Rotation = -7
-	tag.Text = pass.tag
+	tag.Text = Lang.t(nil, pass.tag)
 	Ui.gradient(tag, WHITE, GOLD, 90)
 	local tagStroke = tag:FindFirstChildOfClass("UIStroke")
 	if tagStroke then
@@ -220,7 +221,7 @@ local function buildArt(card: Frame, pass)
 		text.Name = "Text"
 		text.Size = UDim2.fromOffset(0, 24)
 		text.AutomaticSize = Enum.AutomaticSize.X
-		text.Text = pass.ribbon
+		text.Text = Lang.t(nil, pass.ribbon)
 		local padding = Instance.new("UIPadding")
 		padding.PaddingLeft = UDim.new(0, 9)
 		padding.PaddingRight = UDim.new(0, 9)
@@ -314,7 +315,7 @@ function PassShop.start()
 	-- el usuario: se veía muy pequeña): Ui.window la escala hasta que toca el alto o el ancho de la pantalla, y con
 	-- una ventana casi cuadrada mandaba el alto y las tarjetas quedaban diminutas.
 	local shown = math.min(rows, SHOWN_ROWS)
-	local window, body = Ui.window("PassShop", "Tienda", Vector2.new(1200, 78 + 4 + shown * (CARD_HEIGHT + GAP) + 16 + (if rows > shown then PEEK else 0)), function(parent)
+	local window, body = Ui.window("PassShop", Lang.t(nil, "Shop"), Vector2.new(1200, 78 + 4 + shown * (CARD_HEIGHT + GAP) + 16 + (if rows > shown then PEEK else 0)), function(parent)
 		Ui.image(parent, "tienda_robux")
 	end)
 
@@ -341,7 +342,7 @@ function PassShop.start()
 	walletText.TextXAlignment = Enum.TextXAlignment.Right
 	walletText.TextColor3 = GOLD
 	Ui.tip(wallet, function()
-		return "Tickets: los dan las misiones diarias y semanales", TICKET
+		return Lang.t(nil, "Tickets: earned from daily and weekly missions"), TICKET
 	end, true)
 
 	-- Lo que se mueve fuera de los escaparates de los pases (pedido por el usuario: quieto se veía tieso): los rayos de
@@ -391,7 +392,7 @@ function PassShop.start()
 	end
 
 	-- 1. Tréboles (Config.Products): tres fichas apaisadas, con otro aspecto que los pases.
-	heading(1, "HeadClovers", `Tiradas x{Config.Clover.Luck}`, Color3.fromRGB(60, 190, 110))
+	heading(1, "HeadClovers", Lang.t(nil, "x{n} Rolls", { n = Config.Clover.Luck }), Color3.fromRGB(60, 190, 110))
 	local clovers = Instance.new("Frame")
 	clovers.Name = "Clovers"
 	clovers.LayoutOrder = 2
@@ -472,7 +473,7 @@ function PassShop.start()
 		name.Size = UDim2.new(1, -left - 12, 0, 30)
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		name.TextScaled = true
-		name.Text = if product.amount == 1 then "1 trébol" else `{product.amount} tréboles`
+		name.Text = if product.amount == 1 then Lang.t(nil, "1 clover") else Lang.t(nil, "{n} clovers", { n = product.amount })
 		local nameLimit = Instance.new("UITextSizeConstraint")
 		nameLimit.MaxTextSize = 26
 		nameLimit.MinTextSize = 14
@@ -483,7 +484,7 @@ function PassShop.start()
 		note.Size = UDim2.new(1, -left - 12, 0, 20)
 		note.TextXAlignment = Enum.TextXAlignment.Left
 		note.TextColor3 = Color3.fromRGB(205, 230, 215)
-		note.Text = `x{Config.Clover.Luck} de suerte de armas`
+		note.Text = Lang.t(nil, "x{n} weapon luck", { n = Config.Clover.Luck })
 		if product.ribbon then
 			local ribbon = Instance.new("Frame")
 			ribbon.Name = "Ribbon"
@@ -495,7 +496,7 @@ function PassShop.start()
 			Ui.pill(ribbon, Ui.COLORS.red, 8)
 			local ribbonText = Ui.label(ribbon, 18)
 			ribbonText.Size = UDim2.fromScale(1, 1)
-			ribbonText.Text = product.ribbon
+			ribbonText.Text = Lang.t(nil, product.ribbon)
 			name.Size = UDim2.new(1, -left - 90, 0, 30)
 		end
 
@@ -508,7 +509,7 @@ function PassShop.start()
 		Ui.sparkle(buy, 3)
 		local price = product.price
 		local function show()
-			buy.Text = if product.id <= 0 then "Pronto" else `{ROBUX_SIGN} {price}`
+			buy.Text = if product.id <= 0 then Lang.t(nil, "Soon") else `{ROBUX_SIGN} {price}`
 			buy.BackgroundColor3 = if product.id <= 0 then Ui.COLORS.gray else ROBUX
 		end
 		show()
@@ -525,7 +526,7 @@ function PassShop.start()
 		buy.Activated:Connect(function()
 			if product.id <= 0 then
 				Sfx.play("error")
-				Ui.toast("Aún no está a la venta", Ui.COLORS.orange)
+				Ui.toast(Lang.t(nil, "Not for sale yet"), Ui.COLORS.orange)
 				return
 			end
 			MarketplaceService:PromptProductPurchase(player, product.id)
@@ -547,7 +548,7 @@ function PassShop.start()
 	end
 
 	-- 2. Pases de juego: la rejilla de tarjetas.
-	heading(3, "HeadPasses", "Pases de juego", Color3.fromRGB(110, 90, 230))
+	heading(3, "HeadPasses", Lang.t(nil, "Game passes"), Color3.fromRGB(110, 90, 230))
 	local passGrid = Instance.new("Frame")
 	passGrid.Name = "Grid"
 	passGrid.LayoutOrder = 4
@@ -561,7 +562,7 @@ function PassShop.start()
 	grid.Parent = passGrid
 
 	-- 3. Códigos de regalo (Config.Codes, server/Codes): una caja para escribirlo y el botón; la respuesta llega en un aviso.
-	heading(5, "HeadCodes", "Códigos", Color3.fromRGB(235, 150, 50))
+	heading(5, "HeadCodes", Lang.t(nil, "Codes"), Color3.fromRGB(235, 150, 50))
 	local CODE = Color3.fromRGB(120, 124, 255)
 	local codes = Instance.new("Frame")
 	codes.Name = "Codes"
@@ -619,20 +620,20 @@ function PassShop.start()
 	codeTitle.Position = UDim2.fromOffset(CODES_LEFT, 12)
 	codeTitle.Size = UDim2.new(1, -CODES_LEFT - 20, 0, 54)
 	codeTitle.TextXAlignment = Enum.TextXAlignment.Left
-	codeTitle.Text = "Códigos"
+	codeTitle.Text = Lang.t(nil, "Codes")
 	Ui.gradient(codeTitle, WHITE, CODE:Lerp(WHITE, 0.25), 90)
 	local codeNote = Ui.label(codes, 22)
 	codeNote.Name = "Note"
 	codeNote.Position = UDim2.fromOffset(CODES_LEFT, 66)
 	codeNote.Size = UDim2.new(1, -CODES_LEFT - 20, 0, 24)
 	codeNote.TextXAlignment = Enum.TextXAlignment.Left
-	codeNote.Text = "¡Únete a nuestro grupo para conseguir códigos exclusivos!"
+	codeNote.Text = Lang.t(nil, "Join our group to get exclusive codes!")
 	local codeBox = Instance.new("TextBox")
 	codeBox.Name = "Box"
 	codeBox.Position = UDim2.fromOffset(CODES_LEFT, 98)
 	codeBox.Size = UDim2.new(1, -CODES_LEFT - 24, 0, 48)
 	codeBox.ClearTextOnFocus = false
-	codeBox.PlaceholderText = "Escribe tu código..."
+	codeBox.PlaceholderText = Lang.t(nil, "Type your code...")
 	codeBox.Text = ""
 	codeBox.TextSize = 24
 	codeBox.TextXAlignment = Enum.TextXAlignment.Left
@@ -646,7 +647,7 @@ function PassShop.start()
 	codeInset.PaddingLeft = UDim.new(0, 14)
 	codeInset.PaddingRight = UDim.new(0, 14)
 	codeInset.Parent = codeBox
-	local redeem = Ui.button(codes, "Canjear", Ui.COLORS.green)
+	local redeem = Ui.button(codes, Lang.t(nil, "Redeem"), Ui.COLORS.green)
 	redeem.Name = "Redeem"
 	redeem.Position = UDim2.fromOffset(CODES_LEFT, 156)
 	redeem.Size = UDim2.fromOffset(230, 52)
@@ -698,7 +699,7 @@ function PassShop.start()
 		name.Position = UDim2.fromOffset(PAD, PAD + ART_HEIGHT + 6)
 		name.Size = UDim2.new(1, -PAD * 2, 0, 34)
 		name.TextScaled = true
-		name.Text = pass.name
+		name.Text = Lang.t(nil, pass.name)
 		local nameLimit = Instance.new("UITextSizeConstraint")
 		nameLimit.MaxTextSize = 30
 		nameLimit.MinTextSize = 14
@@ -708,7 +709,7 @@ function PassShop.start()
 		-- Lo que da, una línea por ventaja (perksText). El texto se encoge si un pase trae muchas.
 		local lines = {}
 		for _, text in pass.perksText do
-			table.insert(lines, `<font color="#{ROBUX:ToHex()}">+</font> {text}`)
+			table.insert(lines, `<font color="#{ROBUX:ToHex()}">+</font> {Lang.t(nil, text)}`)
 		end
 		local buyHeight = 54
 		local perksTop = PAD + ART_HEIGHT + 44
@@ -786,7 +787,7 @@ function PassShop.start()
 			end
 			if pass.id <= 0 then
 				Sfx.play("error")
-				Ui.toast("Aún no está a la venta", Ui.COLORS.orange)
+				Ui.toast(Lang.t(nil, "Not for sale yet"), Ui.COLORS.orange)
 				return
 			end
 			MarketplaceService:PromptGamePassPurchase(player, pass.id)
@@ -802,7 +803,7 @@ function PassShop.start()
 			local missing = Stats.ticketPrice(key) - (player:GetAttribute("Item_missionToken") or 0)
 			if missing > 0 then
 				Sfx.play("error")
-				Ui.toast(`Te faltan {count(missing)} tickets: los dan las misiones`, Ui.COLORS.orange)
+				Ui.toast(Lang.t(nil, "You need {n} more tickets: missions give them", { n = count(missing) }), Ui.COLORS.orange)
 				return
 			end
 			-- Primer toque: pregunta. El segundo, antes de CONFIRM_TIME s, compra.
@@ -829,11 +830,11 @@ function PassShop.start()
 			entry.buy.Size = if owned then UDim2.new(1, -PAD * 2 - 4, 0, entry.buy.Size.Y.Offset) else entry.tickets.Size
 			entry.tickets.Visible = not owned
 			entry.ticketIcon.Visible = not asking
-			entry.tickets.Text = if asking then "¿Seguro?" else `      {count(cost)}`
+			entry.tickets.Text = if asking then Lang.t(nil, "Sure?") else `      {count(cost)}`
 			entry.tickets.TextSize = if asking then 22 else 26
 			entry.tickets.BackgroundColor3 = if asking then Ui.COLORS.green elseif enough then TICKET else TICKET:Lerp(Color3.fromRGB(70, 72, 90), 0.7)
 			entry.tickets.TextColor3 = if enough then WHITE else Color3.fromRGB(190, 192, 205)
-			entry.buy.Text = if owned then "¡Lo tienes!" elseif entry.pass.id <= 0 then "Pronto" else `{ROBUX_SIGN} {entry.price}`
+			entry.buy.Text = if owned then Lang.t(nil, "You own it!") elseif entry.pass.id <= 0 then Lang.t(nil, "Soon") else `{ROBUX_SIGN} {entry.price}`
 			entry.buy.BackgroundColor3 = if owned then Ui.COLORS.blue elseif entry.pass.id <= 0 then Ui.COLORS.gray else ROBUX
 			entry.buy.TextSize = if owned then 22 else 26
 		end

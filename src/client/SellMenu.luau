@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -54,7 +55,7 @@ end
 
 function SellMenu.start()
 	local body
-	window, body = Ui.window("SellMenu", "Vender armas", Vector2.new(740, 560))
+	window, body = Ui.window("SellMenu", Lang.t(nil, "Sell weapons"), Vector2.new(740, 560))
 	local summary = Ui.label(body, 22)
 	summary.Size = UDim2.fromScale(1, 0.09)
 	summary.TextWrapped = true
@@ -93,7 +94,7 @@ function SellMenu.start()
 	row.Parent = actions
 	local buttons = {}
 	-- Solo dos botones (pedido por el usuario): quitar la selección es pulsar las casillas y salir, la X de la ventana.
-	for order, spec in { { "SelectAll", "Seleccionar todo", Ui.COLORS.blue }, { "Sell", "Vender selección", Ui.COLORS.red } } do
+	for order, spec in { { "SelectAll", Lang.t(nil, "Select all"), Ui.COLORS.blue }, { "Sell", Lang.t(nil, "Sell selected"), Ui.COLORS.red } } do
 		local button = Ui.button(actions, spec[2], spec[3])
 		button.Name = spec[1]
 		button.Size = UDim2.fromScale(0.49, 1)
@@ -116,8 +117,8 @@ function SellMenu.start()
 			if selected[id] then count += 1 end
 		end
 		if count == 0 then confirming = false end
-		summary.Text = `{if confirming then "¿Confirmar venta? " else "Seleccionadas: "}{count} · +{Format.short(count * Config.Gacha.SellValue)} gemas`
-		buttons.Sell.Text = if confirming then "Confirmar venta" else "Vender selección"
+		summary.Text = Lang.t(nil, if confirming then "Confirm sale? {count} · +{gems} gems" else "Selected: {count} · +{gems} gems", { count = count, gems = Format.short(count * Config.Gacha.SellValue) })
+		buttons.Sell.Text = if confirming then Lang.t(nil, "Confirm sale") else Lang.t(nil, "Sell selected")
 		buttons.Sell.Interactable = count > 0
 	end
 	refresh = function()
@@ -141,10 +142,10 @@ function SellMenu.start()
 				local lines = { Permanent.name(copy.sword, copy.metal, copy.size), Permanent.describeOdds(copy.sword, copy.metal, copy.size) }
 				local trait, grade = Config.Traits[copy.trait], Config.Grades[copy.grade]
 				if trait then
-					table.insert(lines, `Rasgo: {trait.name}`)
+					table.insert(lines, Lang.t(nil, "Trait: {name}", { name = Lang.t(nil, trait.name) }))
 				end
 				if grade then
-					table.insert(lines, `Grado: {grade.name}`)
+					table.insert(lines, Lang.t(nil, "Grade: {name}", { name = Lang.t(nil, grade.name) }))
 				end
 				return table.concat(lines, "\n"), tier.color
 			end, true)

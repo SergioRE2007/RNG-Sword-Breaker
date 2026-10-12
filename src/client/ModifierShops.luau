@@ -13,6 +13,7 @@ local HttpService = game:GetService("HttpService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -55,7 +56,7 @@ local AUTO_DELAY = 0.2 -- segundos entre tiradas automáticas
 local CLOSE_DISTANCE = 30 -- se cierra al alejarse del puesto
 local OPEN_DISTANCE = 10 -- se abre sola al acercarse a la estación (la tecla E sigue valiendo)
 -- Tipos de rasgo en el orden de desempate (los colores, los de sus rasgos de nivel I).
-local PRIORITY_NAMES = { luck = "Suerte", coins = "Monedas", damage = "Daño" }
+local PRIORITY_NAMES = { luck = Lang.t(nil, "Luck"), coins = Lang.t(nil, "Coins"), damage = Lang.t(nil, "Damage") }
 local PRIORITY_COLORS = { luck = Color3.fromRGB(150, 230, 90), coins = Color3.fromRGB(110, 220, 120), damage = Color3.fromRGB(90, 210, 230) }
 
 local random = Random.new()
@@ -93,10 +94,10 @@ end
 -- (Especiales, Monedas, Daño, Suerte), cada tipo del más raro al más común. Devuelve una lista
 -- de { header = texto } y { index = posición en la lista de Config }.
 local GROUPS = {
-	{ icon = "all", title = "Especiales" },
-	{ icon = "coins", title = "Monedas" },
-	{ icon = "damage", title = "Daño" },
-	{ icon = "luck", title = "Suerte" },
+	{ icon = "all", title = Lang.t(nil, "Specials") },
+	{ icon = "coins", title = Lang.t(nil, "Coins") },
+	{ icon = "damage", title = Lang.t(nil, "Damage") },
+	{ icon = "luck", title = Lang.t(nil, "Luck") },
 }
 local function displayOrder(kind: string)
 	local list = Modifiers.KINDS[kind].list
@@ -189,7 +190,7 @@ local function entryIcon(parent: GuiObject, kind: string, entry)
 		-- El ∞ de la fuente es un dibujo pequeño: va más grande para pesar lo mismo que las letras.
 		local letter = Ui.label(parent, if entry.name == "∞" then 72 else 48)
 		letter.Size = UDim2.fromScale(1, 1)
-		letter.Text = entry.name
+		letter.Text = Lang.t(nil, entry.name)
 		letter.TextColor3 = if entry.rainbow then WHITE else entry.color
 		if entry.rainbow then
 			rainbow(letter, entry)
@@ -206,11 +207,11 @@ local function paintName(label: TextLabel, entry)
 		old:Destroy()
 	end
 	if not entry then
-		label.Text = "Ninguno"
+		label.Text = Lang.t(nil, "None")
 		label.TextColor3 = Color3.fromRGB(150, 150, 160)
 		return
 	end
-	label.Text = entry.name
+	label.Text = Lang.t(nil, entry.name)
 	label.TextColor3 = if entry.rainbow then WHITE else entry.color
 	if entry.rainbow then
 		rainbow(label, entry)
@@ -220,7 +221,7 @@ end
 local function buildShop(kind: string)
 	local info = Modifiers.KINDS[kind]
 	local windowName = info.title
-	local window, body = Ui.window(windowName, info.title, SIZE)
+	local window, body = Ui.window(windowName, Lang.t(nil, info.title), SIZE)
 	local header = window:FindFirstChild("Header")
 	local headerGradient = header and header:FindFirstChildOfClass("UIGradient")
 	if headerGradient then
@@ -322,7 +323,7 @@ local function buildShop(kind: string)
 				return Backpack.swordTip(copy)
 			end
 		end
-		return "Pulsa para elegir una espada", WHITE
+		return Lang.t(nil, "Click to pick a sword"), WHITE
 	end)
 	local slotHint = Ui.label(slot, 19)
 	slotHint.AnchorPoint = Vector2.new(0.5, 1)
@@ -334,7 +335,7 @@ local function buildShop(kind: string)
 	local heading = Ui.label(swordInfo, 30)
 	heading.Position = UDim2.fromScale(0.385, 0)
 	heading.Size = UDim2.fromScale(0.615, 0.1)
-	heading.Text = info.label
+	heading.Text = Lang.t(nil, info.label)
 
 	local nameBox = Instance.new("Frame")
 	nameBox.Name = "Current"
@@ -363,7 +364,7 @@ local function buildShop(kind: string)
 	warning.Size = UDim2.fromScale(1, 0.15)
 	warning.TextWrapped = true
 	warning.TextColor3 = Color3.fromRGB(200, 200, 210)
-	warning.Text = `Tirar cambia el {string.lower(info.label)} de la espada.`
+	warning.Text = Lang.t(nil, "Rolling changes the sword's {kind}.", { kind = string.lower(Lang.t(nil, info.label)) })
 
 	-- Botones de abajo, repartidos por el UIListLayout (los anchos suman 1 con los huecos).
 	local function control(name: string, text: string, color: Color3, order: number, width: number, textSize: number): TextButton
@@ -376,7 +377,7 @@ local function buildShop(kind: string)
 		return button
 	end
 	local traits = kind == "traits"
-	local rollButton = control("Roll", "Tirar", Ui.COLORS.blue, 1, if traits then 0.3 else 0.42, 28)
+	local rollButton = control("Roll", Lang.t(nil, "Roll"), Ui.COLORS.blue, 1, if traits then 0.3 else 0.42, 28)
 	local autoButton = control("Auto", "Auto", Ui.COLORS.red, 2, if traits then 0.3 else 0.42, 26)
 	-- Rasgos: tirar 1 o 3 de golpe (se queda con el más raro). Sirve también para la tirada automática.
 	local countButton = control("Count", "x1", Ui.COLORS.gray, 3, 0.19, 30)
@@ -431,7 +432,7 @@ local function buildShop(kind: string)
 		padding.PaddingTop = UDim.new(0, 6)
 		padding.PaddingBottom = UDim.new(0, 6)
 		padding.Parent = list
-		local back = Ui.button(frame, "Volver", Ui.COLORS.red)
+		local back = Ui.button(frame, Lang.t(nil, "Back"), Ui.COLORS.red)
 		back.Name = "Back"
 		back.AnchorPoint = Vector2.new(0.5, 1)
 		back.Position = UDim2.new(0.5, 0, 1, -10)
@@ -448,14 +449,14 @@ local function buildShop(kind: string)
 		return frame, list
 	end
 
-	local picker, pickerList = overlay("Picker", "Elige una espada")
+	local picker, pickerList = overlay("Picker", Lang.t(nil, "Pick a sword"))
 	local pickerGrid = Instance.new("UIGridLayout")
 	pickerGrid.CellSize = UDim2.fromOffset(84, 84)
 	pickerGrid.CellPadding = UDim2.fromOffset(8, 8)
 	pickerGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	pickerGrid.Parent = pickerList
 
-	local stopper, stopList = overlay("StopAt", if kind == "traits" then "Ajustes" else "Parar con:")
+	local stopper, stopList = overlay("StopAt", Lang.t(nil, if kind == "traits" then "Settings" else "Stop at:"))
 	local stopGrid = Instance.new("UIGridLayout")
 	stopGrid.CellSize = UDim2.fromOffset(136, 54) -- más alto: en pantallas pequeñas la ventana se encoge
 	stopGrid.CellPadding = UDim2.fromOffset(8, 8)
@@ -470,7 +471,7 @@ local function buildShop(kind: string)
 		for rank, stat in state.priority do
 			local chip = priorityChips[stat]
 			chip.LayoutOrder = rank
-			chip.Text = `{rank}º {PRIORITY_NAMES[stat]}`
+			chip.Text = Lang.t(nil, "{rank}. {name}", { rank = rank, name = PRIORITY_NAMES[stat] })
 		end
 	end
 	if kind == "traits" then
@@ -484,7 +485,7 @@ local function buildShop(kind: string)
 		local hint = Ui.label(section, 18)
 		hint.Size = UDim2.fromScale(1, 0.3)
 		hint.TextColor3 = Color3.fromRGB(200, 200, 210)
-		hint.Text = "Si empatan, gana la de arriba. Pulsa para subir:"
+		hint.Text = Lang.t(nil, "On a tie, the top one wins. Click to move up:")
 		hint.TextScaled = true
 		hint.ZIndex = Z.overlay + 1
 		local hintLimit = Instance.new("UITextSizeConstraint")
@@ -524,7 +525,7 @@ local function buildShop(kind: string)
 		local stopTitle = Ui.label(stopper, 20)
 		stopTitle.Position = UDim2.fromOffset(12, 142)
 		stopTitle.Size = UDim2.new(1, -24, 0, 26)
-		stopTitle.Text = "Parar con:"
+		stopTitle.Text = Lang.t(nil, "Stop at:")
 		stopTitle.ZIndex = Z.overlay + 1
 		stopList.Position = UDim2.fromOffset(12, 172)
 		stopList.Size = UDim2.new(1, -24, 1, -252)
@@ -535,7 +536,7 @@ local function buildShop(kind: string)
 			continue
 		end
 		local entry = info.list[index]
-		local toggle = Ui.button(stopList, entry.name, Ui.COLORS.cell)
+		local toggle = Ui.button(stopList, Lang.t(nil, entry.name), Ui.COLORS.cell)
 		toggle.Name = "Stop" .. index
 		toggle.LayoutOrder = position
 		toggle.TextSize = 24
@@ -669,7 +670,7 @@ local function buildShop(kind: string)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		paintName(title, entry)
 		if kind == "grades" then
-			title.Text = "Grado " .. entry.name
+			title.Text = Lang.t(nil, "Grade {name}", { name = Lang.t(nil, entry.name) })
 		end
 		if not entry.rainbow then
 			-- Degradado de blanco al color de la entrada: más llamativo que el color liso.
@@ -722,7 +723,7 @@ local function buildShop(kind: string)
 			local id = state.selected or player:GetAttribute("Equipped")
 			Remotes.AdminSetModifier:FireServer(kind, id, index)
 			Sfx.play("buy")
-			Ui.toast(`Admin: {entry.name} puesto`, entry.color)
+			Ui.toast(Lang.t(nil, "Admin: {name} set", { name = Lang.t(nil, entry.name) }), entry.color)
 		end)
 	end
 
@@ -735,7 +736,7 @@ local function buildShop(kind: string)
 	adminButton.Position = UDim2.new(1, -86, 0.5, 0)
 	adminButton.Size = UDim2.fromOffset(150, 40)
 	adminButton.TextSize = 20
-	local adminClear = Ui.button((header or window) :: Instance, "Quitar", Ui.COLORS.red)
+	local adminClear = Ui.button((header or window) :: Instance, Lang.t(nil, "Remove"), Ui.COLORS.red)
 	adminClear.Name = "AdminClear"
 	adminClear.AnchorPoint = Vector2.new(1, 0.5)
 	adminClear.Position = UDim2.new(1, -244, 0.5, 0)
@@ -748,7 +749,7 @@ local function buildShop(kind: string)
 		end
 		adminButton.Visible = allowed
 		adminClear.Visible = allowed and adminOn
-		adminButton.Text = if adminOn then "Admin: SÍ" else "Admin: NO"
+		adminButton.Text = "Admin: " .. Lang.t(nil, if adminOn then "YES" else "NO")
 		adminButton.BackgroundColor3 = if adminOn then Ui.COLORS.orange else Ui.COLORS.gray
 		for _, pick in adminPicks do
 			pick.Visible = adminOn
@@ -758,12 +759,12 @@ local function buildShop(kind: string)
 		adminOn = not adminOn
 		paintAdmin()
 		if adminOn then
-			Ui.toast(`Admin: pulsa un {if kind == "traits" then "rasgo" else "grado"} de la lista para ponerlo`, Ui.COLORS.orange)
+			Ui.toast(Lang.t(nil, if kind == "traits" then "Admin: click a trait in the list to set it" else "Admin: click a grade in the list to set it"), Ui.COLORS.orange)
 		end
 	end)
 	adminClear.Activated:Connect(function()
 		Remotes.AdminSetModifier:FireServer(kind, state.selected or player:GetAttribute("Equipped"), 0)
-		Ui.toast("Admin: quitado", Ui.COLORS.red)
+		Ui.toast(Lang.t(nil, "Admin: removed"), Ui.COLORS.red)
 	end)
 	player:GetAttributeChangedSignal("Admin"):Connect(paintAdmin)
 	paintAdmin()
@@ -791,7 +792,7 @@ local function buildShop(kind: string)
 			row.Pity.Visible = Modifiers.hasPity(kind, index) -- los fáciles no tienen pity
 			local limit = Modifiers.pityLimit(kind, index)
 			local progress = if ok and type(counters) == "table" then counters[index] or 0 else 0
-			row.Pity.Text = `Garantía {Format.short(progress)} / {Format.short(limit)}{if progress >= limit then " · ¡Lista!" else ""}`
+			row.Pity.Text = Lang.t(nil, "Pity {n} / {max}", { n = Format.short(progress), max = Format.short(limit) }) .. (if progress >= limit then " · " .. Lang.t(nil, "Ready!") else "")
 			row.Pity.TextColor3 = if progress >= limit then Ui.COLORS.orange else Color3.fromRGB(190, 195, 215)
 		end
 		local copy = selectedCopy()
@@ -814,25 +815,25 @@ local function buildShop(kind: string)
 				WeaponPreview.attach(slot, copy.sword, tierColor, copy.metal)
 			end
 			slot:FindFirstChildOfClass("UIStroke").Color = tierColor
-			slotHint.Text = sword.name
+			slotHint.Text = Lang.t(nil, sword.name)
 			if not state.waiting then
 				local current = info.list[copy[info.field]]
 				paintName(nameLabel, current)
 				effect.Text = if current then Modifiers.effect(current) else ""
 			end
 		else
-			slotHint.Text = "Elige espada"
+			slotHint.Text = Lang.t(nil, "Pick sword")
 		end
 		if kind == "traits" then
-			cost.Text = `Cristales: {Format.short(player:GetAttribute("Item_traitCrystal") or 0)}`
+			cost.Text = Lang.t(nil, "Crystals: {n}", { n = Format.short(player:GetAttribute("Item_traitCrystal") or 0) })
 			countButton.Text = `x{state.count}`
 			countButton.BackgroundColor3 = if state.count > 3 then Ui.COLORS.purple elseif state.count == 3 then Ui.COLORS.orange else Ui.COLORS.gray
 		else
-			cost.Text = `Cristales: {Format.short(player:GetAttribute("Item_gradeCrystal") or 0)}`
+			cost.Text = Lang.t(nil, "Crystals: {n}", { n = Format.short(player:GetAttribute("Item_gradeCrystal") or 0) })
 		end
 		cost.TextColor3 = if canAfford() then WHITE else Ui.COLORS.red
 		rollButton.BackgroundColor3 = if canAfford() and copy then Ui.COLORS.blue else Ui.COLORS.gray
-		autoButton.Text = if state.auto then "Parar" else "Auto"
+		autoButton.Text = Lang.t(nil, if state.auto then "Stop" else "Auto")
 		autoButton.BackgroundColor3 = if state.auto then Ui.COLORS.orange else Ui.COLORS.red
 	end
 
@@ -862,7 +863,7 @@ local function buildShop(kind: string)
 			WeaponPreview.attach(cell, copy.sword, Rarity.tier(Stats.rarity(copy)).color, copy.metal)
 			local current = info.list[copy[info.field]]
 			if current then
-				Ui.cellLabel(cell, current.name)
+				Ui.cellLabel(cell, Lang.t(nil, current.name))
 			end
 			if table.find(worn, copy.id) then
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
@@ -908,7 +909,7 @@ local function buildShop(kind: string)
 		local flash = TweenService:Create(row, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 1, true), { BackgroundColor3 = entry.color })
 		flash:Play()
 		if Modifiers.percent(kind, index) < 1 then
-			Ui.toast(`¡{entry.name}! ({Modifiers.formatPercent(Modifiers.percent(kind, index))})`, entry.color)
+			Ui.toast(Lang.t(nil, "{name}! ({percent})", { name = Lang.t(nil, entry.name), percent = Modifiers.formatPercent(Modifiers.percent(kind, index)) }), entry.color)
 		end
 	end
 
@@ -1030,7 +1031,7 @@ local function buildShop(kind: string)
 	local function playBurst(rolls: { number }, best: number)
 		local holder = roulette :: Frame
 		local area = rouletteColumns :: Frame
-		;(rouletteTitle :: TextLabel).Text = `¡Mejor de {#rolls}!`
+		;(rouletteTitle :: TextLabel).Text = Lang.t(nil, "Best of {n}!", { n = #rolls })
 		;(rouletteTitle :: TextLabel).TextColor3 = WHITE
 		local board = Instance.new("Frame")
 		board.Name = "Column" -- mismo nombre que las columnas: se borra con ellas en la siguiente tirada
@@ -1087,7 +1088,7 @@ local function buildShop(kind: string)
 				TweenService:Create(shade, TweenInfo.new(0.3), { BackgroundTransparency = 0.45 }):Play()
 			end
 		end
-		;(rouletteTitle :: TextLabel).Text = entry.name
+		;(rouletteTitle :: TextLabel).Text = Lang.t(nil, entry.name)
 		;(rouletteTitle :: TextLabel).TextColor3 = if entry.rainbow then WHITE else entry.color
 		task.wait(if rouletteSkip then 0.25 else 0.7)
 	end
@@ -1108,7 +1109,7 @@ local function buildShop(kind: string)
 			playBurst(rolls, best)
 			return
 		end
-		;(rouletteTitle :: TextLabel).Text = if count > 1 then "¡Mejor de tres!" else "Tirando..."
+		;(rouletteTitle :: TextLabel).Text = Lang.t(nil, if count > 1 then "Best of three!" else "Rolling...")
 		;(rouletteTitle :: TextLabel).TextColor3 = WHITE
 		-- Todas las columnas con el mismo ancho: lo que queda del área tras los huecos, a partes iguales.
 		local width = if count == 1 then 0.45 else (1 - (count - 1) * COLUMN_GAP) / count
@@ -1261,7 +1262,7 @@ local function buildShop(kind: string)
 				end
 			end
 		end
-		;(rouletteTitle :: TextLabel).Text = entry.name
+		;(rouletteTitle :: TextLabel).Text = Lang.t(nil, entry.name)
 		;(rouletteTitle :: TextLabel).TextColor3 = if entry.rainbow then WHITE else entry.color
 		task.wait(if rouletteSkip then 0.2 else 0.5)
 	end
@@ -1290,7 +1291,7 @@ local function buildShop(kind: string)
 		while state.auto and window.Visible do
 			if not request() then
 				if not state.waiting then
-					Ui.toast(if canAfford() then "Elige una espada" else (if kind == "traits" then "No te quedan Cristales de rasgo" else "No te quedan Cristales de grado"), Ui.COLORS.red)
+					Ui.toast(Lang.t(nil, if canAfford() then "Pick a sword" else (if kind == "traits" then "You're out of Trait Crystals" else "You're out of Grade Crystals")), Ui.COLORS.red)
 					break
 				end
 			end
@@ -1376,7 +1377,7 @@ local function buildShop(kind: string)
 				state.count = most
 			else
 				if state.count == 3 then
-					Ui.toast("Con el pase de la Tienda puedes tirar 10 a la vez", Ui.COLORS.purple)
+					Ui.toast(Lang.t(nil, "With the Shop pass you can roll 10 at once"), Ui.COLORS.purple)
 				end
 				state.count = 1
 			end

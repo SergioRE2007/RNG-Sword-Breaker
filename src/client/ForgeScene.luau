@@ -15,6 +15,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -92,7 +93,7 @@ local function buildUi()
 	cost.Position = UDim2.new(0.5, 0, 0, 128)
 	cost.Size = UDim2.fromOffset(700, 30)
 
-	local exit = Ui.button(root, "Salir", Ui.COLORS.red)
+	local exit = Ui.button(root, Lang.t(nil, "Leave"), Ui.COLORS.red)
 	exit.Name = "Exit"
 	-- Abajo en medio (pedido por el usuario).
 	exit.AnchorPoint = Vector2.new(0.5, 1)
@@ -120,9 +121,9 @@ local function buildUi()
 		button.TextSize = 24
 		return button
 	end
-	local weapon = side("Weapon", "Arma", Ui.COLORS.blue, 1)
+	local weapon = side("Weapon", Lang.t(nil, "Weapon"), Ui.COLORS.blue, 1)
 	local auto = side("Auto", "Auto", Ui.COLORS.purple, 2)
-	local settings = side("Settings", "Ajustes", Ui.COLORS.gray, 3)
+	local settings = side("Settings", Lang.t(nil, "Settings"), Ui.COLORS.gray, 3)
 
 	-- Cuadro tras un martillazo a mano: quedarse con el grado nuevo o descartarlo y volver al anterior.
 	local decision = Instance.new("Frame")
@@ -149,7 +150,7 @@ local function buildUi()
 	local decisionTitle = Ui.label(decisionBody, 30)
 	decisionTitle.Position = UDim2.fromOffset(0, 14)
 	decisionTitle.Size = UDim2.new(1, 0, 0, 40)
-	decisionTitle.Text = "¿REFORJAR ESTE GRADO?"
+	decisionTitle.Text = Lang.t(nil, "REFORGE THIS GRADE?")
 	local decisionGrade = Ui.label(decisionBody, 64)
 	decisionGrade.Position = UDim2.fromOffset(0, 62)
 	decisionGrade.Size = UDim2.new(1, 0, 0, 80)
@@ -172,12 +173,12 @@ local function buildUi()
 	decisionLayout.Padding = UDim.new(0, 18)
 	decisionLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	decisionLayout.Parent = decisionButtons
-	local skipButton = Ui.button(decisionButtons, "Reforjar", Ui.COLORS.red)
+	local skipButton = Ui.button(decisionButtons, Lang.t(nil, "Reforge"), Ui.COLORS.red)
 	skipButton.Name = "Skip"
 	skipButton.LayoutOrder = 1
 	skipButton.Size = UDim2.fromOffset(200, 60)
 	skipButton.TextSize = 28
-	local keepButton = Ui.button(decisionButtons, "Quedarme", Ui.COLORS.green)
+	local keepButton = Ui.button(decisionButtons, Lang.t(nil, "Keep it"), Ui.COLORS.green)
 	keepButton.Name = "Keep"
 	keepButton.LayoutOrder = 2
 	keepButton.Size = UDim2.fromOffset(200, 60)
@@ -233,22 +234,22 @@ local function refreshUi()
 	end
 	local copy = api.selectedCopy()
 	local crystals = player:GetAttribute("Item_gradeCrystal") or 0
-	ui.cost.Text = `Cristales: {Format.short(crystals)} ({Config.GradeCost} por golpe)`
+	ui.cost.Text = Lang.t(nil, "Crystals: {n} ({cost} per hit)", { n = Format.short(crystals), cost = Config.GradeCost })
 	ui.cost.TextColor3 = if api.canAfford() then WHITE else Ui.COLORS.red
-	ui.auto.Text = if api.state.auto then "Parar" else "Auto"
+	ui.auto.Text = Lang.t(nil, if api.state.auto then "Stop" else "Auto")
 	ui.auto.BackgroundColor3 = if api.state.auto then Ui.COLORS.orange else Ui.COLORS.purple
-	ui.weapon.Text = if scene and scene.placedId then "Cambiar" else "Arma"
+	ui.weapon.Text = Lang.t(nil, if scene and scene.placedId then "Change" else "Weapon")
 	if not scene then
 		return
 	end
 	if not scene.placedId then
-		ui.hint.Text = "Elige un arma en el yunque"
+		ui.hint.Text = Lang.t(nil, "Pick a weapon on the anvil")
 	elseif api.state.auto then
-		ui.hint.Text = "Automático: pulsa Parar"
+		ui.hint.Text = Lang.t(nil, "Automatic: press Stop")
 	elseif not copy then
-		ui.hint.Text = "Elige un arma"
+		ui.hint.Text = Lang.t(nil, "Pick a weapon")
 	else
-		ui.hint.Text = "¡Haz clic para dar un martillazo!"
+		ui.hint.Text = Lang.t(nil, "Click to strike with the hammer!")
 	end
 end
 
@@ -371,7 +372,7 @@ local function buildHammer(folder: Instance): { [Part]: CFrame }
 	for _, z in { -0.5, 0.5 } do
 		add(part(folder, "Aro", Vector3.new(0.88, 0.88, 0.18), Color3.fromRGB(58, 60, 70), Enum.Material.Metal), CFrame.new(0, HANDLE, z))
 	end
-	add(part(folder, "Puño", Vector3.new(0.36, 0.36, 0.36), Color3.fromRGB(62, 40, 26), Enum.Material.Wood), CFrame.new(0, 0, 0))
+	add(part(folder, "Pomo", Vector3.new(0.36, 0.36, 0.36), Color3.fromRGB(62, 40, 26), Enum.Material.Wood), CFrame.new(0, 0, 0))
 	return parts
 end
 
@@ -404,7 +405,7 @@ local function setGradeLabel(index: number?, pop: boolean?)
 		return
 	end
 	local entry = if index then GRADES.list[index] else nil
-	ui.gradeLabel.Text = if entry then entry.name else "Sin grado"
+	ui.gradeLabel.Text = Lang.t(nil, if entry then entry.name else "No grade")
 	ui.gradeLabel.TextColor3 = if entry and not entry.rainbow then entry.color elseif entry then WHITE else Color3.fromRGB(190, 195, 205)
 	ui.gradeInfo.Text = if entry then Modifiers.effect(entry) else ""
 	ui.gradeRainbow.Enabled = entry ~= nil and entry.rainbow == true
@@ -576,10 +577,10 @@ local function confirmReforge(): boolean
 		return true
 	end
 	local percent = Modifiers.formatPercent(Modifiers.percent("grades", index))
-	ui.decisionGrade.Text = `Grado {entry.name}`
+	ui.decisionGrade.Text = Lang.t(nil, "Grade {name}", { name = Lang.t(nil, entry.name) })
 	ui.decisionGrade.TextColor3 = if entry.rainbow then WHITE else entry.color
 	ui.decisionInfo.Text = `{Modifiers.effect(entry)} · {percent}`
-	ui.decisionOld.Text = "Es el que querías: si reforjas, lo pierdes"
+	ui.decisionOld.Text = Lang.t(nil, "It's the one you wanted: if you reforge, you lose it")
 	ui.decision.Visible = true
 	if scene then
 		scene.deciding = true
@@ -605,7 +606,7 @@ local function strike(auto: boolean): boolean
 		return false
 	end
 	if not api.canAfford() then
-		Ui.toast("No te quedan Cristales de grado", Ui.COLORS.red)
+		Ui.toast(Lang.t(nil, "You're out of Grade Crystals"), Ui.COLORS.red)
 		return false
 	end
 	if not auto and not confirmReforge() then
@@ -687,7 +688,7 @@ local function strike(auto: boolean): boolean
 	setGradeLabel(index, true)
 	if super then
 		pulseFlash(if entry.rainbow then WHITE else entry.color:Lerp(WHITE, 0.5), 0.45, 0.4)
-		bigText(`¡SÚPER MARTILLAZO!\n<font size="46">Grado {entry.name}</font>`, if entry.rainbow then Color3.fromRGB(255, 160, 255) else entry.color)
+		bigText(`{Lang.t(nil, "SUPER HAMMER STRIKE!")}\n<font size="46">{Lang.t(nil, "Grade {name}", { name = Lang.t(nil, entry.name) })}</font>`, if entry.rainbow then Color3.fromRGB(255, 160, 255) else entry.color)
 		TweenService:Create(s.fov, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Value = 55 }):Play()
 		task.wait(0.09) -- un instante de pausa en el golpe
 		setHammerLook(nil)
@@ -806,7 +807,7 @@ local function connectInput()
 			return
 		end
 		if not scene.placedId then
-			Ui.toast("Elige un arma primero", Ui.COLORS.red)
+			Ui.toast(Lang.t(nil, "Pick a weapon first"), Ui.COLORS.red)
 			return
 		end
 		if striking or ui.decision.Visible or not confirmReforge() or state.auto then
