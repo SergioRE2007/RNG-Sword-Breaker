@@ -910,10 +910,13 @@ Config.Trade = {
 -- "Shop" = lo que se compra con tickets en el puesto de Misiones (pestaña "Comprar", server/TicketShop): item = clave de
 -- Config.Items (las pociones son potion_<familia>_<tier>: las de tier máximo, pedido por el usuario) y price = tickets.
 -- Todos los pases juntos son unas 10 semanas de misiones (pedido por el usuario: con x3 eran 20).
+-- "Passes" = si los pases se compran también con tickets en la Tienda. Apagado (pedido por el usuario): los tickets solo
+-- valen en el puesto de Misiones, y la Tienda no enseña ni el botón de tickets ni su contador.
 Config.Tickets = {
 	PerRobux = 1.5,
+	Passes = false,
 	Shop = {
-		{ item = "luckClover", price = 50 },
+		{ item = "luckClover", price = 100 },
 		{ item = "potion_weaponLuck_5", price = 20 },
 		{ item = "potion_boxLuck_5", price = 20 },
 		{ item = "potion_coins_5", price = 20 },
