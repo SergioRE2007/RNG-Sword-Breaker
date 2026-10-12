@@ -48,6 +48,9 @@ end
 local LOCK = Config.SessionLock
 local BUSY_MESSAGE = "Your game is still being saved on another server. Come back in a couple of minutes."
 local STOLEN_MESSAGE = "Your game has been opened on another server."
+local FAILED_MESSAGE = "Your game couldn't be loaded. Come back in a couple of minutes."
+local LOAD_TRIES = 3 -- intentos de cargar una partida cuando la lectura falla, antes de echar al jugador
+local MAX_AMOUNT = 1e300 -- tope de lo que se guarda en monedas y gemas: un infinito no se puede guardar
 local closing = 0 -- guardados de salida en marcha (BindToClose espera a que acaben)
 
 local function lockOf(saved)
@@ -498,10 +501,31 @@ local function load(player: Player)
 	local progress = RunService:IsStudio() and (Config.Test.Progress or 0) > 0
 
 	local ds = getStore()
+	-- En el juego publicado nadie juega una partida que no se va a guardar (perdería lo jugado, y lo comprado o lo
+	-- recibido en un trato): si no se puede leer lo guardado, se reintenta y, si sigue sin poderse, se le echa con un aviso.
+	local strict = game.PlaceId ~= 0 and not RunService:IsStudio()
+	if not ds and strict then
+		player:Kick(Lang.t(player, FAILED_MESSAGE))
+		return
+	end
 	if ds then
 		local ok, saved, lock = fetch(player, ds)
+		for _ = 2, if strict then LOAD_TRIES else 1 do
+			if ok ~= false or not player.Parent then
+				break
+			end
+			task.wait(LOCK.Retry)
+			ok, saved, lock = fetch(player, ds)
+		end
 		if ok == nil then
 			return -- su partida sigue abierta en otro servidor: se le ha echado
+		end
+		if not ok and strict then
+			warn(`[PlayerData] Could not load {player.Name}: {saved}`)
+			if player.Parent then
+				player:Kick(Lang.t(player, FAILED_MESSAGE))
+			end
+			return
 		end
 		lockId = lock
 		if ok then
@@ -685,6 +709,15 @@ local function write(session, key: string, final: boolean)
 		end
 		lost = false
 		local out = table.clone(session.data)
+		-- Un infinito o un NaN no se pueden guardar, y un guardado que falla siempre es perderlo todo.
+		for _, field in { "coins", "gems", "totalCoins" } do
+			local value = out[field]
+			if type(value) ~= "number" or value ~= value then
+				out[field] = 0
+			elseif value > MAX_AMOUNT then
+				out[field] = MAX_AMOUNT
+			end
+		end
 		out.lock = if final then nil else { id = session.lockId, time = os.time() }
 		return out
 	end)
@@ -692,11 +725,13 @@ local function write(session, key: string, final: boolean)
 end
 
 -- final = guardado de salida: suelta el candado, reintenta si falla y deja la sesión cerrada (ya no se guarda más).
-local function save(player: Player, final: boolean?)
+-- Devuelve si la partida ha quedado escrita.
+local function save(player: Player, final: boolean?): boolean
 	local session = sessions[player]
 	if not session or session.closing or not session.canSave or not getStore() then
-		return
+		return false
 	end
+	local written = false
 	local key = "p_" .. player.UserId
 	if final then
 		session.closing = true
@@ -705,6 +740,7 @@ local function save(player: Player, final: boolean?)
 	for try = 1, if final then LOCK.SaveTries else 1 do
 		local done, err, lost = write(session, key, final == true)
 		if done then
+			written = true
 			break
 		end
 		if lost then
@@ -726,11 +762,13 @@ local function save(player: Player, final: boolean?)
 	if final then
 		closing -= 1
 	end
+	return written
 end
 
 -- Guarda ya los datos del jugador (server/Rejoin, justo antes de reconectarlo: que el servidor al que va los lea al día).
-function PlayerData.save(player: Player)
-	save(player)
+-- Devuelve si ha quedado escrita (una compra de Robux solo se da por entregada cuando lo está: server/Products).
+function PlayerData.save(player: Player): boolean
+	return save(player)
 end
 
 -- Avisa con callback(player) cuando los datos de un jugador ya están cargados (y ahora mismo, de los que ya lo estén).

@@ -2,9 +2,12 @@
 -- compra la abre el cliente (Tienda) y Roblox llama aquí a ProcessReceipt hasta que se le dice que está entregada. Cada
 -- compra entregada se apunta en data.receipts (se guarda con la partida), para no dar la misma dos veces si Roblox
 -- vuelve a preguntar; si el jugador no está o sus datos no han cargado, se deja pendiente y Roblox lo reintenta.
+-- A Roblox solo se le dice "entregada" cuando la partida ha quedado guardada con la compra dentro: si el guardado falla
+-- (o el servidor se cae antes), Roblox vuelve a preguntar y no se pierde lo pagado.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -31,20 +34,25 @@ local function process(receipt)
 	if not product or not player or not data then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	if table.find(data.receipts, receipt.PurchaseId) then
+	-- Ya está en la partida (Roblox pregunta otra vez porque el guardado de antes no llegó a confirmarse): no se da otra.
+	if not table.find(data.receipts, receipt.PurchaseId) then
+		PlayerData.edit(player, function(edited)
+			edited.items[product.item] += product.amount
+			table.insert(edited.receipts, receipt.PurchaseId)
+			while #edited.receipts > KEPT do
+				table.remove(edited.receipts, 1)
+			end
+		end)
+		-- Robux gastados (clasificaciones): de la compra de verdad, no de lo que diga el cliente.
+		PlayerData.addRobuxSpent(player, tonumber(receipt.CurrencySpent) or 0)
+		local item = Config.Items[product.item]
+		Remotes.Notice:FireClient(player, `+{product.amount} {Lang.t(player, item.name)}`, item.color)
+	end
+	-- En Studio las partidas de prueba no se guardan: allí vale con haberla dado.
+	if PlayerData.save(player) or RunService:IsStudio() then
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
-	PlayerData.edit(player, function(edited)
-		edited.items[product.item] += product.amount
-		table.insert(edited.receipts, receipt.PurchaseId)
-		while #edited.receipts > KEPT do
-			table.remove(edited.receipts, 1)
-		end
-	end)
-	local item = Config.Items[product.item]
-	Remotes.Notice:FireClient(player, `+{product.amount} {Lang.t(player, item.name)}`, item.color)
-	task.spawn(PlayerData.save, player) -- una compra no espera al guardado automático
-	return Enum.ProductPurchaseDecision.PurchaseGranted
+	return Enum.ProductPurchaseDecision.NotProcessedYet
 end
 
 function Products.start()

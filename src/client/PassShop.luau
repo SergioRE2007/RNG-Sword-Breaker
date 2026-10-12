@@ -404,6 +404,18 @@ function PassShop.start()
 	cloverGrid.CellPadding = UDim2.fromOffset(GAP, 0)
 	cloverGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	cloverGrid.Parent = clovers
+	-- Países donde Roblox no deja vender objetos de pago que influyen en un resultado al azar (atributo "NoPaidRandom",
+	-- de server/Policy): la sección no se enseña. Mientras el servidor no lo ha dicho, tampoco.
+	local function showClovers()
+		local allowed = player:GetAttribute("NoPaidRandom") == false
+		clovers.Visible = allowed
+		local head = list:FindFirstChild("HeadClovers")
+		if head then
+			head.Visible = allowed
+		end
+	end
+	player:GetAttributeChangedSignal("NoPaidRandom"):Connect(showClovers)
+	showClovers()
 	for order, key in Config.ProductOrder do
 		local product = Config.Products[key]
 		local color = product.color
@@ -529,7 +541,9 @@ function PassShop.start()
 				Ui.toast(Lang.t(nil, "Not for sale yet"), Ui.COLORS.orange)
 				return
 			end
-			MarketplaceService:PromptProductPurchase(player, product.id)
+			if player:GetAttribute("NoPaidRandom") == false then
+				MarketplaceService:PromptProductPurchase(player, product.id)
+			end
 		end)
 		local mover = { rays = rays, logo = logo, base = logo.Position, phase = order * 1.7, over = false }
 		table.insert(movers, mover)

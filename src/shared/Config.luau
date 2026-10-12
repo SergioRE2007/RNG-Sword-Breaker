@@ -27,11 +27,14 @@ Config.Test = {
 -- Administradores en el juego publicado, además de su dueño: UserId de Roblox de cada uno (server/Admin). Ven el menú
 -- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
 Config.Admins = { 4490621018 }
+-- Jugadores que van aparte (pedido por el usuario, para su propia cuenta): juegan y guardan como todos, pero no salen en
+-- las clasificaciones globales ni pueden tener la "Mejor tirada" del hub (server/Leaderboards y server/BestRoll).
+Config.Unranked = { 4490621018 }
 Config.BaseCooldown = 0.35 -- segundos entre golpes de una espada (cada tipo de arma lo multiplica por su "cooldown"). No hay mejora ni poción que lo baje
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
 Config.StartCoins = 0
 Config.AutosaveInterval = 60
-Config.DataStoreName = "PlayerData_v1"
+Config.DataStoreName = "PlayerData_v2" -- v2 = datos limpios para el lanzamiento (v1 eran las partidas de prueba)
 -- Candado de sesión del guardado (server/PlayerData): mientras un servidor tiene abierta la partida de un jugador, otro no la
 -- carga (así no se lee lo de antes del último guardado al cambiar de servidor deprisa, que duplicaría lo de un trato).
 -- Retry = segundos entre intentos de cargar una partida cogida; Wait = cuánto se espera antes de echar al jugador con un aviso;

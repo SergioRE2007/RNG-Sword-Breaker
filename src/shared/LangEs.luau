@@ -716,6 +716,10 @@ return {
 	["{name}! {buffs} for everyone for {minutes} min."] = "¡{name}! {buffs} para todos durante {minutes} min.",
 	["Your game is still being saved on another server. Come back in a couple of minutes."] = "Tu partida todavía se está guardando en otro servidor. Vuelve a entrar en un par de minutos.",
 	["Your game has been opened on another server."] = "Tu partida se ha abierto en otro servidor.",
+	["Your game couldn't be loaded. Come back in a couple of minutes."] = "No se ha podido cargar tu partida. Vuelve a entrar en un par de minutos.",
+	["Trading isn't available in your region"] = "El comercio no está disponible en tu región",
+	["{name} can't trade in their region"] = "{name} no puede comerciar en su región",
+	["{name} changed one of the swords after accepting"] = "{name} ha cambiado una de las espadas después de aceptar",
 	-- Parte 3: grupo de mazmorra (servidor)
 	["You're already in a dungeon."] = "Ya estás en una mazmorra.",
 	["You can't enter right now."] = "No puedes entrar ahora mismo.",
