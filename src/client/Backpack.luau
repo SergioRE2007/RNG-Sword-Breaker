@@ -853,7 +853,7 @@ function Backpack.start()
 		local cell = Ui.cell(gearGrid, Rarity.tier(artifact.rarity).color)
 		cell.Name = "Artifact" .. index
 		cell.LayoutOrder = -index
-		Ui.amuletIcon(cell, artifact.color)
+		Ui.artifactIcon(cell, artifact)
 		Ui.cellLabel(cell, `{Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}`)
 		Ui.tip(cell, function()
 			return artifactTip(index)
@@ -907,7 +907,7 @@ function Backpack.start()
 					icon:Destroy()
 				end
 				if artifact then
-					Ui.amuletIcon(entry.cell, artifact.color)
+					Ui.artifactIcon(entry.cell, artifact)
 				end
 			end
 			local color = if artifact then Rarity.tier(artifact.rarity).color else Ui.COLORS.gray

@@ -55,7 +55,7 @@ end
 
 function Missions.start()
 	local window, body = Ui.window("Missions", "Misiones", Vector2.new(660, 652), function(parent)
-		Ui.orbIcon(parent, GOLD)
+		Ui.image(parent, "misiones")
 	end)
 
 	-- Fichas que tiene el jugador, arriba a la derecha de la cabecera del cuerpo.

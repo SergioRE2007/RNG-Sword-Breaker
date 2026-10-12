@@ -111,7 +111,7 @@ local function artifactCell(parent: Instance, index: number): TextButton
 	local artifact = Config.Artifacts[index]
 	local color = Rarity.tier(artifact.rarity).color
 	local cell = Ui.cell(parent, color)
-	Ui.amuletIcon(cell, artifact.color)
+	Ui.artifactIcon(cell, artifact)
 	Ui.tip(cell, function()
 		return `{artifact.name}\n<font color="{Ui.SOFT}">Accesorio · {Config.StatNames[artifact.stat]} x{Format.multiplier(artifact.mult)}</font>`, color
 	end, true)

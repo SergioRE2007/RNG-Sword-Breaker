@@ -111,7 +111,7 @@ end
 
 function Index.start()
 	local window, body = Ui.window("Index", "Índice", Vector2.new(780, 590), function(parent)
-		Ui.image(parent, "espada") -- logo provisional (el mismo que el botón del menú)
+		Ui.image(parent, "indice")
 	end)
 
 	local metal, size = 0, 0 -- lo elegido en los botones: 0 = sin metal / tamaño normal
