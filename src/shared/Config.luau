@@ -914,6 +914,17 @@ Config.Tickets = {
 		{ item = "potion_health_5", price = 20 },
 	},
 }
+-- CÓDIGOS DE REGALO (server/Codes; se escriben abajo del todo en la Tienda). La clave es el código, en MAYÚSCULAS y sin
+-- espacios (el jugador puede escribirlo como quiera). Cada jugador lo canjea una sola vez. Opcionales: maxUses = cuántos
+-- jugadores en total pueden canjearlo (los primeros que lleguen) y expires = "AAAA-MM-DD", último día en que vale (hora
+-- UTC). rewards = lo que da, una lista con { coins = N }, { gems = N } o { item = clave de Config.Items, amount = N }
+-- (missionToken = tickets, luckClover = tréboles, traitCrystal, gradeCrystal, potion_<familia>_<tier>...). Ejemplos:
+--	SOLO10 = { maxUses = 10, rewards = { { item = "luckClover", amount = 3 } } },
+--	SEMANA = { expires = "2026-10-19", rewards = { { gems = 500 }, { item = "missionToken", amount = 25 } } },
+-- Quitar un código de aquí lo deja sin valer; quien ya lo canjeó se queda con lo que le dio.
+Config.Codes = {
+	LANZAMIENTO = { rewards = { { item = "luckClover", amount = 1 }, { item = "potion_coins_5", amount = 1 } } },
+}
 -- TRÉBOL DE LA SUERTE: Luck = por cuánto multiplica la suerte de armas del objeto elegido (una sola vez por objeto).
 Config.Clover = { Item = "luckClover", Luck = 999 }
 -- PRODUCTOS DE ROBUX que se compran las veces que se quiera (server/Products; salen los primeros en la Tienda). "id" =

@@ -461,6 +461,7 @@ local function load(player: Player)
 		totalCoins = 0, -- monedas ganadas en total, sin descontar lo gastado (clasificaciones)
 		robuxSpent = 0, -- Robux gastados en el juego (clasificaciones)
 		receipts = {}, -- últimas compras de productos ya entregadas (PurchaseId), para no dar una dos veces (server/Products)
+		codes = {}, -- códigos de regalo ya canjeados: { [código] = true } (server/Codes)
 		passes = {}, -- pases comprados con tickets de misión: { [clave de Config.Gamepasses] = true } (ver server/Passes)
 		missions = {}, -- misiones: { daily = { id, progress, claimed }, weekly = { ... } } (ver server/Missions)
 		swords = { { id = 1, sword = 1 } },
@@ -512,6 +513,15 @@ local function load(player: Player)
 					for _, id in saved.receipts do
 						if type(id) == "string" and #data.receipts < 100 then
 							table.insert(data.receipts, id)
+						end
+					end
+				end
+				if type(saved.codes) == "table" then
+					local kept = 0
+					for key, value in saved.codes do
+						if type(key) == "string" and value == true and kept < 500 then
+							data.codes[key] = true
+							kept += 1
 						end
 					end
 				end
