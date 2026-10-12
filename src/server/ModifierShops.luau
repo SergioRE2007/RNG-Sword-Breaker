@@ -292,9 +292,11 @@ function ModifierShops.start()
 		end)
 	end)
 	Remotes.AdminSetModifier.OnServerEvent:Connect(onAdminSet)
-	-- El cliente enseña el botón "Admin" de las tiendas si lleva este atributo.
+	-- El cliente enseña el botón "Admin" de las tiendas si lleva este atributo. No es el atributo "Admin" de
+	-- server/Admin (el del menú de admin): los dos módulos lo escribían al entrar el jugador y, en el juego publicado,
+	-- este lo dejaba en false y el administrador se quedaba sin menú.
 	local function onPlayer(player: Player)
-		player:SetAttribute("Admin", isAdmin())
+		player:SetAttribute("ModifierAdmin", isAdmin())
 	end
 	Players.PlayerAdded:Connect(onPlayer)
 	for _, player in Players:GetPlayers() do

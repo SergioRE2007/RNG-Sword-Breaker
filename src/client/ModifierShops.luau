@@ -743,7 +743,7 @@ local function buildShop(kind: string)
 	adminClear.Size = UDim2.fromOffset(96, 40)
 	adminClear.TextSize = 20
 	local function paintAdmin()
-		local allowed = player:GetAttribute("Admin") == true
+		local allowed = player:GetAttribute("ModifierAdmin") == true
 		if not allowed then
 			adminOn = false
 		end
@@ -766,7 +766,7 @@ local function buildShop(kind: string)
 		Remotes.AdminSetModifier:FireServer(kind, state.selected or player:GetAttribute("Equipped"), 0)
 		Ui.toast(Lang.t(nil, "Admin: removed"), Ui.COLORS.red)
 	end)
-	player:GetAttributeChangedSignal("Admin"):Connect(paintAdmin)
+	player:GetAttributeChangedSignal("ModifierAdmin"):Connect(paintAdmin)
 	paintAdmin()
 
 	-- Estado --------------------------------------------------------------------------
