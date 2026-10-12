@@ -1398,6 +1398,37 @@ function Ui.starIcon(parent: Instance, color: Color3)
 	core.ZIndex = 3
 end
 
+-- Ticket de misión: una entrada dorada, ladeada, con su línea de corte y una estrella. `color` = el del papel.
+function Ui.ticketIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, -14)
+	holder.Position = UDim2.fromScale(0.5, 0.5)
+	holder.Size = UDim2.fromScale(0.96, 0.96)
+	local paper = piece(holder, UDim2.fromScale(1, 0.62), UDim2.fromScale(0.5, 0.5), color, 5)
+	Ui.gradient(paper, WHITE, Color3.fromRGB(215, 175, 120), 90)
+	-- Línea de corte: tres rayitas a un tercio del ancho.
+	for index = 0, 2 do
+		local dash = Instance.new("Frame")
+		dash.AnchorPoint = Vector2.new(0.5, 0.5)
+		dash.Position = UDim2.fromScale(0.3, 0.22 + index * 0.28)
+		dash.Size = UDim2.fromScale(0.06, 0.16)
+		dash.BackgroundColor3 = BLACK
+		dash.BackgroundTransparency = 0.35
+		dash.BorderSizePixel = 0
+		dash.Parent = paper
+	end
+	local star = Instance.new("TextLabel")
+	star.AnchorPoint = Vector2.new(0.5, 0.5)
+	star.Position = UDim2.fromScale(0.66, 0.5)
+	star.Size = UDim2.fromScale(0.6, 1)
+	star.BackgroundTransparency = 1
+	star.Font = Enum.Font.GothamBlack
+	star.Text = "★"
+	star.TextScaled = true
+	star.TextColor3 = WHITE
+	star.TextStrokeTransparency = 0.4
+	star.Parent = paper
+end
+
 local GOLD = Color3.fromRGB(240, 192, 60)
 
 -- Círculo con borde negro (sin relleno si `color` es nil): base de varios iconos.

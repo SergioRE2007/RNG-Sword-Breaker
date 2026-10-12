@@ -334,7 +334,7 @@ function PassShop.start()
 	walletIcon.Size = UDim2.fromOffset(34, 34)
 	walletIcon.BackgroundTransparency = 1
 	walletIcon.Parent = wallet
-	Ui.orbIcon(walletIcon, TICKET)
+	Ui.ticketIcon(walletIcon, TICKET)
 	local walletText = Ui.label(wallet, 24)
 	walletText.Name = "Amount"
 	walletText.Position = UDim2.fromOffset(44, 0)
@@ -450,7 +450,7 @@ function PassShop.start()
 		ticketIcon.Size = UDim2.fromOffset(32, 32)
 		ticketIcon.BackgroundTransparency = 1
 		ticketIcon.Parent = tickets
-		Ui.orbIcon(ticketIcon, TICKET)
+		Ui.ticketIcon(ticketIcon, TICKET)
 
 		local entry = { key = key, pass = pass, card = card, scale = scale, border = border, art = art, buy = buy, price = pass.price, product = product, tickets = tickets, ticketIcon = ticketIcon, confirm = 0 }
 		cards[key] = entry
