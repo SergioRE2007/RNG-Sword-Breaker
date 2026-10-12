@@ -181,7 +181,9 @@ local function swordTip(copy): (string, Color3, boolean)
 	local tier = Rarity.tier(rarity)
 	-- Pedido por el usuario: el nombre más grande que el resto y con la animación de su rareza, y la probabilidad más
 	-- pequeña y en gris tenue.
-	local lines = { `<font size="{TIP_TITLE}">{Ui.rarityText(sword.name, tier.color, table.find(Config.RarityTiers, tier))}</font>`, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
+	-- Sin el tipo de arma (pedido por el usuario): debajo del nombre, solo la rareza.
+	local lines = { `<font size="{TIP_TITLE}">{Ui.rarityText(sword.name, tier.color, table.find(Config.RarityTiers, tier))}</font>`, `<font color="{hex(tier.color)}">{tier.name}</font>` }
+	local icon = nil -- logo del rasgo, al principio de su línea (Ui.tip)
 	local grade = Config.Grades[copy.grade]
 	local border = tier.color
 	-- Metal y tamaño (permanentes, salen con el arma): solo el nombre, en una línea. Pedido por el usuario: el cartel
@@ -201,8 +203,10 @@ local function swordTip(copy): (string, Color3, boolean)
 		table.insert(lines, TIP_SEPARATOR)
 	end
 	if trait then
-		-- Solo el nombre, sin lo que da (pedido por el usuario: el cartel queda más limpio).
-		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo:</font> {animatedName(trait)}`)
+		-- Su logo y su nombre, sin "Rasgo:" ni lo que da (pedido por el usuario: el cartel queda más limpio).
+		local logo = Ui.traitLogo(trait)
+		table.insert(lines, (if logo then Ui.TIP_ICON_GAP else "") .. animatedName(trait))
+		icon = if logo then { image = logo, line = #lines } else nil
 		if trait.rainbow then
 			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
@@ -223,7 +227,7 @@ local function swordTip(copy): (string, Color3, boolean)
 		-- Una sola probabilidad: la del arma entera, con su metal y su tamaño.
 		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">1 entre {Format.short(rarity)}</font>`)
 	end
-	return table.concat(lines, "\n"), border, true -- animado: el nombre lleva el brillo de su rareza
+	return table.concat(lines, "\n"), border, true, icon -- animado: el nombre lleva el brillo de su rareza
 end
 
 local function artifactTip(index: number): (string, Color3)

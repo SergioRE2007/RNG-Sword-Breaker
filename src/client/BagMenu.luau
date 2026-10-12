@@ -105,8 +105,8 @@ local function coinsPerHit(copy): number
 end
 
 local function swordTip(copy, line: string)
-	local text, color, animated = Backpack.swordTip(copy)
-	return `{text}\n<font color="{GOLD_HEX}">+{Format.short(coinsPerHit(copy))} monedas por golpe</font>\n<font color="{Ui.SOFT}">{line}</font>`, color, animated
+	local text, color, animated, icon = Backpack.swordTip(copy)
+	return `{text}\n<font color="{GOLD_HEX}">+{Format.short(coinsPerHit(copy))} monedas por golpe</font>\n<font color="{Ui.SOFT}">{line}</font>`, color, animated, icon
 end
 
 -- Casilla de un arma: vista 3D, lo que saca por golpe abajo y sus marcas (metal, tamaño y rasgo, como en la mochila).
