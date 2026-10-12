@@ -36,6 +36,7 @@ local Z_INVITE = 70 -- aviso de invitación, por encima de todo lo demás
 
 local OFFER_CELL = 104
 local STOCK_CELL = 104
+local AMOUNT_BOX = 124 -- ancho de la casilla de cantidad de la pestaña de objetos
 
 -- Reparto de la ventana del trato: tu inventario a la izquierda (se queda con el ancho que sobra) y, a su
 -- derecha, tu oferta y la del otro, de ancho fijo para dos casillas por fila.
@@ -498,7 +499,16 @@ local function buildTrade()
 		local box = Instance.new("TextBox")
 		box.Name = "Box"
 		box.AnchorPoint = Vector2.new(1, 0.5)
-		box.Size = UDim2.fromOffset(92, 32)
+		box.Size = UDim2.fromOffset(AMOUNT_BOX, 32)
+		-- Un número largo no se sale por los lados: se recorta dentro de la casilla. Mientras se escribe va alineado a la
+		-- derecha, para que se vean los últimos números (pedido por el usuario; los "…" tapaban lo que se tecleaba).
+		box.ClipsDescendants = true
+		box.Focused:Connect(function()
+			box.TextXAlignment = Enum.TextXAlignment.Right
+		end)
+		box.FocusLost:Connect(function()
+			box.TextXAlignment = Enum.TextXAlignment.Center
+		end)
 		box.PlaceholderText = "0"
 		box.TextSize = 19
 		box.ClearTextOnFocus = false
@@ -622,8 +632,8 @@ local function buildTrade()
 			row.want.Position = UDim2.new(1, -76, 0.5, 0)
 			row.plus.Position = UDim2.new(1, -right, 0.5, 0)
 			row.box.Position = UDim2.new(1, -right - 34, 0.5, 0)
-			row.minus.Position = UDim2.new(1, -right - 130, 0.5, 0)
-			row.label.Size = UDim2.new(1, -right - 186, 1, 0)
+			row.minus.Position = UDim2.new(1, -right - 38 - AMOUNT_BOX, 0.5, 0)
+			row.label.Size = UDim2.new(1, -right - 94 - AMOUNT_BOX, 1, 0)
 			row.label.Text = if suggesting then row.name else `{row.name} <font color="{Ui.SOFT}">(tienes {Format.short(row.owned())})</font>`
 			if not row.box:IsFocused() and not row.touching then
 				local value = if suggesting then row.value else row.offered()
