@@ -19,6 +19,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Targeting = require(script.Parent.Targeting)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local HitboxDebug = {}
 
@@ -165,7 +166,7 @@ local function setEnabled(on: boolean)
 			folder:Destroy()
 		end
 		folder, area, splash, pierce = nil, nil, nil, nil
-		Ui.toast("Hitbox escondida", COLOR_OUT)
+		Ui.toast(Lang.t(nil, "Hitbox hidden"), COLOR_OUT)
 		return
 	end
 
@@ -185,7 +186,7 @@ local function setEnabled(on: boolean)
 	folder = newFolder
 	connection = RunService.RenderStepped:Connect(update)
 
-	Ui.toast(`Hitbox a la vista\nCírculo de {Config.Loadout.Radius} studs · {#Stats.loadout(player)} armas`, COLOR_AREA)
+	Ui.toast(Lang.t(nil, "Hitbox shown\nCircle of {radius} studs · {n} weapons", { radius = Config.Loadout.Radius, n = #Stats.loadout(player) }), COLOR_AREA)
 end
 
 function HitboxDebug.start()

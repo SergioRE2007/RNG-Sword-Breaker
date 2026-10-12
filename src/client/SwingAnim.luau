@@ -29,7 +29,7 @@ local STILL_SPEED = 2 -- por debajo de esta velocidad (studs/s) el personaje est
 
 -- Golpe épico de cada rareza (por la rareza de la copia equipada, con metal y tamaño, como su casilla).
 -- Las de por encima de Divina no tienen golpe propio: hacen el de Divina.
-local EPIC_BY_TIER = { ["Mítica"] = "Mitica", Secreta = "Secreta", Divina = "Divina", Eterna = "Divina", Primordial = "Divina", Absoluta = "Divina" }
+local EPIC_BY_TIER = { Mythic = "Mitica", Secret = "Secreta", Divine = "Divina", Eternal = "Divina", Primordial = "Divina", Absolute = "Divina" }
 
 -- Articulación -> pieza donde está y si solo se mueve con el personaje parado (las piernas: andando mandan sus pasos).
 local JOINTS = {

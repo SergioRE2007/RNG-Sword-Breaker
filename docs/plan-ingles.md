@@ -46,7 +46,7 @@ Estilo "gettext": en el código queda el texto en inglés y una tabla lo pasa a 
 
 - [x] Parte 1: sistema y datos (hecha el 12 de octubre de 2026; notas debajo)
 - [x] Parte 2: ventanas (hecha el 12 de octubre de 2026; notas al final)
-- [ ] Parte 3: HUD, mundo y servidor
+- [x] Parte 3: HUD, mundo y servidor (hecha el 12 de octubre de 2026; notas al final)
 - [ ] Parte 4: repaso
 
 ## Notas de la parte 1 (para las siguientes)
@@ -70,3 +70,15 @@ Estilo "gettext": en el código queda el texto en inglés y una tabla lo pasa a 
 - Quedan para la parte 3, aunque se vean dentro de ventanas: los carteles de `Potions.tip`, el título y la mazmorra que `client/Dungeons` le pasa a `DropMenu.show`, el `StatsDock` de Mejoras (lo monta `Hud`) y los avisos que manda el servidor al comprar, canjear o comerciar.
 - `tests/regressions.luau`: la prueba de "ningún texto en español" mira ya `src/shared` y, de `src/client`, los archivos de su lista `WINDOWS`; al acabar la parte 3 se quita la lista y se mira todo `src`. Las piezas del martillo de la forja tenían una con ñ en el nombre ("Puño"): ahora es "Pomo".
 - Herramienta que ayudó: listar los textos entre comillas de un archivo fuera de los comentarios (un script de Node de usar y tirar) y mirar aparte los `.name`, `.desc`, `.short`, `.tag`... que se enseñan sin comillas; estos últimos son los que más se escapan.
+
+## Notas de la parte 3 (para la 4)
+
+- Avisos del servidor: librería nueva `server/Tell`. `Tell.notice(jugador, color, "Frase {hueco}", { hueco = ... })` para uno y `Tell.all(color, function(lector) return Lang.t(lector, ...) end)` para todos, cada uno en su idioma (ya no se usa `Announce:FireAllClients`). Los nombres que van dentro (objeto, arma, pase) se pasan ya traducidos para ese lector. Un motivo que se decide lejos de donde se manda (por qué no se puede entrar a una mazmorra o cerrar un trato) es la frase en inglés o una función `(lector) -> texto`; `Tell.text` la resuelve.
+- Carteles del mundo y avisos de E (una sola pieza para todos): el servidor deja la frase en inglés en atributos con `Tell.world(etiqueta, frase, huecos, mayúsculas)` y `Tell.prompt(aviso, acción, objeto)` (etiqueta `LangText`) y el módulo nuevo `client/WorldText` la escribe en el idioma de cada jugador. Van así: parcelas, "MAZMORRAS" (boca y templo), Mejor tirada, clasificaciones, tiendas del hub, ascensor de luz y salas de grupo. Un cartel nuevo hecho en el servidor se pone con `Tell.world`, no con `.Text`.
+- Los `warn` de consola están en inglés (no los lee el jugador y la prueba no deja tildes entre comillas); sin entrada en `LangEs`.
+- El marcador de la lista de jugadores (`leaderstats`) se llama ahora "Coins" (antes "Monedas"): no pasa por `Lang`, lo traduce Roblox si acaso.
+- Ingleses distintos a propósito, como en la parte 2: el botón del menú es "Rebirths" (Renacer; "Rebirth" ya es Renacimiento) y las estadísticas de Mejoras son "Luck (objects)" y "Luck (weapons)" (Suerte objetos / Suerte armas; "Object luck" y "Weapon luck" ya son las largas).
+- Arreglado de paso, roto desde la parte 1: `WeatherHud` elegía el color de la suerte de armas comparando con el texto "Armas" (ahora `buff.stat`, que da `WeatherInfo.buffs`), y `SwingAnim` (que no se arranca) buscaba las rarezas por su nombre en español.
+- `tests/regressions.luau`: la prueba de "ningún texto en español" mira ya todo `src`; solo deja pasar las letras sueltas (las tablas que suben las tildes a mayúsculas).
+- Probado en Studio con `Config.Test.Lang` en `"en"` y en `"es"`: menú, transporte, estadísticas, cartel del objeto, carteles del mundo, avisos (código, poción, renacer, mejor tirada, trato cancelado) y panel de mazmorra, sin avisos de textos que falten. Sin mirar con capturas: si algún texto en inglés no cabe (parte 4). Tampoco se han visto en marcha el cartel de reconexión, el del autoclicker ni la tirada gratis antigua (`GachaRoll`).
+- Para la parte 4, además de lo que ya dice: `CLAUDE.md` habla de `Remotes.Announce:FireAllClients`, de textos en español en ejemplos de prueba ("Quiero 5 Cristal de rasgo", "Botín añadido a tu inventario") y de `Hud.Rasgos`/`Hud.Grados`; añadir allí `Tell` y `WorldText`. El nombre del bot de comercio es "Test bot".

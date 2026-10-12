@@ -10,6 +10,8 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Rebirth = {}
 
@@ -24,21 +26,23 @@ local function onRebirth(player: Player)
 	lastTry[player] = now
 
 	if Stats.rebirths(player) >= Config.Rebirth.max then
-		Remotes.Notice:FireClient(player, "Has alcanzado el máximo de renacimientos.", GOLD)
+		Tell.notice(player, GOLD, "You've reached the maximum number of rebirths.")
 		return
 	end
 	local cost = Stats.rebirthCost(player)
 	if not PlayerData.trySpend(player, cost) then
-		Remotes.Notice:FireClient(player, `Te faltan monedas: el renacimiento cuesta {Format.short(cost)}`, Color3.fromRGB(240, 65, 75))
+		Tell.notice(player, Color3.fromRGB(240, 65, 75), "Not enough coins: the rebirth costs {n}", { n = Format.short(cost, player) })
 		return
 	end
 	PlayerData.addRebirth(player)
 	Missions.add(player, "rebirth")
 	local count = Stats.rebirths(player)
-	Remotes.Notice:FireClient(player, `¡Renacimiento {count}! Monedas x{Format.multiplier(Stats.rebirthBonus(player, "coins"))} y más para siempre`, GOLD)
+	Tell.notice(player, GOLD, "Rebirth {count}! Coins x{n} and more forever", { count = count, n = Format.multiplier(Stats.rebirthBonus(player, "coins"), player) })
 	-- Los números redondos y los primeros se anuncian a todos.
 	if count <= 3 or count % 5 == 0 then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha renacido {count} {if count == 1 then "vez" else "veces"}!`, GOLD)
+		Tell.all(GOLD, function(reader)
+			return Lang.t(reader, if count == 1 then "{player} has been reborn {count} time!" else "{player} has been reborn {count} times!", { player = player.DisplayName, count = count })
+		end)
 	end
 end
 

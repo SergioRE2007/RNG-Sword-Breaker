@@ -21,6 +21,7 @@ local MenuTile = require(script.Parent.MenuTile)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local ForgeScene = require(script.Parent.ForgeScene)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Hud = {}
 
@@ -184,13 +185,13 @@ function Hud.start()
 
 	local destinations = {
 		{ "hub", "Hub", Color3.fromRGB(255, 175, 40), "hub" },
-		{ "home", "Casa", Color3.fromRGB(50, 190, 240), "casa" },
-		{ "dungeon", "Mazmorras", Ui.COLORS.purple, "mazmorras" },
+		{ "home", "Home", Color3.fromRGB(50, 190, 240), "casa" },
+		{ "dungeon", "Dungeons", Ui.COLORS.purple, "mazmorras" },
 	}
 	for order, entry in destinations do
 		-- Botón alargado de client/MenuTile, los tres igual de anchos. La barra mide 76 de alto: lo que va debajo
 		-- (paneles de mazmorra, forja, gacha) empieza en Y = 90.
-		local button = MenuTile.new(travel, entry[2], entry[3], entry[4], true)
+		local button = MenuTile.new(travel, Lang.t(nil, entry[2]), entry[3], entry[4], true)
 		button.Name = "Travel_" .. entry[1]
 		button.LayoutOrder = order
 		Ui.sparkle(button, 5)
@@ -294,18 +295,18 @@ function Hud.start()
 
 	-- Botones cuadrados con el logo grande y el nombre abajo (client/MenuTile): ventana, nombre, color y logo.
 	local menuItems = {
-		{ "Backpack", "Mochila", Ui.COLORS.blue, "mochila" },
-		{ "Rebirth", "Renacer", Ui.COLORS.orange, "rebirth" },
-		{ "Upgrades", "Mejoras", Ui.COLORS.green, "mejora" },
+		{ "Backpack", "Backpack", Ui.COLORS.blue, "mochila" },
+		{ "Rebirth", "Rebirths", Ui.COLORS.orange, "rebirth" },
+		{ "Upgrades", "Upgrades", Ui.COLORS.green, "mejora" },
 		-- La Tienda, en rojo y con los rayos en arcoíris (el quinto dato): tiene que llamar la atención.
-		{ "PassShop", "Tienda", Color3.fromRGB(225, 50, 75), "tienda_robux", true },
+		{ "PassShop", "Shop", Color3.fromRGB(225, 50, 75), "tienda_robux", true },
 		-- Abre la lista de Comercio (antes iba arriba, con los botones de transporte: pedido por el usuario).
 		{ "TradeList", "Trades", Color3.fromRGB(40, 170, 200), "trade" },
 		-- Índice de armas (client/Index).
-		{ "Index", "Índice", Ui.COLORS.purple, "indice" },
+		{ "Index", "Index", Ui.COLORS.purple, "indice" },
 	}
 	for order, entry in menuItems do
-		local item = MenuTile.new(menu, entry[2], entry[3], entry[4], false, entry[5])
+		local item = MenuTile.new(menu, Lang.t(nil, entry[2]), entry[3], entry[4], false, entry[5])
 		item.Name = entry[1]
 		item.LayoutOrder = order
 		Ui.sparkle(item, 6)
@@ -320,17 +321,17 @@ function Hud.start()
 
 		setCoins(amount)
 		setGems(gemAmount)
-		damageText.Text = `Daño <font color="#ff9a6a">{Format.multiplier(Stats.damage(player))}</font>  ·  Vida <font color="#ff6e6e">{Format.short(Stats.maxHealth(player))}</font>`
-		luckText.Text = `Suerte objetos <font color="#7ee07a">x{Format.multiplier(Stats.luck(player) * Stats.spawnLuck(player))}</font>`
-		gachaText.Text = `Suerte armas <font color="#c9a0ff">x{Format.multiplier(Stats.gachaLuck(player))}</font>`
+		damageText.Text = `{Lang.t(nil, "Damage")} <font color="#ff9a6a">{Format.multiplier(Stats.damage(player))}</font>  ·  {Lang.t(nil, "Health")} <font color="#ff6e6e">{Format.short(Stats.maxHealth(player))}</font>`
+		luckText.Text = `{Lang.t(nil, "Luck (objects)")} <font color="#7ee07a">x{Format.multiplier(Stats.luck(player) * Stats.spawnLuck(player))}</font>`
+		gachaText.Text = `{Lang.t(nil, "Luck (weapons)")} <font color="#c9a0ff">x{Format.multiplier(Stats.gachaLuck(player))}</font>`
 		for name, text in upgradeRows do
 			local upgrade = Config.Upgrades[name]
 			local level = player:GetAttribute("Upgrade_" .. name) or 0
 			local balance = if upgrade.currency == "gems" then gemAmount else amount
 			local price = if level >= upgrade.maxLevel
-				then `<font color="#6fe07a">al máximo</font>`
+				then `<font color="#6fe07a">{Lang.t(nil, "maxed")}</font>`
 				else `<font color="{if balance >= Upgrades.cost(name, level) then "#ffd24a" else Ui.SOFT}">{Format.short(Upgrades.cost(name, level))}</font>`
-			text.Text = `{upgrade.short} <font color="{Ui.SOFT}">{level}/{upgrade.maxLevel}</font> · {Upgrades.display(name, level)}\n{price}`
+			text.Text = `{Lang.t(nil, upgrade.short)} <font color="{Ui.SOFT}">{level}/{upgrade.maxLevel}</font> · {Upgrades.display(name, level)}\n{price}`
 		end
 	end
 

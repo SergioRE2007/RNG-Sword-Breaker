@@ -4,6 +4,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Tell = require(script.Parent.Tell)
 
 local Plots = {}
 
@@ -254,7 +255,7 @@ local function buildPlot(index: number, parent: Instance)
 	label.TextStrokeTransparency = 0
 	label.Font = Enum.Font.FredokaOne
 	label.TextSize = 28
-	label.Text = "Parcela libre"
+	Tell.world(label, "Free plot")
 	label.Parent = gui
 
 	model.Parent = parent
@@ -271,7 +272,7 @@ local function assign(player: Player)
 			plot.owner = player
 			byPlayer[player] = plot
 			paint(plot, true)
-			plot.label.Text = "Parcela de " .. player.DisplayName
+			Tell.world(plot.label, "{name}'s plot", { name = player.DisplayName })
 			plot.face.Image = `rbxthumb://type=AvatarHeadShot&id={math.max(player.UserId, 1)}&w=150&h=150`
 			plot.avatar.Visible = true
 			player.RespawnLocation = plot.spawn
@@ -290,7 +291,7 @@ local function assign(player: Player)
 			return
 		end
 	end
-	warn(`[Plots] No quedan parcelas libres para {player.Name}`)
+	warn(`[Plots] No free plots left for {player.Name}`)
 end
 
 local function release(player: Player)
@@ -304,7 +305,7 @@ local function release(player: Player)
 	byPlayer[player] = nil
 	plot.owner = nil
 	paint(plot, false)
-	plot.label.Text = "Parcela libre"
+	Tell.world(plot.label, "Free plot")
 	plot.avatar.Visible = false
 end
 

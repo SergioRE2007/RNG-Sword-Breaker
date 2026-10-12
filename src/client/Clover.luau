@@ -14,6 +14,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Clover = {}
 
@@ -125,12 +126,12 @@ local function build()
 	text.Size = UDim2.new(1, -62 - 136, 1, 0)
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	text.TextScaled = true
-	text.Text = "Elige un objeto de tu parcela"
+	text.Text = Lang.t(nil, "Pick an object on your plot")
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = 24
 	limit.MinTextSize = 14
 	limit.Parent = text
-	local cancel = Ui.button(frame, "Cancelar", Ui.COLORS.red)
+	local cancel = Ui.button(frame, Lang.t(nil, "Cancel"), Ui.COLORS.red)
 	cancel.Name = "Cancel"
 	cancel.AnchorPoint = Vector2.new(1, 0.5)
 	cancel.Position = UDim2.new(1, -8, 0.5, 0)
@@ -157,7 +158,7 @@ function Clover.pick()
 	end
 	if (player:GetAttribute("Item_" .. cfg.Item) or 0) < 1 then
 		Sfx.play("error")
-		Ui.toast("No tienes tréboles: se compran en la Tienda o con tickets", Ui.COLORS.orange)
+		Ui.toast(Lang.t(nil, "You have no clovers: get them in the Shop or with tickets"), Ui.COLORS.orange)
 		return
 	end
 	if not banner then

@@ -18,6 +18,7 @@ local SwordController = require(script.Parent.SwordController)
 local Sfx = require(script.Parent.Sfx)
 local Targeting = require(script.Parent.Targeting)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Dungeons = {}
 
@@ -35,10 +36,10 @@ local Z_HURT = 40 -- destello rojo al recibir un golpe
 local Z_RESULT = 60 -- cartel del resultado, por encima del HUD
 
 local REASONS = {
-	clear = { "¡MAZMORRA SUPERADA!", GOLD },
-	dead = { "HAS CAÍDO", BAD },
-	time = { "SE ACABÓ EL TIEMPO", BAD },
-	left = { "HAS SALIDO", Color3.fromRGB(200, 205, 225) },
+	clear = { "DUNGEON CLEARED!", GOLD },
+	dead = { "YOU FELL", BAD },
+	time = { "TIME'S UP", BAD },
+	left = { "YOU LEFT", Color3.fromRGB(200, 205, 225) },
 }
 
 local function hex(color: Color3): string
@@ -120,7 +121,7 @@ local function buildRunPanel()
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.TextTruncate = Enum.TextTruncate.AtEnd
 
-	local leave = Ui.button(panel, "Salir", Ui.COLORS.red)
+	local leave = Ui.button(panel, Lang.t(nil, "Leave"), Ui.COLORS.red)
 	leave.Name = "Leave"
 	leave.AnchorPoint = Vector2.new(1, 0)
 	leave.Position = UDim2.new(1, -12, 0, 10)
@@ -145,9 +146,9 @@ local function buildRunPanel()
 	loopButton.TextSize = 19
 	local function paintToggles()
 		local loop = player:GetAttribute("DungeonLoop") == true
-		autoButton.Text = if autoFight() then "Auto: SÍ" else "Auto: NO"
+		autoButton.Text = Lang.t(nil, if autoFight() then "Auto: ON" else "Auto: OFF")
 		autoButton.BackgroundColor3 = if autoFight() then Ui.COLORS.green else Ui.COLORS.gray
-		loopButton.Text = if loop then "Repetir: SÍ" else "Repetir: NO"
+		loopButton.Text = Lang.t(nil, if loop then "Loop: ON" else "Loop: OFF")
 		loopButton.BackgroundColor3 = if loop then Ui.COLORS.green else Ui.COLORS.gray
 		-- Repetir lo decide el líder del grupo.
 		loopButton.Visible = Party.isLeader()
@@ -236,13 +237,13 @@ local function buildRunPanel()
 		end
 		local wave = player:GetAttribute("DungeonWave") or 0
 		local waves = player:GetAttribute("DungeonWaves") or #cfg.Waves
-		title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>`
+		title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.25))}">{Lang.t(nil, level.name)}</font>`
 		local left = math.max(0, (player:GetAttribute("DungeonEnds") or 0) - workspace:GetServerTimeNow())
-		detail.Text = `<font color="{Ui.SOFT}">Oleada</font> {math.max(wave, 1)}/{waves}  <font color="{Ui.SOFT}">·</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
+		detail.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Wave")}</font> {math.max(wave, 1)}/{waves}  <font color="{Ui.SOFT}">·</font> <font color="{hex(if left < 30 then BAD else WHITE)}">{math.floor(left / 60)}:{string.format("%02d", math.floor(left % 60))}</font>`
 		if wave ~= shownWave and wave > 0 then
 			shownWave = wave
 			Sfx.play("wave")
-			Ui.toast(if wave >= waves then "¡Oleada final: el jefe!" else `Oleada {wave} de {waves}`, level.color)
+			Ui.toast(if wave >= waves then Lang.t(nil, "Final wave: the boss!") else Lang.t(nil, "Wave {n} of {total}", { n = wave, total = waves }), level.color)
 		end
 	end
 	for _, attribute in { "Dungeon", "DungeonWave", "DungeonLeft", "DungeonEnds" } do
@@ -437,19 +438,19 @@ local function buildFeedback()
 		elseif kind == "result" and type(data) == "table" then
 			local reason = REASONS[data.reason] or REASONS.left
 			local level = Config.Dungeons[data.level]
-			title.Text = reason[1]
+			title.Text = Lang.t(nil, reason[1])
 			title.TextColor3 = reason[2]
-			subtitle.Text = if level then `<font color="{Ui.SOFT}">Mazmorra</font> <font color="{hex(level.color:Lerp(WHITE, 0.25))}">{level.name}</font>` else ""
+			subtitle.Text = if level then `<font color="{Ui.SOFT}">{Lang.t(nil, "Dungeon")}</font> <font color="{hex(level.color:Lerp(WHITE, 0.25))}">{Lang.t(nil, level.name)}</font>` else ""
 			Sfx.play(if data.won then "dungeon_win" else "dungeon_lose")
 			-- Con botín, lo enseña el menú de botín (client/DropMenu); este cartel solo dice cómo acabó.
 			if type(data.drops) == "table" and #data.drops > 0 then
 				card.Visible = false
-				DropMenu.show(data, reason[1], reason[2], if level then level.name else nil)
+				DropMenu.show(data, Lang.t(nil, reason[1]), reason[2], if level then Lang.t(nil, level.name) else nil)
 				return
 			end
 			loot.Text = if (tonumber(data.granted) or 0) > 0
-				then `<font color="{Ui.SOFT}">Botín en tu inventario.</font>`
-				else `<font color="{Ui.SOFT}">Sin premios esta vez.</font>`
+				then `<font color="{Ui.SOFT}">{Lang.t(nil, "Loot in your inventory.")}</font>`
+				else `<font color="{Ui.SOFT}">{Lang.t(nil, "No rewards this time.")}</font>`
 			card.Visible = true
 			if not Performance.get() then
 				cardScale.Scale = 0.6

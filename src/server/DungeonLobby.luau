@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local DungeonThemes = require(script.Parent.DungeonThemes)
+local Tell = require(script.Parent.Tell)
 
 local DungeonLobby = {}
 
@@ -67,7 +68,7 @@ local function cutHole(target: BasePart, radius: number): boolean
 	cutter:Destroy()
 	local piece = if ok and type(result) == "table" then result[1] else nil
 	if not piece then
-		warn(`DungeonLobby: no se pudo abrir el hueco en {target.Name}: {tostring(result)}`)
+		warn(`DungeonLobby: could not cut the hole in {target.Name}: {tostring(result)}`)
 		return false
 	end
 	piece.Name = target.Name
@@ -169,7 +170,7 @@ local function buildEntrance(parent: Instance)
 	label.Font = Enum.Font.FredokaOne
 	label.TextSize = 50
 	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Text = "MAZMORRAS"
+	Tell.world(label, "Dungeons", nil, true)
 	label.Parent = gui
 	local outline = Instance.new("UIStroke")
 	outline.Color = BLACK
@@ -340,8 +341,7 @@ local function buildRoom(parent: Instance, index: number, level, total: number, 
 	local altar = small(part(model, "Altar", Vector3.new(2, 2, 2), roomCF * CFrame.new(0, 2, 0), level.color, Enum.Material.SmoothPlastic))
 	altar.Transparency = 1
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Sala de grupo"
-	prompt.ObjectText = level.name
+	Tell.prompt(prompt, "Party room", level.name)
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 14
 	prompt.RequiresLineOfSight = false

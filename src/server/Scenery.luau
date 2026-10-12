@@ -451,7 +451,7 @@ end
 local function clearLoose()
 	for _, item in workspace:GetChildren() do
 		if item:IsA("BasePart") and not item:IsA("Terrain") and not item:IsA("SpawnLocation") and item.Name ~= "Baseplate" then
-			warn(`[Scenery] Quitada de Workspace una pieza que no es del juego: {item.Name} (tamaño {item.Size})`)
+			warn(`[Scenery] Removed from Workspace a part that is not part of the game: {item.Name} (size {item.Size})`)
 			item:Destroy()
 		end
 	end

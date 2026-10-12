@@ -19,6 +19,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local WeatherInfo = require(ReplicatedStorage.Shared.WeatherInfo)
 local Admin = require(script.Parent.Admin)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Weather = {}
 
@@ -83,7 +85,9 @@ end
 local function announce(id: string)
 	local def = cfg.Events[id]
 	local minutes = math.floor(WeatherInfo.duration(id) / 60 + 0.5)
-	Remotes.Announce:FireAllClients(`¡{def.name}! {WeatherInfo.buffText(def)} para todos durante {minutes} min.`, def.color)
+	Tell.all(def.color, function(reader)
+		return Lang.t(reader, "{name}! {buffs} for everyone for {minutes} min.", { name = Lang.t(reader, def.name), buffs = WeatherInfo.buffText(def, reader), minutes = minutes })
+	end)
 end
 
 -- Manda la hora del siguiente clima a ese jugador si es administrador.

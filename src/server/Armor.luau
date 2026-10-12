@@ -14,6 +14,8 @@ local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Armor = {}
 
@@ -73,18 +75,29 @@ function Armor.store(player: Player, piece, luck: number): boolean
 			edited.nextArmorId += 1
 			table.insert(edited.armor, piece)
 		end)
-		Remotes.Notice:FireClient(player, `¡{ArmorStats.name(piece)} ({quality.name})!`, quality.color)
+		Tell.notice(player, quality.color, "{name} ({quality})!", { name = ArmorStats.name(piece, player), quality = Lang.t(player, quality.name) })
 	else
 		local crystals = ArmorStats.salvage(piece)
 		PlayerData.edit(player, function(edited)
 			edited.items[CRYSTAL] += crystals
 		end)
-		local gained = if crystals > 0 then ` (+{Format.short(crystals)} cristales)` else ""
-		Remotes.Notice:FireClient(player, `Armadura llena: {ArmorStats.name(piece)} desmontada{gained}`, quality.color)
+		Tell.notice(
+			player,
+			quality.color,
+			if crystals > 0 then "Armor full: {name} salvaged (+{n} crystals)" else "Armor full: {name} salvaged",
+			{ name = ArmorStats.name(piece, player), n = Format.short(crystals, player) }
+		)
 	end
 	local odds = quality.odds / luck
 	if odds >= Config.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {ArmorStats.name(piece)} ({quality.name}, 1 entre {Format.short(odds)})!`, quality.color)
+		Tell.all(quality.color, function(reader)
+			return Lang.t(reader, "{player} got {name} ({quality}, 1 in {n})!", {
+				player = player.DisplayName,
+				name = ArmorStats.name(piece, reader),
+				quality = Lang.t(reader, quality.name),
+				n = Format.short(odds, reader),
+			})
+		end)
 	end
 	return kept
 end

@@ -19,6 +19,7 @@ local OrbitWeapons = require(script.Parent.OrbitWeapons)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local GoldBag = {}
 
@@ -278,9 +279,9 @@ local function update(model: Model, entry)
 	local elapsed = math.max(workspace:GetServerTimeNow() - (owner:GetAttribute("BagAt") or 0), 0)
 	local taken = math.clamp((owner:GetAttribute("BagTaken") or 0) + (owner:GetAttribute("BagRate") or 0) * elapsed, 0, full)
 	entry.left = math.clamp(1 - taken / full, 0, 1)
-	entry.title.Text = `BOLSA Nº {stage}`
+	entry.title.Text = Lang.t(nil, "BAG #{n}", { n = stage })
 	entry.fill.Size = UDim2.fromScale(entry.left, 1)
-	entry.amount.Text = if deposited == 0 then `<font color="{Ui.SOFT}">Haz clic en el saco para dejar armas</font>` else Format.short(math.ceil(full - taken))
+	entry.amount.Text = if deposited == 0 then `<font color="{Ui.SOFT}">{Lang.t(nil, "Click the sack to leave weapons")}</font>` else Format.short(math.ceil(full - taken))
 end
 
 -- Cada cuadro: las armas de los sacos cercanos vuelan y pegan, y el saco se encoge y da su respingo.
@@ -326,12 +327,12 @@ local function onEvent(kind: string, info)
 		if os.clock() - lastToast >= TOAST_EVERY then
 			lastToast = os.clock()
 			Sfx.play("win")
-			Ui.toast(if pendingBags > 1 then `¡{pendingBags} bolsas vaciadas!` else "¡Bolsa vaciada!", GOLD)
+			Ui.toast(if pendingBags > 1 then Lang.t(nil, "{n} bags emptied!", { n = pendingBags }) else Lang.t(nil, "Bag emptied!"), GOLD)
 			pendingBags = 0
 		end
 	elseif kind == "away" then
 		Sfx.play("win")
-		Ui.toast(`Mientras no estabas: +{Format.short(info.coins or 0)} monedas`, GOLD)
+		Ui.toast(Lang.t(nil, "While you were away: +{n} coins", { n = Format.short(info.coins or 0) }), GOLD)
 	end
 end
 

@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local TicketShop = {}
 
@@ -30,7 +31,7 @@ local function onBuy(player: Player, index: unknown)
 		edited.items[TICKET] -= offer.price
 		edited.items[offer.item] += 1
 	end)
-	Remotes.Notice:FireClient(player, `+1 {item.name}`, item.color)
+	Remotes.Notice:FireClient(player, `+1 {Lang.t(player, item.name)}`, item.color)
 end
 
 function TicketShop.start()

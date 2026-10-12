@@ -18,6 +18,7 @@ local Armor = require(script.Parent.Armor)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 local Potions = require(script.Parent.Potions)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Loot = {}
 
@@ -73,7 +74,7 @@ function handlers.item(player: Player, drop, context, summary, bonus: number)
 	PlayerData.edit(player, function(data)
 		data.items[drop.item] += amount
 	end)
-	Remotes.Notice:FireClient(player, `+{Format.short(amount)} {item.name}`, item.color)
+	Remotes.Notice:FireClient(player, `+{Format.short(amount, player)} {Lang.t(player, item.name)}`, item.color)
 	if summary then
 		summary.items[drop.item] = (summary.items[drop.item] or 0) + amount
 	end
@@ -91,7 +92,7 @@ function handlers.armor(player: Player, drop, context, summary, bonus: number)
 		end
 		local piece, kept = Armor.give(player, context.level, (context.qualityLuck or 1) * (drop.luck or 1))
 		if piece and summary then
-			table.insert(summary.armor, { name = ArmorStats.name(piece), quality = piece.quality, kept = kept })
+			table.insert(summary.armor, { name = ArmorStats.name(piece, player), quality = piece.quality, kept = kept })
 		end
 	end
 end

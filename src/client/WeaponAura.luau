@@ -222,7 +222,7 @@ end
 local function addParticles(state, layer, onPlayer: boolean, parent: Instance?)
 	local preset = Defs.particles[layer[1]]
 	if not preset then
-		warn(`WeaponAura: no existe el tipo de partícula "{layer[1]}"`)
+		warn(`WeaponAura: unknown particle type "{layer[1]}"`)
 		return
 	end
 	local spec = table.clone(preset)

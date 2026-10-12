@@ -22,6 +22,7 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
 local Sfx = require(script.Parent.Sfx)
 local WeaponPreview = require(script.Parent.WeaponPreview)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local GachaRoll = {}
 
@@ -50,17 +51,17 @@ local TIER_FX = {
 
 -- Frase de la pantalla grande según lo rara que era la tirada para el jugador (misma posición).
 local EPIC_LINES = {
-	"¡Buena tirada!",
-	"¡La suerte está de tu lado!",
-	"¡Algo poderoso se acerca!",
-	"¡El destino te ha elegido!",
-	"¡Ha despertado una leyenda!",
-	"¡Los cielos se abren ante ti!",
-	"¡Nadie debía encontrar esto!",
-	"¡Los dioses se inclinan ante ti!",
-	"¡Esto durará más que las estrellas!",
-	"¡Así empezó el universo!",
-	"¡No existe nada por encima de esto!",
+	"Nice roll!",
+	"Luck is on your side!",
+	"Something powerful is coming!",
+	"Fate has chosen you!",
+	"A legend has awakened!",
+	"The heavens open before you!",
+	"Nobody was meant to find this!",
+	"The gods bow before you!",
+	"This will outlast the stars!",
+	"This is how the universe began!",
+	"Nothing exists above this!",
 }
 
 local overlay: ScreenGui
@@ -590,7 +591,7 @@ local function makeCard(parent: Instance, index: number, kept: boolean, metal: n
 	info.AnchorPoint = Vector2.new(0.5, 1)
 	info.Position = UDim2.new(0.5, 0, 1, -10)
 	info.Size = UDim2.new(1, -8, 0.12, 0)
-	info.Text = string.upper(tier.name)
+	info.Text = Ui.upper(Lang.t(nil, tier.name))
 	info.TextColor3 = tier.color:Lerp(WHITE, 0.25)
 	info.ZIndex = 8
 
@@ -603,7 +604,7 @@ local function makeCard(parent: Instance, index: number, kept: boolean, metal: n
 		tag.Position = UDim2.fromScale(0.5, 0.32)
 		tag.AnchorPoint = Vector2.new(0.5, 0.5)
 		tag.Rotation = -12
-		tag.Text = if Config.Gacha.SellValue > 0 then `Vendida\n+{Config.Gacha.SellValue} gemas` else "Vendida"
+		tag.Text = if Config.Gacha.SellValue > 0 then Lang.t(nil, "Sold\n+{n} gems", { n = Config.Gacha.SellValue }) else Lang.t(nil, "Sold")
 		tag.TextColor3 = Ui.COLORS.orange
 		tag.ZIndex = 10
 	end
@@ -797,7 +798,7 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 	banner.AnchorPoint = Vector2.new(0.5, 1)
 	banner.Position = UDim2.new(0.5, 0, 0.45, -grown.Y / 2 - 14)
 	banner.Size = UDim2.fromOffset(760, 84)
-	banner.Text = `¡{string.upper(tierInfo.name)}!`
+	banner.Text = Lang.t(nil, "{name}!", { name = Ui.upper(Lang.t(nil, tierInfo.name)) })
 	banner.TextColor3 = WHITE
 	banner.ZIndex = 30
 	local bannerStroke = banner:FindFirstChildOfClass("UIStroke") :: UIStroke
@@ -847,7 +848,7 @@ local function showcase(index: number, kept: boolean, odds: number, metal: numbe
 		entry.shine.Visible = false
 	end
 
-	summary.Text = EPIC_LINES[tier] or EPIC_LINES[#EPIC_LINES]
+	summary.Text = Lang.t(nil, EPIC_LINES[tier] or EPIC_LINES[#EPIC_LINES])
 	oddsLabel.Text = Permanent.describeOdds(index, metal, size)
 	oddsLabel.TextColor3 = color:Lerp(WHITE, 0.3)
 	footer.Visible = true
@@ -898,7 +899,7 @@ local function spin(index: number, kept: boolean, luck: number, metal: number?, 
 	local color = tierInfo.color
 
 	-- Pasan espadas, cada vez más despacio (deja un poco de tiempo para ver el resultado).
-	detail.Text = "Tirando..."
+	detail.Text = Lang.t(nil, "Rolling...")
 	local total = Stats.rollTime(player) * 0.65
 	local steps = 12
 	for step = 1, steps do
@@ -915,9 +916,9 @@ local function spin(index: number, kept: boolean, luck: number, metal: number?, 
 
 	-- Se para en la que ha tocado.
 	showSword(index, metal, size)
-	local text = `<font color="#{color:ToHex()}">{tierInfo.name}</font>  ·  {Permanent.describeOdds(index, metal, size)}`
+	local text = `<font color="#{color:ToHex()}">{Lang.t(nil, tierInfo.name)}</font>  ·  {Permanent.describeOdds(index, metal, size)}`
 	if not kept then
-		text ..= `  ·  <font color="#{Ui.COLORS.orange:ToHex()}">vendida{if Config.Gacha.SellValue > 0 then ` +{Config.Gacha.SellValue}` else ""}</font>`
+		text ..= `  ·  <font color="#{Ui.COLORS.orange:ToHex()}">{Lang.t(nil, "sold")}{if Config.Gacha.SellValue > 0 then ` +{Config.Gacha.SellValue}` else ""}</font>`
 	end
 	detail.Text = text
 	panelScale.Scale = 1.25
@@ -1014,7 +1015,7 @@ local function buildPanel()
 	detail.Size = UDim2.new(1, -116, 0, 22)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.TextTruncate = Enum.TextTruncate.AtEnd
-	detail.Text = "¡Gratis! Pulsa Tirar"
+	detail.Text = Lang.t(nil, "Free! Press Roll")
 	detail.ZIndex = 4
 
 	-- Barra del tiempo que falta para la siguiente tirada gratis.
@@ -1042,7 +1043,7 @@ local function buildPanel()
 	sparkleArea.ZIndex = 6
 
 	showSword(2)
-	title.Text = "Gacha de espadas"
+	title.Text = Lang.t(nil, "Sword gacha")
 	title.TextColor3 = WHITE
 end
 
@@ -1099,7 +1100,7 @@ local function buildOverlay()
 	oddsScale = Instance.new("UIScale")
 	oddsScale.Parent = oddsLabel
 
-	local continueButton = Ui.button(footer, "Continuar", Ui.COLORS.green)
+	local continueButton = Ui.button(footer, Lang.t(nil, "Continue"), Ui.COLORS.green)
 	continueButton.Name = "Continue"
 	continueButton.AnchorPoint = Vector2.new(0.5, 0)
 	continueButton.Position = UDim2.new(0.5, 0, 0, 104)
@@ -1175,7 +1176,7 @@ local function buildButtons(): (Frame, TextButton)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = bar
 
-	local rollButton = Ui.button(bar, "Tirar", Ui.COLORS.green)
+	local rollButton = Ui.button(bar, Lang.t(nil, "Roll"), Ui.COLORS.green)
 	rollButton.Name = "RollOnce"
 	rollButton.LayoutOrder = 1
 	rollButton.Size = UDim2.fromOffset(170, 64)
@@ -1188,7 +1189,7 @@ local function buildButtons(): (Frame, TextButton)
 	autoButton.Size = UDim2.fromOffset(170, 64)
 	autoButton.TextSize = 22
 	local function refreshAuto()
-		autoButton.Text = if auto then "Auto: SÍ" else "Auto: NO"
+		autoButton.Text = Lang.t(nil, if auto then "Auto: ON" else "Auto: OFF")
 		autoButton.BackgroundColor3 = if auto then Ui.COLORS.orange else Ui.COLORS.blue
 	end
 	autoButton.Activated:Connect(function()

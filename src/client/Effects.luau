@@ -14,6 +14,7 @@ local FloatText = require(script.Parent.FloatText)
 local ObjectBreak = require(script.Parent.ObjectBreak)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Effects = {}
 
@@ -228,14 +229,14 @@ function Effects.start()
 				coinSound(top)
 			end
 			if gems > 0 then
-				FloatText.spawn("gem", top + Vector3.new(0, 2, 0), `+{Format.short(gems)} gemas`)
+				FloatText.spawn("gem", top + Vector3.new(0, 2, 0), Lang.t(nil, "+{n} gems", { n = Format.short(gems) }))
 				task.delay(0.13, Sfx.play, "gem_break", nil, nil, top)
 			end
 			-- Tiradas de arma que ha dado: se anuncian cuando el objeto tenía algo de especial (varias tiradas, rareza
 			-- o buen tamaño); las de un objeto corriente ya se ven en el panel de arriba.
 			if info and info.rolls > 0 and (info.rolls > 1 or info.scale >= ROLL_POPUP_SCALE or quality > 1) then
-				local rolls = if info.rolls == 1 then "1 tirada" else `¡{info.rolls} tiradas!`
-				FloatText.spawn("notice", top + Vector3.new(0, 4.5, 0), `{rolls}  ·  suerte x{Format.multiplier(info.luck)}`, {
+				local text = if info.rolls == 1 then "1 roll  ·  luck x{luck}" else "{n} rolls!  ·  luck x{luck}"
+				FloatText.spawn("notice", top + Vector3.new(0, 4.5, 0), Lang.t(nil, text, { n = info.rolls, luck = Format.multiplier(info.luck) }), {
 					color = ObjectSpec.rarity(quality).color:Lerp(Color3.new(1, 1, 1), 0.25),
 					emphasis = if quality >= 4 or info.rolls > 1 then 1.5 else 1.15,
 				})

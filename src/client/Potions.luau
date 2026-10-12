@@ -13,6 +13,7 @@ local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Potions = {}
 
@@ -67,9 +68,9 @@ function Potions.tip(family: string, tier: number): (string, Color3)
 	local info = cfg.Families[family]
 	local color = PotionInfo.color(tier)
 	local lines = {
-		`{info.name} <font color="{hex(color)}">{PotionInfo.tierName(tier)}</font>`,
+		`{Lang.t(nil, info.name)} <font color="{hex(color)}">{PotionInfo.tierName(tier)}</font>`,
 		`<font color="{hex(info.color:Lerp(Color3.new(1, 1, 1), 0.3))}">{PotionInfo.effect(family, tier)}</font>`,
-		`<font color="{Ui.SOFT}">Dura {PotionInfo.minutes(PotionInfo.duration(tier))}</font>`,
+		`<font color="{Ui.SOFT}">{Lang.t(nil, "Lasts {time}", { time = PotionInfo.minutes(PotionInfo.duration(tier)) })}</font>`,
 	}
 	return table.concat(lines, "\n"), color
 end

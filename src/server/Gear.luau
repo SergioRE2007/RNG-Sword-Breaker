@@ -7,6 +7,8 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Gear = {}
 
@@ -25,13 +27,15 @@ function Gear.onBroken(player: Player)
 				table.insert(edited.artifacts, index)
 				table.sort(edited.artifacts)
 			end)
-			Remotes.Notice:FireClient(
-				player,
-				`¡Accesorio: {artifact.name}!`,
-				artifact.color
-			)
+			Tell.notice(player, artifact.color, "Accessory: {name}!", { name = Lang.t(player, artifact.name) })
 			if artifact.rarity / luck >= Config.AnnounceOdds then
-				Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha encontrado {artifact.name} (1 entre {Format.short(artifact.rarity / luck)})!`, artifact.color)
+				Tell.all(artifact.color, function(reader)
+					return Lang.t(reader, "{player} found {name} (1 in {n})!", {
+						player = player.DisplayName,
+						name = Lang.t(reader, artifact.name),
+						n = Format.short(artifact.rarity / luck, reader),
+					})
+				end)
 			end
 			return
 		end

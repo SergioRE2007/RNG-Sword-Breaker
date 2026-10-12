@@ -17,6 +17,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 local Plots = require(script.Parent.Plots)
+local Tell = require(script.Parent.Tell)
 
 local GoldBag = {}
 
@@ -279,7 +280,7 @@ local function onSet(player: Player, id: unknown)
 		local equipped = table.find(edited.loadout, id)
 		if equipped then
 			if #edited.loadout <= 1 then
-				message = "No puedes dejar en la bolsa tu única arma equipada"
+				message = "You can't put your only equipped weapon in the bag"
 				return
 			end
 			table.remove(edited.loadout, equipped)
@@ -300,7 +301,7 @@ local function onSet(player: Player, id: unknown)
 		edited.bag.seen = os.time()
 	end)
 	if message then
-		Remotes.Notice:FireClient(player, message, RED)
+		Tell.notice(player, RED, message)
 	end
 	publish(player, data, true)
 end

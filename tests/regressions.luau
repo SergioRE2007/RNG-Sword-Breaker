@@ -1703,14 +1703,10 @@ do
 	each(missions.pool.daily, "Misiones", { "text" })
 	each(missions.pool.weekly, "Misiones", { "text" })
 
-	-- Ningún texto entre comillas del código lleva letras del español (fuera de LangEs y de los comentarios). De momento
-	-- se mira solo lo que ya está pasado a inglés (docs/plan-ingles.md): al acabar las partes 2 y 3, todo src.
-	local DONE = { "src/shared", "src/client" }
-	-- De src/client, solo las ventanas de la parte 2; al acabar la parte 3 se quita esta lista y se mira todo.
-	local WINDOWS = {}
-	for _, name in { "Backpack", "ArmorPane", "PassShop", "Trade", "ModifierShops", "ForgeScene", "Index", "Missions", "Party", "BagMenu", "SellMenu", "DropMenu", "Settings", "Rebirth", "SkillTree", "AdminPanel" } do
-		WINDOWS[name .. ".luau"] = true
-	end
+	-- Ningún texto entre comillas del código lleva letras del español (fuera de LangEs y de los comentarios): todo
+	-- texto va en inglés y su español en LangEs (docs/plan-ingles.md). Una letra suelta sí vale: son las tablas que
+	-- pasan las tildes a mayúsculas.
+	local DONE = { "src" }
 	local SKIP = { ["src/shared/LangEs.luau"] = true }
 	local SPANISH = { "á", "é", "í", "ó", "ú", "ñ", "Á", "É", "Í", "Ó", "Ú", "Ñ", "¿", "¡" }
 	local function strings(source: string): { string }
@@ -1740,10 +1736,10 @@ do
 			local file = path .. "/" .. name
 			if fs.isDir(file) then
 				scan(file)
-			elseif name:match("%.luau$") and not SKIP[file] and (path ~= "src/client" or WINDOWS[name]) then
+			elseif name:match("%.luau$") and not SKIP[file] then
 				for _, text in strings(fs.readFile(file)) do
 					for _, letter in SPANISH do
-						assert(not text:find(letter, 1, true), `texto en español en {file}: {text}`)
+						assert(utf8.len(text) == 1 or not text:find(letter, 1, true), `texto en español en {file}: {text}`)
 					end
 				end
 				checks += 1

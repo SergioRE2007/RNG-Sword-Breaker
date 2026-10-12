@@ -11,6 +11,7 @@ local DungeonInfo = require(ReplicatedStorage.Shared.DungeonInfo)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local RoomSigns = {}
 
@@ -76,14 +77,14 @@ local function build(board: BasePart)
 	limit.MaxTextSize = 52
 	limit.MinTextSize = 24
 	limit.Parent = title
-	title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.3))}">{string.upper(level.name)}</font>`
+	title.Text = `<font color="{hex(level.color:Lerp(WHITE, 0.3))}">{Ui.upper(Lang.t(nil, level.name))}</font>`
 
 	local tagline = Ui.label(root, 28)
 	tagline.Position = UDim2.fromOffset(34, 72)
 	tagline.Size = UDim2.new(1, -68, 0, 34)
 	tagline.TextXAlignment = Enum.TextXAlignment.Left
 	tagline.TextTruncate = Enum.TextTruncate.AtEnd
-	tagline.Text = `<font color="{Ui.SOFT}">{level.tagline or ""}</font>`
+	tagline.Text = `<font color="{Ui.SOFT}">{if level.tagline then Lang.t(nil, level.tagline) else ""}</font>`
 
 	-- Lo que cae en una partida (DungeonInfo.rewards): cuatro líneas, por eso la letra es más pequeña que antes.
 	local rewards = Ui.label(root, 26)
@@ -109,11 +110,11 @@ local function build(board: BasePart)
 	signs[board] = function()
 		local damage = Stats.damage(player)
 		local ready = damage >= DungeonInfo.recommended(index)
-		recommended.Text = `<font color="{Ui.SOFT}">Daño</font> <font color="{hex(if ready then GOOD else BAD)}">{Format.short(DungeonInfo.recommended(index))}</font>`
+		recommended.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Damage")}</font> <font color="{hex(if ready then GOOD else BAD)}">{Format.short(DungeonInfo.recommended(index))}</font>`
 		local lock = DungeonInfo.lock(index, damage)
-		state.Text = if lock then `<font color="{hex(BAD)}">{lock}</font>` else `<font color="{hex(GOOD)}">ABIERTA</font>`
+		state.Text = if lock then `<font color="{hex(BAD)}">{lock}</font>` else `<font color="{hex(GOOD)}">{Lang.t(nil, "OPEN")}</font>`
 		local count = board:GetAttribute("Waiting") or 0
-		waiting.Text = if count > 0 then `<font color="{Ui.SOFT}">Esperando</font> {count}` else ""
+		waiting.Text = if count > 0 then `<font color="{Ui.SOFT}">{Lang.t(nil, "Waiting")}</font> {count}` else ""
 	end
 	signs[board]()
 end

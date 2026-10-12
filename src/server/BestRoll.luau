@@ -12,6 +12,8 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local BestRoll = {}
 
@@ -59,7 +61,7 @@ local function sanitize(value)
 	local size = if type(value.size) == "number" and Config.Sizes[value.size] then value.size else 0
 	return {
 		userId = value.userId,
-		name = if type(value.name) == "string" then string.sub(value.name, 1, 40) else "Jugador",
+		name = if type(value.name) == "string" then string.sub(value.name, 1, 40) else "Player",
 		sword = value.sword,
 		metal = metal,
 		size = size,
@@ -142,7 +144,7 @@ local function build(map: Instance)
 	gui.MaxDistance = 320
 	gui.Parent = board
 	local title = line(gui, 0, 0.36, WHITE)
-	title.Text = "MEJOR TIRADA"
+	Tell.world(title, "BEST ROLL")
 	local shine = Instance.new("UIGradient")
 	shine.Rotation = 90
 	shine.Color = ColorSequence.new(WHITE, Color3.fromRGB(196, 170, 255))
@@ -236,15 +238,15 @@ local function render()
 	folder:ClearAllChildren()
 	local record = best
 	if not record then
-		lines.odds.Text = "Nadie todavía"
-		lines.weapon.Text = "¡Rompe objetos y sé el primero!"
+		Tell.world(lines.odds, "Nobody yet")
+		Tell.world(lines.weapon, "Break objects and be the first!")
 		lines.weapon.TextColor3 = WHITE
 		lines.player.Text = ""
 		return
 	end
 	local sword = Config.Swords[record.sword]
-	lines.odds.Text = `1 entre {Format.short(record.rarity)}`
-	lines.weapon.Text = Permanent.name(record.sword, record.metal, record.size)
+	Tell.world(lines.odds, "1 in {n}", { n = record.rarity })
+	Tell.world(lines.weapon, "{weapon}", { weapon = { weapon = { record.sword, record.metal, record.size } } })
 	lines.weapon.TextColor3 = if record.metal > 0 then Config.Metals[record.metal].color else sword.color
 	lines.player.Text = "@" .. record.name
 	-- El cartel sube con las armas muy largas (una Titánica mide más del doble) para no taparlas.
@@ -312,7 +314,13 @@ function BestRoll.submit(player: Player, sword: number, metal: number?, size: nu
 	task.spawn(save, record)
 	-- Al principio cualquier arma bate el récord: solo es noticia si de verdad es rara.
 	if record.rarity >= Config.Gacha.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} tiene la MEJOR TIRADA de la historia! {Permanent.name(sword, metal, size)} · 1 entre {Format.short(record.rarity)}`, Color3.fromRGB(255, 226, 70))
+		Tell.all(Color3.fromRGB(255, 226, 70), function(reader)
+			return Lang.t(reader, "{player} has the BEST ROLL ever! {weapon} · 1 in {n}", {
+				player = player.DisplayName,
+				weapon = Permanent.name(sword, metal, size, reader),
+				n = Format.short(record.rarity, reader),
+			})
+		end)
 	end
 end
 

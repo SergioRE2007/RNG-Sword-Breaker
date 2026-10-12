@@ -12,6 +12,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
+local Tell = require(script.Parent.Tell)
 
 local Leaderboards = {}
 
@@ -30,7 +31,7 @@ end
 local METRICS = {
 	{
 		key = "playTime",
-		title = "Tiempo jugado",
+		title = "Time played",
 		color = Color3.fromRGB(80, 190, 255),
 		glyph = "T",
 		store = "LB_PlayTime",
@@ -43,7 +44,7 @@ local METRICS = {
 	},
 	{
 		key = "totalCoins",
-		title = "Dinero ganado",
+		title = "Coins earned",
 		color = Color3.fromRGB(255, 200, 60),
 		glyph = "$",
 		-- A los lados, el logo de las monedas del juego (el mismo id que Ui.IMAGES.monedas, que es del cliente; pedido por
@@ -63,7 +64,7 @@ local METRICS = {
 	},
 	{
 		key = "robuxSpent",
-		title = "Robux gastados",
+		title = "Robux spent",
 		color = Color3.fromRGB(120, 230, 120),
 		glyph = "R$",
 		store = "LB_Robux",
@@ -312,7 +313,7 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 	bannerGradient.Parent = bannerBack
 	local title = label(bannerBack, 88, CREAM)
 	title.Size = UDim2.fromScale(1, 1)
-	title.Text = metric.title
+	Tell.world(title, metric.title)
 	title.TextScaled = true
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = 88
@@ -406,7 +407,7 @@ local function nameOf(userId: number): string
 		return names[userId]
 	end
 	local ok, name = pcall(Players.GetNameFromUserIdAsync, Players, userId)
-	names[userId] = if ok then name else "Jugador"
+	names[userId] = if ok then name else "Player"
 	return names[userId]
 end
 

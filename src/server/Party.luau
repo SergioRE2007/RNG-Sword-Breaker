@@ -19,6 +19,8 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local DungeonLobby = require(script.Parent.DungeonLobby)
 local Dungeons = require(script.Parent.Dungeons)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Party = {}
 
@@ -35,10 +37,9 @@ local invites: { [Player]: { [Player]: number } } = {} -- invitado -> líder -> 
 local lastAction: { [Player]: number } = {}
 local nextId = 0
 
-local function notice(player: Player?, text: string, color: Color3?)
-	if player and player.Parent then
-		Remotes.Notice:FireClient(player, text, color or RED)
-	end
+-- `text` es la frase en inglés (con sus huecos en `args`) o una función (lector) -> texto: ver server/Tell.
+local function notice(player: Player?, text: any, color: Color3?, args: { [string]: any }?)
+	Tell.notice(player, color or RED, text, args)
 end
 
 local function memberOf(party, player: Player)
@@ -77,16 +78,19 @@ local function nearRoom(player: Player, zone: number): boolean
 end
 
 -- ¿Puede este jugador jugar esa zona ahora? (no está ya en una partida, está vivo y le llega lo que pida la zona)
-local function canPlay(player: Player, zone: number): (boolean, string?)
+-- El motivo es la frase en inglés o una función (lector) -> texto, para que cada uno lo lea en su idioma.
+local function canPlay(player: Player, zone: number): (boolean, any)
 	if Dungeons.isBusy(player) then
-		return false, "Ya estás en una mazmorra."
+		return false, "You're already in a dungeon."
 	end
 	if not liveRoot(player) then
-		return false, "No puedes entrar ahora mismo."
+		return false, "You can't enter right now."
 	end
-	local lock = DungeonInfo.lock(zone, Stats.damage(player))
-	if lock then
-		return false, lock
+	local damage = Stats.damage(player)
+	if DungeonInfo.lock(zone, damage) then
+		return false, function(reader)
+			return DungeonInfo.lock(zone, damage, reader)
+		end
 	end
 	return true, nil
 end
@@ -231,7 +235,7 @@ local function removeMember(party, member)
 		return
 	end
 	if member.player and party.leader.player then
-		notice(party.leader.player, `{member.name} ha dejado el grupo.`, Color3.fromRGB(230, 230, 240))
+		notice(party.leader.player, "{name} left the party.", Color3.fromRGB(230, 230, 240), { name = member.name })
 	end
 	touch(party)
 	pushAll()
@@ -275,20 +279,25 @@ end
 -- Inicio ------------------------------------------------------------------------------------------------------------
 
 -- Por qué no se puede iniciar (texto), o nil si se puede.
-local function startProblem(party): string?
+local function startProblem(party): any
 	local size = #party.members
 	if size < cfg.MinSize or size > cfg.MaxSize then
-		return "El grupo no tiene el tamaño adecuado."
+		return "The party isn't the right size."
 	end
 	for _, member in party.members do
 		if member.player then
 			local ok, reason = canPlay(member.player, party.dungeon)
 			if not ok then
-				return `{member.name}: {reason}`
+				return function(reader)
+					return `{member.name}: {Tell.text(reader, reason)}`
+				end
 			end
 			if not member.ready and member ~= party.leader then
-				return `Falta que {member.name} marque Listo.`
-			end		end
+				return function(reader)
+					return Lang.t(reader, "{name} still has to press Ready.", { name = member.name })
+				end
+			end
+		end
 	end
 	return nil
 end
@@ -327,7 +336,7 @@ local function launchParty(party)
 	if not run and parties[party.id] == party and party.state == "running" then
 		party.state = "lobby"
 		resetReady(party)
-		notice(party.leader.player, "No se ha podido empezar la mazmorra. Inténtalo de nuevo.")
+		notice(party.leader.player, "The dungeon couldn't start. Try again.")
 		for _, member in party.members do
 			if member.player then
 				viewing[member.player] = party.dungeon
@@ -384,7 +393,7 @@ HANDLERS.create = function(player, zoneArg)
 	end
 	local ok, reason = canPlay(player, zone)
 	if not ok then
-		notice(player, reason or "No puedes entrar.")
+		notice(player, reason or "You can't enter.")
 		return
 	end
 	createParty(player, zone, true)
@@ -399,7 +408,7 @@ HANDLERS.solo = function(player, zoneArg)
 	end
 	local ok, reason = canPlay(player, zone)
 	if not ok then
-		notice(player, reason or "No puedes entrar.")
+		notice(player, reason or "You can't enter.")
 		return
 	end
 	local party = createParty(player, zone, false)
@@ -418,11 +427,11 @@ HANDLERS.join = function(player, idArg)
 	local leaderPlayer = party.leader.player
 	local invited = leaderPlayer ~= nil and invites[player] ~= nil and (invites[player][leaderPlayer] or 0) > os.clock()
 	if not party.options.public and not invited then
-		notice(player, "Es un grupo privado: hace falta invitación.")
+		notice(player, "It's a private party: you need an invite.")
 		return
 	end
 	if #party.members >= cfg.MaxSize then
-		notice(player, "El grupo está lleno.")
+		notice(player, "The party is full.")
 		return
 	end
 	if not nearRoom(player, party.dungeon) then
@@ -430,7 +439,7 @@ HANDLERS.join = function(player, idArg)
 	end
 	local ok, reason = canPlay(player, party.dungeon)
 	if not ok then
-		notice(player, reason or "No puedes entrar.")
+		notice(player, reason or "You can't enter.")
 		return
 	end
 	table.insert(party.members, { player = player, userId = player.UserId, name = player.DisplayName, ready = false })
@@ -440,7 +449,7 @@ HANDLERS.join = function(player, idArg)
 	cancelCountdown(party)
 	resetReady(party)
 	touch(party)
-	notice(leaderPlayer, `{player.DisplayName} se ha unido al grupo.`, GREEN)
+	notice(leaderPlayer, "{name} joined the party.", GREEN, { name = player.DisplayName })
 	pushAll()
 end
 
@@ -479,7 +488,7 @@ HANDLERS.ready = function(player, value)
 	if want then
 		local ok, reason = canPlay(player, party.dungeon)
 		if not ok then
-			notice(player, reason or "No puedes entrar.")
+			notice(player, reason or "You can't enter.")
 			return
 		end
 	end
@@ -499,9 +508,11 @@ HANDLERS.dungeon = function(player, zoneArg)
 	end
 	for _, member in party.members do
 		if member.player then
-			local lock = DungeonInfo.lock(zone, Stats.damage(member.player))
-			if lock then
-				notice(player, `{member.name}: {lock}`)
+			local damage = Stats.damage(member.player)
+			if DungeonInfo.lock(zone, damage) then
+				notice(player, function(reader)
+					return `{member.name}: {DungeonInfo.lock(zone, damage, reader)}`
+				end)
 				return
 			end
 		end
@@ -540,7 +551,7 @@ HANDLERS.kick = function(player, userId)
 	end
 	for _, member in party.members do
 		if member.userId == userId and member ~= party.leader then
-			notice(member.player, "Te han echado del grupo.")
+			notice(member.player, "You were kicked from the party.")
 			removeMember(party, member)
 			return
 		end
@@ -553,7 +564,7 @@ HANDLERS.invite = function(player, userId)
 		return
 	end
 	if #party.members >= cfg.MaxSize then
-		notice(player, "El grupo está lleno.")
+		notice(player, "The party is full.")
 		return
 	end
 	local target = Players:GetPlayerByUserId(userId)
@@ -567,7 +578,7 @@ HANDLERS.invite = function(player, userId)
 	end
 	invites[target][player] = now + cfg.InviteTime
 	Remotes.PartyInvite:FireClient(target, player.UserId, player.DisplayName, party.dungeon)
-	notice(player, `Invitación enviada a {target.DisplayName}.`, GREEN)
+	notice(player, "Invite sent to {name}.", GREEN, { name = target.DisplayName })
 end
 
 HANDLERS.respond = function(player, leaderId, accept)
@@ -582,26 +593,26 @@ HANDLERS.respond = function(player, leaderId, accept)
 	end
 	pending[leader] = nil
 	if accept ~= true then
-		notice(leader, `{player.DisplayName} ha rechazado la invitación.`, Color3.fromRGB(230, 230, 240))
+		notice(leader, "{name} declined the invite.", Color3.fromRGB(230, 230, 240), { name = player.DisplayName })
 		return
 	end
 	if expires < os.clock() then
-		notice(player, "La invitación ha caducado.")
+		notice(player, "The invite has expired.")
 		return
 	end
 	freeIfOut(player)
 	local party = partyOf[leader]
 	if partyOf[player] or not party or party.state ~= "lobby" or party.leader.player ~= leader then
-		notice(player, "Ese grupo ya no está abierto.")
+		notice(player, "That party is no longer open.")
 		return
 	end
 	if #party.members >= cfg.MaxSize then
-		notice(player, "El grupo está lleno.")
+		notice(player, "The party is full.")
 		return
 	end
 	local ok, reason = canPlay(player, party.dungeon)
 	if not ok then
-		notice(player, reason or "No puedes entrar.")
+		notice(player, reason or "You can't enter.")
 		return
 	end
 	-- Si está lejos de la sala, se le lleva a ella.
@@ -618,7 +629,7 @@ HANDLERS.respond = function(player, leaderId, accept)
 	cancelCountdown(party)
 	resetReady(party)
 	touch(party)
-	notice(leader, `{player.DisplayName} se ha unido al grupo.`, GREEN)
+	notice(leader, "{name} joined the party.", GREEN, { name = player.DisplayName })
 	pushAll()
 end
 
@@ -704,7 +715,7 @@ function Party.start()
 			local now = os.clock()
 			for _, party in table.clone(parties) do
 				if party.state == "lobby" and now - party.activeAt > cfg.WaitTimeout then
-					disband(party, "El grupo se ha deshecho por esperar demasiado.")
+					disband(party, "The party was disbanded for waiting too long.")
 				elseif party.state == "running" and now - (party.startedAt or now) > 10 then
 					-- Quien ya no está en la partida (murió o salió) deja el grupo; hace falta verlo dos veces seguidas
 					-- para no confundirlo con el instante en que "repetir" pasa a los vivos a la arena nueva.

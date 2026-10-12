@@ -15,6 +15,8 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 local StallSkin = require(script.Parent.StallSkin)
 local Stations = require(script.Parent.Stations)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local ModifierShops = {}
 
@@ -101,8 +103,10 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 	-- El aviso cuenta la probabilidad real, con la suerte de la poción.
 	local odds = Modifiers.odds(kind, index, luck)
 	if odds >= Config.AnnounceOdds then
-		local what = if kind == "traits" then "el rasgo" else "el grado"
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha sacado {what} {entry.name} (1 entre {Format.short(odds)})!`, entry.color)
+		local text = if kind == "traits" then "{player} rolled the {name} trait (1 in {n})!" else "{player} rolled the {name} grade (1 in {n})!"
+		Tell.all(entry.color, function(reader)
+			return Lang.t(reader, text, { player = player.DisplayName, name = Lang.t(reader, entry.name), n = Format.short(odds, reader) })
+		end)
 	end
 end
 
@@ -146,7 +150,7 @@ local function addSignAndPrompt(counter: Part, kind: string, shopTitle: string, 
 	label.Font = Enum.Font.FredokaOne
 	label.TextSize = 40
 	label.TextColor3 = Color3.new(1, 1, 1)
-	label.Text = string.upper(shopTitle)
+	Tell.world(label, shopTitle, nil, true)
 	label.Parent = gui
 	local outline = Instance.new("UIStroke")
 	outline.Color = Color3.new(0, 0, 0)
@@ -170,8 +174,7 @@ local function addSignAndPrompt(counter: Part, kind: string, shopTitle: string, 
 		return
 	end
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Abrir"
-	prompt.ObjectText = shopTitle
+	Tell.prompt(prompt, "Open", shopTitle)
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 14
 	prompt.RequiresLineOfSight = false

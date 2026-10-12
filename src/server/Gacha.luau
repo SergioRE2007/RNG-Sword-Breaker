@@ -14,6 +14,8 @@ local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
 local BestRoll = require(script.Parent.BestRoll)
 local Index = require(script.Parent.Index)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Gacha = {}
 
@@ -35,7 +37,13 @@ local function broadcast(player: Player, entry)
 		Remotes.GachaAura:FireAllClients(player, entry.index, entry.odds)
 	end
 	if entry.odds >= Config.Gacha.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡{player.DisplayName} ha conseguido {Permanent.name(entry.index, entry.metal, entry.size)} ({Permanent.describeOdds(entry.index, entry.metal, entry.size)})!`, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color)
+		Tell.all(if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color, function(reader)
+			return Lang.t(reader, "{player} got {weapon} ({odds})!", {
+				player = player.DisplayName,
+				weapon = Permanent.name(entry.index, entry.metal, entry.size, reader),
+				odds = Permanent.describeOdds(entry.index, entry.metal, entry.size, reader),
+			})
+		end)
 	end
 end
 
@@ -66,7 +74,7 @@ local function warnFull(player: Player)
 		return
 	end
 	fullNotice[player] = now
-	Remotes.Notice:FireClient(player, "Mochila llena: las peores armas se venden solas.", Color3.fromRGB(255, 170, 60))
+	Tell.notice(player, Color3.fromRGB(255, 170, 60), "Backpack full: your worst weapons are sold automatically.")
 end
 
 -- Saca una espada con la suerte `boost` del objeto que da la tirada (1 si no hay) por la suerte de armas propia
@@ -298,7 +306,7 @@ local function onSellMany(player: Player, ids: unknown)
 		edited.gems += sold * Config.Gacha.SellValue
 	end)
 	if sold > 0 then
-		Remotes.Notice:FireClient(player, `Vendidas {sold} armas · +{Format.short(sold * Config.Gacha.SellValue)} gemas`, Config.RarityTiers[1].color)
+		Tell.notice(player, Config.RarityTiers[1].color, "Sold {n} weapons · +{gems} gems", { n = sold, gems = Format.short(sold * Config.Gacha.SellValue, player) })
 	end
 end
 

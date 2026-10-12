@@ -13,6 +13,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerData = require(script.Parent.PlayerData)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Codes = {}
 
@@ -84,16 +86,16 @@ local function give(player: Player, rewards): string
 	for _, reward in rewards do
 		if reward.coins then
 			PlayerData.addCoins(player, reward.coins)
-			table.insert(parts, `{Format.short(reward.coins)} monedas`)
+			table.insert(parts, Lang.t(player, "{n} coins", { n = Format.short(reward.coins, player) }))
 		elseif reward.gems then
 			PlayerData.addGems(player, reward.gems)
-			table.insert(parts, `{Format.short(reward.gems)} gemas`)
+			table.insert(parts, Lang.t(player, "{n} gems", { n = Format.short(reward.gems, player) }))
 		elseif reward.item and Config.Items[reward.item] then
 			local amount = reward.amount or 1
 			PlayerData.edit(player, function(edited)
 				edited.items[reward.item] += amount
 			end)
-			table.insert(parts, `{Format.short(amount)} {Config.Items[reward.item].name}`)
+			table.insert(parts, `{Format.short(amount, player)} {Lang.t(player, Config.Items[reward.item].name)}`)
 		end
 	end
 	return table.concat(parts, ", ")
@@ -112,16 +114,16 @@ local function onRedeem(player: Player, text: unknown)
 		return
 	end
 	if not code then
-		Remotes.Notice:FireClient(player, "Ese código no existe", BAD)
+		Tell.notice(player, BAD, "That code doesn't exist")
 		return
 	end
 	if data.codes[key] then
-		Remotes.Notice:FireClient(player, "Ya has usado ese código", BAD)
+		Tell.notice(player, BAD, "You already used that code")
 		return
 	end
 	local expiry = Codes.expiry(code)
 	if expiry and os.time() >= expiry then
-		Remotes.Notice:FireClient(player, "Ese código ha caducado", BAD)
+		Tell.notice(player, BAD, "That code has expired")
 		return
 	end
 	if code.maxUses then
@@ -133,10 +135,10 @@ local function onRedeem(player: Player, text: unknown)
 			return
 		end
 		if taken == nil then
-			Remotes.Notice:FireClient(player, "No se ha podido comprobar el código: prueba otra vez", BAD)
+			Tell.notice(player, BAD, "Couldn't check the code: try again")
 			return
 		elseif not taken then
-			Remotes.Notice:FireClient(player, "Ese código ya no tiene usos", BAD)
+			Tell.notice(player, BAD, "That code has no uses left")
 			return
 		end
 	end
@@ -144,7 +146,7 @@ local function onRedeem(player: Player, text: unknown)
 		edited.codes[key] = true
 	end)
 	local got = give(player, code.rewards)
-	Remotes.Notice:FireClient(player, `¡Código canjeado! +{got}`, GOOD)
+	Tell.notice(player, GOOD, "Code redeemed! +{got}", { got = got })
 	task.spawn(PlayerData.save, player) -- que no se pierda el canje si el servidor se cae
 end
 

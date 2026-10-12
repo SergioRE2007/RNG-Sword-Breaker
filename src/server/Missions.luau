@@ -11,6 +11,7 @@ local MissionList = require(ReplicatedStorage.Shared.MissionList)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerData = require(script.Parent.PlayerData)
 local ModifierShops = require(script.Parent.ModifierShops)
+local Tell = require(script.Parent.Tell)
 
 local Missions = {}
 
@@ -94,7 +95,7 @@ local function onClaim(player: Player, period: unknown, id: unknown)
 				edited.items[TOKEN] += mission.reward
 			end)
 			publish(player)
-			Remotes.Notice:FireClient(player, `+{mission.reward} {Config.Items[TOKEN].name}{if mission.reward == 1 then "" else "s"}`, GOLD)
+			Tell.notice(player, GOLD, if mission.reward == 1 then "+{n} Ticket" else "+{n} Tickets", { n = mission.reward })
 			return
 		end
 	end
@@ -145,7 +146,7 @@ function Missions.start()
 		Color3.fromRGB(255, 190, 40),
 		Color3.fromRGB(60, 200, 110),
 		Color3.fromRGB(245, 245, 250),
-	}, "Misiones", true)
+	}, "Missions", true)
 end
 
 return Missions

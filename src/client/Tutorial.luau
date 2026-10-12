@@ -18,6 +18,7 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Tutorial = {}
 
@@ -82,7 +83,7 @@ local function build()
 	skip.Size = UDim2.fromOffset(30, 26)
 	skip.TextSize = 16
 	Ui.tip(skip, function()
-		return "Saltar el tutorial (sin premio)", Ui.COLORS.red
+		return Lang.t(nil, "Skip the tutorial (no reward)"), Ui.COLORS.red
 	end, true)
 	-- Dos toques: el primero avisa.
 	local asked = 0
@@ -91,7 +92,7 @@ local function build()
 			Remotes.TutorialSkip:FireServer()
 		else
 			asked = os.clock()
-			Ui.toast("Pulsa otra vez la X para saltar el tutorial (sin premio)", Ui.COLORS.orange)
+			Ui.toast(Lang.t(nil, "Press the X again to skip the tutorial (no reward)"), Ui.COLORS.orange)
 		end
 	end)
 
@@ -291,7 +292,7 @@ local function refresh()
 	end
 	frame.Visible = true
 	refs.title.Text = `Tutorial {index}/{#cfg.Steps}`
-	refs.text.Text = info.text
+	refs.text.Text = Lang.t(nil, info.text)
 	local goal = info.goal or 1
 	local counted = goal > 1
 	refs.track.Visible = counted

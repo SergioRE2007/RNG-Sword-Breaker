@@ -13,6 +13,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local IndexInfo = require(ReplicatedStorage.Shared.IndexInfo)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local PlayerData = {}
 
@@ -24,7 +25,7 @@ local function getStore()
 	if store == nil then
 		store = false
 		if game.PlaceId == 0 then
-			warn("[PlayerData] Lugar sin publicar: el progreso no se guardará.")
+			warn("[PlayerData] Unpublished place: progress will not be saved.")
 		else
 			local ok, result = pcall(function()
 				return DataStoreService:GetDataStore(Config.DataStoreName)
@@ -32,7 +33,7 @@ local function getStore()
 			if ok then
 				store = result
 			else
-				warn("[PlayerData] DataStore no disponible: " .. tostring(result))
+				warn("[PlayerData] DataStore not available: " .. tostring(result))
 			end
 		end
 	end
@@ -44,8 +45,8 @@ end
 -- guardado y se quita en el guardado de salida; todo con UpdateAsync, que lee y escribe de una vez. Sin él, quien sale y
 -- entra deprisa en otro servidor podía cargar lo de antes del último guardado (por ejemplo, de antes de un trato).
 local LOCK = Config.SessionLock
-local BUSY_MESSAGE = "Tu partida todavía se está guardando en otro servidor. Vuelve a entrar en un par de minutos."
-local STOLEN_MESSAGE = "Tu partida se ha abierto en otro servidor."
+local BUSY_MESSAGE = "Your game is still being saved on another server. Come back in a couple of minutes."
+local STOLEN_MESSAGE = "Your game has been opened on another server."
 local closing = 0 -- guardados de salida en marcha (BindToClose espera a que acaben)
 
 local function lockOf(saved)
@@ -128,8 +129,8 @@ local function fetch(player: Player, ds)
 		end
 		if waited >= LOCK.Wait or not player.Parent then
 			if player.Parent then
-				warn(`[PlayerData] La partida de {player.Name} sigue abierta en otro servidor: no se carga.`)
-				player:Kick(BUSY_MESSAGE)
+				warn(`[PlayerData] The save of {player.Name} is still open on another server: not loaded.`)
+				player:Kick(Lang.t(player, BUSY_MESSAGE))
 			end
 			return nil, nil, nil
 		end
@@ -197,7 +198,7 @@ local function publish(player: Player)
 	end
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
-		leaderstats.Monedas.Value = math.floor(data.coins)
+		leaderstats.Coins.Value = math.floor(data.coins)
 	end
 end
 
@@ -577,7 +578,7 @@ local function load(player: Player)
 			end
 		else
 			-- Si la carga falla no guardamos después, para no pisar el progreso real.
-			warn(`[PlayerData] No se pudo cargar a {player.Name}: {saved}`)
+			warn(`[PlayerData] Could not load {player.Name}: {saved}`)
 		end
 	end
 
@@ -647,7 +648,7 @@ local function load(player: Player)
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	local coins = Instance.new("NumberValue") -- un IntValue se desborda con cantidades enormes
-	coins.Name = "Monedas"
+	coins.Name = "Coins"
 	coins.Parent = leaderstats
 	leaderstats.Parent = player
 
@@ -702,14 +703,14 @@ local function save(player: Player, final: boolean?)
 			-- Un guardado normal que llega cuando el de salida ya ha soltado el candado no es un robo: se ignora.
 			if not session.closing or final then
 				session.canSave = false
-				warn(`[PlayerData] La partida de {player.Name} se abrió en otro servidor: no se guarda la de este.`)
+				warn(`[PlayerData] The save of {player.Name} was opened on another server: this one is not saved.`)
 				if player.Parent then
-					player:Kick(STOLEN_MESSAGE)
+					player:Kick(Lang.t(player, STOLEN_MESSAGE))
 				end
 			end
 			break
 		end
-		warn(`[PlayerData] No se pudo guardar a {player.Name}: {err}`)
+		warn(`[PlayerData] Could not save {player.Name}: {err}`)
 		if final and try < LOCK.SaveTries then
 			task.wait(LOCK.Retry)
 		end

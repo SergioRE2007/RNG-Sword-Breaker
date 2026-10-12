@@ -17,6 +17,8 @@ local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local PlayerData = require(script.Parent.PlayerData)
 local Hitbox = require(ReplicatedStorage.Shared.Hitbox)
 local Plots = require(script.Parent.Plots)
+local Lang = require(ReplicatedStorage.Shared.Lang)
+local Tell = require(script.Parent.Tell)
 
 local Destructibles = {}
 
@@ -80,12 +82,12 @@ local function findPosition(plot, radius: number, height: number): Vector3?
 end
 
 -- "Cristal (Legendaria, Enorme)": el objeto con lo que tiene de especial.
-local function describe(def, spec): string
-	local parts = { ObjectSpec.rarity(spec.quality).name }
+local function describe(def, spec, reader: Player): string
+	local parts = { Lang.t(reader, ObjectSpec.rarity(spec.quality).name) }
 	if spec.size > 1 then
-		table.insert(parts, ObjectSpec.size(spec.size).name)
+		table.insert(parts, Lang.t(reader, ObjectSpec.size(spec.size).name))
 	end
-	return `{def.name} ({table.concat(parts, ", ")})`
+	return `{Lang.t(reader, def.name)} ({table.concat(parts, ", ")})`
 end
 
 -- Lo que le toca a un objeto nuevo de esa parcela: tipo (suerte de parcela), rareza y tamaño (ObjectSpec).
@@ -169,12 +171,17 @@ local function spawnIn(plot)
 	-- objeto, aunque sea raro por su tipo y por su rareza a la vez.
 	local rarity = ObjectSpec.rarity(spec.quality)
 	if spec.odds >= Config.ObjectRolls.NoticeOdds then
-		Remotes.Notice:FireClient(owner, `¡Te ha aparecido {describe(def, spec)}!`, rarity.color)
+		Tell.notice(owner, rarity.color, "{object} appeared on your plot!", { object = describe(def, spec, owner) })
 	end
 	if spec.odds >= Config.ObjectRolls.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡A {owner.DisplayName} le ha aparecido {describe(def, spec)}!`, rarity.color)
+		Tell.all(rarity.color, function(reader)
+			return Lang.t(reader, "{object} appeared on {player}'s plot!", { player = owner.DisplayName, object = describe(def, spec, reader) })
+		end)
 	elseif spec.typeOdds >= Config.AnnounceOdds then
-		Remotes.Announce:FireAllClients(`¡A {owner.DisplayName} le ha aparecido {def.name} (1 entre {Format.short(spec.typeOdds)})!`, def.color)
+		Tell.all(def.color, function(reader)
+			local odds = Lang.t(reader, "1 in {n}", { n = Format.short(spec.typeOdds, reader) })
+			return Lang.t(reader, "{object} appeared on {player}'s plot!", { player = owner.DisplayName, object = `{Lang.t(reader, def.name)} ({odds})` })
+		end)
 	end
 end
 
