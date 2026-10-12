@@ -3,7 +3,9 @@
 -- ni el botón ni la ventana, y aunque alguien se la fabricara, el servidor comprueba cada orden.
 -- La ventana `Hud.Admin` lleva un panel por pestaña (como la mochila): `TabWeather` y `Body.Weather`, y los de
 -- client/AdminTools (`TabPlayers` y `TabServer`: regalar, ir, traer, echar y avisar) y el de client/AdminWeapons
--- (`TabWeapons`: dar armas a medida). Un
+-- (`TabWeapons`: dar armas a medida) y el de client/AdminEvents (`TabEvents`: mensaje grande y eventos). Debajo de
+-- las pestañas, el botón `Hud.Admin.Scope` elige si lo que vale para todos (clima, regalos a todos, avisos, mensaje
+-- grande, eventos) va a este servidor o a todos los del juego (client/AdminScope). Un
 -- panel nuevo = una entrada en PANELS con su función, que recibe el marco donde montarse. El botón es pequeño y va
 -- arriba a la derecha, junto al de Ajustes: `Hud.HudRoot.TopButtons.Admin`.
 -- Panel del clima: una casilla por clima de Config.Weather (pulsarla lo pone ya en este servidor, para todos y con
@@ -22,6 +24,8 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local WeatherInfo = require(ReplicatedStorage.Shared.WeatherInfo)
 local Performance = require(script.Parent.Performance)
 local Ui = require(script.Parent.Ui)
+local AdminEvents = require(script.Parent.AdminEvents)
+local AdminScope = require(script.Parent.AdminScope)
 local AdminTools = require(script.Parent.AdminTools)
 local AdminWeapons = require(script.Parent.AdminWeapons)
 local WeatherHud = require(script.Parent.WeatherHud)
@@ -140,7 +144,7 @@ local function weatherPanel(pane: Frame, window: Frame)
 			return table.concat(lines, "\n"), def.color
 		end, true)
 		cell.Activated:Connect(function()
-			Remotes.AdminWeather:FireServer(id)
+			AdminScope.weather(id)
 		end)
 	end
 
@@ -158,7 +162,7 @@ local function weatherPanel(pane: Frame, window: Frame)
 		button.Size = UDim2.new(0.5, -GAP / 2, 1, 0)
 		button.TextSize = 20
 		button.Activated:Connect(function()
-			Remotes.AdminWeather:FireServer(send)
+			AdminScope.weather(send)
 		end)
 	end
 	action("Clear", Lang.t(nil, "Clear the sky"), Ui.COLORS.blue, 0, "none")
@@ -236,6 +240,13 @@ local PANELS = {
 		end,
 		build = AdminTools.server,
 	},
+	{
+		key = "Events", name = Lang.t(nil, "Events"), color = Color3.fromRGB(70, 180, 120),
+		icon = function(parent: Frame)
+			Ui.image(parent, "trebol")
+		end,
+		build = AdminEvents.build,
+	},
 }
 
 local function build()
@@ -303,6 +314,36 @@ local function build()
 		end)
 	end
 	show(PANELS[1].key)
+
+	-- A qué servidores van las órdenes para todos: gris = este, rojo = todos los del juego.
+	local scope = Ui.button(window, "", Ui.COLORS.gray)
+	scope.Name = "Scope"
+	scope.Position = UDim2.fromOffset(TAB_X, TAB.Y + #PANELS * TAB_STEP + 8)
+	scope.Size = UDim2.fromOffset(TAB.X, TAB.Y)
+	scope.TextWrapped = true
+	scope.TextScaled = true
+	local scopeLimit = Instance.new("UITextSizeConstraint")
+	scopeLimit.MaxTextSize = 16
+	scopeLimit.MinTextSize = 10
+	scopeLimit.Parent = scope
+	local scopePad = Instance.new("UIPadding")
+	scopePad.PaddingLeft = UDim.new(0, 6)
+	scopePad.PaddingRight = UDim.new(0, 6)
+	scopePad.PaddingTop = UDim.new(0, 6)
+	scopePad.PaddingBottom = UDim.new(0, 10)
+	scopePad.Parent = scope
+	local function paintScope()
+		scope.Text = Lang.t(nil, if AdminScope.all then "All servers" else "This server")
+		scope.BackgroundColor3 = if AdminScope.all then Ui.COLORS.red else Ui.COLORS.gray
+	end
+	scope.Activated:Connect(function()
+		AdminScope.set(not AdminScope.all)
+		paintScope()
+	end)
+	Ui.tip(scope, function()
+		return Lang.t(nil, if AdminScope.all then "Weather, gifts for everyone, messages and events go to <b>all servers</b>." else "Weather, gifts for everyone, messages and events stay on <b>this server</b>."), if AdminScope.all then Ui.COLORS.red else GOLD
+	end, true)
+	paintScope()
 
 	-- Botón pequeño arriba a la derecha, junto al de Ajustes y del mismo tamaño.
 	local button = Ui.button(Ui.topButtons(), "", Color3.fromRGB(196, 70, 86))

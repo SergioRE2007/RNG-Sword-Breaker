@@ -8,6 +8,12 @@
 --   "kick", userId                 echar a ese jugador del servidor
 --   "goto", userId / "bring", userId   ir junto a ese jugador / traerlo junto a mí
 --   "announce", texto              aviso a todo el servidor (pasa por el filtro de texto de Roblox)
+--   "banner", texto                mensaje grande arriba de la pantalla de todos (también filtrado)
+--   "boost", stat, multiplicador, minutos / "stopBoost", stat   evento de admin (server/AdminEvents)
+-- Con "all" delante (AdminCommand:FireServer("all", acción, ...)) la orden vale en todos los servidores del juego
+-- (server/Broadcast): "give" y "sword" con userId 0 (a todos los que estén jugando en ese momento), "announce",
+-- "banner", "boost", "stopBoost" y "weather" (un id de clima, "none" o "auto"). Cada servidor vuelve a comprobar
+-- lo que le llega.
 -- Lo regalado no cuenta como monedas ganadas (clasificaciones). Cada orden deja una línea en la consola del servidor.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +25,8 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Admin = require(script.Parent.Admin)
+local AdminEvents = require(script.Parent.AdminEvents)
+local Broadcast = require(script.Parent.Broadcast)
 local PlayerData = require(script.Parent.PlayerData)
 local Tell = require(script.Parent.Tell)
 
@@ -54,28 +62,17 @@ local function rootOf(player: Player): BasePart?
 	return character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
-local function give(admin: Player, userId: unknown, key: unknown, amount: unknown)
-	if type(amount) ~= "number" or amount ~= amount or amount < 1 then
-		return
-	end
+-- Entrega a esos jugadores (ya comprobado: validItems). Devuelve a cuántos.
+local function deliverItems(players: { Player }, key: string, count: number): number
 	local money = key == "coins" or key == "gems"
-	local count = math.min(math.floor(amount), if money then MAX_MONEY else MAX_ITEMS)
-	if not gift(key) then
-		return
-	end
-	local everyone = userId == 0
-	local one = target(userId)
-	if not everyone and not one then
-		return
-	end
 	local given = 0
-	for _, player in if everyone then Players:GetPlayers() else { one :: Player } do
+	for _, player in players do
 		if PlayerData.read(player) then
 			PlayerData.edit(player, function(data)
 				if money then
-					data[key :: string] += count
+					data[key] += count
 				else
-					data.items[key :: string] += count
+					data.items[key] += count
 				end
 			end)
 			given += 1
@@ -83,7 +80,36 @@ local function give(admin: Player, userId: unknown, key: unknown, amount: unknow
 			Tell.notice(player, color, "An admin gave you +{n} {item}", { n = Format.short(count, player), item = name })
 		end
 	end
+	return given
+end
+
+-- Clave y cantidad de un regalo, o nil si lo que llega no vale.
+local function validItems(key: unknown, amount: unknown): (string?, number?)
+	if type(amount) ~= "number" or amount ~= amount or amount < 1 or not gift(key) then
+		return nil, nil
+	end
+	local money = key == "coins" or key == "gems"
+	return key :: string, math.min(math.floor(amount), if money then MAX_MONEY else MAX_ITEMS)
+end
+
+local function give(admin: Player, userId: unknown, rawKey: unknown, amount: unknown, global: boolean)
+	local key, count = validItems(rawKey, amount)
+	if not key or not count then
+		return
+	end
+	local everyone = userId == 0
+	local one = target(userId)
+	if not everyone and not one then
+		return
+	end
 	local name = gift(key, admin)
+	if everyone and global then
+		Broadcast.send("give", { key = key, count = count })
+		Tell.notice(admin, GOLD, "Given on all servers: +{n} {item}", { n = Format.short(count, admin), item = name })
+		print(`[Admin] {admin.Name} gives {count} {key} to all servers`)
+		return
+	end
+	local given = deliverItems(if everyone then Players:GetPlayers() else { one :: Player }, key, count)
 	if everyone then
 		Tell.notice(admin, GOLD, "Given to everyone: +{n} {item}", { n = Format.short(count, admin), item = name })
 	elseif given > 0 then
@@ -103,24 +129,24 @@ local function index(value: unknown, list, optional: boolean): number?
 	return if list[value] then value else nil
 end
 
-local function giveSwords(admin: Player, userId: unknown, spec: unknown, amount: unknown)
+-- Arma a medida y cantidad, o nil si lo que llega no vale.
+local function validSwords(spec: unknown, amount: unknown)
 	if type(spec) ~= "table" or type(amount) ~= "number" or amount ~= amount or amount < 1 then
-		return
+		return nil, nil
 	end
 	local sword = index(spec.sword, Config.Swords, false)
 	local metal, size = index(spec.metal, Config.Metals, true), index(spec.size, Config.Sizes, true)
 	local trait, grade = index(spec.trait, Config.Traits, true), index(spec.grade, Config.Grades, true)
 	if not (sword and metal and size and trait and grade) then
-		return
+		return nil, nil
 	end
-	local count = math.min(math.floor(amount), MAX_SWORDS)
-	local everyone = userId == 0
-	local one = target(userId)
-	if not everyone and not one then
-		return
-	end
-	local given, short = 0, 0 -- jugadores que reciben alguna y a los que no les caben todas
-	for _, player in if everyone then Players:GetPlayers() else { one :: Player } do
+	return { sword = sword, metal = metal, size = size, trait = trait, grade = grade }, math.min(math.floor(amount), MAX_SWORDS)
+end
+
+-- Entrega a esos jugadores (ya comprobado: validSwords). Devuelve cuántos reciben alguna y a cuántos no les caben todas.
+local function deliverSwords(players: { Player }, spec, count: number): (number, number)
+	local given, short = 0, 0
+	for _, player in players do
 		if not PlayerData.read(player) then
 			continue
 		end
@@ -129,11 +155,11 @@ local function giveSwords(admin: Player, userId: unknown, spec: unknown, amount:
 			for _ = 1, math.min(count, Config.MaxSwords - #data.swords) do
 				table.insert(data.swords, {
 					id = data.nextSwordId,
-					sword = sword,
-					metal = if metal > 0 then metal else nil,
-					size = if size > 0 then size else nil,
-					trait = if trait > 0 then trait else nil,
-					grade = if grade > 0 then grade else nil,
+					sword = spec.sword,
+					metal = if spec.metal > 0 then spec.metal else nil,
+					size = if spec.size > 0 then spec.size else nil,
+					trait = if spec.trait > 0 then spec.trait else nil,
+					grade = if spec.grade > 0 then spec.grade else nil,
 				})
 				data.nextSwordId += 1
 				added += 1
@@ -144,10 +170,31 @@ local function giveSwords(admin: Player, userId: unknown, spec: unknown, amount:
 		end
 		if added > 0 then
 			given += 1
-			Tell.notice(player, GOLD, "An admin gave you {n} x {weapon}", { n = added, weapon = Permanent.name(sword, metal, size, player) })
+			Tell.notice(player, GOLD, "An admin gave you {n} x {weapon}", { n = added, weapon = Permanent.name(spec.sword, spec.metal, spec.size, player) })
 		end
 	end
-	local name = Permanent.name(sword, metal, size, admin)
+	return given, short
+end
+
+local function giveSwords(admin: Player, userId: unknown, rawSpec: unknown, amount: unknown, global: boolean)
+	local spec, count = validSwords(rawSpec, amount)
+	if not spec or not count then
+		return
+	end
+	local everyone = userId == 0
+	local one = target(userId)
+	if not everyone and not one then
+		return
+	end
+	local name = Permanent.name(spec.sword, spec.metal, spec.size, admin)
+	local log = `sword {spec.sword} (metal {spec.metal}, size {spec.size}, trait {spec.trait}, grade {spec.grade})`
+	if everyone and global then
+		Broadcast.send("sword", { spec = spec, count = count })
+		Tell.notice(admin, GOLD, "Given on all servers: {n} x {weapon}", { n = count, weapon = name })
+		print(`[Admin] {admin.Name} gives {count} x {log} to all servers`)
+		return
+	end
+	local given, short = deliverSwords(if everyone then Players:GetPlayers() else { one :: Player }, spec, count)
 	if given == 0 then
 		Tell.notice(admin, BAD, "No room in the backpack for more weapons")
 	elseif everyone then
@@ -158,7 +205,7 @@ local function giveSwords(admin: Player, userId: unknown, spec: unknown, amount:
 	if given > 0 and short > 0 then
 		Tell.notice(admin, BAD, "Some didn't fit: the backpack holds {n} weapons", { n = Config.MaxSwords })
 	end
-	print(`[Admin] {admin.Name} gives {count} x sword {sword} (metal {metal}, size {size}, trait {trait}, grade {grade}) to {if everyone then "everyone" else (one :: Player).Name}`)
+	print(`[Admin] {admin.Name} gives {count} x {log} to {if everyone then "everyone" else (one :: Player).Name}`)
 end
 
 local function kick(admin: Player, userId: unknown)
@@ -188,36 +235,98 @@ local function move(admin: Player, mover: Player, anchor: Player)
 	end
 end
 
-local function announce(admin: Player, text: unknown)
+-- Texto escrito por un administrador que van a leer otros: recortado y pasado por el filtro de Roblox. nil si se
+-- queda vacío o no se puede filtrar (y se le avisa).
+local function clean(admin: Player, text: unknown, limit: number): string?
 	if type(text) ~= "string" then
-		return
+		return nil
 	end
-	local clean = string.sub((string.gsub(text, "[%c<>]", " ")), 1, MAX_TEXT)
-	if string.match(clean, "^%s*$") then
-		return
+	local short = string.sub((string.gsub(text, "[%c<>]", " ")), 1, limit)
+	if string.match(short, "^%s*$") then
+		return nil
 	end
-	-- Texto escrito por una persona que van a leer otras: tiene que pasar por el filtro de Roblox.
 	local ok, filtered = pcall(function()
-		return TextService:FilterStringAsync(clean, admin.UserId):GetNonChatStringForBroadcastAsync()
+		return TextService:FilterStringAsync(short, admin.UserId):GetNonChatStringForBroadcastAsync()
 	end)
 	if not ok or type(filtered) ~= "string" then
 		Tell.notice(admin, BAD, "The message couldn't be sent")
-		return
+		return nil
 	end
-	print(`[Admin] {admin.Name} announces: {filtered}`)
+	return filtered
+end
+
+local function tellAll(text: string)
 	Tell.all(GOLD, function()
-		return filtered
+		return text
 	end)
 end
 
-local function onCommand(admin: Player, action: unknown, a: unknown, b: unknown, c: unknown)
+local function announce(admin: Player, text: unknown, global: boolean)
+	local filtered = clean(admin, text, MAX_TEXT)
+	if not filtered then
+		return
+	end
+	print(`[Admin] {admin.Name} announces{if global then " on all servers" else ""}: {filtered}`)
+	if global then
+		Broadcast.send("announce", { text = filtered })
+	else
+		tellAll(filtered)
+	end
+end
+
+local function banner(admin: Player, text: unknown, global: boolean)
+	local filtered = clean(admin, text, Config.AdminEvents.MaxMessage)
+	if not filtered then
+		return
+	end
+	print(`[Admin] {admin.Name} shows the banner{if global then " on all servers" else ""}: {filtered}`)
+	AdminEvents.banner(filtered, global)
+end
+
+local function boost(admin: Player, stat: unknown, mult: unknown, minutes: unknown, global: boolean)
+	if AdminEvents.boost(stat, mult, minutes, global) then
+		print(`[Admin] {admin.Name} starts x{mult} {stat} for {minutes} min{if global then " on all servers" else ""}`)
+	else
+		Tell.notice(admin, BAD, "That event isn't valid: up to x{mult} and {minutes} min", { mult = Config.AdminEvents.MaxMult, minutes = Config.AdminEvents.MaxMinutes })
+	end
+end
+
+local function weather(admin: Player, action: unknown)
+	if action == "none" or action == "auto" or (type(action) == "string" and Config.Weather.Events[action]) then
+		print(`[Admin] {admin.Name} sets the weather on all servers: {action}`)
+		Broadcast.send("weather", { action = action })
+	end
+end
+
+local function onCommand(admin: Player, action: unknown, ...: unknown)
 	if not Admin.is(admin) then
 		return
 	end
+	local args = { ... }
+	local global = action == "all"
+	if global then
+		action = table.remove(args, 1)
+	end
+	local a, b, c = args[1], args[2], args[3]
 	if action == "give" then
-		give(admin, a, b, c)
+		give(admin, a, b, c, global)
 	elseif action == "sword" then
-		giveSwords(admin, a, b, c)
+		giveSwords(admin, a, b, c, global)
+	elseif action == "announce" then
+		announce(admin, a, global)
+	elseif action == "banner" then
+		banner(admin, a, global)
+	elseif action == "boost" then
+		boost(admin, a, b, c, global)
+	elseif action == "stopBoost" then
+		if AdminEvents.stop(a, global) then
+			print(`[Admin] {admin.Name} stops the {a} event{if global then " on all servers" else ""}`)
+		end
+	elseif global then
+		-- Lo demás (echar, ir, traer) no existe para todos los servidores; el clima de uno solo va por AdminWeather.
+		if action == "weather" then
+			weather(admin, a)
+		end
 	elseif action == "kick" then
 		kick(admin, a)
 	elseif action == "goto" or action == "bring" then
@@ -229,12 +338,34 @@ local function onCommand(admin: Player, action: unknown, a: unknown, b: unknown,
 				move(admin, other, admin)
 			end
 		end
-	elseif action == "announce" then
-		announce(admin, a)
 	end
 end
 
 function AdminCommands.start()
+	-- Lo que llega de otro servidor (o de este): se comprueba otra vez y se hace para los que están aquí.
+	Broadcast.on("give", function(data)
+		local key, count = validItems(type(data) == "table" and data.key, type(data) == "table" and data.count)
+		if key and count then
+			deliverItems(Players:GetPlayers(), key, count)
+		end
+	end)
+	Broadcast.on("sword", function(data)
+		local spec, count = validSwords(type(data) == "table" and data.spec, type(data) == "table" and data.count)
+		if spec and count then
+			deliverSwords(Players:GetPlayers(), spec, count)
+		end
+	end)
+	Broadcast.on("announce", function(data)
+		if type(data) == "table" and type(data.text) == "string" and #data.text <= MAX_TEXT * 4 then
+			tellAll(data.text)
+		end
+	end)
+	Broadcast.on("weather", function(data)
+		if type(data) == "table" then
+			-- Se pide aquí: Weather arranca después que este módulo.
+			require(script.Parent.Weather).force(data.action)
+		end
+	end)
 	Remotes.AdminCommand.OnServerEvent:Connect(onCommand)
 end
 

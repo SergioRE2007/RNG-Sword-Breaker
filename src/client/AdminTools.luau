@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local AdminScope = require(script.Parent.AdminScope)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 
@@ -267,7 +268,7 @@ function AdminTools.server(pane: Frame, window: Frame)
 	local info = heading(content, "Info", "", 0)
 
 	-- Aviso a todo el servidor.
-	heading(content, "MessageTitle", Lang.t(nil, "Announcement to this server"), 30)
+	local messageTitle = heading(content, "MessageTitle", "", 30)
 	local row = Instance.new("Frame")
 	row.Name = "MessageRow"
 	row.Position = UDim2.fromOffset(0, 58)
@@ -294,17 +295,24 @@ function AdminTools.server(pane: Frame, window: Frame)
 			Sfx.play("error")
 			return
 		end
-		Remotes.AdminCommand:FireServer("announce", message.Text)
+		AdminScope.command("announce", message.Text)
 		message.Text = ""
 	end)
 
 	-- Regalo a todos los que están dentro.
 	local top = 58 + ROW + 14
-	heading(content, "GiftTitle", Lang.t(nil, "Give to everyone on this server"), top)
+	local giftTitle = heading(content, "GiftTitle", "", top)
+	-- Avisos y regalos van a este servidor o a todos, según el botón de la ventana (client/AdminScope).
+	local function paintScope()
+		messageTitle.Text = Lang.t(nil, if AdminScope.all then "Announcement to all servers" else "Announcement to this server")
+		giftTitle.Text = Lang.t(nil, if AdminScope.all then "Give to everyone on all servers" else "Give to everyone on this server")
+	end
+	AdminScope.Changed:Connect(paintScope)
+	paintScope()
 	local amount = field(content, "Amount", Lang.t(nil, "Amount"), top + 28)
 	amount.Text = "10"
 	gifts(content, top + 28 + ROW + GAP, amount, function(key: string, count: number)
-		Remotes.AdminCommand:FireServer("give", 0, key, count)
+		AdminScope.command("give", 0, key, count)
 	end)
 
 	-- Cuánta gente hay y cuánto lleva abierto: se repinta con el panel a la vista.

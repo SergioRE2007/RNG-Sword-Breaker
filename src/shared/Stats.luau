@@ -199,6 +199,19 @@ function Stats.weather(stat: string): number
 	return WeatherInfo.multiplier(stat)
 end
 
+-- Evento de admin en curso (Config.AdminEvents; server/AdminEvents lo publica en workspace, el mismo para todos los
+-- de ese servidor): por cuánto multiplica ese stat, 1 si no hay ninguno. Cada stat entra en un solo sitio: "luck" en
+-- Stats.spawnLuck, "weaponLuck" en Stats.gachaLuck, "coins" en Stats.coins, "damage" en el daño global, y "traitLuck"
+-- y "gradeLuck" en las tiradas de server/ModifierShops.
+function Stats.boost(stat: string): number
+	local mult = workspace:GetAttribute("Boost_" .. stat)
+	local ends = workspace:GetAttribute("BoostEnd_" .. stat)
+	if type(mult) == "number" and type(ends) == "number" and workspace:GetServerTimeNow() < ends then
+		return mult
+	end
+	return 1
+end
+
 local function upgrade(player: Player, name: string): number
 	return Upgrades.value(name, player:GetAttribute("Upgrade_" .. name) or 0)
 end
@@ -248,7 +261,7 @@ end
 
 -- Lo que multiplica el daño de cualquiera de sus armas: artefactos, renacimientos, armadura y poción.
 local function damageBonus(player: Player): number
-	return gear(player, "damage") * Stats.rebirthBonus(player, "damage") * (1 + armor(player, "damage")) * Stats.potion(player, "damage")
+	return gear(player, "damage") * Stats.rebirthBonus(player, "damage") * (1 + armor(player, "damage")) * Stats.potion(player, "damage") * Stats.boost("damage")
 end
 
 -- Daño con el que pega una de sus copias equipadas: el suyo (Stats.swordDamage) por lo que lleva el jugador.
@@ -269,7 +282,7 @@ end
 -- poción de daño (lo que pega mientras su dueño está desconectado).
 function Stats.bagHit(player: Player, copy, noPotion: boolean?): number
 	local damage = Stats.swordDamage(copy) * damageBonus(player)
-	return if noPotion then damage / Stats.potion(player, "damage") else damage
+	return if noPotion then damage / Stats.potion(player, "damage") / Stats.boost("damage") else damage
 end
 
 -- Monedas por segundo que sacan de su Bolsa de oro las armas depositadas: cada una da un golpe cada
@@ -312,7 +325,7 @@ end
 -- cuentan en Stats.luck. Aquí van solo las fuentes directas: los renacimientos, la poción de suerte de armas y los
 -- climas más raros, y los pases de suerte de armas (ventaja "weaponLuck").
 function Stats.gachaLuck(player: Player): number
-	return Stats.rebirthBonus(player, "gachaLuck") * Stats.potion(player, "weaponLuck") * Stats.weather("weaponLuck") * Stats.passMult(player, "weaponLuck")
+	return Stats.rebirthBonus(player, "gachaLuck") * Stats.potion(player, "weaponLuck") * Stats.weather("weaponLuck") * Stats.passMult(player, "weaponLuck") * Stats.boost("weaponLuck")
 end
 
 -- Segundos por tirada gratis del gacha (solo con Config.Gacha.FreeRoll): la mejora "Velocidad de aparición"
@@ -339,13 +352,13 @@ end
 -- la suerte de las armas (Stats.gachaLuck), los accesorios ni los rasgos y grados: las armas solo ganan de rebote, porque
 -- salen objetos mejores. El clima (Stats.weather) da esta misma suerte a todos mientras dura.
 function Stats.spawnLuck(player: Player): number
-	return Stats.potion(player, "boxLuck") * Stats.weather("luck")
+	return Stats.potion(player, "boxLuck") * Stats.weather("luck") * Stats.boost("luck")
 end
 
 -- Monedas: la mejora "Fortuna", artefactos, los rasgos de las armas equipadas, renacimientos y los pases (ventaja
 -- "coins"). Los grados ya no dan monedas: multiplican el daño de su arma (Stats.swordDamage).
 function Stats.coins(player: Player): number
-	return upgrade(player, "fortune") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins")
+	return upgrade(player, "fortune") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins") * Stats.boost("coins")
 end
 
 function Stats.gems(player: Player): number

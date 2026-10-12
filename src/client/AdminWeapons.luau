@@ -13,6 +13,7 @@ local Lang = require(ReplicatedStorage.Shared.Lang)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local AdminScope = require(script.Parent.AdminScope)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 
@@ -276,7 +277,7 @@ function AdminWeapons.build(pane: Frame)
 			Ui.setSelected(button, userId == target)
 		end
 		local who = Players:GetPlayerByUserId(target)
-		title.Text = if who then Lang.t(nil, "Give to {name}", { name = who.DisplayName }) else Lang.t(nil, "Give to everyone on this server")
+		title.Text = if who then Lang.t(nil, "Give to {name}", { name = who.DisplayName }) elseif AdminScope.all then Lang.t(nil, "Give to everyone on all servers") else Lang.t(nil, "Give to everyone on this server")
 		for _, field in FIELDS do
 			local text, color = look(field, chosen[field.key])
 			values[field.key].Text = text
@@ -384,7 +385,12 @@ function AdminWeapons.build(pane: Frame)
 			return
 		end
 		asked = 0
-		Remotes.AdminCommand:FireServer("sword", target, table.clone(chosen), math.floor(count))
+		-- A todos: a los de este servidor o a los de todos, según el botón de la ventana (client/AdminScope).
+		if target == 0 then
+			AdminScope.command("sword", 0, table.clone(chosen), math.floor(count))
+		else
+			Remotes.AdminCommand:FireServer("sword", target, table.clone(chosen), math.floor(count))
+		end
 		paint()
 	end)
 
@@ -425,6 +431,7 @@ function AdminWeapons.build(pane: Frame)
 		addPlayer(other)
 	end
 
+	AdminScope.Changed:Connect(paint)
 	-- La casilla del arma sale de la mochila, que puede montarse después que este panel: se pinta al enseñarlo.
 	pane:GetPropertyChangedSignal("Visible"):Connect(function()
 		if pane.Visible then
