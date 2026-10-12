@@ -40,6 +40,8 @@ local GROW = {
 	twinkle = { { 0, 0 }, { 0.15, 1 }, { 0.4, 0.35 }, { 0.65, 1 }, { 1, 0 } },
 	flame = { { 0, 0.45 }, { 0.3, 1 }, { 1, 0.2 } },
 	grow = { { 0, 0.1 }, { 1, 1 } },
+	hold = { { 0, 1 }, { 1, 1 } }, -- siempre igual de grande (sellos, runas y texturas animadas)
+	flick = { { 0, 0 }, { 0.15, 1 }, { 1, 0 } }, -- sale de golpe y se consume (lenguas de fuego animadas)
 }
 -- Cómo se desvanece (0 = lo más opaca que llega a estar, 1 = invisible).
 local ALPHA = {
@@ -47,6 +49,8 @@ local ALPHA = {
 	linger = { { 0, 0 }, { 0.6, 0.2 }, { 1, 1 } },
 	puff ={ { 0, 1 }, { 0.25, 0 }, { 1, 1 } },
 	hold = { { 0, 0 }, { 0.7, 0 }, { 1, 1 } },
+	swell = { { 0, 1 }, { 0.3, 0 }, { 0.7, 0 }, { 1, 1 } }, -- entra y sale despacio: varias encimadas hacen un sello que late
+	solid = { { 0, 0 }, { 1, 0 } }, -- no se desvanece (la que se consume encogiendo)
 	blink = { { 0, 0 }, { 0.2, 0 }, { 0.21, 1 }, { 0.4, 1 }, { 0.41, 0 }, { 0.6, 0 }, { 0.61, 1 }, { 0.8, 1 }, { 0.81, 0 }, { 0.95, 0 }, { 1, 1 } },
 }
 local ARC = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.6, 0.6), NumberSequenceKeypoint.new(1, 1) })
@@ -191,8 +195,17 @@ local function emitter(parent: Instance, spec, palette, k): ParticleEmitter
 	if spec.spin ~= false then
 		item.Rotation = NumberRange.new(0, 360)
 	end
-	if spec.rot then
+	if spec.turn then
+		item.RotSpeed = NumberRange.new(spec.turn) -- todas hacia el mismo lado: un sello que gira
+	elseif spec.rot then
 		item.RotSpeed = NumberRange.new(-spec.rot, spec.rot)
+	end
+	if spec.flip then
+		-- Textura animada (una rejilla de fotogramas): por defecto se reproduce una vez a lo largo de la vida.
+		item.FlipbookLayout = (Enum.ParticleFlipbookLayout :: any)["Grid" .. spec.flip]
+		item.FlipbookMode = if spec.fps then Enum.ParticleFlipbookMode.Loop else Enum.ParticleFlipbookMode.OneShot
+		item.FlipbookFramerate = NumberRange.new(spec.fps or 1)
+		item.FlipbookStartRandom = spec.fps ~= nil
 	end
 	item.LightEmission = spec.emission or 0.6 -- con 1 los colores se queman a blanco a plena luz
 	item.LightInfluence = if spec.lit then 1 else 0
@@ -351,6 +364,34 @@ local function addRing(state, layer, onPlayer: boolean)
 		spin = layer.spin or 1,
 		precess = layer.precess or 0,
 	})
+end
+
+-- Columna de luz que sube de los pies del jugador: un haz con una textura que corre hacia arriba.
+local function addPillar(state, layer)
+	local parent = body(state)
+	local k = state.onPlayer
+	local floor = -BODY.Y / 2 + 0.2
+	local a0 = attachment(parent, "AuraPillarA", Vector3.new(0, floor, 0))
+	local a1 = attachment(parent, "AuraPillarB", Vector3.new(0, floor + (layer.height or 9) * k.size, 0))
+	local beam = Instance.new("Beam")
+	beam.Name = "AuraPillar"
+	beam.Attachment0 = a0
+	beam.Attachment1 = a1
+	beam.Texture = layer.tex or Defs.PILLAR
+	beam.TextureMode = Enum.TextureMode.Stretch
+	beam.TextureLength = 1
+	beam.TextureSpeed = layer.speed or 1
+	beam.Width0 = (layer.width or 4) * k.size
+	beam.Width1 = beam.Width0 * (layer.taper or 1)
+	beam.Segments = 10
+	beam.FaceCamera = true
+	beam.Color = gradient(state.palette, layer.colors or { "main" })
+	local solid = layer.transparency or 0.85
+	beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.12, solid), NumberSequenceKeypoint.new(0.6, solid), NumberSequenceKeypoint.new(1, 1) })
+	beam.LightEmission = 0.5
+	beam.LightInfluence = 0
+	beam.Brightness = layer.bright or 1
+	beam.Parent = parent
 end
 
 -- Rayos: una línea quebrada de tramos rectos que cambia de forma varias veces por segundo.
@@ -533,6 +574,10 @@ local function build(blade: BasePart)
 			addRing(state, layer, onPlayer)
 		elseif kind == "bolts" then
 			addBolts(state, layer)
+		elseif kind == "pillar" then
+			if worn then
+				addPillar(state, layer)
+			end
 		else
 			addParticles(state, layer, onPlayer)
 		end
