@@ -27,11 +27,12 @@ local function onBuy(player: Player, index: unknown)
 		return
 	end
 	last[player] = now
+	local amount = offer.amount or 1
 	PlayerData.edit(player, function(edited)
 		edited.items[TICKET] -= offer.price
-		edited.items[offer.item] += 1
+		edited.items[offer.item] += amount
 	end)
-	Remotes.Notice:FireClient(player, `+1 {Lang.t(player, item.name)}`, item.color)
+	Remotes.Notice:FireClient(player, `+{amount} {Lang.t(player, item.name)}`, item.color)
 end
 
 function TicketShop.start()

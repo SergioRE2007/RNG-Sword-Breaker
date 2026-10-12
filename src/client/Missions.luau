@@ -278,23 +278,53 @@ function Missions.start()
 	stripText.Position = UDim2.fromOffset(14, 0)
 	stripText.Size = UDim2.new(1, -28, 1, 0)
 	stripText.TextXAlignment = Enum.TextXAlignment.Left
-	stripText.Text = `{Lang.t(nil, "Max tier potions")} <font color="{Ui.SOFT}">· {math.floor(Config.Potions.Durations[#Config.Potions.Durations] / 60)} min</font>`
+	stripText.Text = `{Lang.t(nil, "Crystals and max tier potions")} <font color="{Ui.SOFT}">· {math.floor(Config.Potions.Durations[#Config.Potions.Durations] / 60)} min</font>`
 
-	-- Las demás ofertas: una tarjeta estrecha por cada una.
-	local row = Instance.new("Frame")
+	-- Las demás ofertas: una tarjeta estrecha por cada una. Caben ROW_SHOWN a la vista; con más, la fila se desliza de
+	-- lado (y la siguiente asoma, para que se vea que hay más).
+	local ROW_SHOWN = 5
+	local ROW_GAP = 8
+	local row = Instance.new("ScrollingFrame")
 	row.Name = "Row"
+	row.BorderSizePixel = 0
+	row.ScrollingDirection = Enum.ScrollingDirection.X
+	row.AutomaticCanvasSize = Enum.AutomaticSize.X
+	row.CanvasSize = UDim2.new()
+	row.ScrollBarThickness = 6
+	row.ScrollBarImageColor3 = ORANGE
 	row.AnchorPoint = Vector2.new(0.5, 0)
 	row.Position = UDim2.new(0.5, 0, 0, HERO_HEIGHT + STRIP_HEIGHT + 22)
 	row.Size = UDim2.new(1, -24, 1, -(HERO_HEIGHT + STRIP_HEIGHT + 32))
 	row.BackgroundTransparency = 1
 	row.Parent = shopPane
 	local small = #Config.Tickets.Shop - 1
-	local rowGrid = Instance.new("UIGridLayout")
-	-- Un píxel de menos por casilla: justas, el redondeo mandaba la última a otra fila.
-	rowGrid.CellSize = UDim2.new(1 / small, -math.ceil(8 * (small - 1) / small) - 1, 1, 0)
-	rowGrid.CellPadding = UDim2.fromOffset(8, 0)
-	rowGrid.SortOrder = Enum.SortOrder.LayoutOrder
-	rowGrid.Parent = row
+	local scrolls = small > ROW_SHOWN
+	row.ScrollingEnabled = scrolls
+	-- Margen para que la tarjeta que crece con el ratón encima no se corte, y sitio abajo para la barra.
+	local rowPad = Instance.new("UIPadding")
+	rowPad.PaddingTop = UDim.new(0, 5)
+	rowPad.PaddingBottom = UDim.new(0, if scrolls then 13 else 5)
+	rowPad.PaddingLeft = UDim.new(0, 4)
+	rowPad.PaddingRight = UDim.new(0, 4)
+	rowPad.Parent = row
+	local rowList = Instance.new("UIListLayout")
+	rowList.FillDirection = Enum.FillDirection.Horizontal
+	rowList.SortOrder = Enum.SortOrder.LayoutOrder
+	rowList.Padding = UDim.new(0, ROW_GAP)
+	rowList.Parent = row
+	-- El ancho de cada hueco va en píxeles (dentro de un marco que se desliza, la escala cuenta sobre el lienzo): se
+	-- recalcula con el ancho de la fila.
+	local slots = {}
+	local function sizeSlots()
+		local shown = if scrolls then ROW_SHOWN + 0.35 else small
+		-- AbsoluteSize ya lleva el UIScale de la ventana y el tamaño de los huecos no: se deshace (la ventana mide 660).
+		local scale = math.max(window.AbsoluteSize.X / 660, 0.01)
+		local width = math.floor((row.AbsoluteSize.X / scale - 8 - ROW_GAP * (math.ceil(shown) - 1)) / shown)
+		for _, slot in slots do
+			slot.Size = UDim2.new(0, math.max(width, 60), 1, 0)
+		end
+	end
+	row:GetPropertyChangedSignal("AbsoluteSize"):Connect(sizeSlots)
 	for index = 2, #Config.Tickets.Shop do
 		local offer = Config.Tickets.Shop[index]
 		local item = Config.Items[offer.item]
@@ -306,6 +336,7 @@ function Missions.start()
 		slot.LayoutOrder = index
 		slot.BackgroundTransparency = 1
 		slot.Parent = row
+		table.insert(slots, slot)
 		local card = Instance.new("Frame")
 		card.Name = "Card"
 		card.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -348,6 +379,7 @@ function Missions.start()
 			Ui.tip(cell, function()
 				return `{Lang.t(nil, item.name)}\n<font color="{Ui.SOFT}">{Lang.t(nil, item.description)}</font>`, item.color
 			end, true)
+			value = "x" .. (offer.amount or 1) -- cuántos da cada compra
 		end
 
 		local name = Ui.label(card, 17)
@@ -385,6 +417,7 @@ function Missions.start()
 		ticket.Size = UDim2.fromOffset(28, 28)
 		ticket.Position = UDim2.new(0.5, -4, 0.5, 0)
 	end
+	sizeSlots()
 
 	-- Escaparate de la oferta grande: un bucle que solo vive con la pestaña a la vista (y no en modo rendimiento).
 	local artLoop: RBXScriptConnection? = nil

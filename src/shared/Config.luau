@@ -908,12 +908,15 @@ Config.Trade = {
 -- usuario: 100 Robux = 150 tickets). La cuenta es Stats.ticketPrice y la compra, server/Passes. Lo que dan las misiones
 -- (50 al día y 200 a la semana como mucho) está en shared/MissionList.
 -- "Shop" = lo que se compra con tickets en el puesto de Misiones (pestaña "Comprar", server/TicketShop): item = clave de
--- Config.Items (las pociones son potion_<familia>_<tier>: las de tier máximo, pedido por el usuario) y price = tickets.
+-- Config.Items (las pociones son potion_<familia>_<tier>: las de tier máximo, pedido por el usuario), price = tickets y
+-- amount = cuántos da cada compra (1 si falta). Los cristales de rasgo y de grado van a 10 por ticket (pedido por el usuario).
 -- Todos los pases juntos son unas 10 semanas de misiones (pedido por el usuario: con x3 eran 20).
 Config.Tickets = {
 	PerRobux = 1.5,
 	Shop = {
 		{ item = "luckClover", price = 150 },
+		{ item = "traitCrystal", price = 1, amount = 10 },
+		{ item = "gradeCrystal", price = 1, amount = 10 },
 		{ item = "potion_weaponLuck_5", price = 20 },
 		{ item = "potion_boxLuck_5", price = 20 },
 		{ item = "potion_coins_5", price = 20 },
