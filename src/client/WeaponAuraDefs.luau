@@ -145,7 +145,7 @@ WeaponAuraDefs.particles = {
 	-- Relámpagos animados que chasquean pegados al arma.
 	lightning = { tex = BOLT_FLIP, flip = "4x4", colors = { "white", "main" }, rate = 5, life = { 0.45, 0.7 }, speed = { 0, 0 }, size = 2.6, grow = "hold", alpha = "swell", transparency = 0.25, emission = 0.8, bright = 1.8, locked = true, z = 0.4 },
 	-- Chasquidos de energía.
-	energy = { tex = ENERGY_FLIP, flip = "4x4", colors = { "white", "main" }, rate = 5, life = { 0.3, 0.4 }, speed = { 0, 0 }, size = 3, grow = "shrink", alpha = "solid", transparency = 0.4, emission = 0.7, bright = 1.5, locked = true, z = 0.2 },
+	energy = { tex = ENERGY_FLIP, flip = "4x4", colors = { "white", "main" }, rate = 5, life = { 0.3, 0.4 }, speed = { 0, 0 }, size = 3, grow = "shrink", alpha = "solid", transparency = 0.45, emission = 1, bright = 1.5, locked = true, z = 0.2 },
 	-- Tajos de luz: solo al atacar (rate 0 y `burst`).
 	slashes = { tex = SLASH_FLIP, flip = "4x4", colors = { "white", "main" }, rate = 0, life = { 0.2, 0.28 }, speed = { 0, 0 }, size = 5, grow = "hold", alpha = "swell", transparency = 0.2, emission = 0.8, bright = 1.6, locked = true, z = 0.5, burst = 2 },
 	-- Estrella grande de cuatro puntas que late (para la punta: at = "tip").
@@ -162,12 +162,15 @@ WeaponAuraDefs.particles = {
 	-- Aro que se abre por el suelo desde el sello.
 	sealwave = { tex = SEAL_WAVE, colors = { "pale", "main" }, rate = 0.9, life = { 1.2, 1.2 }, speed = { 0.01, 0.01 }, spread = 0, dir = "Top", orient = "flat", size = 11, grow = "grow", alpha = "swell", spin = false, transparency = 0.65, emission = 0.4, bright = 1, locked = true },
 	-- Disco de energía que gira deprisa de cara a la cámara (alrededor de la hoja o de la punta).
-	disc = { tex = DISC, colors = { "main" }, rate = 2.5, life = { 1, 1 }, speed = { 0, 0 }, size = 3.6, grow = "hold", alpha = "swell", transparency = 0.45, turn = 220, emission = 0.5, bright = 1.1, locked = true, z = -0.3 },
+	disc = { tex = DISC, colors = { "main" }, rate = 2.5, life = { 1, 1 }, speed = { 0, 0 }, size = 3.6, grow = "hold", alpha = "swell", transparency = 0.55, turn = 220, emission = 1, bright = 1.1, locked = true, z = -0.3 },
+	-- OJO: las texturas de portal, vortex, disc, nova y energy traen el fondo negro, no transparente: con emission por
+	-- debajo de 1 se ven como cuadrados negros dando vueltas (lo vio el usuario en el Colmillo astral). Van siempre con
+	-- emission = 1 y se suavizan con transparency.
 	-- Borde de portal girando y remolino que cae hacia dentro: juntos, un agujero en el espacio.
-	portal = { tex = PORTAL, colors = { "main" }, rate = 4, life = { 1, 1 }, speed = { 0, 0 }, size = 3.4, grow = "hold", alpha = "swell", turn = 300, transparency = 0.45, emission = 0.5, bright = 1.1, locked = true, z = -0.2 },
-	vortex = { tex = SUCK, colors = { "second", "main" }, rate = 3, life = { 1, 1 }, speed = { 0, 0 }, size = 4.6, grow = "shrink", alpha = "swell", turn = 260, transparency = 0.5, emission = 0.5, bright = 1.1, locked = true, z = -0.3 },
+	portal = { tex = PORTAL, colors = { "main" }, rate = 4, life = { 1, 1 }, speed = { 0, 0 }, size = 3.4, grow = "hold", alpha = "swell", turn = 300, transparency = 0.55, emission = 1, bright = 1.1, locked = true, z = -0.2 },
+	vortex = { tex = SUCK, colors = { "second", "main" }, rate = 3, life = { 1, 1 }, speed = { 0, 0 }, size = 4.6, grow = "shrink", alpha = "swell", turn = 260, transparency = 0.6, emission = 1, bright = 1.1, locked = true, z = -0.3 },
 	-- Estallido de puntas que se abre girando (una estrella que revienta).
-	nova = { tex = NOVA, colors = { "white", "main" }, rate = 2.5, life = { 0.9, 1.1 }, speed = { 0, 0 }, size = 4.4, grow = "grow", alpha = "swell", turn = -260, transparency = 0.4, emission = 0.6, bright = 1.3, locked = true, z = 0.2 },
+	nova = { tex = NOVA, colors = { "white", "main" }, rate = 2.5, life = { 0.9, 1.1 }, speed = { 0, 0 }, size = 4.4, grow = "grow", alpha = "swell", turn = -260, transparency = 0.5, emission = 1, bright = 1.3, locked = true, z = 0.2 },
 }
 
 WeaponAuraDefs.weapons = {
@@ -516,19 +519,20 @@ WeaponAuraDefs.weapons = {
 			{ "orbit", at = "player", path = "atom", count = 3, radius = 3.4, speed = 2.6, orb = 0.9, colors = { "main", "accent" }, emit = { "stars", rate = 5, colors = { "main", "accent", "second" } } },
 		},
 	},
-	[42] = { -- Colmillo astral: energía astral turquesa y magenta, con tres astros girando alrededor del jugador
+	[42] = { -- Colmillo astral: energía astral turquesa y magenta, con tres astros girando alrededor del jugador.
+		-- Lo que gira deja una cola corta y fina: al usuario no le gustó nada el rastro largo ("exagerado").
 		main = rgb(70, 235, 220), second = rgb(255, 80, 210),
 		light = { range = 14, brightness = 1.2, pulse = 0.3 },
 		layers = {
 			{ "nebula", rate = 4 },
-			{ "orbit", path = "helix", count = 3, radius = 1.5, speed = 5, trail = 0.6, trailLife = 0.9, colors = { "main", "second" } },
+			{ "orbit", path = "helix", count = 3, radius = 1.5, speed = 5, trail = 0.2, trailLife = 0.15, transparency = 0.45, colors = { "main", "second" } },
 			{ "portal", size = 3.2 },
 			{ "vortex", colors = { "second", "main" } },
 			{ "energy", rate = 4, colors = { "white", "second" } },
 			{ "stardust", rate = 10, burst = 20 },
 			{ "starshine", at = "tip", size = 2.8 },
 			{ "slashes", colors = { "white", "second" } },
-			{ "orbit", at = "player", path = "circle", count = 3, radius = 3.4, speed = 2.2, bob = 1.8, orb = 1, trail = 0.45, trailLife = 1.2, colors = { "main", "second" } },
+			{ "orbit", at = "player", path = "circle", count = 3, radius = 3.4, speed = 2.2, bob = 1.8, orb = 1, trail = 0.2, trailLife = 0.25, transparency = 0.4, colors = { "main", "second" } },
 			{ "aura", at = "player" },
 			{ "stardust", at = "player", rate = 8, size = 1, speed = { 0.5, 2 }, accel = Vector3.new(0, 3, 0) },
 			{ "pillar", colors = { "main", "second" } },
