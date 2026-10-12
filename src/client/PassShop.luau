@@ -46,6 +46,8 @@ local SHOWN_ROWS = 2 -- filas de tarjetas a la vista; las demás, deslizando
 local PEEK = 46 -- lo que asoma de la fila siguiente cuando hay más
 local HEAD_HEIGHT = 44 -- cinta con el nombre de cada sección
 local TILE_HEIGHT = 132 -- fichas de los tréboles
+local CODES_HEIGHT = 222 -- panel de los códigos
+local CODES_LEFT = 250 -- donde empieza su texto, a la derecha del icono
 local PAD = 8 -- margen de la tarjeta
 local ART_HEIGHT = 130 -- alto del escaparate
 local ART_RADIUS = 10
@@ -426,7 +428,6 @@ function PassShop.start()
 		medal.Position = UDim2.new(0, 10, 0.5, 0)
 		medal.Size = UDim2.fromOffset(TILE_HEIGHT - 20, TILE_HEIGHT - 20)
 		medal.BackgroundColor3 = WHITE
-		medal.ClipsDescendants = true
 		medal.Parent = tile
 		Ui.round(medal, 100)
 		Ui.stroke(medal, color:Lerp(WHITE, 0.6), 3)
@@ -435,11 +436,14 @@ function PassShop.start()
 		rays.Name = "Rays"
 		rays.AnchorPoint = Vector2.new(0.5, 0.5)
 		rays.Position = UDim2.fromScale(0.5, 0.5)
-		rays.Size = UDim2.fromScale(1.7, 1.7)
+		-- Del tamaño del medallón y con su propia esquina redonda: ClipsDescendants recorta en rectángulo y las
+		-- esquinas de la imagen asomaban fuera del círculo.
+		rays.Size = UDim2.fromScale(1, 1)
 		rays.BackgroundTransparency = 1
 		rays.Image = Ui.IMAGES.boton_rayos
 		rays.ImageTransparency = 0.7
 		rays.Parent = medal
+		Ui.round(rays, 100)
 		local logo = Instance.new("Frame")
 		logo.Name = "Logo"
 		logo.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -551,32 +555,95 @@ function PassShop.start()
 
 	-- 3. Códigos de regalo (Config.Codes, server/Codes): una caja para escribirlo y el botón; la respuesta llega en un aviso.
 	heading(5, "HeadCodes", "Códigos", Color3.fromRGB(235, 150, 50))
+	local CODE = Color3.fromRGB(120, 124, 255)
 	local codes = Instance.new("Frame")
 	codes.Name = "Codes"
 	codes.LayoutOrder = 6
-	codes.Size = UDim2.new(1, 0, 0, 76)
+	codes.Size = UDim2.new(1, 0, 0, CODES_HEIGHT)
 	codes.BackgroundColor3 = WHITE
 	codes.Parent = list
-	Ui.round(codes, 12)
-	Ui.stroke(codes, BLACK, 3)
-	Ui.panel(codes, Color3.fromRGB(52, 56, 100))
+	Ui.round(codes, 14)
+	Ui.stroke(codes, BLACK, 4)
+	Ui.gradient(codes, Color3.fromRGB(16, 18, 38), Color3.fromRGB(44, 46, 100), 90)
+	-- Rombos al fondo y canto de color por dentro del borde negro.
+	local codePattern = Instance.new("ImageLabel")
+	codePattern.Name = "Pattern"
+	codePattern.Size = UDim2.fromScale(1, 1)
+	codePattern.BackgroundTransparency = 1
+	codePattern.Image = Ui.IMAGES.boton_patron
+	codePattern.ImageColor3 = CODE
+	codePattern.ImageTransparency = 0.9
+	codePattern.ScaleType = Enum.ScaleType.Tile
+	codePattern.TileSize = UDim2.fromOffset(44, 44)
+	codePattern.Parent = codes
+	Ui.round(codePattern, 14)
+	local codeRim = Instance.new("Frame")
+	codeRim.Name = "Rim"
+	codeRim.Position = UDim2.fromOffset(3, 3)
+	codeRim.Size = UDim2.new(1, -6, 1, -6)
+	codeRim.BackgroundTransparency = 1
+	codeRim.Parent = codes
+	Ui.round(codeRim, 11)
+	Ui.stroke(codeRim, CODE, 3)
+	-- Ticket grande a la izquierda, sobre un resplandor.
+	local codeGlow = Instance.new("ImageLabel")
+	codeGlow.Name = "Glow"
+	codeGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+	codeGlow.Position = UDim2.new(0, CODES_LEFT / 2 + 6, 0.5, 0)
+	codeGlow.Size = UDim2.fromOffset(CODES_HEIGHT - 24, CODES_HEIGHT - 24)
+	codeGlow.BackgroundTransparency = 1
+	codeGlow.Image = Ui.IMAGES.boton_rayos
+	codeGlow.ImageColor3 = CODE
+	codeGlow.ImageTransparency = 0.55
+	codeGlow.Parent = codes
+	Ui.round(codeGlow, 100)
+	local codeIcon = Instance.new("Frame")
+	codeIcon.Name = "Icon"
+	codeIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	codeIcon.Position = codeGlow.Position
+	codeIcon.Size = UDim2.fromOffset(150, 150)
+	codeIcon.BackgroundTransparency = 1
+	codeIcon.Parent = codes
+	Ui.ticketIcon(codeIcon, TICKET)
+
+	local codeTitle = Ui.label(codes, 52)
+	codeTitle.Name = "Title"
+	codeTitle.Position = UDim2.fromOffset(CODES_LEFT, 12)
+	codeTitle.Size = UDim2.new(1, -CODES_LEFT - 20, 0, 54)
+	codeTitle.TextXAlignment = Enum.TextXAlignment.Left
+	codeTitle.Text = "Códigos"
+	Ui.gradient(codeTitle, WHITE, CODE:Lerp(WHITE, 0.25), 90)
+	local codeNote = Ui.label(codes, 22)
+	codeNote.Name = "Note"
+	codeNote.Position = UDim2.fromOffset(CODES_LEFT, 66)
+	codeNote.Size = UDim2.new(1, -CODES_LEFT - 20, 0, 24)
+	codeNote.TextXAlignment = Enum.TextXAlignment.Left
+	codeNote.Text = "¡Únete a nuestro grupo para conseguir códigos exclusivos!"
 	local codeBox = Instance.new("TextBox")
 	codeBox.Name = "Box"
-	codeBox.AnchorPoint = Vector2.new(0, 0.5)
-	codeBox.Position = UDim2.new(0, 12, 0.5, 0)
-	codeBox.Size = UDim2.new(1, -24 - 232, 0, 52)
+	codeBox.Position = UDim2.fromOffset(CODES_LEFT, 98)
+	codeBox.Size = UDim2.new(1, -CODES_LEFT - 24, 0, 48)
 	codeBox.ClearTextOnFocus = false
-	codeBox.PlaceholderText = "Escribe aquí tu código"
+	codeBox.PlaceholderText = "Escribe tu código..."
 	codeBox.Text = ""
-	codeBox.TextSize = 26
+	codeBox.TextSize = 24
+	codeBox.TextXAlignment = Enum.TextXAlignment.Left
 	codeBox.Parent = codes
 	Ui.field(codeBox)
+	local codeEdge = codeBox:FindFirstChildOfClass("UIStroke")
+	if codeEdge then
+		codeEdge.Color = CODE:Lerp(WHITE, 0.35)
+	end
+	local codeInset = Instance.new("UIPadding")
+	codeInset.PaddingLeft = UDim.new(0, 14)
+	codeInset.PaddingRight = UDim.new(0, 14)
+	codeInset.Parent = codeBox
 	local redeem = Ui.button(codes, "Canjear", Ui.COLORS.green)
 	redeem.Name = "Redeem"
-	redeem.AnchorPoint = Vector2.new(1, 0.5)
-	redeem.Position = UDim2.new(1, -12, 0.5, 0)
-	redeem.Size = UDim2.fromOffset(220, 52)
-	redeem.TextSize = 26
+	redeem.Position = UDim2.fromOffset(CODES_LEFT, 156)
+	redeem.Size = UDim2.fromOffset(230, 52)
+	redeem.TextSize = 28
+	Ui.sparkle(redeem, 3)
 	local function sendCode()
 		local text = string.gsub(codeBox.Text, "%s+", "")
 		if text == "" then
