@@ -1,5 +1,5 @@
 -- Administradores del juego: quién puede usar el menú de admin (client/AdminPanel) y sus órdenes. En el juego
--- publicado lo son el dueño (la cuenta que lo publica o, si es de un grupo, el dueño del grupo) y los de Config.Admins;
+-- publicado lo son solo las cuentas de Config.Admins;
 -- en Studio, cualquiera que le dé a Jugar con Config.Test.Admin. Se decide aquí al entrar cada jugador y se publica en
 -- su atributo "Admin", que el cliente solo usa para enseñar el menú: cada orden que llega se vuelve a comprobar con
 -- Admin.is, así que fabricarse el menú con trampas no sirve de nada.
@@ -17,15 +17,8 @@ local function check(player: Player): boolean
 	if RunService:IsStudio() then
 		return Config.Test.Admin == true
 	end
-	if table.find(Config.Admins, player.UserId) then
-		return true
-	end
-	if game.CreatorType == Enum.CreatorType.User then
-		return player.UserId == game.CreatorId
-	end
-	-- Juego de un grupo: su dueño (rango 255). La consulta puede fallar; entonces no lo es.
-	local ok, rank = pcall(player.GetRankInGroup, player, game.CreatorId)
-	return ok and rank == 255
+	-- Solo las cuentas de Config.Admins (pedido por el usuario: ni el dueño del grupo ni nadie más por su rango).
+	return table.find(Config.Admins, player.UserId) ~= nil
 end
 
 -- ¿Es administrador ese jugador? Lo que decide si se obedece una orden de admin.
