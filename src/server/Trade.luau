@@ -17,6 +17,7 @@ local Armor = require(script.Parent.Armor)
 local PlayerData = require(script.Parent.PlayerData)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Tell = require(script.Parent.Tell)
+local Policy = require(script.Parent.Policy)
 
 local Trade = {}
 
@@ -720,6 +721,11 @@ local function onRequest(player: Player, userId: unknown)
 		return
 	end
 	lastRequest[player] = now
+	-- Países donde Roblox no deja intercambiar objetos de pago (server/Policy).
+	if not Policy.canTrade(player) then
+		Tell.notice(player, BAD, "Trading isn't available in your region")
+		return
+	end
 	if userId == 0 then
 		if botAllowed() then
 			start(player, nil)
@@ -732,6 +738,10 @@ local function onRequest(player: Player, userId: unknown)
 	end
 	if sessions[target] then
 		Tell.notice(player, BAD, "{name} is already in another trade", { name = target.DisplayName })
+		return
+	end
+	if not Policy.canTrade(target) then
+		Tell.notice(player, BAD, "{name} can't trade in their region", { name = target.DisplayName })
 		return
 	end
 	invites[target] = invites[target] or {}
@@ -752,7 +762,7 @@ local function onRespond(player: Player, userId: unknown, accept: unknown)
 		Tell.notice(from, BAD, "{name} declined the trade", { name = player.DisplayName })
 		return
 	end
-	if os.clock() > expires or sessions[player] or sessions[from] or not PlayerData.read(player) or not PlayerData.read(from) then
+	if os.clock() > expires or not Policy.canTrade(player) or not Policy.canTrade(from) or sessions[player] or sessions[from] or not PlayerData.read(player) or not PlayerData.read(from) then
 		Tell.notice(player, BAD, "The invite is no longer valid")
 		return
 	end

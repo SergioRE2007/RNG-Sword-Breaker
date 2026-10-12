@@ -172,6 +172,7 @@ local function fixture(saved, customStore)
 		["src/shared/Remotes"] = remotes,
 		["src/server/Missions"] = { add = function() end },
 		["src/server/BestRoll"] = { submit = function() end }, -- el pedestal construye modelos (SwordModel, AssetService)
+		["src/server/Policy"] = { canTrade = function() return true end }, -- las normas por país las pregunta a Roblox (PolicyService)
 		["src/server/StallSkin"] = {},
 		["src/server/Stations"] = {
 			enchanter = function()
