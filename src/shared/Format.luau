@@ -2,7 +2,11 @@ local Lang = require(script.Parent.Lang)
 
 local Format = {}
 
-local SUFFIXES = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
+-- Hasta 1e63 (vigintillón): por encima de la última, el número sigue creciendo delante de ella.
+local SUFFIXES = {
+	"", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc",
+	"Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nod", "Vg",
+}
 
 -- Los decimales van con punto en inglés y con coma en español (Lang.decimal): `player` es quien va a leer el número
 -- (en el cliente siempre es el jugador local; en el servidor, sin él, sale con punto).
