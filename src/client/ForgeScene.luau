@@ -280,7 +280,7 @@ end
 
 local function gradeColors(entry): ColorSequence
 	if entry.rainbow then
-		return rainbow()
+		return Modifiers.tones(entry) or rainbow()
 	end
 	return ColorSequence.new({
 		ColorSequenceKeypoint.new(0, WHITE),
@@ -409,7 +409,7 @@ local function setGradeLabel(index: number?, pop: boolean?)
 	ui.gradeInfo.Text = if entry then Modifiers.effect(entry) else ""
 	ui.gradeRainbow.Enabled = entry ~= nil and entry.rainbow == true
 	if entry and entry.rainbow then
-		ui.gradeRainbow.Color = rainbow()
+		ui.gradeRainbow.Color = Modifiers.tones(entry) or rainbow()
 	end
 	if pop then
 		ui.gradeScale.Scale = 1.7

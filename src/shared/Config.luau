@@ -274,8 +274,10 @@ Config.Grades = {
 	{ name = "S+", damage = 8, chance = 0.2, color = Color3.fromRGB(50, 80, 255) },
 	{ name = "Z", damage = 12, chance = 0.063, color = Color3.fromRGB(40, 210, 190) },
 	{ name = "Z+", damage = 20, chance = 0.019, color = Color3.fromRGB(200, 90, 255), rainbow = true },
+	-- "tones" (con rainbow): en vez del arcoíris, un degradado de esos dos colores que gira (Modifiers.tones). Pedido por
+	-- el usuario: el ∞ en blanco y negro (probó el X en verde y lo devolvió al arcoíris).
 	{ name = "X", damage = 40, chance = 0.0057, color = Color3.fromRGB(230, 40, 40), rainbow = true },
-	{ name = "∞", damage = 100, chance = 0.0016, color = Color3.fromRGB(190, 150, 255), rainbow = true },
+	{ name = "∞", damage = 100, chance = 0.0016, color = Color3.fromRGB(240, 240, 245), rainbow = true, tones = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(30, 30, 36) } },
 }
 -- Pity de rasgos y grados (Modifiers.rollWithPity): solo lo tienen los resultados de "1 entre MinOdds" o más raros
 -- (pedido por el usuario: de S+ para arriba en grados, que en rasgos es de Shogun para arriba). Los fáciles no: su
@@ -913,6 +915,17 @@ Config.Tickets = {
 		{ item = "potion_damage_5", price = 20 },
 		{ item = "potion_health_5", price = 20 },
 	},
+}
+-- CÓDIGOS DE REGALO (server/Codes; se escriben abajo del todo en la Tienda). La clave es el código, en MAYÚSCULAS y sin
+-- espacios (el jugador puede escribirlo como quiera). Cada jugador lo canjea una sola vez. Opcionales: maxUses = cuántos
+-- jugadores en total pueden canjearlo (los primeros que lleguen) y expires = "AAAA-MM-DD", último día en que vale (hora
+-- UTC). rewards = lo que da, una lista con { coins = N }, { gems = N } o { item = clave de Config.Items, amount = N }
+-- (missionToken = tickets, luckClover = tréboles, traitCrystal, gradeCrystal, potion_<familia>_<tier>...). Ejemplos:
+--	SOLO10 = { maxUses = 10, rewards = { { item = "luckClover", amount = 3 } } },
+--	SEMANA = { expires = "2026-10-19", rewards = { { gems = 500 }, { item = "missionToken", amount = 25 } } },
+-- Quitar un código de aquí lo deja sin valer; quien ya lo canjeó se queda con lo que le dio.
+Config.Codes = {
+	LANZAMIENTO = { rewards = { { item = "luckClover", amount = 1 }, { item = "potion_coins_5", amount = 1 } } },
 }
 -- TRÉBOL DE LA SUERTE: Luck = por cuánto multiplica la suerte de armas del objeto elegido (una sola vez por objeto).
 Config.Clover = { Item = "luckClover", Luck = 999 }

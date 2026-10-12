@@ -275,7 +275,7 @@ function AutoPlay.start()
 			local active = on(name)
 			local locked = mode == "farm" and not Stats.perk(player, "autoFarm")
 			button.BackgroundColor3 = if active then ON_COLOR else color
-			state.Text = if locked then "R$" elseif active then "ON" else "OFF"
+			state.Text = if locked then "\u{E002}" elseif active then "ON" else "OFF"
 			state.BackgroundColor3 = if locked then ROBUX elseif active then ON_COLOR else Ui.COLORS.dark
 			-- Encendido, el icono late: se ve de un vistazo que está trabajando.
 			if pulse then

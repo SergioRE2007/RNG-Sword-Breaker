@@ -6,8 +6,10 @@
 -- La compra la hace Roblox (MarketplaceService); el servidor (server/Passes) publica cuáles tiene el jugador en los
 -- atributos "Pass_<clave>". Al lado del botón de Robux va el de tickets de misión (Stats.ticketPrice; BuyPassTickets):
 -- pide confirmar con un segundo toque, y los tickets que se tienen salen en la cabecera (Header.Tickets).
--- Delante de los pases van los productos de Config.Products (packs de Trébol de la suerte), con la misma tarjeta
--- (Product_<clave>): se compran las veces que se quiera, solo con Robux (server/Products), y no llevan botón de tickets.
+-- La ventana va por secciones, cada una con su cinta (pedido por el usuario): arriba "Tiradas x999", los packs de Trébol
+-- de la suerte de Config.Products en fichas apaisadas (Passes.Clovers.Product_<clave>.Card: se compran las veces que se
+-- quiera, solo con Robux, server/Products), luego "Pases de juego" (Passes.Grid.Pass_<clave>) y abajo "Códigos"
+-- (Passes.Codes: caja Box y botón Redeem; RedeemCode, server/Codes).
 -- Capas: todo va en la capa por defecto (la interfaz ordena el ZIndex globalmente), así que manda el orden en que
 -- se crean las piezas de cada tarjeta: fondo, escaparate (rombos, lluvia, rayos, canto, logo, etiqueta, cinta),
 -- textos y botón.
@@ -34,6 +36,7 @@ local ROBUX = Color3.fromRGB(70, 215, 120)
 local GOLD = Color3.fromRGB(255, 225, 90)
 local TICKET = Color3.fromRGB(255, 170, 40) -- botón y contador de tickets
 local CONFIRM_TIME = 3 -- segundos que dura el "¿Seguro?" del botón de tickets
+local ROBUX_SIGN = "\u{E002}" -- el símbolo de Robux: un carácter propio de Roblox, que pintan todas sus fuentes
 
 -- Medidas de la tarjeta (píxeles de diseño: la ventana entera se encoge con su UIScale).
 local COLUMNS = 3
@@ -41,6 +44,10 @@ local GAP = 12
 local CARD_HEIGHT = 324
 local SHOWN_ROWS = 2 -- filas de tarjetas a la vista; las demás, deslizando
 local PEEK = 46 -- lo que asoma de la fila siguiente cuando hay más
+local HEAD_HEIGHT = 44 -- cinta con el nombre de cada sección
+local TILE_HEIGHT = 132 -- fichas de los tréboles
+local CODES_HEIGHT = 222 -- panel de los códigos
+local CODES_LEFT = 250 -- donde empieza su texto, a la derecha del icono
 local PAD = 8 -- margen de la tarjeta
 local ART_HEIGHT = 130 -- alto del escaparate
 local ART_RADIUS = 10
@@ -300,15 +307,7 @@ local function celebrate(entry)
 end
 
 function PassShop.start()
-	-- Lo que se vende, en orden: primero los productos y luego los pases.
-	local offers = {}
-	for _, key in Config.ProductOrder do
-		table.insert(offers, { key = key, def = Config.Products[key], product = true })
-	end
-	for _, key in Config.GamepassOrder do
-		table.insert(offers, { key = key, def = Config.Gamepasses[key], product = false })
-	end
-	local rows = math.ceil(#offers / COLUMNS)
+	local rows = math.ceil(#Config.GamepassOrder / COLUMNS)
 	-- Como mucho se ven SHOWN_ROWS filas y el resto se alcanza deslizando (pedido por el usuario: con una tercera fila
 	-- la ventana entera se encogía para caber y quedaba diminuta); si hay más, asoma un trozo de la siguiente para que
 	-- se vea que sigue. Alto: cabecera y márgenes de Ui.window (78) y la rejilla. Ancha y baja a propósito (pedido por
@@ -345,6 +344,10 @@ function PassShop.start()
 		return "Tickets: los dan las misiones diarias y semanales", TICKET
 	end, true)
 
+	-- Lo que se mueve fuera de los escaparates de los pases (pedido por el usuario: quieto se veía tieso): los rayos de
+	-- cada medallón de trébol y del panel de códigos giran, y su logo flota y se balancea. Lo mueve el bucle de abajo.
+	local movers = {} -- { rays, logo, base = posición del logo, phase, over }
+	-- Todo va en una lista que se desliza, por secciones: los tréboles, los pases y los códigos.
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "Passes"
 	list.Position = UDim2.fromOffset(8, 4)
@@ -364,21 +367,316 @@ function PassShop.start()
 	padding.PaddingRight = UDim.new(0, 14) -- y sitio para la barra de deslizar
 	padding.PaddingBottom = UDim.new(0, 8)
 	padding.Parent = list
-	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.new(1 / COLUMNS, -GAP * (COLUMNS - 1) / COLUMNS, 0, CARD_HEIGHT)
-	grid.CellPadding = UDim2.fromOffset(GAP, GAP)
-	grid.SortOrder = Enum.SortOrder.LayoutOrder
-	grid.Parent = list
+	local sections = Instance.new("UIListLayout")
+	sections.SortOrder = Enum.SortOrder.LayoutOrder
+	sections.Padding = UDim.new(0, GAP)
+	sections.Parent = list
 
-	local cards = {}
-	for order, offer in offers do
-		local key, pass, product = offer.key, offer.def, offer.product
-		-- La casilla de la rejilla es un hueco; la tarjeta va dentro, centrada, para poder crecer desde su centro.
+	-- Cinta con el nombre de una sección.
+	local function heading(order: number, name: string, text: string, color: Color3)
+		local bar = Instance.new("Frame")
+		bar.Name = name
+		bar.LayoutOrder = order
+		bar.Size = UDim2.new(1, 0, 0, HEAD_HEIGHT)
+		bar.BackgroundColor3 = WHITE
+		bar.Parent = list
+		Ui.round(bar, 10)
+		Ui.stroke(bar, BLACK, 3)
+		Ui.panel(bar, color:Lerp(BLACK, 0.15))
+		local label = Ui.label(bar, 26)
+		label.Position = UDim2.fromOffset(16, 0)
+		label.Size = UDim2.new(1, -32, 1, 0)
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.Text = text
+	end
+
+	-- 1. Tréboles (Config.Products): tres fichas apaisadas, con otro aspecto que los pases.
+	heading(1, "HeadClovers", `Tiradas x{Config.Clover.Luck}`, Color3.fromRGB(60, 190, 110))
+	local clovers = Instance.new("Frame")
+	clovers.Name = "Clovers"
+	clovers.LayoutOrder = 2
+	clovers.Size = UDim2.new(1, 0, 0, TILE_HEIGHT)
+	clovers.BackgroundTransparency = 1
+	clovers.Parent = list
+	local cloverGrid = Instance.new("UIGridLayout")
+	cloverGrid.CellSize = UDim2.new(1 / COLUMNS, -math.ceil(GAP * (COLUMNS - 1) / COLUMNS) - 1, 1, 0)
+	cloverGrid.CellPadding = UDim2.fromOffset(GAP, 0)
+	cloverGrid.SortOrder = Enum.SortOrder.LayoutOrder
+	cloverGrid.Parent = clovers
+	for order, key in Config.ProductOrder do
+		local product = Config.Products[key]
+		local color = product.color
 		local slot = Instance.new("Frame")
-		slot.Name = (if product then "Product_" else "Pass_") .. key
+		slot.Name = "Product_" .. key
 		slot.LayoutOrder = order
 		slot.BackgroundTransparency = 1
-		slot.Parent = list
+		slot.Parent = clovers
+		local tile = Instance.new("Frame")
+		tile.Name = "Card"
+		tile.AnchorPoint = Vector2.new(0.5, 0.5)
+		tile.Position = UDim2.fromScale(0.5, 0.5)
+		tile.Size = UDim2.fromScale(1, 1)
+		tile.BackgroundColor3 = WHITE
+		tile.Parent = slot
+		Ui.round(tile, 14)
+		local border = Ui.stroke(tile, BLACK, 4)
+		Ui.gradient(tile, color:Lerp(BLACK, 0.25), Color3.fromRGB(20, 44, 40), 0)
+		local scale = Instance.new("UIScale")
+		scale.Parent = tile
+
+		-- Medallón del trébol a la izquierda, con sus rayos.
+		local medal = Instance.new("Frame")
+		medal.Name = "Medal"
+		medal.AnchorPoint = Vector2.new(0, 0.5)
+		medal.Position = UDim2.new(0, 10, 0.5, 0)
+		medal.Size = UDim2.fromOffset(TILE_HEIGHT - 20, TILE_HEIGHT - 20)
+		medal.BackgroundColor3 = WHITE
+		medal.Parent = tile
+		Ui.round(medal, 100)
+		Ui.stroke(medal, color:Lerp(WHITE, 0.6), 3)
+		Ui.gradient(medal, color:Lerp(WHITE, 0.3), color:Lerp(BLACK, 0.4), 90)
+		local rays = Instance.new("ImageLabel")
+		rays.Name = "Rays"
+		rays.AnchorPoint = Vector2.new(0.5, 0.5)
+		rays.Position = UDim2.fromScale(0.5, 0.5)
+		-- Del tamaño del medallón y con su propia esquina redonda: ClipsDescendants recorta en rectángulo y las
+		-- esquinas de la imagen asomaban fuera del círculo.
+		rays.Size = UDim2.fromScale(1, 1)
+		rays.BackgroundTransparency = 1
+		rays.Image = Ui.IMAGES.boton_rayos
+		rays.ImageTransparency = 0.7
+		rays.Parent = medal
+		Ui.round(rays, 100)
+		local logo = Instance.new("Frame")
+		logo.Name = "Logo"
+		logo.AnchorPoint = Vector2.new(0.5, 0.5)
+		logo.Position = UDim2.fromScale(0.5, 0.5)
+		logo.Size = UDim2.fromScale(0.78, 0.78)
+		logo.BackgroundTransparency = 1
+		logo.Parent = medal
+		Ui.image(logo, product.icon)
+		-- Cuántos trae, a caballo del medallón.
+		local amount = Ui.label(tile, 34)
+		amount.Name = "Amount"
+		amount.AnchorPoint = Vector2.new(0.5, 1)
+		amount.Position = UDim2.new(0, TILE_HEIGHT - 16, 1, -4)
+		amount.Size = UDim2.fromOffset(80, 40)
+		amount.Rotation = -6
+		amount.Text = "x" .. product.amount
+		Ui.gradient(amount, WHITE, GOLD, 90)
+
+		local left = TILE_HEIGHT + 22
+		local name = Ui.label(tile, 26)
+		name.Name = "Title"
+		name.Position = UDim2.fromOffset(left, 8)
+		name.Size = UDim2.new(1, -left - 12, 0, 30)
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		name.TextScaled = true
+		name.Text = if product.amount == 1 then "1 trébol" else `{product.amount} tréboles`
+		local nameLimit = Instance.new("UITextSizeConstraint")
+		nameLimit.MaxTextSize = 26
+		nameLimit.MinTextSize = 14
+		nameLimit.Parent = name
+		local note = Ui.label(tile, 16)
+		note.Name = "Note"
+		note.Position = UDim2.fromOffset(left, 38)
+		note.Size = UDim2.new(1, -left - 12, 0, 20)
+		note.TextXAlignment = Enum.TextXAlignment.Left
+		note.TextColor3 = Color3.fromRGB(205, 230, 215)
+		note.Text = `x{Config.Clover.Luck} de suerte de armas`
+		if product.ribbon then
+			local ribbon = Instance.new("Frame")
+			ribbon.Name = "Ribbon"
+			ribbon.AnchorPoint = Vector2.new(1, 0)
+			ribbon.Position = UDim2.new(1, -8, 0, 8)
+			ribbon.Size = UDim2.fromOffset(74, 28)
+			ribbon.Rotation = 4
+			ribbon.Parent = tile
+			Ui.pill(ribbon, Ui.COLORS.red, 8)
+			local ribbonText = Ui.label(ribbon, 18)
+			ribbonText.Size = UDim2.fromScale(1, 1)
+			ribbonText.Text = product.ribbon
+			name.Size = UDim2.new(1, -left - 90, 0, 30)
+		end
+
+		local buy = Ui.button(tile, "", ROBUX)
+		buy.Name = "Buy"
+		buy.AnchorPoint = Vector2.new(0.5, 1)
+		buy.Position = UDim2.new(0.5, left / 2 - 2, 1, -10)
+		buy.Size = UDim2.new(1, -left - 12, 0, 46)
+		buy.TextSize = 26
+		Ui.sparkle(buy, 3)
+		local price = product.price
+		local function show()
+			buy.Text = if product.id <= 0 then "Pronto" else `{ROBUX_SIGN} {price}`
+			buy.BackgroundColor3 = if product.id <= 0 then Ui.COLORS.gray else ROBUX
+		end
+		show()
+		-- El precio de verdad lo dice Roblox (el de Config es solo el que se enseña mientras llega).
+		if product.id > 0 then
+			task.spawn(function()
+				local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, product.id, Enum.InfoType.Product)
+				if ok and type(info) == "table" and info.PriceInRobux then
+					price = info.PriceInRobux
+					show()
+				end
+			end)
+		end
+		buy.Activated:Connect(function()
+			if product.id <= 0 then
+				Sfx.play("error")
+				Ui.toast("Aún no está a la venta", Ui.COLORS.orange)
+				return
+			end
+			MarketplaceService:PromptProductPurchase(player, product.id)
+		end)
+		local mover = { rays = rays, logo = logo, base = logo.Position, phase = order * 1.7, over = false }
+		table.insert(movers, mover)
+		tile.MouseEnter:Connect(function()
+			mover.over = true
+			if not Performance.get() then
+				ease(scale, 0.2, Enum.EasingStyle.Back, { Scale = HOVER })
+			end
+			ease(border, 0.15, Enum.EasingStyle.Quad, { Color = color:Lerp(WHITE, 0.55) })
+		end)
+		tile.MouseLeave:Connect(function()
+			mover.over = false
+			ease(scale, 0.2, Enum.EasingStyle.Quad, { Scale = 1 })
+			ease(border, 0.2, Enum.EasingStyle.Quad, { Color = BLACK })
+		end)
+	end
+
+	-- 2. Pases de juego: la rejilla de tarjetas.
+	heading(3, "HeadPasses", "Pases de juego", Color3.fromRGB(110, 90, 230))
+	local passGrid = Instance.new("Frame")
+	passGrid.Name = "Grid"
+	passGrid.LayoutOrder = 4
+	passGrid.Size = UDim2.new(1, 0, 0, rows * (CARD_HEIGHT + GAP) - GAP)
+	passGrid.BackgroundTransparency = 1
+	passGrid.Parent = list
+	local grid = Instance.new("UIGridLayout")
+	grid.CellSize = UDim2.new(1 / COLUMNS, -math.ceil(GAP * (COLUMNS - 1) / COLUMNS) - 1, 0, CARD_HEIGHT)
+	grid.CellPadding = UDim2.fromOffset(GAP, GAP)
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.Parent = passGrid
+
+	-- 3. Códigos de regalo (Config.Codes, server/Codes): una caja para escribirlo y el botón; la respuesta llega en un aviso.
+	heading(5, "HeadCodes", "Códigos", Color3.fromRGB(235, 150, 50))
+	local CODE = Color3.fromRGB(120, 124, 255)
+	local codes = Instance.new("Frame")
+	codes.Name = "Codes"
+	codes.LayoutOrder = 6
+	codes.Size = UDim2.new(1, 0, 0, CODES_HEIGHT)
+	codes.BackgroundColor3 = WHITE
+	codes.Parent = list
+	Ui.round(codes, 14)
+	Ui.stroke(codes, BLACK, 4)
+	Ui.gradient(codes, Color3.fromRGB(16, 18, 38), Color3.fromRGB(44, 46, 100), 90)
+	-- Rombos al fondo y canto de color por dentro del borde negro.
+	local codePattern = Instance.new("ImageLabel")
+	codePattern.Name = "Pattern"
+	codePattern.Size = UDim2.fromScale(1, 1)
+	codePattern.BackgroundTransparency = 1
+	codePattern.Image = Ui.IMAGES.boton_patron
+	codePattern.ImageColor3 = CODE
+	codePattern.ImageTransparency = 0.9
+	codePattern.ScaleType = Enum.ScaleType.Tile
+	codePattern.TileSize = UDim2.fromOffset(44, 44)
+	codePattern.Parent = codes
+	Ui.round(codePattern, 14)
+	local codeRim = Instance.new("Frame")
+	codeRim.Name = "Rim"
+	codeRim.Position = UDim2.fromOffset(3, 3)
+	codeRim.Size = UDim2.new(1, -6, 1, -6)
+	codeRim.BackgroundTransparency = 1
+	codeRim.Parent = codes
+	Ui.round(codeRim, 11)
+	Ui.stroke(codeRim, CODE, 3)
+	-- Ticket grande a la izquierda, sobre un resplandor.
+	local codeGlow = Instance.new("ImageLabel")
+	codeGlow.Name = "Glow"
+	codeGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+	codeGlow.Position = UDim2.new(0, CODES_LEFT / 2 + 6, 0.5, 0)
+	codeGlow.Size = UDim2.fromOffset(CODES_HEIGHT - 24, CODES_HEIGHT - 24)
+	codeGlow.BackgroundTransparency = 1
+	codeGlow.Image = Ui.IMAGES.boton_rayos
+	codeGlow.ImageColor3 = CODE
+	codeGlow.ImageTransparency = 0.55
+	codeGlow.Parent = codes
+	Ui.round(codeGlow, 100)
+	local codeIcon = Instance.new("Frame")
+	codeIcon.Name = "Icon"
+	codeIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	codeIcon.Position = codeGlow.Position
+	codeIcon.Size = UDim2.fromOffset(150, 150)
+	codeIcon.BackgroundTransparency = 1
+	codeIcon.Parent = codes
+	Ui.ticketIcon(codeIcon, TICKET)
+	table.insert(movers, { rays = codeGlow, logo = codeIcon, base = codeIcon.Position, phase = 0, over = false })
+
+	local codeTitle = Ui.label(codes, 52)
+	codeTitle.Name = "Title"
+	codeTitle.Position = UDim2.fromOffset(CODES_LEFT, 12)
+	codeTitle.Size = UDim2.new(1, -CODES_LEFT - 20, 0, 54)
+	codeTitle.TextXAlignment = Enum.TextXAlignment.Left
+	codeTitle.Text = "Códigos"
+	Ui.gradient(codeTitle, WHITE, CODE:Lerp(WHITE, 0.25), 90)
+	local codeNote = Ui.label(codes, 22)
+	codeNote.Name = "Note"
+	codeNote.Position = UDim2.fromOffset(CODES_LEFT, 66)
+	codeNote.Size = UDim2.new(1, -CODES_LEFT - 20, 0, 24)
+	codeNote.TextXAlignment = Enum.TextXAlignment.Left
+	codeNote.Text = "¡Únete a nuestro grupo para conseguir códigos exclusivos!"
+	local codeBox = Instance.new("TextBox")
+	codeBox.Name = "Box"
+	codeBox.Position = UDim2.fromOffset(CODES_LEFT, 98)
+	codeBox.Size = UDim2.new(1, -CODES_LEFT - 24, 0, 48)
+	codeBox.ClearTextOnFocus = false
+	codeBox.PlaceholderText = "Escribe tu código..."
+	codeBox.Text = ""
+	codeBox.TextSize = 24
+	codeBox.TextXAlignment = Enum.TextXAlignment.Left
+	codeBox.Parent = codes
+	Ui.field(codeBox)
+	local codeEdge = codeBox:FindFirstChildOfClass("UIStroke")
+	if codeEdge then
+		codeEdge.Color = CODE:Lerp(WHITE, 0.35)
+	end
+	local codeInset = Instance.new("UIPadding")
+	codeInset.PaddingLeft = UDim.new(0, 14)
+	codeInset.PaddingRight = UDim.new(0, 14)
+	codeInset.Parent = codeBox
+	local redeem = Ui.button(codes, "Canjear", Ui.COLORS.green)
+	redeem.Name = "Redeem"
+	redeem.Position = UDim2.fromOffset(CODES_LEFT, 156)
+	redeem.Size = UDim2.fromOffset(230, 52)
+	redeem.TextSize = 28
+	Ui.sparkle(redeem, 3)
+	local function sendCode()
+		local text = string.gsub(codeBox.Text, "%s+", "")
+		if text == "" then
+			Sfx.play("error")
+			return
+		end
+		Remotes.RedeemCode:FireServer(text)
+		codeBox.Text = ""
+	end
+	redeem.Activated:Connect(sendCode)
+	codeBox.FocusLost:Connect(function(enter)
+		if enter then
+			sendCode()
+		end
+	end)
+
+	local cards = {}
+	for order, key in Config.GamepassOrder do
+		local pass = Config.Gamepasses[key]
+		-- La casilla de la rejilla es un hueco; la tarjeta va dentro, centrada, para poder crecer desde su centro.
+		local slot = Instance.new("Frame")
+		slot.Name = "Pass_" .. key
+		slot.LayoutOrder = order
+		slot.BackgroundTransparency = 1
+		slot.Parent = passGrid
 		local card = Instance.new("Frame")
 		card.Name = "Card"
 		card.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -452,7 +750,7 @@ function PassShop.start()
 		ticketIcon.Parent = tickets
 		Ui.ticketIcon(ticketIcon, TICKET)
 
-		local entry = { key = key, pass = pass, card = card, scale = scale, border = border, art = art, buy = buy, price = pass.price, product = product, tickets = tickets, ticketIcon = ticketIcon, confirm = 0 }
+		local entry = { key = key, pass = pass, card = card, scale = scale, border = border, art = art, buy = buy, price = pass.price, tickets = tickets, ticketIcon = ticketIcon, confirm = 0 }
 		cards[key] = entry
 
 		-- Ratón encima: la tarjeta crece, el borde se enciende del color del pase y el escaparate se acelera.
@@ -473,11 +771,11 @@ function PassShop.start()
 		-- El precio de verdad lo dice Roblox (el de Config es solo el que se enseña mientras llega).
 		if pass.id > 0 then
 			task.spawn(function()
-				local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, pass.id, if product then Enum.InfoType.Product else Enum.InfoType.GamePass)
+				local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, pass.id, Enum.InfoType.GamePass)
 				if ok and type(info) == "table" and info.PriceInRobux then
 					entry.price = info.PriceInRobux
 					if buy.Parent and not Stats.pass(player, key) then
-						buy.Text = `R$ {entry.price}`
+						buy.Text = `{ROBUX_SIGN} {entry.price}`
 					end
 				end
 			end)
@@ -491,18 +789,14 @@ function PassShop.start()
 				Ui.toast("Aún no está a la venta", Ui.COLORS.orange)
 				return
 			end
-			if product then
-				MarketplaceService:PromptProductPurchase(player, pass.id)
-			else
-				MarketplaceService:PromptGamePassPurchase(player, pass.id)
-			end
+			MarketplaceService:PromptGamePassPurchase(player, pass.id)
 		end)
 	end
 
 	local refresh
 	for key, entry in cards do
 		entry.tickets.Activated:Connect(function()
-			if entry.product or Stats.pass(player, key) then
+			if Stats.pass(player, key) then
 				return
 			end
 			local missing = Stats.ticketPrice(key) - (player:GetAttribute("Item_missionToken") or 0)
@@ -528,19 +822,18 @@ function PassShop.start()
 		local owns = player:GetAttribute("Item_missionToken") or 0
 		walletText.Text = count(owns)
 		for key, entry in cards do
-			local owned = not entry.product and Stats.pass(player, key)
+			local owned = Stats.pass(player, key)
 			local asking = os.clock() - entry.confirm <= CONFIRM_TIME
-			local cost = if entry.product then 0 else Stats.ticketPrice(key)
+			local cost = Stats.ticketPrice(key)
 			local enough = owns >= cost
-			local alone = owned or entry.product -- sin botón de tickets: el de Robux ocupa todo el ancho
-			entry.buy.Size = if alone then UDim2.new(1, -PAD * 2 - 4, 0, entry.buy.Size.Y.Offset) else entry.tickets.Size
-			entry.tickets.Visible = not alone
+			entry.buy.Size = if owned then UDim2.new(1, -PAD * 2 - 4, 0, entry.buy.Size.Y.Offset) else entry.tickets.Size
+			entry.tickets.Visible = not owned
 			entry.ticketIcon.Visible = not asking
 			entry.tickets.Text = if asking then "¿Seguro?" else `      {count(cost)}`
 			entry.tickets.TextSize = if asking then 22 else 26
 			entry.tickets.BackgroundColor3 = if asking then Ui.COLORS.green elseif enough then TICKET else TICKET:Lerp(Color3.fromRGB(70, 72, 90), 0.7)
 			entry.tickets.TextColor3 = if enough then WHITE else Color3.fromRGB(190, 192, 205)
-			entry.buy.Text = if owned then "¡Lo tienes!" elseif entry.pass.id <= 0 then "Pronto" else `R$ {entry.price}`
+			entry.buy.Text = if owned then "¡Lo tienes!" elseif entry.pass.id <= 0 then "Pronto" else `{ROBUX_SIGN} {entry.price}`
 			entry.buy.BackgroundColor3 = if owned then Ui.COLORS.blue elseif entry.pass.id <= 0 then Ui.COLORS.gray else ROBUX
 			entry.buy.TextSize = if owned then 22 else 26
 		end
@@ -573,6 +866,13 @@ function PassShop.start()
 				end
 				for _, entry in cards do
 					stepArt(entry.art, dt)
+				end
+				for _, mover in movers do
+					-- Con el ratón encima, todo más deprisa.
+					mover.phase += dt * (if mover.over then 2.4 else 1)
+					mover.rays.Rotation = mover.phase * 26
+					mover.logo.Position = mover.base + UDim2.fromOffset(0, math.sin(mover.phase * 2.6) * 3)
+					mover.logo.Rotation = math.sin(mover.phase * 1.9) * 6
 				end
 			end)
 		elseif not on and loop then

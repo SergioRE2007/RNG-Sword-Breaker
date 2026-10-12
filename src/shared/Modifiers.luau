@@ -184,4 +184,25 @@ function Modifiers.effect(entry): string
 	return table.concat(parts, " · ")
 end
 
+-- Degradado de las entradas con "tones" (dos colores que se alternan, para que al girar se vea moverse), o nil si la
+-- entrada no los tiene (entonces, si es `rainbow`, va con el arcoíris de siempre).
+function Modifiers.tones(entry): ColorSequence?
+	local tones = entry and entry.tones
+	if not tones then
+		return nil
+	end
+	return ColorSequence.new({
+		ColorSequenceKeypoint.new(0, tones[1]),
+		ColorSequenceKeypoint.new(0.25, tones[2]),
+		ColorSequenceKeypoint.new(0.5, tones[1]),
+		ColorSequenceKeypoint.new(0.75, tones[2]),
+		ColorSequenceKeypoint.new(1, tones[1]),
+	})
+end
+
+-- Color de una entrada con "tones" en el instante `t` (para textos que se pintan letra a letra y bordes de un color).
+function Modifiers.toneAt(entry, t: number): Color3
+	return entry.tones[1]:Lerp(entry.tones[2], 0.5 + 0.5 * math.sin(t))
+end
+
 return Modifiers
