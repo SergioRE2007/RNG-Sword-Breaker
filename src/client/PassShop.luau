@@ -322,7 +322,7 @@ function PassShop.start()
 	-- Tickets que tiene el jugador, en la cabecera, a la izquierda de la X.
 	local wallet = Instance.new("Frame")
 	wallet.Name = "Tickets"
-	wallet.Visible = Config.Tickets.Passes == true
+	wallet.Visible = false -- el contador de tickets no sale en la Tienda (pedido por el usuario: ahí no pintaba nada); se ven en la mochila y en el puesto de Misiones
 	wallet.AnchorPoint = Vector2.new(1, 0.5)
 	wallet.Position = UDim2.new(1, -72, 0.5, 0)
 	wallet.Size = UDim2.fromOffset(190, 42)
@@ -842,9 +842,8 @@ function PassShop.start()
 			local asking = os.clock() - entry.confirm <= CONFIRM_TIME
 			local cost = Stats.ticketPrice(key)
 			local enough = owns >= cost
-			local single = owned or not Config.Tickets.Passes -- un solo botón, a todo lo ancho
-			entry.buy.Size = if single then UDim2.new(1, -PAD * 2 - 4, 0, entry.buy.Size.Y.Offset) else entry.tickets.Size
-			entry.tickets.Visible = not single
+			entry.buy.Size = if owned then UDim2.new(1, -PAD * 2 - 4, 0, entry.buy.Size.Y.Offset) else entry.tickets.Size
+			entry.tickets.Visible = not owned
 			entry.ticketIcon.Visible = not asking
 			entry.tickets.Text = if asking then Lang.t(nil, "Sure?") else `      {count(cost)}`
 			entry.tickets.TextSize = if asking then 22 else 26

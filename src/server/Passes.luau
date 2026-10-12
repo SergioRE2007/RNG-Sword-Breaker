@@ -126,7 +126,7 @@ end
 
 -- Compra con tickets: el precio lo pone el servidor y se cobra y se apunta de una vez.
 local function onBuy(player: Player, key: unknown)
-	if not Config.Tickets.Passes or type(key) ~= "string" or not Config.Gamepasses[key] or Stats.pass(player, key) then
+	if type(key) ~= "string" or not Config.Gamepasses[key] or Stats.pass(player, key) then
 		return
 	end
 	local data = PlayerData.read(player)
