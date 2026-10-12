@@ -611,7 +611,7 @@ function PassShop.start()
 	codeIcon.Size = UDim2.fromOffset(150, 150)
 	codeIcon.BackgroundTransparency = 1
 	codeIcon.Parent = codes
-	Ui.ticketIcon(codeIcon, TICKET)
+	Ui.image(codeIcon, "codigos")
 	table.insert(movers, { rays = codeGlow, logo = codeIcon, base = codeIcon.Position, phase = 0, over = false })
 
 	local codeTitle = Ui.label(codes, 52)

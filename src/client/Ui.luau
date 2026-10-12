@@ -1319,21 +1319,49 @@ end
 -- Logos en imagen (PNG en assets/logos, subidos a Roblox a 512 px y recortados al dibujo). Uno nuevo: subirlo y
 -- añadir aquí su id.
 Ui.IMAGES = {
+	-- Accesorios (Config.Artifacts, campo `image`; sin él, el colgante hecho con marcos: Ui.artifactIcon).
+	acc_amuleto_cobre = "rbxassetid://134657407986727",
+	acc_anillo_afilado = "rbxassetid://84754923156498",
+	acc_colgante_gemas = "rbxassetid://106695268490390",
+	acc_corazon_estelar = "rbxassetid://71249482960122",
+	acc_corona_dorada = "rbxassetid://117216600465188",
+	acc_guantelete = "rbxassetid://109822557238424",
+	acc_nucleo_infinito = "rbxassetid://115279655896885",
+	acc_ojo_fortuna = "rbxassetid://77199791902222",
+	acc_reliquia_vacio = "rbxassetid://87711122782991",
+	acc_trebol = "rbxassetid://79526781719923",
 	accesorios = "rbxassetid://100488682771428",
 	ajustes = "rbxassetid://81188398748574",
 	armadura = "rbxassetid://106264890410101",
+	autoclick = "rbxassetid://89637675898054",
+	bolsa = "rbxassetid://88554627204634",
 	boton_destello = "rbxassetid://116619506680363", -- los tres boton_* son de client/MenuTile (tools/ui/botones.mjs)
 	boton_patron = "rbxassetid://92215772110677",
 	boton_rayos = "rbxassetid://123487236385810",
 	casa = "rbxassetid://118337847160649",
+	codigos = "rbxassetid://77315431402481",
+	cristal_grado = "rbxassetid://127096179789432",
+	cristal_rasgo = "rbxassetid://83278150749876",
 	espada = "rbxassetid://100527116629167",
 	gemas = "rbxassetid://86307416552518",
+	grupo = "rbxassetid://95015760055060",
 	hub = "rbxassetid://74343969763454",
+	indice = "rbxassetid://87281400697781",
 	mazmorras = "rbxassetid://137297255530089",
 	mejora = "rbxassetid://112320049421954",
+	misiones = "rbxassetid://111649268210603",
 	mochila = "rbxassetid://95507779119186",
 	monedas = "rbxassetid://134320261318517",
 	objetos = "rbxassetid://91743584320580",
+	-- Logo de cada pase de juego (Config.Gamepasses, campo `icon`).
+	pase_arsenal = "rbxassetid://99587825188898",
+	pase_auto = "rbxassetid://91531669755148",
+	pase_botin = "rbxassetid://87234218567402",
+	pase_forja = "rbxassetid://129338431835432",
+	pase_monedas2 = "rbxassetid://129803233752954",
+	pase_suerte2 = "rbxassetid://73793149682052",
+	pase_suerte5 = "rbxassetid://90220764595655",
+	pase_vip = "rbxassetid://115660656754557",
 	patron_rombos = "rbxassetid://127373214598364", -- textura en mosaico de Ui.pattern
 	-- Frascos de las pociones, potion_<familia>_<tier> (client/Potions.icon; sin imagen, el frasco hecho con marcos).
 	potion_boxLuck_1 = "rbxassetid://96905997595105",
@@ -1371,8 +1399,12 @@ Ui.IMAGES = {
 	rasgo_shogun = "rbxassetid://91767316052986",
 	rasgo_trascendente = "rbxassetid://107888798952316",
 	suerte = "rbxassetid://114098318122458",
+	ticket = "rbxassetid://107845889445469",
 	tienda_robux = "rbxassetid://93004325604664",
 	trade = "rbxassetid://118234202800810",
+	trebol = "rbxassetid://109403301965202", -- el Trébol de la suerte y sus packs de 5 y de 10 (Config.Products)
+	trebol_10 = "rbxassetid://99518608443875",
+	trebol_5 = "rbxassetid://123449526365265",
 }
 
 -- Pone el logo `name` de Ui.IMAGES en el mismo hueco que ocupan los iconos hechos con marcos.
@@ -1407,16 +1439,10 @@ function Ui.gemIcon(parent: Instance, color: Color3)
 	shine.BackgroundTransparency = 0.35
 end
 
--- Cristal: esquirlas alargadas e inclinadas (una, o dos con `double`), para que no se confunda con la gema.
-function Ui.crystalIcon(parent: Instance, color: Color3, double: boolean?)
-	local holder = iconHolder(parent, 0)
-	for _, tilt in if double then { -20, 20 } else { 14 } do
-		local shard = piece(holder, UDim2.fromScale(0.3, 0.8), UDim2.fromScale(0.5 + tilt / 110, 0.5), color, 5)
-		shard.Rotation = tilt
-		Ui.gradient(shard, WHITE, Color3.fromRGB(150, 150, 170), 30)
-		local shine = piece(shard, UDim2.fromScale(0.3, 0.5), UDim2.fromScale(0.34, 0.32), WHITE, 2)
-		shine.BackgroundTransparency = 0.35
-	end
+-- Cristal: el de rasgo (uno, celeste) o, con `double`, el de grado (dos cruzados, violeta). Son imágenes: `color` ya
+-- no se usa.
+function Ui.crystalIcon(parent: Instance, _color: Color3, double: boolean?)
+	Ui.image(parent, if double then "cristal_grado" else "cristal_rasgo")
 end
 
 function Ui.orbIcon(parent: Instance, color: Color3)
@@ -1440,35 +1466,9 @@ function Ui.starIcon(parent: Instance, color: Color3)
 	core.ZIndex = 3
 end
 
--- Ticket de misión: una entrada dorada, ladeada, con su línea de corte y una estrella. `color` = el del papel.
-function Ui.ticketIcon(parent: Instance, color: Color3)
-	local holder = iconHolder(parent, -14)
-	holder.Position = UDim2.fromScale(0.5, 0.5)
-	holder.Size = UDim2.fromScale(0.96, 0.96)
-	local paper = piece(holder, UDim2.fromScale(1, 0.62), UDim2.fromScale(0.5, 0.5), color, 5)
-	Ui.gradient(paper, WHITE, Color3.fromRGB(215, 175, 120), 90)
-	-- Línea de corte: tres rayitas a un tercio del ancho.
-	for index = 0, 2 do
-		local dash = Instance.new("Frame")
-		dash.AnchorPoint = Vector2.new(0.5, 0.5)
-		dash.Position = UDim2.fromScale(0.3, 0.22 + index * 0.28)
-		dash.Size = UDim2.fromScale(0.06, 0.16)
-		dash.BackgroundColor3 = BLACK
-		dash.BackgroundTransparency = 0.35
-		dash.BorderSizePixel = 0
-		dash.Parent = paper
-	end
-	local star = Instance.new("TextLabel")
-	star.AnchorPoint = Vector2.new(0.5, 0.5)
-	star.Position = UDim2.fromScale(0.66, 0.5)
-	star.Size = UDim2.fromScale(0.6, 1)
-	star.BackgroundTransparency = 1
-	star.Font = Enum.Font.GothamBlack
-	star.Text = "★"
-	star.TextScaled = true
-	star.TextColor3 = WHITE
-	star.TextStrokeTransparency = 0.4
-	star.Parent = paper
+-- Ticket de misión: la imagen de la entrada dorada con su estrella (`color` ya no se usa).
+function Ui.ticketIcon(parent: Instance, _color: Color3)
+	Ui.image(parent, "ticket")
 end
 
 local GOLD = Color3.fromRGB(240, 192, 60)
@@ -1504,6 +1504,15 @@ function Ui.amuletIcon(parent: Instance, color: Color3)
 	stone.Rotation = 45
 	Ui.gradient(stone, WHITE, Color3.fromRGB(150, 150, 170), 45)
 	shine(stone, UDim2.fromScale(0.3, 0.3), UDim2.fromScale(0.3, 0.3))
+end
+
+-- Icono de un accesorio de Config.Artifacts: su imagen (`image`) o, si no tiene, el colgante de su color.
+function Ui.artifactIcon(parent: Instance, artifact)
+	if artifact.image and Ui.IMAGES[artifact.image] then
+		Ui.image(parent, artifact.image)
+	else
+		Ui.amuletIcon(parent, artifact.color)
+	end
 end
 
 -- Símbolos de las pociones (dentro del líquido): cada uno se dibuja en un cuadrado de lado 1 con piezas sin borde grueso.

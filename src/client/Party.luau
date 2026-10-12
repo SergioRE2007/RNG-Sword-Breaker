@@ -110,7 +110,7 @@ end
 
 local function buildWindow()
 	local window, body = Ui.window("Party", "Sala de grupo", Vector2.new(940, 600), function(parent)
-		Ui.starIcon(parent, Color3.fromRGB(215, 160, 255))
+		Ui.image(parent, "grupo")
 	end)
 
 	-- Tarjeta de la zona (izquierda).

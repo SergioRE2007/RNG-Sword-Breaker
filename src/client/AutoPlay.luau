@@ -75,49 +75,6 @@ end
 
 -- Botones ---------------------------------------------------------------------------------
 
--- Icono del autoclicker: un ratón con el botón izquierdo encendido.
-local function mouseIcon(parent: Instance): Frame
-	local holder = Instance.new("Frame")
-	holder.Name = "Icon"
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.4)
-	holder.Size = UDim2.fromScale(0.42, 0.56)
-	holder.BackgroundColor3 = WHITE
-	holder.BorderSizePixel = 0
-	holder.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.45, 0)
-	corner.Parent = holder
-	Ui.stroke(holder, BLACK, 2.5)
-	Ui.gradient(holder, WHITE, Color3.fromRGB(200, 208, 230), 90)
-	local key = Instance.new("Frame")
-	key.Name = "Key"
-	key.Position = UDim2.fromScale(0.08, 0.06)
-	key.Size = UDim2.fromScale(0.38, 0.36)
-	key.BackgroundColor3 = Color3.fromRGB(255, 90, 80)
-	key.BorderSizePixel = 0
-	key.Parent = holder
-	local keyCorner = Instance.new("UICorner")
-	keyCorner.CornerRadius = UDim.new(0.5, 0)
-	keyCorner.Parent = key
-	local split = Instance.new("Frame")
-	split.Name = "Split"
-	split.AnchorPoint = Vector2.new(0.5, 0)
-	split.Position = UDim2.fromScale(0.5, 0)
-	split.Size = UDim2.new(0, 2, 0.46, 0)
-	split.BackgroundColor3 = BLACK
-	split.BorderSizePixel = 0
-	split.Parent = holder
-	local line = Instance.new("Frame")
-	line.Name = "Line"
-	line.Position = UDim2.fromScale(0, 0.46)
-	line.Size = UDim2.new(1, 0, 0, 2)
-	line.BackgroundColor3 = BLACK
-	line.BorderSizePixel = 0
-	line.Parent = holder
-	return holder
-end
-
 -- Un botón al lado de la casilla del arma. `side` = -1 a su izquierda, 1 a su derecha.
 local function build(dock: Instance, name: string, text: string, color: Color3, side: number)
 	local button = Ui.button(dock, "", color)
@@ -125,14 +82,9 @@ local function build(dock: Instance, name: string, text: string, color: Color3, 
 	button.AnchorPoint = Vector2.new(if side < 0 then 1 else 0, 1)
 	button.Position = UDim2.new(if side < 0 then 0 else 1, side * GAP, 0, SLOT)
 	button.Size = UDim2.fromOffset(BUTTON, BUTTON)
-	local icon: GuiObject
-	if name == "AutoClick" then
-		icon = mouseIcon(button)
-	else
-		icon = Ui.image(button, "espada")
-		icon.Position = UDim2.fromScale(0.5, 0.4)
-		icon.Size = UDim2.fromScale(0.66, 0.66)
-	end
+	local icon = Ui.image(button, if name == "AutoClick" then "autoclick" else "pase_auto")
+	icon.Position = UDim2.fromScale(0.5, 0.4)
+	icon.Size = UDim2.fromScale(0.66, 0.66)
 	local iconScale = Instance.new("UIScale")
 	iconScale.Parent = icon
 	local label = Ui.label(button, 15)

@@ -301,8 +301,8 @@ function Hud.start()
 		{ "PassShop", "Tienda", Color3.fromRGB(225, 50, 75), "tienda_robux", true },
 		-- Abre la lista de Comercio (antes iba arriba, con los botones de transporte: pedido por el usuario).
 		{ "TradeList", "Trades", Color3.fromRGB(40, 170, 200), "trade" },
-		-- Índice de armas (client/Index). Logo provisional: el usuario pondrá el suyo.
-		{ "Index", "Índice", Ui.COLORS.purple, "espada" },
+		-- Índice de armas (client/Index).
+		{ "Index", "Índice", Ui.COLORS.purple, "indice" },
 	}
 	for order, entry in menuItems do
 		local item = MenuTile.new(menu, entry[2], entry[3], entry[4], false, entry[5])

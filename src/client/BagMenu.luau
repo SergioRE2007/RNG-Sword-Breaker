@@ -334,7 +334,7 @@ end
 local function build()
 	local body
 	window, body = Ui.window(NAME, "Bolsa de oro", Vector2.new(720, 560), function(parent)
-		Ui.image(parent, "monedas")
+		Ui.image(parent, "bolsa")
 	end)
 
 	-- Arriba: los huecos de la bolsa y cómo va.

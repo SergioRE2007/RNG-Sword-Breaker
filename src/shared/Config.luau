@@ -191,17 +191,17 @@ Config.Gacha = {
 -- al 5 % de antes la parcela daba ella sola varias veces las tiradas de rasgo que pide el calendario.
 Config.ItemOrder = { "traitCrystal", "missionToken", "gradeCrystal", "luckClover" }
 Config.Items = {
-	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.007, color = Color3.fromRGB(90, 230, 255) },
+	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.007, color = Color3.fromRGB(90, 230, 255), image = "cristal_rasgo" },
 	-- Moneda gratuita (f2p) que dan las misiones diarias y semanales (el usuario los llama "tickets"): con ellos se compran
 	-- los pases de la Tienda (Config.Tickets). No cae de los objetos (sin dropChance) y no se comercia (noTrade: si no,
 	-- con cuentas de más haciendo misiones se le pasarían todos a una sola).
-	missionToken = { name = "Ticket", description = "Los dan las misiones diarias y semanales. Con ellos se compran los pases de la Tienda.", color = Color3.fromRGB(255, 190, 60), noTrade = true },
+	missionToken = { name = "Ticket", description = "Los dan las misiones diarias y semanales. Con ellos se compran los pases de la Tienda.", color = Color3.fromRGB(255, 190, 60), image = "ticket", noTrade = true },
 	-- Trébol de la suerte (pedido por el usuario): se pulsa en la mochila, se elige un objeto de tu parcela y su suerte
 	-- de armas se multiplica por Config.Clover.Luck, encima de todo lo que ya tuviera (server/Clover). Se compra con
 	-- Robux (Config.Products) o con tickets (Config.Tickets.Shop); no cae de nada y no se comercia.
-	luckClover = { name = "Trébol de la suerte", description = "Púlsalo y elige un objeto de tu parcela: su suerte de armas se multiplica por 999.", color = Color3.fromRGB(90, 220, 130), image = "suerte", noTrade = true },
+	luckClover = { name = "Trébol de la suerte", description = "Púlsalo y elige un objeto de tu parcela: su suerte de armas se multiplica por 999.", color = Color3.fromRGB(90, 220, 130), image = "trebol", noTrade = true },
 	-- Lo sueltan los enemigos de las mazmorras y se saca al desmontar armadura. No cae de los objetos (sin dropChance).
-	gradeCrystal = { name = "Cristal de grado", description = "Se gasta en la tienda de Grados del hub: da un grado al azar a la espada que elijas. Lo sueltan los enemigos de las mazmorras.", color = Color3.fromRGB(200, 120, 255) },
+	gradeCrystal = { name = "Cristal de grado", description = "Se gasta en la tienda de Grados del hub: da un grado al azar a la espada que elijas. Lo sueltan los enemigos de las mazmorras.", color = Color3.fromRGB(200, 120, 255), image = "cristal_grado" },
 }
 
 -- Armas equipadas a la vez (pedido por el usuario: con una sola, rasgos y grados solo se mejoraban en la mejor). Cada
@@ -302,16 +302,16 @@ Config.Rebirth = { max = 5, costs = { 3.5e7, 1e11, 3.5e15, 1.9e20, 2.2e25 }, coi
 -- NÚMEROS GENERADOS por tools/equilibrio para que cada uno caiga a su hora (de los 5 min a las 155 h): no los retoques.
 Config.GearSlots = 3
 Config.Artifacts = {
-	{ name = "Amuleto de cobre", stat = "coins", mult = 1.5, rarity = 1100, color = Color3.fromRGB(200, 120, 70) },
-	{ name = "Anillo afilado", stat = "damage", mult = 2, rarity = 46000, color = Color3.fromRGB(200, 205, 210) },
-	{ name = "Trébol", stat = "luck", mult = 1.5, rarity = 1.7e6, color = Color3.fromRGB(90, 200, 100) },
-	{ name = "Colgante de gemas", stat = "gems", mult = 2, rarity = 2.3e8, color = Color3.fromRGB(190, 110, 255) },
-	{ name = "Guantelete", stat = "damage", mult = 4, rarity = 2.1e10, color = Color3.fromRGB(120, 160, 200) },
-	{ name = "Corona dorada", stat = "coins", mult = 4, rarity = 2e13, color = Color3.fromRGB(255, 200, 50) },
-	{ name = "Ojo de la fortuna", stat = "luck", mult = 3, rarity = 8.3e16, color = Color3.fromRGB(60, 255, 170) },
-	{ name = "Corazón estelar", stat = "damage", mult = 10, rarity = 5.9e20, color = Color3.fromRGB(255, 240, 150) },
-	{ name = "Reliquia del vacío", stat = "luck", mult = 6, rarity = 9e23, color = Color3.fromRGB(130, 50, 255) },
-	{ name = "Núcleo del infinito", stat = "damage", mult = 25, rarity = 4.3e26, color = Color3.fromRGB(255, 40, 60) },
+	{ name = "Amuleto de cobre", stat = "coins", mult = 1.5, rarity = 1100, color = Color3.fromRGB(200, 120, 70), image = "acc_amuleto_cobre" },
+	{ name = "Anillo afilado", stat = "damage", mult = 2, rarity = 46000, color = Color3.fromRGB(200, 205, 210), image = "acc_anillo_afilado" },
+	{ name = "Trébol", stat = "luck", mult = 1.5, rarity = 1.7e6, color = Color3.fromRGB(90, 200, 100), image = "acc_trebol" },
+	{ name = "Colgante de gemas", stat = "gems", mult = 2, rarity = 2.3e8, color = Color3.fromRGB(190, 110, 255), image = "acc_colgante_gemas" },
+	{ name = "Guantelete", stat = "damage", mult = 4, rarity = 2.1e10, color = Color3.fromRGB(120, 160, 200), image = "acc_guantelete" },
+	{ name = "Corona dorada", stat = "coins", mult = 4, rarity = 2e13, color = Color3.fromRGB(255, 200, 50), image = "acc_corona_dorada" },
+	{ name = "Ojo de la fortuna", stat = "luck", mult = 3, rarity = 8.3e16, color = Color3.fromRGB(60, 255, 170), image = "acc_ojo_fortuna" },
+	{ name = "Corazón estelar", stat = "damage", mult = 10, rarity = 5.9e20, color = Color3.fromRGB(255, 240, 150), image = "acc_corazon_estelar" },
+	{ name = "Reliquia del vacío", stat = "luck", mult = 6, rarity = 9e23, color = Color3.fromRGB(130, 50, 255), image = "acc_reliquia_vacio" },
+	{ name = "Núcleo del infinito", stat = "damage", mult = 25, rarity = 4.3e26, color = Color3.fromRGB(255, 40, 60), image = "acc_nucleo_infinito" },
 }
 Config.StatNames = { damage = "daño", luck = "suerte", coins = "monedas", gems = "gemas" }
 
@@ -954,9 +954,9 @@ Config.Clover = { Item = "luckClover", Luck = 999 }
 -- precio real; item y amount = lo que da (clave de Config.Items). icon, tag, ribbon y color, como en los pases.
 Config.ProductOrder = { "clover1", "clover5", "clover10" }
 Config.Products = {
-	clover1 = { id = 3718055245, name = "Trébol de la suerte", price = 50, item = "luckClover", amount = 1, icon = "suerte", tag = "x1", color = Color3.fromRGB(90, 220, 130), perksText = { "Elige un objeto de tu parcela: x999 de suerte de armas", "Se multiplica con toda la suerte que ya tengas" } },
-	clover5 = { id = 3718055248, name = "Pack de 5 tréboles", price = 225, item = "luckClover", amount = 5, icon = "suerte", tag = "x5", ribbon = "-10 %", color = Color3.fromRGB(60, 205, 190), perksText = { "5 tréboles: x999 de suerte de armas en 5 objetos", "Más baratos que de uno en uno" } },
-	clover10 = { id = 3718055274, name = "Pack de 10 tréboles", price = 400, item = "luckClover", amount = 10, icon = "suerte", tag = "x10", ribbon = "-20 %", color = Color3.fromRGB(255, 190, 60), perksText = { "10 tréboles: x999 de suerte de armas en 10 objetos", "El pack más barato por trébol" } },
+	clover1 = { id = 3718055245, name = "Trébol de la suerte", price = 50, item = "luckClover", amount = 1, icon = "trebol", tag = "x1", color = Color3.fromRGB(90, 220, 130), perksText = { "Elige un objeto de tu parcela: x999 de suerte de armas", "Se multiplica con toda la suerte que ya tengas" } },
+	clover5 = { id = 3718055248, name = "Pack de 5 tréboles", price = 225, item = "luckClover", amount = 5, icon = "trebol_5", tag = "x5", ribbon = "-10 %", color = Color3.fromRGB(60, 205, 190), perksText = { "5 tréboles: x999 de suerte de armas en 5 objetos", "Más baratos que de uno en uno" } },
+	clover10 = { id = 3718055274, name = "Pack de 10 tréboles", price = 400, item = "luckClover", amount = 10, icon = "trebol_10", tag = "x10", ribbon = "-20 %", color = Color3.fromRGB(255, 190, 60), perksText = { "10 tréboles: x999 de suerte de armas en 10 objetos", "El pack más barato por trébol" } },
 }
 
 Config.GamepassOrder = { "vip", "coins2", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }
@@ -964,7 +964,7 @@ Config.Gamepasses = {
 	vip = {
 		id = 2027114984,
 		name = "VIP",
-		icon = "monedas", tag = "VIP", ribbon = "POPULAR",
+		icon = "pase_vip", tag = "VIP", ribbon = "POPULAR",
 		price = 449,
 		color = Color3.fromRGB(255, 205, 70),
 		perksText = { "x1,5 de monedas", "x1,5 de suerte de destructibles", "x2 de velocidad al andar", "Etiqueta [VIP] en el chat" },
@@ -974,7 +974,7 @@ Config.Gamepasses = {
 	weaponLuck2 = {
 		id = 2025987032,
 		name = "Suerte de armas x2",
-		icon = "suerte", tag = "x2",
+		icon = "pase_suerte2", tag = "x2",
 		price = 299,
 		color = Color3.fromRGB(90, 220, 130),
 		perksText = { "x2 de suerte en todas las tiradas de arma", "Se multiplica con el x5: juntos, x10" },
@@ -983,7 +983,7 @@ Config.Gamepasses = {
 	weaponLuck5 = {
 		id = 2026598990,
 		name = "Suerte de armas x5",
-		icon = "suerte", tag = "x5", ribbon = "MEJOR OFERTA",
+		icon = "pase_suerte5", tag = "x5", ribbon = "MEJOR OFERTA",
 		price = 999,
 		color = Color3.fromRGB(255, 110, 200),
 		perksText = { "x5 de suerte en todas las tiradas de arma", "Se multiplica con el x2: juntos, x10" },
@@ -992,7 +992,7 @@ Config.Gamepasses = {
 	dungeonLoot = {
 		id = 2027079048,
 		name = "Botín de mazmorra x2",
-		icon = "mazmorras", tag = "x2",
+		icon = "pase_botin", tag = "x2",
 		price = 349,
 		color = Color3.fromRGB(170, 120, 255),
 		perksText = { "El doble de cristales, armadura y pociones en las mazmorras" },
@@ -1001,7 +1001,7 @@ Config.Gamepasses = {
 	auto = {
 		id = 2026755018,
 		name = "Auto",
-		icon = "espada", tag = "AUTO",
+		icon = "pase_auto", tag = "AUTO",
 		price = 249,
 		color = Color3.fromRGB(255, 200, 60),
 		perksText = { "Botón Auto junto al arma: en tu parcela, tus armas llegan solas a todos los objetos", "No hace falta moverse ni hacer clic" },
@@ -1010,7 +1010,7 @@ Config.Gamepasses = {
 	arsenal = {
 		id = 2026904972,
 		name = "Arsenal doble",
-		icon = "espada", tag = "+4",
+		icon = "pase_arsenal", tag = "+4",
 		price = 799,
 		color = Color3.fromRGB(240, 80, 90),
 		perksText = { "Equipa 4 armas más: 8 atacando a la vez", "4 huecos más en la Bolsa de oro: 8 armas sacando monedas" },
@@ -1019,7 +1019,7 @@ Config.Gamepasses = {
 	forge = {
 		id = 2025668973,
 		name = "Maestro de la forja",
-		icon = "mejora", tag = "x10",
+		icon = "pase_forja", tag = "x10",
 		price = 199,
 		color = Color3.fromRGB(255, 150, 60),
 		perksText = { "Tira 10 rasgos a la vez (se queda el mejor)", "Tiradas de grado al 400 % de velocidad" },
@@ -1028,7 +1028,7 @@ Config.Gamepasses = {
 	coins2 = {
 		id = 2025747023,
 		name = "Monedas x2",
-		icon = "monedas", tag = "x2",
+		icon = "pase_monedas2", tag = "x2",
 		price = 299,
 		color = Color3.fromRGB(70, 200, 230),
 		perksText = { "x2 de monedas en todo lo que rompes", "Se multiplica con el VIP: juntos, x3" },
