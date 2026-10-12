@@ -2,6 +2,7 @@
 -- cuánto dura, cómo se escribe el tiempo que queda. Los números salen siempre de Config.
 local Config = require(script.Parent.Config)
 local Format = require(script.Parent.Format)
+local Lang = require(script.Parent.Lang)
 
 local PotionInfo = {}
 
@@ -19,8 +20,9 @@ function PotionInfo.key(family: string, tier: number): string
 	return `potion_{family}_{tier}`
 end
 
-function PotionInfo.name(family: string, tier: number): string
-	return Config.Items[PotionInfo.key(family, tier)].name
+-- "Damage Potion III", en el idioma de `player`.
+function PotionInfo.name(family: string, tier: number, player: Player?): string
+	return Lang.t(player, Config.Items[PotionInfo.key(family, tier)].name)
 end
 
 -- Nombre del tier ("III", "Divina") y su color (el de la rareza de esa posición).
@@ -42,14 +44,14 @@ function PotionInfo.multiplier(family: string, tier: number): number
 	return if info.additive then 1 + value else value
 end
 
--- "Daño x1.55", "Vida máxima +50 %".
-function PotionInfo.effect(family: string, tier: number): string
+-- "Damage x1.55", "Max Health +50%".
+function PotionInfo.effect(family: string, tier: number, player: Player?): string
 	local info = Config.Potions.Families[family]
 	local value = info.values[tier]
 	if info.additive then
-		return `{info.effect} +{Format.multiplier(value * 100)} %`
+		return Lang.t(player, "{effect} +{n}%", { effect = Lang.t(player, info.effect), n = Format.multiplier(value * 100, player) })
 	end
-	return `{info.effect} x{Format.multiplier(value)}`
+	return `{Lang.t(player, info.effect)} x{Format.multiplier(value, player)}`
 end
 
 -- Duración de un tier en segundos de juego, y lo más que puede acumular sumando pociones iguales.

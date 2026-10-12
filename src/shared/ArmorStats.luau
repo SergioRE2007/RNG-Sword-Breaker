@@ -6,6 +6,7 @@ local HttpService = game:GetService("HttpService")
 
 local Config = require(script.Parent.Config)
 local Format = require(script.Parent.Format)
+local Lang = require(script.Parent.Lang)
 
 local ArmorStats = {}
 
@@ -63,9 +64,9 @@ function ArmorStats.total(pieces, worn)
 	return totals
 end
 
--- "Casco de cuero".
-function ArmorStats.name(piece): string
-	return `{cfg.Slots[piece.slot].name} {Config.Dungeons[piece.level].set}`
+-- "Leather Helmet" / "Casco de cuero": el "set" de la zona es la frase entera, con el hueco {slot} para la pieza.
+function ArmorStats.name(piece, player: Player?): string
+	return Lang.t(player, Config.Dungeons[piece.level].set, { slot = Lang.t(player, cfg.Slots[piece.slot].name) })
 end
 
 function ArmorStats.quality(piece)
@@ -73,16 +74,16 @@ function ArmorStats.quality(piece)
 end
 
 -- "+120" para la vida y "+7.5%" para los porcentajes.
-function ArmorStats.value(stat: string, value: number): string
+function ArmorStats.value(stat: string, value: number, player: Player?): string
 	if cfg.Stats[stat].flat then
-		return "+" .. Format.short(value)
+		return "+" .. Format.short(value, player)
 	end
-	return `+{Format.multiplier(value * 100)}%`
+	return `+{Format.multiplier(value * 100, player)}%`
 end
 
--- "+120 Vida máxima".
-function ArmorStats.text(stat: string, value: number): string
-	return `{ArmorStats.value(stat, value)} {cfg.Stats[stat].name}`
+-- "+120 Max Health".
+function ArmorStats.text(stat: string, value: number, player: Player?): string
+	return `{ArmorStats.value(stat, value, player)} {Lang.t(player, cfg.Stats[stat].name)}`
 end
 
 -- Por cuánto se multiplica un stat de la armadura según la zona donde cae (índice de Config.Dungeons): la vida, por el

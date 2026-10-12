@@ -7,6 +7,7 @@
 local Chance = require(script.Parent.Chance)
 local Config = require(script.Parent.Config)
 local Format = require(script.Parent.Format)
+local Lang = require(script.Parent.Lang)
 
 local WeatherInfo = {}
 
@@ -61,11 +62,11 @@ function WeatherInfo.chance(id: string): number
 	return 0
 end
 
--- "1 entre 6.2", "1 entre 151", "1 entre 500": con un decimal solo en los comunes.
-function WeatherInfo.oddsText(id: string): string
+-- "1 in 6.2", "1 in 151", "1 in 500": con un decimal solo en los comunes.
+function WeatherInfo.oddsText(id: string, player: Player?): string
 	local chance = WeatherInfo.chance(id)
 	local odds = if chance > 0 then 1 / chance else math.huge
-	return `1 entre {Format.multiplier(if odds < 20 then math.floor(odds * 10 + 0.5) / 10 else math.floor(odds + 0.5))}`
+	return Lang.t(player, "1 in {n}", { n = Format.multiplier(if odds < 20 then math.floor(odds * 10 + 0.5) / 10 else math.floor(odds + 0.5), player) })
 end
 
 -- Nombre y color de su rareza (Config.RarityTiers).
@@ -73,23 +74,23 @@ function WeatherInfo.tier(def: { [string]: any })
 	return Config.RarityTiers[def.tier] or Config.RarityTiers[1]
 end
 
--- Lo que da ese clima: { { name = "Suerte de destructibles", short = "Suerte", value = 2 }, ... }.
-function WeatherInfo.buffs(def: { [string]: any }): { { name: string, short: string, value: number } }
+-- Lo que da ese clima: { { name = "Destructible Luck", short = "Luck", value = 2 }, ... }, ya en el idioma de `player`.
+function WeatherInfo.buffs(def: { [string]: any }, player: Player?): { { name: string, short: string, value: number } }
 	local list = {}
 	if def.luck and def.luck ~= 1 then
-		table.insert(list, { name = "Suerte de destructibles", short = "Suerte", value = def.luck })
+		table.insert(list, { name = Lang.t(player, "Destructible Luck"), short = Lang.t(player, "Luck"), value = def.luck })
 	end
 	if def.weaponLuck and def.weaponLuck ~= 1 then
-		table.insert(list, { name = "Suerte de armas", short = "Armas", value = def.weaponLuck })
+		table.insert(list, { name = Lang.t(player, "Weapon Luck"), short = Lang.t(player, "Weapons"), value = def.weaponLuck })
 	end
 	return list
 end
 
--- "Suerte de destructibles x2 · Suerte de armas x1.5".
-function WeatherInfo.buffText(def: { [string]: any }): string
+-- "Destructible Luck x2 · Weapon Luck x1.5".
+function WeatherInfo.buffText(def: { [string]: any }, player: Player?): string
 	local parts = {}
-	for _, buff in WeatherInfo.buffs(def) do
-		table.insert(parts, `{buff.name} x{Format.multiplier(buff.value)}`)
+	for _, buff in WeatherInfo.buffs(def, player) do
+		table.insert(parts, `{buff.name} x{Format.multiplier(buff.value, player)}`)
 	end
 	return table.concat(parts, " · ")
 end
