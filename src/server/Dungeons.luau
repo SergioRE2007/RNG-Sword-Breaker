@@ -183,6 +183,7 @@ local function spawnEnemy(run, key: string)
 	body.TopSurface = Enum.SurfaceType.Smooth
 	body.BottomSurface = Enum.SurfaceType.Smooth
 	body.CustomPhysicalProperties = PhysicalProperties.new(1, 0, 0) -- sin rozamiento: lo mueve LinearVelocity
+	body.CollisionGroup = "Enemies" -- no choca con el decorado de la arena (server/CollisionGroups)
 	body.CFrame = CFrame.lookAt(position, Vector3.new(run.origin.X, position.Y, run.origin.Z))
 	local hp = def.hp * level.hp * run.hpMult
 	body:SetAttribute("HP", hp)

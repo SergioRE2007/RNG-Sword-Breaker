@@ -41,7 +41,7 @@ local function emitter(parent: BasePart, color: Color3, spec)
 	sparks.Name = "AmbientSparks"
 	sparks.Texture = texture
 	sparks.Color = ColorSequence.new(color)
-	sparks.LightEmission = 1
+	sparks.LightEmission = 0.4
 	sparks.Rate = rate
 	sparks.Lifetime = NumberRange.new(1.2, 2.2)
 	sparks.Speed = NumberRange.new(rise * 0.5, rise)
@@ -96,8 +96,9 @@ local function setup(part: BasePart)
 		local lamp = Instance.new("PointLight")
 		lamp.Name = "AmbientLight"
 		lamp.Color = light
-		lamp.Brightness = style.light
-		lamp.Range = 12 + 4 * style.light
+		-- Luz floja y corta (pedido por el usuario: brillaban demasiado, y con varios juntos la parcela se quemaba).
+		lamp.Brightness = style.light * 0.3
+		lamp.Range = 8 + 2 * style.light
 		lamp.Parent = part
 	end
 end

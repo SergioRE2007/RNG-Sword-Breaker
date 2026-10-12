@@ -54,15 +54,15 @@ local LABEL = Vector2.new(300, 108) -- tamaño del cartel en píxeles, sin escal
 -- charge = segundos que el orbe se carga antes de destaparse, pulses = latidos en ese rato, rise = studs que sube
 -- mientras tanto, hover = segundos que el arma se queda a la vista, fly = segundos de vuelo, turns = vueltas de
 -- espiral en el vuelo, sparks = chispas al destaparse, aura = chispas por segundo alrededor del arma, shock = ondas
--- en el suelo, light = brillo de la luz, beam = grosor del rayo hacia el cielo, punch = grados que se abre la
--- cámara, shake = fuerza del temblor, absorb = el orbe traga energía de alrededor, rays = rayos que giran,
--- flash = destello de pantalla, grow = tamaño del cartel, sounds = lo que suena al destaparse.
+-- en el suelo, light = brillo de la luz, beam = grosor del rayo hacia el cielo, absorb = el orbe traga
+-- energía de alrededor, rays = rayos que giran, flash = destello de pantalla, grow = tamaño del cartel, sounds = lo
+-- que suena al destaparse. Nada toca la cámara (pedido por el usuario: el temblor y el tirón del zoom molestaban).
 local LEVELS = {
 	{ charge = 0.2, pulses = 1, rise = 0, hover = 0.42, fly = 0.38, turns = 0, sparks = 8, grow = 1, sounds = { "reveal_1" } },
 	{ charge = 0.36, pulses = 2, rise = 0.4, hover = 0.7, fly = 0.44, turns = 0, sparks = 16, aura = 8, grow = 1.1, sounds = { "reveal_2" } },
 	{ charge = 0.7, pulses = 3, rise = 0.9, hover = 1.1, fly = 0.52, turns = 0.5, sparks = 28, aura = 14, shock = 1, light = 0.8, grow = 1.25, sounds = { "reveal_3" } },
-	{ charge = 1.25, pulses = 5, rise = 1.8, hover = 1.6, fly = 0.7, turns = 1, sparks = 46, aura = 22, shock = 2, light = 1.2, beam = 1.4, punch = 5, shake = 0.4, absorb = true, grow = 1.45, sounds = { "reveal_4" } },
-	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.2, fly = 0.85, turns = 1.5, sparks = 80, aura = 34, shock = 3, light = 1.6, beam = 2.6, punch = 9, shake = 0.7, absorb = true, rays = true, flash = true, grow = 1.7, sounds = { "reveal_5" } },
+	{ charge = 1.25, pulses = 5, rise = 1.8, hover = 1.6, fly = 0.7, turns = 1, sparks = 46, aura = 22, shock = 2, light = 1.2, beam = 1.4,absorb = true, grow = 1.45, sounds = { "reveal_4" } },
+	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.2, fly = 0.85, turns = 1.5, sparks = 80, aura = 34, shock = 3, light = 1.6, beam = 2.6,absorb = true, rays = true, flash = true, grow = 1.7, sounds = { "reveal_5" } },
 }
 -- Frase encima del cartel en los niveles altos.
 local LINES = { [3] = "Nice roll!", [4] = "Fate has chosen you!", [5] = "The heavens open before you!" }
@@ -167,40 +167,6 @@ local function levelOf(odds: number): number
 		end
 	end
 	return math.min(level, #LEVELS)
-end
-
--- Cámara: solo reacciona a lo muy bueno, y sin quitarle el mando al jugador.
-local punching = false
-local function punch(degrees: number)
-	local camera = workspace.CurrentCamera
-	if punching or not camera then
-		return
-	end
-	punching = true
-	local base = camera.FieldOfView
-	camera.FieldOfView = base + degrees
-	local back = tween(camera, 0.55, { FieldOfView = base }, Enum.EasingStyle.Back)
-	back.Completed:Once(function()
-		camera.FieldOfView = base
-		punching = false
-	end)
-end
-
-local function shake(strength: number, seconds: number)
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return
-	end
-	task.spawn(function()
-		local began = os.clock()
-		while os.clock() - began < seconds and humanoid.Parent do
-			local fade = 1 - (os.clock() - began) / seconds
-			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0) * strength * fade
-			RunService.RenderStepped:Wait()
-		end
-		humanoid.CameraOffset = Vector3.zero
-	end)
 end
 
 -- Destello de pantalla, corto y suave.
@@ -477,9 +443,6 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 		if level >= 2 then
 			Sfx.play("charge", 0.6, 2 ^ ((pulse - 1) / 12), orb.Position) -- cada pulso suena una nota más arriba
 		end
-		if fx.rays then
-			shake(0.1 + pulse * 0.04, beat)
-		end
 		animate(beat, function()
 			clock += 1 / 60
 			if fx.absorb and not lite and rng:NextNumber() < 0.45 then
@@ -544,12 +507,6 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 			created.Parent = follow
 			tween(created, 0.6, { Brightness = fx.light * 0.35 })
 			lamp = created
-		end
-		if fx.punch then
-			punch(fx.punch)
-		end
-		if fx.shake then
-			shake(fx.shake, 0.4)
 		end
 		if fx.flash then
 			screenFlash(color)

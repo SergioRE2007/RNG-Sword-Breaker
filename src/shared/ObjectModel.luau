@@ -70,7 +70,9 @@ local function roleLook(role: string, def): (Color3, Enum.Material, number)
 		-- (y el vidrio transparente esconde las partículas y lo translúcido que tenga detrás).
 		return def.color, Enum.Material.Glass, 0
 	elseif role == "Glow" then
-		return def.color:Lerp(Color3.new(1, 1, 1), 0.3), Enum.Material.Neon, 0.2
+		-- Oscurecido (pedido por el usuario: brillaban demasiado): el neón aclarado, con el brillo de pantalla, se
+		-- quedaba en una mancha blanca.
+		return def.color:Lerp(Color3.new(0, 0, 0), 0.3), Enum.Material.Neon, 0.2
 	end
 	return def.color, calm(def.material), 0
 end

@@ -402,6 +402,8 @@ local function facing(ctx, index: number): CFrame
 end
 
 local WALLS: { [string]: (any) -> () } = {}
+local BARRIER_HEIGHT = 120 -- studs de alto de la barrera invisible
+local BARRIER_INSET = 6.5 -- studs que se mete hacia el centro: más que lo que sobresale cualquier muro de abajo
 
 WALLS.stone = function(ctx)
 	for index = 1, ctx.segments do
@@ -536,10 +538,12 @@ function DungeonThemes.build(model: Model, origin: Vector3, radius: number, leve
 	local style = (theme.wall and theme.wall.style) or "stone"
 	;(WALLS[style] or WALLS.stone)(ctx)
 
-	-- Muro invisible desde el suelo: no se puede salir saltando ni pasar entre árboles o pilares.
+	-- Muro invisible desde el suelo: no se puede salir saltando ni pasar entre árboles o pilares. Va por delante de
+	-- todo lo que sobresale del muro (troncos, columnas, bases): con la barrera en el centro del muro quedaba una
+	-- repisa encima de los muros bajos a la que se subía saltando, y allí los enemigos no llegaban.
 	for index = 1, ctx.segments do
 		local at = facing(ctx, index)
-		local barrier = part(model, "Barrier", Vector3.new(ctx.width, 60, 2), at * CFrame.new(0, 30, 0), ctx.c1, ctx.material)
+		local barrier = part(model, "Barrier", Vector3.new(ctx.width, BARRIER_HEIGHT, 2), at * CFrame.new(0, BARRIER_HEIGHT / 2, -BARRIER_INSET), ctx.c1, ctx.material)
 		barrier.Transparency = 1
 		barrier.CanQuery = false
 		barrier.CastShadow = false
@@ -557,6 +561,14 @@ function DungeonThemes.build(model: Model, origin: Vector3, radius: number, leve
 	end
 
 	addProps(ctx, theme.props)
+
+	-- Los enemigos solo chocan con el suelo y la barrera: persiguen en línea recta y los grandes se quedaban
+	-- atascados contra las rocas, columnas y troncos del borde. Los jugadores sí chocan con el decorado.
+	for _, item in model:GetChildren() do
+		if item:IsA("BasePart") and item.CanCollide and item.Name ~= "Floor" and item.Name ~= "Barrier" then
+			item.CollisionGroup = "DungeonDecor"
+		end
+	end
 end
 
 -- Adorna una sala del lobby con los adornos "room" del tema. `roomCF`: centro del suelo, -Z hacia la entrada.

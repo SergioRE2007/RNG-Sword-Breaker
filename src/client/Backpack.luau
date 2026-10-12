@@ -502,6 +502,7 @@ function Backpack.start()
 		end, true)
 		return cell
 	end
+	Backpack.swordCell = swordCell -- la misma casilla en el menú de vender (client/SellMenu)
 
 	-- Fila de huecos: cada uno es un marco del tamaño de una casilla de la lista, encogido con su UIScale, así la
 	-- casilla de dentro es la misma que la de la lista y no hace falta otra con medidas más pequeñas.
