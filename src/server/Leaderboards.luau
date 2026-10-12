@@ -1,11 +1,13 @@
--- Clasificaciones del hub: tres paneles grandes (tiempo jugado, dinero ganado y Robux gastados)
--- con los 10 mejores. Las puntuaciones globales van en OrderedDataStore (cada minuto se sube la de
--- los jugadores del servidor y se lee el top 10); si el DataStore no está disponible (lugar sin
+-- Clasificaciones del hub: tres paneles grandes (tiempo jugado, dinero ganado y objetos destruidos; pedido por el
+-- usuario, que antes el tercero era de Robux gastados) con los 100 mejores: 10 a la vista y el resto deslizando la
+-- lista. Las puntuaciones globales van en OrderedDataStore (cada minuto se sube la de
+-- los jugadores del servidor y se lee el top 100); si el DataStore no está disponible (lugar sin
 -- publicar o sin acceso a la API en Studio) los paneles enseñan solo a los jugadores de este servidor
 -- y lo avisan abajo. El dinero se guarda en escala logarítmica para que quepan los números enormes.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -15,7 +17,9 @@ local Tell = require(script.Parent.Tell)
 
 local Leaderboards = {}
 
-local TOP = 10
+local TOP = 100 -- puestos que se leen y se pueden ver deslizando (el máximo de una página del OrderedDataStore)
+local SHOWN = 10 -- filas a la vista, y las que hay siempre aunque estén vacías
+local ROW_STEP = 80 -- alto de cada fila con su separación, en píxeles del panel
 local REFRESH = 60 -- segundos entre actualizaciones
 local TICK = 15 -- cada cuántos segundos se suma tiempo jugado
 local LOG_SCALE = 1e6
@@ -62,16 +66,16 @@ local METRICS = {
 		end,
 	},
 	{
-		key = "robuxSpent",
-		title = "Robux spent",
+		key = "broken",
+		title = "Objects destroyed",
 		color = Color3.fromRGB(120, 230, 120),
-		glyph = "R$",
-		store = "LB_Robux",
+		glyph = "X",
+		store = "LB_Broken",
 		score = function(data)
-			return math.floor(data.robuxSpent)
+			return math.floor(data.broken)
 		end,
 		show = function(score)
-			return `R$ {Format.short(score)}`
+			return Format.short(score)
 		end,
 	},
 }
@@ -103,9 +107,9 @@ local ROOF = Color3.fromRGB(48, 54, 66)
 local STONE = Color3.fromRGB(122, 126, 136)
 local CREAM = Color3.fromRGB(255, 244, 220)
 
--- Color del número de puesto: del rojo del primero al amarillo del décimo.
+-- Color del número de puesto: del rojo del primero al amarillo del décimo (y de ahí en adelante).
 local function rankColor(index: number): Color3
-	return Color3.fromRGB(255, 84, 70):Lerp(Color3.fromRGB(255, 215, 80), (index - 1) / (TOP - 1))
+	return Color3.fromRGB(255, 84, 70):Lerp(Color3.fromRGB(255, 215, 80), math.min((index - 1) / (SHOWN - 1), 1))
 end
 
 local function buildBoard(parent: Instance, metric, position: Vector3, center: Vector3)
@@ -196,14 +200,29 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 	backGradient.Color = ColorSequence.new(Color3.fromRGB(84, 50, 38), Color3.fromRGB(36, 22, 20))
 	backGradient.Parent = back
 
+	-- La lista se desliza (rueda del ratón o dedo sobre el panel): 10 filas a la vista y hasta TOP en total.
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = "List"
+	scroll.Size = UDim2.fromScale(1, 1)
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+	scroll.CanvasSize = UDim2.fromOffset(0, 0)
+	scroll.ScrollBarThickness = 14
+	scroll.ScrollBarImageColor3 = GOLD
+	scroll.VerticalScrollBarInset = Enum.ScrollBarInset.None
+	scroll.Parent = back
+
+	-- Las filas de más allá de las 10 primeras se crean cuando hay alguien en ese puesto.
 	local rows = {}
-	for index = 1, TOP do
+	local function addRow(index: number)
 		local row = Instance.new("Frame")
-		row.Position = UDim2.fromOffset(14, 14 + (index - 1) * 80)
-		row.Size = UDim2.new(1, -28, 0, 72)
+		row.Name = "Row" .. index
+		row.Position = UDim2.fromOffset(14, 14 + (index - 1) * ROW_STEP)
+		row.Size = UDim2.new(1, -46, 0, ROW_STEP - 8)
 		row.BackgroundColor3 = Color3.new(1, 1, 1)
 		row.BorderSizePixel = 0
-		row.Parent = back
+		row.Parent = scroll
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(0, 8)
 		corner.Parent = row
@@ -244,6 +263,10 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 		value.Size = UDim2.fromOffset(190, 22)
 		value.TextXAlignment = Enum.TextXAlignment.Right
 		rows[index] = { rank = rank, avatar = avatar, name = name, value = value, row = row }
+		return rows[index]
+	end
+	for index = 1, SHOWN do
+		addRow(index)
 	end
 
 	-- Tejado a dos aguas de tejas oscuras con caballete y adornos dorados en las puntas.
@@ -359,7 +382,7 @@ local function buildBoard(parent: Instance, metric, position: Vector3, center: V
 	end
 
 	model.Parent = parent
-	boards[metric.key] = { rows = rows }
+	boards[metric.key] = { rows = rows, add = addRow, scroll = scroll }
 end
 
 -- Rellena el panel con una lista { { userId, name, score } } ya ordenada de mayor a menor.
@@ -368,7 +391,13 @@ local function render(metric, entries, isGlobal: boolean)
 	if not board then
 		return
 	end
-	for index, row in board.rows do
+	local count = math.clamp(#entries, SHOWN, TOP)
+	board.scroll.CanvasSize = UDim2.fromOffset(0, if count > SHOWN then 14 + count * ROW_STEP + 6 else 0)
+	for index = count + 1, #board.rows do
+		board.rows[index].row.Visible = false
+	end
+	for index = 1, count do
+		local row = board.rows[index] or board.add(index)
 		local entry = entries[index]
 		row.row.Visible = true
 		if entry then
@@ -427,6 +456,17 @@ local function localEntries(metric)
 end
 
 local function refresh(metric)
+	-- Prueba (solo en Studio): workspace:SetAttribute("BoardTest", N) llena los paneles con N jugadores de mentira, para
+	-- ver la lista deslizando sin tener cien jugadores.
+	local fake = if RunService:IsStudio() then workspace:GetAttribute("BoardTest") else nil
+	if type(fake) == "number" then
+		local entries = {}
+		for index = 1, math.clamp(fake, 0, TOP) do
+			entries[index] = { userId = index, name = "Player" .. index, score = (TOP + 1 - index) * 1000 }
+		end
+		render(metric, entries, false)
+		return
+	end
 	local store = orderedStore(metric)
 	if store then
 		-- Sube las puntuaciones de los jugadores de este servidor y lee el top.
