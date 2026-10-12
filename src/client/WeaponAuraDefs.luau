@@ -25,6 +25,8 @@
 --       eje), width, colors y arcs (false = aro entero; si no, dos arcos que se persiguen).
 --   · "bolts": rayos hechos por código. mode = "crawl" (recorren la hoja) o "arc" (saltan hacia fuera),
 --       count, reach (lo que se separan), extend (cuánto bajan de la hoja), width, colors.
+--   · "pillar": columna de luz que sube de los pies del jugador. height, width, taper (ancho de arriba, en veces),
+--       speed (lo que corre la textura), transparency, bright, colors.
 --
 -- Las partículas con `at` del jugador solo salen cuando el arma está en la mano (no en la del expositor ni en las
 -- tiradas), y en las armas dobles solo las pone una de las dos.
@@ -42,6 +44,29 @@ local SOOT = "rbxasset://textures/particles/explosion01_smoke_main.dds" -- manch
 local BUBBLE = "rbxasset://textures/particles/forcefield_vortex_main.dds" -- burbuja
 local SQUARE = "rbxasset://textures/particles/SquareParticle.png" -- cuadrado
 
+-- Texturas del pack de efectos que encontró el usuario ("VFX PACK", create.roblox.com/store/asset/112672322113504),
+-- para las armas más raras. Son imágenes de otros creadores: si alguna deja de cargar, esa capa no se ve y el resto
+-- del aura sigue. Las "4x4" son animadas (una rejilla de 16 fotogramas: campo `flip`).
+local function id(number: number): string
+	return "rbxassetid://" .. number
+end
+local FIRE_FLIP = id(13818306392) -- fuego animado, 4x4
+local BOLT_FLIP = id(16664675233) -- relámpago animado, 4x4
+local ENERGY_FLIP = id(15041986621) -- chasquido de energía animado, 4x4
+local SLASH_FLIP = id(16939611858) -- tajo animado, 4x4
+local STAR4 = id(14006783533) -- estrella grande de cuatro puntas
+local STARDUST = id(17087151546) -- estrellitas
+local SHINE = id(1053548563) -- rayo de luz fino
+local HALO = id(1075864321) -- resplandor redondo
+local SEAL_A = id(14591895021) -- sello mágico (círculo de runas)
+local SEAL_B = id(16956497860) -- otro sello, para encimarlo girando al revés
+local SEAL_WAVE = id(16956569427) -- aro que se abre por el suelo
+local DISC = id(17087507236) -- disco de energía que gira
+local PORTAL = id(16951115765) -- borde de portal
+local SUCK = id(16951208736) -- remolino que cae hacia dentro
+local NOVA = id(17086022111) -- estallido de puntas
+WeaponAuraDefs.PILLAR = id(3029306948) -- textura de la columna de luz (capa "pillar")
+
 -- Rareza mínima (posición en Config.RarityTiers) para llevar aura: 4 = Épica. Las de menos no llevan nada,
 -- salvo que tengan su entrada en `weapons`.
 WeaponAuraDefs.FROM_TIER = 4
@@ -55,7 +80,9 @@ WeaponAuraDefs.TIER_RATE = { [4] = 0.85, [5] = 1, [6] = 1.1, [7] = 1.2, [8] = 1.
 -- blink), transparency (lo más opaca que llega a estar: 0 sólida, 0.8 casi invisible), bright (cuánto brilla: por
 -- encima de 1 deslumbra), spread, accel, drag, rot (giro), spin (false = sin giro inicial), emission (0 = pintura,
 -- 1 = luz), lit (le afecta la luz del mapa), locked (se mueve pegada al arma), orient ("velocity" = estirada hacia
--- donde va, "flat" = tumbada en el suelo), squash, dir, z y shape/surface.
+-- donde va, "flat" = tumbada en el suelo), squash, dir, z y shape/surface. turn = giro fijo en grados por segundo,
+-- todas hacia el mismo lado (sellos); flip = "4x4" si la textura es animada (una rejilla de fotogramas) y fps = a
+-- cuántos por segundo se repite (sin fps se reproduce una vez a lo largo de la vida de la partícula).
 -- Medido en Studio: por debajo de estos tamaños no se ven al lado de una hoja de neón, y con más `emission` o
 -- `bright` las de color se queman a blanco a mediodía (solo van al blanco chispas, destellos, rayos y bolas).
 WeaponAuraDefs.particles = {
@@ -108,6 +135,39 @@ WeaponAuraDefs.particles = {
 	-- Penachos de energía que suben alrededor del cuerpo (para at = "player"). Con el punto de luz y no con la
 	-- textura de fuego: esa tiene partes oscuras y, con colores claros, se veía como humo gris.
 	aura = { tex = GLOW, colors = { "main", "second" }, rate = 20, life = { 0.6, 1 }, speed = { 3, 6 }, spread = 8, dir = "Top", size = 2.4, grow = "flame", alpha = "puff", transparency = 0.35, accel = Vector3.new(0, 4, 0), orient = "velocity", squash = 1, spin = false, emission = 0.5, bright = 1.3 },
+
+	-- ===== Con las texturas del pack (para las diez armas más raras). Lo aprendido de él: pocas partículas, grandes y
+	-- lentas, pegadas al arma, que entran y salen despacio y se enciman (un sello que late en vez de una nube de
+	-- puntos); texturas animadas para lo que tiene que parecer vivo (fuego, rayos), y sellos tumbados que giran. El
+	-- pack los pone con Brightness de 5 a 25: aquí van mucho más bajos y medio transparentes; probado con sus valores, a mediodía el sello del suelo era una mancha blanca que tapaba al personaje. =====
+	-- Fuego animado que lame la hoja.
+	fire = { tex = FIRE_FLIP, flip = "4x4", fps = 18, colors = { "main", "second" }, rate = 26, life = { 0.45, 0.65 }, speed = { 0.8, 3 }, size = 1.7, grow = "flick", alpha = "solid", transparency = 0.15, accel = Vector3.new(0, 4, 0), drag = 4, emission = 0.3, bright = 1.6, z = 0.3 },
+	-- Relámpagos animados que chasquean pegados al arma.
+	lightning = { tex = BOLT_FLIP, flip = "4x4", colors = { "white", "main" }, rate = 5, life = { 0.45, 0.7 }, speed = { 0, 0 }, size = 2.6, grow = "hold", alpha = "swell", transparency = 0.25, emission = 0.8, bright = 1.8, locked = true, z = 0.4 },
+	-- Chasquidos de energía.
+	energy = { tex = ENERGY_FLIP, flip = "4x4", colors = { "white", "main" }, rate = 5, life = { 0.3, 0.4 }, speed = { 0, 0 }, size = 3, grow = "shrink", alpha = "solid", transparency = 0.4, emission = 0.7, bright = 1.5, locked = true, z = 0.2 },
+	-- Tajos de luz: solo al atacar (rate 0 y `burst`).
+	slashes = { tex = SLASH_FLIP, flip = "4x4", colors = { "white", "main" }, rate = 0, life = { 0.2, 0.28 }, speed = { 0, 0 }, size = 5, grow = "hold", alpha = "swell", transparency = 0.2, emission = 0.8, bright = 1.6, locked = true, z = 0.5, burst = 2 },
+	-- Estrella grande de cuatro puntas que late (para la punta: at = "tip").
+	starshine = { tex = STAR4, colors = { "white", "main" }, rate = 1.6, life = { 1, 1.2 }, speed = { 0, 0 }, size = 2.4, grow = "hold", alpha = "swell", spin = false, turn = 25, transparency = 0.2, emission = 0.8, bright = 1.6, locked = true, z = 0.6 },
+	-- Polvo de estrellas que sale hacia fuera.
+	stardust = { tex = STARDUST, colors = { "white", "main", "second" }, rate = 10, life = { 0.8, 1.2 }, speed = { 1.5, 3.5 }, size = 0.9, grow = "grow", alpha = "swell", rot = 40, transparency = 0.1, emission = 0.8, bright = 1.6 },
+	-- Abanico de rayos de luz finos que respira alrededor de la hoja.
+	shine = { tex = SHINE, colors = { "main", "pale" }, rate = 14, life = { 0.8, 1.1 }, speed = { 0, 0 }, size = 3.4, grow = "puff", alpha = "puff", transparency = 0.8, emission = 0.7, bright = 1, locked = true, z = -0.2 },
+	-- Halo redondo y blando que late despacio.
+	halo = { tex = HALO, colors = { "main" }, rate = 1.2, life = { 2, 2.5 }, speed = { 0, 0 }, size = 3.2, grow = "hold", alpha = "swell", transparency = 0.6, spin = false, emission = 0.6, bright = 1, locked = true, z = -0.4 },
+	-- Sello mágico en el suelo, girando (para at = "feet"). `turn` negativo = al revés; con SEAL_B encima hace el dibujo.
+	seal = { tex = SEAL_A, colors = { "main" }, rate = 1.2, life = { 2, 2 }, speed = { 0.01, 0.01 }, spread = 0, dir = "Top", orient = "flat", size = 9, grow = "hold", alpha = "swell", transparency = 0.5, spin = false, turn = 35, emission = 0.4, bright = 1.1, locked = true },
+	seal2 = { tex = SEAL_B, colors = { "second" }, rate = 1.2, life = { 2, 2 }, speed = { 0.01, 0.01 }, spread = 0, dir = "Top", orient = "flat", size = 7, grow = "hold", alpha = "swell", transparency = 0.5, spin = false, turn = -50, emission = 0.4, bright = 1.1, locked = true },
+	-- Aro que se abre por el suelo desde el sello.
+	sealwave = { tex = SEAL_WAVE, colors = { "pale", "main" }, rate = 0.9, life = { 1.2, 1.2 }, speed = { 0.01, 0.01 }, spread = 0, dir = "Top", orient = "flat", size = 11, grow = "grow", alpha = "swell", spin = false, transparency = 0.65, emission = 0.4, bright = 1, locked = true },
+	-- Disco de energía que gira deprisa de cara a la cámara (alrededor de la hoja o de la punta).
+	disc = { tex = DISC, colors = { "main" }, rate = 2.5, life = { 1, 1 }, speed = { 0, 0 }, size = 3.6, grow = "hold", alpha = "swell", transparency = 0.45, turn = 220, emission = 0.5, bright = 1.1, locked = true, z = -0.3 },
+	-- Borde de portal girando y remolino que cae hacia dentro: juntos, un agujero en el espacio.
+	portal = { tex = PORTAL, colors = { "main" }, rate = 4, life = { 1, 1 }, speed = { 0, 0 }, size = 3.4, grow = "hold", alpha = "swell", turn = 300, transparency = 0.45, emission = 0.5, bright = 1.1, locked = true, z = -0.2 },
+	vortex = { tex = SUCK, colors = { "second", "main" }, rate = 3, life = { 1, 1 }, speed = { 0, 0 }, size = 4.6, grow = "shrink", alpha = "swell", turn = 260, transparency = 0.5, emission = 0.5, bright = 1.1, locked = true, z = -0.3 },
+	-- Estallido de puntas que se abre girando (una estrella que revienta).
+	nova = { tex = NOVA, colors = { "white", "main" }, rate = 2.5, life = { 0.9, 1.1 }, speed = { 0, 0 }, size = 4.4, grow = "grow", alpha = "swell", turn = -260, transparency = 0.4, emission = 0.6, bright = 1.3, locked = true, z = 0.2 },
 }
 
 WeaponAuraDefs.weapons = {
@@ -255,20 +315,30 @@ WeaponAuraDefs.weapons = {
 			{ "shadow", rate = 9, size = 3.6, colors = { "second" } },
 			{ "stars", rate = 14, colors = { "white", "accent", "main" }, burst = 16 },
 			{ "nebula", rate = 3, colors = { "main", "accent" } },
+			{ "portal", size = 3, colors = { "main" } },
+			{ "vortex", size = 4.2, colors = { "accent", "main" } },
+			{ "starshine", at = "tip", size = 2, colors = { "white", "accent" } },
+			{ "slashes", colors = { "accent", "main" } },
 			{ "ring", radius = 1.5, height = -0.4, tilt = 60, spin = 1 },
 			{ "ring", radius = 1.5, height = -0.4, tilt = -60, spin = -1.3, colors = { "accent", "main" } },
-			{ "stars", at = "player", rate = 8, size = 0.8, life = { 1.5, 2.5 }, colors = { "white", "accent", "main" } },
+			{ "stardust", at = "player", rate = 8, size = 1, speed = { 0.3, 1.2 }, colors = { "white", "accent", "main" } },
+			{ "seal", at = "feet", size = 8, colors = { "main" } },
+			{ "seal2", at = "feet", size = 6, colors = { "accent" } },
 		},
 	},
 	[15] = { -- Espada del origen: luz pura; rayos blancos y dorados y ondas suaves
 		main = rgb(255, 245, 210), second = rgb(255, 205, 110),
 		light = { range = 12, brightness = 1, pulse = 0.3 },
 		layers = {
-			{ "glow", rate = 4, colors = { "second" } },
+			{ "halo", colors = { "second" } },
+			{ "shine", colors = { "second", "main" } },
 			{ "rays", rate = 9, burst = 14 },
-			{ "motes", rate = 9 },
-			{ "rings", rate = 0.7 },
+			{ "stardust", rate = 8, colors = { "white", "second" } },
+			{ "starshine", at = "tip", size = 2.4, colors = { "white", "second" } },
+			{ "slashes", colors = { "white", "second" } },
 			{ "motes", at = "player", rate = 8, accel = Vector3.new(0, 2.5, 0) },
+			{ "seal", at = "feet", size = 8, colors = { "second" } },
+			{ "sealwave", at = "feet", size = 10, colors = { "white", "second" } },
 		},
 	},
 	[30] = { -- Martillo glacial: vaho helado, copos, esquirlas de hielo y una ventisca alrededor del jugador
@@ -309,10 +379,13 @@ WeaponAuraDefs.weapons = {
 		main = rgb(255, 130, 210), second = rgb(255, 220, 130),
 		light = { range = 11, brightness = 0.9, pulse = 0.5 },
 		layers = {
-			{ "stars", rate = 12, size = 1.1, burst = 18 },
+			{ "stardust", rate = 12, size = 1.1, burst = 18 },
 			{ "glints", rate = 6 },
-			{ "motes", rate = 6 },
+			{ "starshine", size = 2.6, colors = { "second", "main" } },
+			{ "halo", size = 3.4 },
+			{ "slashes", colors = { "second", "main" } },
 			{ "orbit", path = "helix", count = 2, radius = 2.8, speed = 6, orb = 1, trail = 0.35, trailLife = 0.8, colors = { "second", "main" } },
+			{ "seal", at = "feet", size = 8 },
 			{ "orbit", at = "player", path = "circle", count = 2, radius = 3, speed = 3, bob = 1.6, orb = 1, trail = 0.4, trailLife = 0.9, colors = { "second", "main" } },
 		},
 	},
@@ -331,11 +404,15 @@ WeaponAuraDefs.weapons = {
 		main = rgb(255, 140, 225), second = rgb(255, 230, 160),
 		light = { range = 12, brightness = 1, pulse = 0.8 },
 		layers = {
-			{ "rings", rate = 1.6, size = 5, burst = 2 },
+			{ "nova", at = "tip", size = 4.2, colors = { "second", "main" } },
+			{ "starshine", at = "tip", size = 2.4, colors = { "white", "second" } },
 			{ "rays", rate = 9, burst = 14 },
 			{ "embers", rate = 8, accel = Vector3.zero, drag = 1.5 },
-			{ "glow", rate = 4, size = 4 },
-			{ "groundring", at = "feet", rate = 0.6 },
+			{ "stardust", rate = 7 },
+			{ "halo", size = 3 },
+			{ "slashes" },
+			{ "seal", at = "feet", size = 8 },
+			{ "sealwave", at = "feet", rate = 0.6 },
 		},
 	},
 
@@ -345,15 +422,19 @@ WeaponAuraDefs.weapons = {
 		light = { range = 13, brightness = 1.1, pulse = 0.35 },
 		layers = {
 			{ "orbit", path = "infinity", count = 2, radius = 2.4, speed = 3.2, orb = 0.9, trail = 0.3, trailLife = 1.1, colors = { "accent", "main" } },
-			{ "wisps", rate = 9 },
+			{ "fire", rate = 24, colors = { "main", "second" } },
 			{ "embers", rate = 9, burst = 20 },
 			{ "shadow", rate = 4, colors = { "second" } },
-			{ "glow", rate = 3 },
+			{ "halo", size = 3 },
+			{ "starshine", at = "tip", colors = { "accent", "main" } },
+			{ "slashes", colors = { "accent", "main" } },
 			{ "orbit", at = "player", path = "infinity", count = 2, radius = 4.2, speed = 2, orb = 1.1, trail = 0.45, trailLife = 1.6, colors = { "accent", "main" } },
 			{ "aura", at = "player" },
-			{ "ring", at = "feet", radius = 3.2, spin = 2.2, width = 0.25, colors = { "accent", "main" } },
-			{ "groundring", at = "feet" },
 			{ "embers", at = "player", rate = 12, size = 0.6, speed = { 0.5, 2 }, accel = Vector3.new(0, 4, 0) },
+			{ "pillar", colors = { "main" } },
+			{ "seal", at = "feet" },
+			{ "seal2", at = "feet", colors = { "accent" } },
+			{ "sealwave", at = "feet" },
 		},
 	},
 	[32] = { -- Martillo del fin del mundo: tormenta del apocalipsis; rayos blancos, humo, ceniza y el suelo temblando
@@ -361,11 +442,16 @@ WeaponAuraDefs.weapons = {
 		light = { range = 13, brightness = 1.1, flicker = true },
 		layers = {
 			{ "bolts", mode = "arc", count = 3, reach = 3 },
+			{ "lightning", rate = 6, size = 3.4 },
+			{ "energy", rate = 3, size = 3.6, colors = { "white", "accent" } },
 			{ "shadow", rate = 8, size = 4, colors = { "second" } },
 			{ "snow", rate = 8, size = 0.5, colors = { "second", "main" } },
-			{ "rings", rate = 0.8, size = 6, burst = 2 },
 			{ "sparks", rate = 30, burst = 24 },
-			{ "groundring", at = "feet", rate = 1.2, size = 14 },
+			{ "slashes", size = 6 },
+			{ "lightning", at = "player", rate = 3, size = 5, locked = false },
+			{ "seal", at = "feet", colors = { "pale" } },
+			{ "seal2", at = "feet", colors = { "accent" } },
+			{ "sealwave", at = "feet", rate = 1.2, size = 14 },
 			{ "aura", at = "player", rate = 12, colors = { "pale", "second" } },
 			{ "ring", at = "feet", radius = 3.4, spin = -3, width = 0.25 },
 			{ "smoke", at = "player", rate = 4, colors = { "second" } },
@@ -377,14 +463,18 @@ WeaponAuraDefs.weapons = {
 		light = { range = 13, brightness = 1.1, pulse = 0.2 },
 		layers = {
 			{ "rays", rate = 10, burst = 18 },
-			{ "flames", rate = 10, size = 2, colors = { "accent", "main", "second" } },
-			{ "motes", rate = 8 },
-			{ "glow", rate = 4, colors = { "second" } },
+			{ "fire", rate = 20, colors = { "main", "second" } },
+			{ "shine", colors = { "main", "accent" } },
+			{ "halo", colors = { "second" } },
+			{ "starshine", size = 2.6, colors = { "accent", "main" } },
+			{ "slashes", colors = { "accent", "main" } },
 			{ "ring", at = "head", radius = 1.1, spin = 1.2, width = 0.22, arcs = false, colors = { "accent", "main" } },
 			{ "aura", at = "player", rate = 12, colors = { "main", "second" } },
 			{ "motes", at = "player", rate = 10, size = 0.8, accel = Vector3.new(0, 3, 0) },
-			{ "ring", at = "feet", radius = 3.2, spin = 1.4, width = 0.25, colors = { "accent", "second" } },
-			{ "groundring", at = "feet" },
+			{ "pillar", colors = { "main", "second" } },
+			{ "seal", at = "feet", colors = { "main" } },
+			{ "seal2", at = "feet", colors = { "second" } },
+			{ "sealwave", at = "feet" },
 		},
 	},
 	[40] = { -- Hojas del alba eterna: luz blanca y celeste, con dos aros cruzados girando alrededor del jugador
@@ -392,26 +482,36 @@ WeaponAuraDefs.weapons = {
 		light = { range = 12, brightness = 1, pulse = 0.25 },
 		layers = {
 			{ "glints", rate = 8, burst = 12 },
-			{ "motes", rate = 8 },
+			{ "stardust", rate = 8, colors = { "white", "second" } },
 			{ "orbit", path = "helix", count = 2, radius = 0.9, speed = 5, trail = 0.5, trailLife = 0.8, colors = { "white", "second" } },
-			{ "glow", rate = 3, colors = { "second" } },
+			{ "shine", colors = { "second", "white" } },
+			{ "starshine", at = "tip", size = 2.2, colors = { "white", "second" } },
+			{ "slashes", colors = { "white", "second" } },
 			{ "ring", at = "player", radius = 3, tilt = 35, spin = 1.6, precess = 0.5, width = 0.22 },
 			{ "ring", at = "player", radius = 3, tilt = -35, spin = -1.9, precess = 0.5, width = 0.22, colors = { "accent", "second" } },
 			{ "aura", at = "player", rate = 12, colors = { "main", "second" } },
-			{ "motes", at = "player", rate = 10, size = 0.8, accel = Vector3.new(0, 2.5, 0) },
-			{ "groundring", at = "feet", colors = { "white", "second" } },
+			{ "stardust", at = "player", rate = 8, size = 1, speed = { 0.5, 2 }, accel = Vector3.new(0, 2.5, 0), colors = { "white", "second" } },
+			{ "seal", at = "feet", colors = { "second" } },
+			{ "seal2", at = "feet", colors = { "accent" } },
+			{ "sealwave", at = "feet", colors = { "white", "second" } },
 		},
 	},
 	[41] = { -- Lanza del big bang: el estallido que lo creó todo; ondas, rayos y chispas de todos los colores
 		main = rgb(255, 255, 255), second = rgb(255, 150, 60), accent = rgb(110, 200, 255),
 		light = { range = 14, brightness = 1.2, pulse = 0.9 },
 		layers = {
-			{ "rings", rate = 2, size = 6, colors = { "main", "second" }, burst = 3 },
+			{ "nova", at = "tip", size = 5, colors = { "main", "second" } },
+			{ "nova", at = "tip", size = 3.2, turn = 200, colors = { "main", "accent" } },
+			{ "starshine", at = "tip", size = 3, colors = { "main", "second" } },
 			{ "rays", rate = 12, colors = { "main", "accent" }, burst = 20 },
 			{ "embers", rate = 12, speed = { 4, 9 }, accel = Vector3.zero, drag = 1.2, colors = { "main", "second", "accent" } },
-			{ "stars", rate = 8, colors = { "main", "accent", "second" } },
-			{ "glow", rate = 4, size = 5, colors = { "accent" } },
-			{ "groundring", at = "feet", rate = 1.4, size = 15, colors = { "main", "accent" } },
+			{ "stardust", rate = 10, colors = { "main", "accent", "second" } },
+			{ "energy", rate = 4, colors = { "main", "accent" } },
+			{ "slashes", colors = { "main", "second" } },
+			{ "pillar", colors = { "accent", "second" } },
+			{ "seal", at = "feet", size = 10, colors = { "accent" } },
+			{ "seal2", at = "feet", colors = { "second" } },
+			{ "sealwave", at = "feet", rate = 1.4, size = 14, colors = { "main", "accent" } },
 			{ "aura", at = "player", rate = 12, colors = { "accent", "second" } },
 			{ "orbit", at = "player", path = "atom", count = 3, radius = 3.4, speed = 2.6, orb = 0.9, colors = { "main", "accent" }, emit = { "stars", rate = 5, colors = { "main", "accent", "second" } } },
 		},
@@ -420,16 +520,21 @@ WeaponAuraDefs.weapons = {
 		main = rgb(70, 235, 220), second = rgb(255, 80, 210),
 		light = { range = 14, brightness = 1.2, pulse = 0.3 },
 		layers = {
-			{ "nebula", rate = 5 },
-			{ "stars", rate = 12, burst = 20 },
+			{ "nebula", rate = 4 },
 			{ "orbit", path = "helix", count = 3, radius = 1.5, speed = 5, trail = 0.6, trailLife = 0.9, colors = { "main", "second" } },
-			{ "wisps", rate = 7 },
-			{ "glow", rate = 3 },
+			{ "portal", size = 3.2 },
+			{ "vortex", colors = { "second", "main" } },
+			{ "energy", rate = 4, colors = { "white", "second" } },
+			{ "stardust", rate = 10, burst = 20 },
+			{ "starshine", at = "tip", size = 2.8 },
+			{ "slashes", colors = { "white", "second" } },
 			{ "orbit", at = "player", path = "circle", count = 3, radius = 3.4, speed = 2.2, bob = 1.8, orb = 1, trail = 0.45, trailLife = 1.2, colors = { "main", "second" } },
 			{ "aura", at = "player" },
-			{ "motes", at = "player", rate = 10, size = 0.8, accel = Vector3.new(0, 3, 0) },
-			{ "ring", at = "feet", radius = 3.2, spin = 2, width = 0.25, colors = { "main", "second" } },
-			{ "groundring", at = "feet" },
+			{ "stardust", at = "player", rate = 8, size = 1, speed = { 0.5, 2 }, accel = Vector3.new(0, 3, 0) },
+			{ "pillar", colors = { "main", "second" } },
+			{ "seal", at = "feet" },
+			{ "seal2", at = "feet" },
+			{ "sealwave", at = "feet" },
 		},
 	},
 }
