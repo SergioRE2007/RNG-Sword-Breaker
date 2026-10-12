@@ -17,6 +17,34 @@ local window, refresh, paint
 local selected, cells = {}, {}
 local confirming = false
 
+-- X roja y medio transparente encima de las armas elegidas (pedido por el usuario: es un menú de vender, que se vea
+-- que se van). Dos barras cruzadas, por encima de la vista 3D (2) y del daño (3).
+local MARK_COLOR = Color3.fromRGB(235, 45, 55)
+local MARK_ALPHA = 0.4 -- transparencia de la X
+local function sellMark(cell: GuiObject): Frame
+	local mark = Instance.new("Frame")
+	mark.Name = "SellMark"
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.BackgroundTransparency = 1
+	mark.Visible = false
+	mark.ZIndex = 4
+	mark.Parent = cell
+	for _, turn in { 45, -45 } do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Position = UDim2.fromScale(0.5, 0.5)
+		bar.Size = UDim2.fromScale(0.95, 0.15)
+		bar.Rotation = turn
+		bar.BackgroundColor3 = MARK_COLOR
+		bar.BackgroundTransparency = MARK_ALPHA
+		bar.BorderSizePixel = 0
+		bar.ZIndex = 4
+		bar.Parent = mark
+		Ui.round(bar, 6)
+	end
+	return mark
+end
+
 function SellMenu.open(id: number?)
 	selected = {}
 	confirming = false
@@ -46,9 +74,11 @@ function SellMenu.start()
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = stock
 	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, 6)
-	padding.PaddingLeft = UDim.new(0, 6)
-	padding.PaddingBottom = UDim.new(0, 6)
+	-- Hueco para lo que sobresale de las casillas (crecen al pasar el ratón y las raras llevan halo): con menos, el borde
+	-- de la fila de arriba se cortaba contra el de la lista.
+	padding.PaddingTop = UDim.new(0, 12)
+	padding.PaddingLeft = UDim.new(0, 12)
+	padding.PaddingBottom = UDim.new(0, 12)
 	padding.Parent = stock
 	local actions = Instance.new("Frame")
 	actions.Name = "Actions"
@@ -62,10 +92,11 @@ function SellMenu.start()
 	row.SortOrder = Enum.SortOrder.LayoutOrder
 	row.Parent = actions
 	local buttons = {}
-	for order, spec in { { "SelectAll", "Seleccionar todo", Ui.COLORS.blue }, { "Clear", "Deseleccionar todo", Ui.COLORS.gray }, { "Sell", "Vender selección", Ui.COLORS.red }, { "Cancel", "Volver", Ui.COLORS.gray } } do
+	-- Solo dos botones (pedido por el usuario): quitar la selección es pulsar las casillas y salir, la X de la ventana.
+	for order, spec in { { "SelectAll", "Seleccionar todo", Ui.COLORS.blue }, { "Sell", "Vender selección", Ui.COLORS.red } } do
 		local button = Ui.button(actions, spec[2], spec[3])
 		button.Name = spec[1]
-		button.Size = UDim2.fromScale(0.235, 1)
+		button.Size = UDim2.fromScale(0.49, 1)
 		button.LayoutOrder = order
 		button.TextWrapped = true
 		button.TextSize = 20
@@ -74,7 +105,14 @@ function SellMenu.start()
 	paint = function()
 		local count = 0
 		for id, cell in cells do
-			cell.Select.Visible = selected[id] == true
+			-- Elegida: fondo rojo y la X, sin el borde blanco de seleccionado (pedido por el usuario).
+			cell.SellMark.Visible = selected[id] == true
+			local base = if selected[id] then MARK_COLOR else cell:GetAttribute("Base")
+			cell.BackgroundColor3 = base
+			local glow = cell:FindFirstChild("Glow") :: Frame? -- el círculo de luz de WeaponPreview, detrás del arma
+			if glow then
+				glow.BackgroundColor3 = base
+			end
 			if selected[id] then count += 1 end
 		end
 		if count == 0 then confirming = false end
@@ -95,6 +133,8 @@ function SellMenu.start()
 			local cell = Ui.cell(stock, tier.color, table.find(Config.RarityTiers, tier))
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = copy.id
+			cell:SetAttribute("Base", tier.color) -- color de su fondo sin elegir
+			sellMark(cell)
 			WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
 			Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
 			Ui.tip(cell, function()
@@ -124,19 +164,6 @@ function SellMenu.start()
 		confirming = false
 		for id in cells do selected[id] = true end
 		paint()
-	end)
-	buttons.Clear.Activated:Connect(function()
-		selected = {}
-		confirming = false
-		paint()
-	end)
-	buttons.Cancel.Activated:Connect(function()
-		if confirming then
-			confirming = false
-			paint()
-		else
-			Ui.toggle("Backpack")
-		end
 	end)
 	buttons.Sell.Activated:Connect(function()
 		if not confirming then
