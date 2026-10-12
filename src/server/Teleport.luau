@@ -12,7 +12,7 @@ local Plots = require(script.Parent.Plots)
 local Teleport = {}
 
 -- Sitio (mirando hacia donde toca) de cada destino, o nil si no hay.
-local function destination(player: Player, where: unknown): CFrame?
+local function destination(player: Player, where: unknown, zone: unknown): CFrame?
 	local floor = Config.Plot.FloorHeight + 3
 	if where == "hub" or where == "shops" then
 		-- Entre los dos puestos de Rasgos y Grados, mirándolos.
@@ -23,6 +23,12 @@ local function destination(player: Player, where: unknown): CFrame?
 	elseif where == "dungeon" then
 		-- Abajo, en la plaza del lobby subterráneo (si no se ha podido construir, junto a la boca del pozo, en el hub).
 		return DungeonLobby.plazaCFrame() or CFrame.lookAt(Vector3.new(0, floor, 38), Vector3.new(0, floor, 0))
+	elseif where == "room" then
+		-- Delante del altar de la sala de esa zona (menú de mazmorras, botón "Party"). Dentro de una partida, no.
+		if type(zone) ~= "number" or (player:GetAttribute("Dungeon") or 0) ~= 0 then
+			return nil
+		end
+		return DungeonLobby.returnCFrame(zone, 1, 1)
 	elseif where == "home" then
 		local plot = Plots.get(player)
 		return plot and plot.spawn.CFrame + Vector3.new(0, 4, 0)
@@ -30,10 +36,10 @@ local function destination(player: Player, where: unknown): CFrame?
 	return nil
 end
 
-local function onTeleport(player: Player, where: unknown)
+local function onTeleport(player: Player, where: unknown, zone: unknown)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	local target = destination(player, where)
+	local target = destination(player, where, zone)
 	if not target or not humanoid or humanoid.Health <= 0 then
 		return
 	end
@@ -43,7 +49,7 @@ local function onTeleport(player: Player, where: unknown)
 		root.AssemblyLinearVelocity = Vector3.zero
 		root.AssemblyAngularVelocity = Vector3.zero
 	end
-	Remotes.Teleported:FireClient(player, where)
+	Remotes.Teleported:FireClient(player, where, zone)
 end
 
 function Teleport.start()

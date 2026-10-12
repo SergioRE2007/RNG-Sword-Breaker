@@ -415,6 +415,26 @@ HANDLERS.solo = function(player, zoneArg)
 	launchParty(party)
 end
 
+-- Partida en solitario pedida desde el menú de mazmorras (client/DungeonMenu), esté donde esté el jugador: se valida
+-- igual que desde el altar, menos la distancia (bajar al lobby es gratis, así que no protegía nada).
+HANDLERS.quick = function(player, zoneArg)
+	freeIfOut(player)
+	local zone = validZone(zoneArg)
+	if not zone then
+		return
+	end
+	if partyOf[player] then
+		notice(player, "Leave your party first.")
+		return
+	end
+	local ok, reason = canPlay(player, zone)
+	if not ok then
+		notice(player, reason or "You can't enter.")
+		return
+	end
+	launchParty(createParty(player, zone, false))
+end
+
 HANDLERS.join = function(player, idArg)
 	if type(idArg) ~= "number" then
 		return

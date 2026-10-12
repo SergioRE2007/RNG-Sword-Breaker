@@ -960,7 +960,7 @@ Config.Tutorial = {
 		{ id = "upgrade", kind = "upgrades", goal = 1, text = "Buy an upgrade with your coins", point = "button:Menu.Upgrades" },
 		{ id = "bag", kind = "bag", text = "Tap the sack behind your plot and leave a weapon: it will earn coins on its own", point = "bag" },
 		{ id = "missions", kind = "seen", window = "Missions", text = "Go to the Missions stall in the center and take a look", point = "stall:missions" },
-		{ id = "dungeon", kind = "lobby", text = "Head down to the Dungeons", point = "button:Travel.Travel_dungeon" },
+		{ id = "dungeon", kind = "seen", window = "DungeonMenu", text = "Open the Dungeons menu and pick one", point = "button:Travel.Travel_dungeon" },
 	},
 }
 -- CÓDIGOS DE REGALO: la lista (y cómo se escribe cada uno) está en server/CodeList, no aquí: lo de shared lo puede leer

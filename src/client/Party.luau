@@ -694,6 +694,19 @@ local function buildWindow()
 			end
 		end
 	end)
+	-- Desde el menú de mazmorras (client/DungeonMenu, botón "Party"): el servidor te deja delante del altar de esa sala
+	-- y la ventana se abre sola. Un instante después, porque Hud cierra todas las ventanas al viajar.
+	Remotes.Teleported.OnClientEvent:Connect(function(where, zone)
+		if where == "room" and type(zone) == "number" then
+			task.defer(function()
+				pendingZone = zone
+				request("open", zone)
+				if not Ui.isOpen(window) then
+					Ui.toggle("Party")
+				end
+			end)
+		end
+	end)
 	-- Se cierra sola al alejarte de la sala.
 	task.spawn(function()
 		while true do
