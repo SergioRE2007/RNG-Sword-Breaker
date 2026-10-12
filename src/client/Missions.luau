@@ -1,6 +1,8 @@
 -- Ventana de Misiones (el puesto "Misiones" del hub): tres misiones diarias y tres semanales con su
 -- barra de progreso y su recompensa en tickets (con los que se compran pases en la Tienda). El servidor cuenta el progreso y lo publica en
 -- el atributo "Missions" (JSON); las misiones del día se calculan igual aquí con shared/MissionList.
+-- Dos pestañas (pedido por el usuario): "Misiones" (Body.Missions) y "Comprar" (Body.Shop), donde se gastan los tickets
+-- en lo de Config.Tickets.Shop: una tarjeta Offer_<n> por objeto, con su botón Buy (BuyTicketItem; server/TicketShop).
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -11,6 +13,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local MissionList = require(ReplicatedStorage.Shared.MissionList)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Potions = require(script.Parent.Potions)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 
@@ -57,22 +60,132 @@ function Missions.start()
 	tokens.Position = UDim2.new(1, -16, 0, 6)
 	tokens.Size = UDim2.fromOffset(280, 34)
 	tokens.TextXAlignment = Enum.TextXAlignment.Right
-	local note = Ui.label(body, 16)
-	note.Position = UDim2.fromOffset(16, 6)
-	note.Size = UDim2.fromOffset(320, 34)
-	note.TextXAlignment = Enum.TextXAlignment.Left
-	note.TextColor3 = Color3.fromRGB(190, 195, 215)
-	note.Text = "Con los tickets se compran pases en la Tienda."
+
+	-- Pestañas, arriba a la izquierda, y un panel por cada una debajo.
+	local panes = {}
+	local tabs = {}
+	local function show(name: string)
+		for key, pane in panes do
+			pane.Visible = key == name
+			Ui.setSelected(tabs[key], key == name)
+		end
+	end
+	for order, entry in { { "Missions", "Misiones", Ui.COLORS.blue }, { "Shop", "Comprar", Ui.COLORS.orange } } do
+		local name = entry[1]
+		local tab = Ui.button(body, entry[2], entry[3])
+		tab.Name = "Tab" .. name
+		tab.Position = UDim2.fromOffset(12 + (order - 1) * 150, 4)
+		tab.Size = UDim2.fromOffset(142, 38)
+		tab.TextSize = 20
+		tabs[name] = tab
+		local pane = Instance.new("Frame")
+		pane.Name = name
+		pane.Position = UDim2.fromOffset(0, 46)
+		pane.Size = UDim2.new(1, 0, 1, -46)
+		pane.BackgroundTransparency = 1
+		pane.Parent = body
+		panes[name] = pane
+		tab.Activated:Connect(function()
+			show(name)
+		end)
+	end
+	local missionPane, shopPane = panes.Missions, panes.Shop
+
+	-- Comprar: una tarjeta por objeto de Config.Tickets.Shop.
+	local shopPadding = Instance.new("UIPadding")
+	shopPadding.PaddingLeft = UDim.new(0, 12)
+	shopPadding.PaddingRight = UDim.new(0, 12)
+	shopPadding.PaddingTop = UDim.new(0, 4)
+	shopPadding.PaddingBottom = UDim.new(0, 8)
+	shopPadding.Parent = shopPane
+	local shopGrid = Instance.new("UIGridLayout")
+	shopGrid.CellSize = UDim2.new(1 / 3, -8, 0.5, -6)
+	shopGrid.CellPadding = UDim2.fromOffset(12, 12)
+	shopGrid.SortOrder = Enum.SortOrder.LayoutOrder
+	shopGrid.Parent = shopPane
+	local offers = {}
+	for index, offer in Config.Tickets.Shop do
+		local item = Config.Items[offer.item]
+		local card = Instance.new("Frame")
+		card.Name = "Offer_" .. index
+		card.LayoutOrder = index
+		card.BackgroundColor3 = WHITE
+		card.Parent = shopPane
+		Ui.round(card, 12)
+		Ui.stroke(card, BLACK, 3)
+		Ui.panel(card, Color3.fromRGB(58, 62, 110):Lerp(item.color, 0.18))
+
+		local cell = Ui.cell(card, item.color, if item.potion then item.potion.tier else nil)
+		cell.Name = "Icon"
+		cell.AnchorPoint = Vector2.new(0.5, 0)
+		cell.Position = UDim2.new(0.5, 0, 0, 12)
+		cell.Size = UDim2.fromOffset(96, 96)
+		if item.potion then
+			Potions.icon(cell, item.potion.family, item.potion.tier)
+			Potions.addTag(cell, item.potion.tier, true)
+			Ui.tip(cell, function()
+				return Potions.tip(item.potion.family, item.potion.tier, player:GetAttribute("Item_" .. offer.item) or 0), item.color
+			end, true)
+		else
+			Ui.image(cell, item.image)
+			Ui.tip(cell, function()
+				return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>`, item.color
+			end, true)
+		end
+
+		local name = Ui.label(card, 20)
+		name.Name = "Title"
+		name.Position = UDim2.fromOffset(8, 112)
+		name.Size = UDim2.new(1, -16, 0, 44)
+		name.TextWrapped = true
+		name.TextScaled = true
+		name.Text = item.name
+		local nameLimit = Instance.new("UITextSizeConstraint")
+		nameLimit.MaxTextSize = 20
+		nameLimit.MinTextSize = 12
+		nameLimit.Parent = name
+		local owned = Ui.label(card, 16)
+		owned.Name = "Owned"
+		owned.Position = UDim2.fromOffset(8, 156)
+		owned.Size = UDim2.new(1, -16, 0, 20)
+		owned.TextColor3 = Color3.fromRGB(190, 195, 215)
+
+		local buy = Ui.button(card, `      {offer.price}`, GOLD)
+		buy.Name = "Buy"
+		buy.AnchorPoint = Vector2.new(0.5, 1)
+		buy.Position = UDim2.new(0.5, 0, 1, -10)
+		buy.Size = UDim2.new(1, -20, 0, 46)
+		buy.TextSize = 26
+		local coin = Instance.new("Frame")
+		coin.Name = "Icon"
+		coin.AnchorPoint = Vector2.new(0, 0.5)
+		coin.Position = UDim2.new(0.5, -46, 0.5, 0)
+		coin.Size = UDim2.fromOffset(30, 30)
+		coin.BackgroundTransparency = 1
+		coin.Parent = buy
+		Ui.orbIcon(coin, GOLD)
+		buy.Activated:Connect(function()
+			local missing = offer.price - (player:GetAttribute("Item_missionToken") or 0)
+			if missing > 0 then
+				Sfx.play("error")
+				Ui.toast(`Te faltan {missing} tickets`, Ui.COLORS.orange)
+				return
+			end
+			Remotes.BuyTicketItem:FireServer(index)
+		end)
+		offers[index] = { offer = offer, buy = buy, owned = owned }
+	end
+	show("Missions")
 
 	local sections = {} -- [periodo] = { header, countdown, rows = { [n] = fila } }
-	local y = 46
+	local y = 0
 	for _, period in PERIODS do
 		local key, title, color = period[1], period[2], period[3]
 		local header = Instance.new("Frame")
 		header.Position = UDim2.fromOffset(12, y)
 		header.Size = UDim2.new(1, -24, 0, 38)
 		header.BackgroundColor3 = WHITE
-		header.Parent = body
+		header.Parent = missionPane
 		Ui.round(header, 10)
 		Ui.stroke(header, BLACK, 3)
 		Ui.panel(header, color:Lerp(BLACK, 0.12))
@@ -94,7 +207,7 @@ function Missions.start()
 			row.Position = UDim2.fromOffset(12, y)
 			row.Size = UDim2.new(1, -24, 0, 66)
 			row.BackgroundColor3 = WHITE
-			row.Parent = body
+			row.Parent = missionPane
 			Ui.round(row, 10)
 			Ui.stroke(row, BLACK, 3)
 			Ui.panel(row, Color3.fromRGB(62, 68, 118), color)
@@ -158,6 +271,13 @@ function Missions.start()
 
 	local function refresh()
 		tokens.Text = `Tickets: <font color="#{GOLD:ToHex()}">{Format.short(player:GetAttribute("Item_missionToken") or 0)}</font>`
+		local tickets = player:GetAttribute("Item_missionToken") or 0
+		for _, entry in offers do
+			local enough = tickets >= entry.offer.price
+			entry.buy.BackgroundColor3 = if enough then GOLD else GOLD:Lerp(Color3.fromRGB(70, 72, 90), 0.7)
+			entry.buy.TextColor3 = if enough then WHITE else Color3.fromRGB(190, 192, 205)
+			entry.owned.Text = `Tienes: {Format.short(player:GetAttribute("Item_" .. entry.offer.item) or 0)}`
+		end
 		local state = readState()
 		local now = os.time()
 		for _, period in PERIODS do
@@ -195,6 +315,9 @@ function Missions.start()
 		refresh()
 	end)
 	window:GetPropertyChangedSignal("Visible"):Connect(refresh)
+	for _, offer in Config.Tickets.Shop do
+		player:GetAttributeChangedSignal("Item_" .. offer.item):Connect(refresh)
+	end
 	task.spawn(function()
 		-- La cuenta atrás se actualiza cada segundo mientras la ventana está abierta.
 		while true do

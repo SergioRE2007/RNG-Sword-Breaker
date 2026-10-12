@@ -191,6 +191,20 @@ function Destructibles.reaches(part: BasePart, origin: CFrame, range: number, ar
 	return Hitbox.reaches(part, origin, range, arc)
 end
 
+-- Multiplica la suerte de armas de ese objeto (Trébol de la suerte, server/Clover): una sola vez por objeto. Devuelve
+-- si se ha hecho.
+function Destructibles.boost(part: Instance, luck: number): boolean
+	local object = objects[part]
+	if not object or object.boosted then
+		return false
+	end
+	object.boosted = true
+	object.luck *= luck
+	part:SetAttribute("Luck", object.luck)
+	part:SetAttribute("Clover", true)
+	return true
+end
+
 -- Si esa pieza es un objeto vivo de la parcela del jugador (lo único de aquí que puede atacar).
 function Destructibles.owns(player: Player, part: Instance): boolean
 	local object = objects[part]

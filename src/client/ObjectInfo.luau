@@ -412,6 +412,7 @@ end
 
 local focus: BasePart? = nil
 local hpConnection: RBXScriptConnection? = nil
+local luckConnection: RBXScriptConnection? = nil
 
 local function setFocus(part: BasePart?)
 	if part == focus then
@@ -420,6 +421,10 @@ local function setFocus(part: BasePart?)
 	if hpConnection then
 		hpConnection:Disconnect()
 		hpConnection = nil
+	end
+	if luckConnection then
+		luckConnection:Disconnect()
+		luckConnection = nil
 	end
 	-- La etiqueta del objeto se esconde mientras lleva el cartel entero.
 	local before = focus and decorated[focus]
@@ -441,6 +446,10 @@ local function setFocus(part: BasePart?)
 		local size, text = hpGoal(part)
 		refs.hpText.Text = text
 		TweenService:Create(refs.hpFill, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = size }):Play()
+	end)
+	-- La suerte cambia si le ponen un Trébol de la suerte con el cartel a la vista.
+	luckConnection = part:GetAttributeChangedSignal("Luck"):Connect(function()
+		fill(part)
 	end)
 	card.Adornee = part
 	card.StudsOffsetWorldSpace = lift(part, 1, CARD_HEIGHT)

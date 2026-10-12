@@ -188,13 +188,17 @@ Config.Gacha = {
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
 -- (los que dan gemas) al romperse. La del Cristal de rasgo va con el calendario de tools/equilibrio (objetivo.rasgo):
 -- al 5 % de antes la parcela daba ella sola varias veces las tiradas de rasgo que pide el calendario.
-Config.ItemOrder = { "traitCrystal", "missionToken", "gradeCrystal" }
+Config.ItemOrder = { "traitCrystal", "missionToken", "gradeCrystal", "luckClover" }
 Config.Items = {
 	traitCrystal = { name = "Cristal de rasgo", description = "Se gasta en la tienda de Rasgos del hub: da un rasgo al azar a la espada que elijas (sustituye al que tuviera).", dropChance = 0.007, color = Color3.fromRGB(90, 230, 255) },
 	-- Moneda gratuita (f2p) que dan las misiones diarias y semanales (el usuario los llama "tickets"): con ellos se compran
 	-- los pases de la Tienda (Config.Tickets). No cae de los objetos (sin dropChance) y no se comercia (noTrade: si no,
 	-- con cuentas de más haciendo misiones se le pasarían todos a una sola).
 	missionToken = { name = "Ticket", description = "Los dan las misiones diarias y semanales. Con ellos se compran los pases de la Tienda.", color = Color3.fromRGB(255, 190, 60), noTrade = true },
+	-- Trébol de la suerte (pedido por el usuario): se pulsa en la mochila, se elige un objeto de tu parcela y su suerte
+	-- de armas se multiplica por Config.Clover.Luck, encima de todo lo que ya tuviera (server/Clover). Se compra con
+	-- Robux (Config.Products) o con tickets (Config.Tickets.Shop); no cae de nada y no se comercia.
+	luckClover = { name = "Trébol de la suerte", description = "Púlsalo y elige un objeto de tu parcela: su suerte de armas se multiplica por 999.", color = Color3.fromRGB(90, 220, 130), image = "suerte", noTrade = true },
 	-- Lo sueltan los enemigos de las mazmorras y se saca al desmontar armadura. No cae de los objetos (sin dropChance).
 	gradeCrystal = { name = "Cristal de grado", description = "Se gasta en la tienda de Grados del hub: da un grado al azar a la espada que elijas. Lo sueltan los enemigos de las mazmorras.", color = Color3.fromRGB(200, 120, 255) },
 }
@@ -893,9 +897,34 @@ Config.Trade = {
 -- extraSlots = armas de más que se pueden equipar y, otras tantas, dejar en la Bolsa de oro (Stats.loadoutSlots y
 -- Stats.bagSlots; pedido por el usuario).
 -- Con tickets (los de las misiones) se compra cualquier pase: cuesta su "price" en Robux por PerRobux (pedido por el
--- usuario: 100 Robux = 300 tickets). La cuenta es Stats.ticketPrice y la compra, server/Passes. Lo que dan las misiones
+-- usuario: 100 Robux = 150 tickets). La cuenta es Stats.ticketPrice y la compra, server/Passes. Lo que dan las misiones
 -- (50 al día y 200 a la semana como mucho) está en shared/MissionList.
-Config.Tickets = { PerRobux = 3 }
+-- "Shop" = lo que se compra con tickets en el puesto de Misiones (pestaña "Comprar", server/TicketShop): item = clave de
+-- Config.Items (las pociones son potion_<familia>_<tier>: las de tier máximo, pedido por el usuario) y price = tickets.
+-- Todos los pases juntos son unas 10 semanas de misiones (pedido por el usuario: con x3 eran 20).
+Config.Tickets = {
+	PerRobux = 1.5,
+	Shop = {
+		{ item = "luckClover", price = 50 },
+		{ item = "potion_weaponLuck_5", price = 20 },
+		{ item = "potion_boxLuck_5", price = 20 },
+		{ item = "potion_coins_5", price = 20 },
+		{ item = "potion_damage_5", price = 20 },
+		{ item = "potion_health_5", price = 20 },
+	},
+}
+-- TRÉBOL DE LA SUERTE: Luck = por cuánto multiplica la suerte de armas del objeto elegido (una sola vez por objeto).
+Config.Clover = { Item = "luckClover", Luck = 999 }
+-- PRODUCTOS DE ROBUX que se compran las veces que se quiera (server/Products; salen los primeros en la Tienda). "id" =
+-- id del producto en Roblox (0 = aún no se vende, "Pronto"); "price" = Robux que se enseñan hasta que Roblox dice el
+-- precio real; item y amount = lo que da (clave de Config.Items). icon, tag, ribbon y color, como en los pases.
+Config.ProductOrder = { "clover1", "clover5", "clover10" }
+Config.Products = {
+	clover1 = { id = 3718055245, name = "Trébol de la suerte", price = 50, item = "luckClover", amount = 1, icon = "suerte", tag = "x1", color = Color3.fromRGB(90, 220, 130), perksText = { "Elige un objeto de tu parcela: x999 de suerte de armas", "Se multiplica con toda la suerte que ya tengas" } },
+	clover5 = { id = 3718055248, name = "Pack de 5 tréboles", price = 225, item = "luckClover", amount = 5, icon = "suerte", tag = "x5", ribbon = "-10 %", color = Color3.fromRGB(60, 205, 190), perksText = { "5 tréboles: x999 de suerte de armas en 5 objetos", "Más baratos que de uno en uno" } },
+	clover10 = { id = 3718055274, name = "Pack de 10 tréboles", price = 400, item = "luckClover", amount = 10, icon = "suerte", tag = "x10", ribbon = "-20 %", color = Color3.fromRGB(255, 190, 60), perksText = { "10 tréboles: x999 de suerte de armas en 10 objetos", "El pack más barato por trébol" } },
+}
+
 Config.GamepassOrder = { "vip", "coins2", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }
 Config.Gamepasses = {
 	vip = {

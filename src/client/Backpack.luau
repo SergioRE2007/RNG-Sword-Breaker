@@ -16,6 +16,7 @@ local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
 local WeaponPreview = require(script.Parent.WeaponPreview)
 local ArmorPane = require(script.Parent.ArmorPane)
+local Clover = require(script.Parent.Clover)
 local Potions = require(script.Parent.Potions)
 local Sfx = require(script.Parent.Sfx)
 
@@ -620,8 +621,21 @@ function Backpack.start()
 		local cell = Ui.cell(itemGrid, item.color)
 		cell.Name = name
 		cell.LayoutOrder = order
-		Ui.gemIcon(cell, item.color)
+		if item.image then
+			Ui.image(cell, item.image)
+		else
+			Ui.gemIcon(cell, item.color)
+		end
 		itemLabels[name] = Ui.cellLabel(cell, "x0")
+		if name == Config.Clover.Item then
+			-- Trébol de la suerte: se cierra la mochila y se elige el objeto en la parcela (client/Clover).
+			cell.Activated:Connect(function()
+				if (player:GetAttribute("Item_" .. name) or 0) >= 1 then
+					Ui.close(window)
+				end
+				Clover.pick()
+			end)
+		end
 		Ui.tip(cell, function()
 			return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>`, item.color
 		end)

@@ -460,6 +460,7 @@ local function load(player: Player)
 		playTime = 0, -- segundos jugados (clasificaciones)
 		totalCoins = 0, -- monedas ganadas en total, sin descontar lo gastado (clasificaciones)
 		robuxSpent = 0, -- Robux gastados en el juego (clasificaciones)
+		receipts = {}, -- últimas compras de productos ya entregadas (PurchaseId), para no dar una dos veces (server/Products)
 		passes = {}, -- pases comprados con tickets de misión: { [clave de Config.Gamepasses] = true } (ver server/Passes)
 		missions = {}, -- misiones: { daily = { id, progress, claimed }, weekly = { ... } } (ver server/Missions)
 		swords = { { id = 1, sword = 1 } },
@@ -507,6 +508,13 @@ local function load(player: Player)
 				data.playTime = math.max(0, tonumber(saved.playTime) or 0)
 				data.totalCoins = math.max(0, tonumber(saved.totalCoins) or 0)
 				data.robuxSpent = math.max(0, math.floor(tonumber(saved.robuxSpent) or 0))
+				if type(saved.receipts) == "table" then
+					for _, id in saved.receipts do
+						if type(id) == "string" and #data.receipts < 100 then
+							table.insert(data.receipts, id)
+						end
+					end
+				end
 				if type(saved.passes) == "table" then
 					for key in Config.Gamepasses do
 						if saved.passes[key] == true then

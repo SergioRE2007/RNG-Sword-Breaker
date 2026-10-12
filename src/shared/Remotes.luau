@@ -27,6 +27,8 @@ local NAMES = {
 	"Announce", -- servidor -> clientes: (text, color) aviso de algo muy raro
 	"Rebirth", -- cliente -> servidor: pagar el siguiente renacimiento (solo monedas, no quita nada)
 	"BuyPassTickets", -- cliente -> servidor: (clave de Config.Gamepasses) comprar ese pase con tickets de misión
+	"BuyTicketItem", -- cliente -> servidor: (posición en Config.Tickets.Shop) comprar ese objeto con tickets de misión
+	"UseClover", -- cliente -> servidor: (objeto de tu parcela) gastar un Trébol de la suerte en él
 	"ClaimMission", -- cliente -> servidor: (periodo "daily" o "weekly", id de la misión) cobrar la recompensa de una misión cumplida
 	"AdminSetModifier", -- cliente -> servidor: (kind "traits" o "grades", id de la copia, índice o 0 = quitar) modo admin de pruebas, solo en Studio
 	"TradeRequest", -- cliente -> servidor: (userId) invitar a comerciar a ese jugador (0 = bot de pruebas, solo en Studio)
