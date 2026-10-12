@@ -43,4 +43,5 @@ require(script.Products).start() -- productos de Robux (ProcessReceipt)
 require(script.AutoPlay).start() -- autoclicker y Auto de la parcela: después de Plots y Passes
 require(script.Rejoin).start() -- reconexión antes de la expulsión por inactividad: después de Party, Dungeons y AutoPlay
 require(script.Admin).start() -- antes de quien obedece órdenes de admin
+require(script.AdminCommands).start() -- regalar, echar, ir y avisar desde el menú de admin
 require(script.Weather).start()
