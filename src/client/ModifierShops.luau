@@ -676,24 +676,24 @@ local function buildShop(kind: string)
 			gradient.Color = ColorSequence.new(entry.color:Lerp(WHITE, 0.55), entry.color)
 			gradient.Parent = title
 		end
-		local detail = Ui.label(row, 20)
-		detail.Position = UDim2.fromOffset(TEXT_X, 54)
-		detail.Size = UDim2.new(1, -TEXT_X - 12, 0, 26)
+		local detail = Ui.label(row, 26)
+		detail.Position = UDim2.fromOffset(TEXT_X, 46)
+		detail.Size = UDim2.new(1, -TEXT_X - 12, 0, 32)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
 		detail.TextColor3 = Color3.fromRGB(120, 235, 120)
 		detail.Text = Modifiers.effect(entry)
 		detail.TextScaled = true
 		local detailLimit = Instance.new("UITextSizeConstraint")
-		detailLimit.MaxTextSize = 20
+		detailLimit.MaxTextSize = 26
 		detailLimit.Parent = detail
-		local pityLabel = Ui.label(row, 17)
+		local pityLabel = Ui.label(row, 21)
 		pityLabel.Name = "Pity"
-		pityLabel.Position = UDim2.fromOffset(TEXT_X, 86)
-		pityLabel.Size = UDim2.new(1, -TEXT_X - 12, 0, 24)
+		pityLabel.Position = UDim2.fromOffset(TEXT_X, 82)
+		pityLabel.Size = UDim2.new(1, -TEXT_X - 12, 0, 28)
 		pityLabel.TextXAlignment = Enum.TextXAlignment.Left
 		pityLabel.TextScaled = true
 		local pityLimit = Instance.new("UITextSizeConstraint")
-		pityLimit.MaxTextSize = 17
+		pityLimit.MaxTextSize = 21
 		pityLimit.Parent = pityLabel
 		pityLabel.TextColor3 = Color3.fromRGB(190, 195, 215)
 		-- Crece un poco al pasar el ratón.
