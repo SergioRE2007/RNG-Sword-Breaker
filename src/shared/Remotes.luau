@@ -60,6 +60,7 @@ local NAMES = {
 	"BagEvent", -- servidor -> cliente: (tipo, datos) "emptied" ({ stage = bolsa nueva, bags = vaciadas }) o "away" ({ seconds, coins, bags }: lo que han sacado sus armas mientras no estaba)
 	"Rejoin", -- cliente -> servidor: ({ fight, dungeon }) llevo mucho rato sin tocar nada: reconéctame antes de que Roblox me expulse (fight = peleaba en Auto, dungeon = zona en la que estaba)
 	"AdminWeather",-- cliente -> servidor: (acción) menú de admin, solo administradores (server/Admin): un id de Config.Weather.Events = poner ese clima ya, "none" = despejar, "auto" = volver al calendario, "next" = el siguiente de la lista
+	"AdminCommand", -- cliente -> servidor: (acción, ...) órdenes del menú de admin, solo administradores (server/AdminCommands): "give" (userId o 0 = todos, objeto, cantidad), "kick" (userId), "goto" / "bring" (userId), "announce" (texto)
 	"WeatherSchedule", -- servidor -> cliente: (hora de GetServerTimeNow) cuándo empieza el siguiente clima; solo se manda a los administradores, los demás no ven la cuenta atrás
 }
 

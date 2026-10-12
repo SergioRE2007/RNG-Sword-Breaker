@@ -1,7 +1,8 @@
 -- Menú de admin: una ventana que solo existe para los administradores del juego (atributo "Admin" del jugador, que
 -- pone server/Admin: el dueño y los de Config.Admins; en Studio, con Config.Test.Admin). A los demás no se les crea
 -- ni el botón ni la ventana, y aunque alguien se la fabricara, el servidor comprueba cada orden.
--- La ventana `Hud.Admin` lleva un panel por pestaña (como la mochila): `TabWeather` y `Body.Weather`, de momento. Un
+-- La ventana `Hud.Admin` lleva un panel por pestaña (como la mochila): `TabWeather` y `Body.Weather`, y los de
+-- client/AdminTools (`TabPlayers` y `TabServer`: regalar, ir, traer, echar y avisar). Un
 -- panel nuevo = una entrada en PANELS con su función, que recibe el marco donde montarse. El botón es pequeño y va
 -- arriba a la derecha, junto al de Ajustes: `Hud.HudRoot.TopButtons.Admin`.
 -- Panel del clima: una casilla por clima de Config.Weather (pulsarla lo pone ya en este servidor, para todos y con
@@ -20,6 +21,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local WeatherInfo = require(ReplicatedStorage.Shared.WeatherInfo)
 local Performance = require(script.Parent.Performance)
 local Ui = require(script.Parent.Ui)
+local AdminTools = require(script.Parent.AdminTools)
 local WeatherHud = require(script.Parent.WeatherHud)
 
 local AdminPanel = {}
@@ -210,6 +212,20 @@ local PANELS = {
 			badge.Position = UDim2.fromScale(0.5, 0.5)
 		end,
 		build = weatherPanel,
+	},
+	{
+		key = "Players", name = Lang.t(nil, "Players"), color = Color3.fromRGB(235, 150, 50),
+		icon = function(parent: Frame)
+			Ui.image(parent, "grupo")
+		end,
+		build = AdminTools.players,
+	},
+	{
+		key = "Server", name = Lang.t(nil, "Server"), color = Color3.fromRGB(150, 110, 235),
+		icon = function(parent: Frame)
+			Ui.starIcon(parent, GOLD)
+		end,
+		build = AdminTools.server,
 	},
 }
 
