@@ -2,6 +2,9 @@
 -- administradores: cada una se comprueba con Admin.is, y de lo que manda el cliente no se da nada por bueno.
 -- AdminCommand:FireServer(acción, ...):
 --   "give", userId (0 = todos los de este servidor), objeto ("coins", "gems" o una clave de Config.Items), cantidad
+--   "sword", userId (0 = todos), { sword, metal, size, trait, grade } (índices de Config; 0 = sin metal, tamaño
+--     normal, sin rasgo o sin grado), cantidad: armas hechas a medida, hasta MAX_SWORDS por orden y lo que quepa
+--     en la mochila (Config.MaxSwords). No cuentan para el Índice ni para la "Mejor tirada": no son tiradas.
 --   "kick", userId                 echar a ese jugador del servidor
 --   "goto", userId / "bring", userId   ir junto a ese jugador / traerlo junto a mí
 --   "announce", texto              aviso a todo el servidor (pasa por el filtro de texto de Roblox)
@@ -11,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -25,6 +29,7 @@ local BAD = Color3.fromRGB(255, 110, 110)
 local MAX_ITEMS = 1e12 -- tope de una entrega de objetos
 local MAX_MONEY = 1e60 -- tope de una entrega de monedas o gemas
 local MAX_TEXT = 200
+local MAX_SWORDS = 50 -- tope de armas de una orden
 
 -- Nombre (para ese lector) y color de lo que se regala, o nil si no existe.
 local function gift(key: unknown, reader: Player?): (string?, Color3?)
@@ -87,6 +92,75 @@ local function give(admin: Player, userId: unknown, key: unknown, amount: unknow
 	print(`[Admin] {admin.Name} gives {count} {key} to {if everyone then "everyone" else (one :: Player).Name}`)
 end
 
+-- Índice entero de `list` (o 0, si `optional`), o nil si lo que manda el cliente no vale.
+local function index(value: unknown, list, optional: boolean): number?
+	if type(value) ~= "number" or value ~= value or value % 1 ~= 0 then
+		return nil
+	end
+	if value == 0 and optional then
+		return 0
+	end
+	return if list[value] then value else nil
+end
+
+local function giveSwords(admin: Player, userId: unknown, spec: unknown, amount: unknown)
+	if type(spec) ~= "table" or type(amount) ~= "number" or amount ~= amount or amount < 1 then
+		return
+	end
+	local sword = index(spec.sword, Config.Swords, false)
+	local metal, size = index(spec.metal, Config.Metals, true), index(spec.size, Config.Sizes, true)
+	local trait, grade = index(spec.trait, Config.Traits, true), index(spec.grade, Config.Grades, true)
+	if not (sword and metal and size and trait and grade) then
+		return
+	end
+	local count = math.min(math.floor(amount), MAX_SWORDS)
+	local everyone = userId == 0
+	local one = target(userId)
+	if not everyone and not one then
+		return
+	end
+	local given, short = 0, 0 -- jugadores que reciben alguna y a los que no les caben todas
+	for _, player in if everyone then Players:GetPlayers() else { one :: Player } do
+		if not PlayerData.read(player) then
+			continue
+		end
+		local added = 0
+		PlayerData.edit(player, function(data)
+			for _ = 1, math.min(count, Config.MaxSwords - #data.swords) do
+				table.insert(data.swords, {
+					id = data.nextSwordId,
+					sword = sword,
+					metal = if metal > 0 then metal else nil,
+					size = if size > 0 then size else nil,
+					trait = if trait > 0 then trait else nil,
+					grade = if grade > 0 then grade else nil,
+				})
+				data.nextSwordId += 1
+				added += 1
+			end
+		end)
+		if added < count then
+			short += 1
+		end
+		if added > 0 then
+			given += 1
+			Tell.notice(player, GOLD, "An admin gave you {n} x {weapon}", { n = added, weapon = Permanent.name(sword, metal, size, player) })
+		end
+	end
+	local name = Permanent.name(sword, metal, size, admin)
+	if given == 0 then
+		Tell.notice(admin, BAD, "No room in the backpack for more weapons")
+	elseif everyone then
+		Tell.notice(admin, GOLD, "Given to everyone: {n} x {weapon}", { n = count, weapon = name })
+	else
+		Tell.notice(admin, GOLD, "Given to {name}: {n} x {weapon}", { name = (one :: Player).DisplayName, n = count, weapon = name })
+	end
+	if given > 0 and short > 0 then
+		Tell.notice(admin, BAD, "Some didn't fit: the backpack holds {n} weapons", { n = Config.MaxSwords })
+	end
+	print(`[Admin] {admin.Name} gives {count} x sword {sword} (metal {metal}, size {size}, trait {trait}, grade {grade}) to {if everyone then "everyone" else (one :: Player).Name}`)
+end
+
 local function kick(admin: Player, userId: unknown)
 	local player = target(userId)
 	if not player or player == admin then
@@ -142,6 +216,8 @@ local function onCommand(admin: Player, action: unknown, a: unknown, b: unknown,
 	end
 	if action == "give" then
 		give(admin, a, b, c)
+	elseif action == "sword" then
+		giveSwords(admin, a, b, c)
 	elseif action == "kick" then
 		kick(admin, a)
 	elseif action == "goto" or action == "bring" then
