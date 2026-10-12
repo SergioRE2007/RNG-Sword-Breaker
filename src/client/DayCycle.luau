@@ -21,6 +21,8 @@ local NIGHT = {
 	ambient = rgb(52, 62, 98), outdoor = rgb(66, 80, 130), brightness = 1.2, sun = rgb(150, 170, 230),
 	air = rgb(24, 36, 72), decay = rgb(14, 20, 46), density = 0.3, haze = 0.3, tint = rgb(210, 222, 255), saturation = -0.05,
 }
+-- La luz de relleno (ambient y outdoor) de las horas de pleno día va baja a propósito: el usuario vio el mediodía
+-- "súper iluminado y sin sombras" con 138 y 180 y brillo 2,8 (el sol queda casi en vertical y el relleno se comía las sombras).
 local KEYS = {
 	{ hour = 0, look = NIGHT },
 	{ hour = 5, look = { -- antes del alba
@@ -32,15 +34,15 @@ local KEYS = {
 		air = rgb(255, 190, 170), decay = rgb(255, 140, 120), density = 0.34, haze = 1.6, tint = rgb(255, 236, 232), saturation = 0.15,
 	} },
 	{ hour = 9, look = { -- mañana
-		ambient = rgb(130, 130, 140), outdoor = rgb(170, 175, 190), brightness = 2.4, sun = rgb(255, 232, 200),
+		ambient = rgb(96, 96, 108), outdoor = rgb(124, 128, 142), brightness = 2.2, sun = rgb(255, 232, 200),
 		air = rgb(199, 215, 240), decay = rgb(150, 180, 220), density = 0.3, haze = 0.6, tint = rgb(250, 248, 250), saturation = 0.18,
 	} },
 	{ hour = 12, look = { -- mediodía
-		ambient = rgb(138, 138, 145), outdoor = rgb(180, 185, 195), brightness = 2.8, sun = rgb(255, 248, 235),
+		ambient = rgb(92, 92, 104), outdoor = rgb(118, 122, 136), brightness = 2.4, sun = rgb(255, 248, 235),
 		air = rgb(190, 215, 245), decay = rgb(120, 165, 225), density = 0.28, haze = 0.3, tint = rgb(255, 255, 255), saturation = 0.2,
 	} },
 	{ hour = 16, look = { -- tarde
-		ambient = rgb(136, 128, 130), outdoor = rgb(185, 175, 175), brightness = 2.5, sun = rgb(255, 225, 185),
+		ambient = rgb(98, 92, 98), outdoor = rgb(128, 120, 124), brightness = 2.3, sun = rgb(255, 225, 185),
 		air = rgb(220, 215, 230), decay = rgb(200, 175, 190), density = 0.3, haze = 0.8, tint = rgb(255, 246, 240), saturation = 0.2,
 	} },
 	{ hour = 18, look = { -- atardecer dorado (la luz de siempre de la isla)
@@ -73,6 +75,11 @@ local MOOD_VALUES = { "density", "haze", "saturation" }
 
 -- Hora del reloj (0-24) según la hora del servidor: la parte de día (6 a 18) dura DayShare de la vuelta y la noche el resto.
 local function clockNow(): number
+	-- Para probar (solo en Studio): workspace:SetAttribute("ClockForce", 12) deja la hora fija; nil la suelta.
+	local forced = if RunService:IsStudio() then workspace:GetAttribute("ClockForce") else nil
+	if type(forced) == "number" then
+		return forced % 24
+	end
 	local cfg = Config.DayCycle
 	local f = (workspace:GetServerTimeNow() / cfg.Length) % 1
 	if f < cfg.DayShare then
