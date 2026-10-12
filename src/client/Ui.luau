@@ -1362,6 +1362,14 @@ Ui.IMAGES = {
 	potion_weaponLuck_4 = "rbxassetid://123089696540790",
 	potion_weaponLuck_5 = "rbxassetid://139693134801553",
 	rebirth = "rbxassetid://90522539620973",
+	-- Centro del medallón de los rasgos especiales (Config.Traits, campo `image`; los de una sola estadística usan
+	-- monedas, espada y suerte).
+	rasgo_eterno = "rbxassetid://131845354343195",
+	rasgo_monarca = "rbxassetid://88237431685960",
+	rasgo_paradoja = "rbxassetid://107388779490803",
+	rasgo_samurai = "rbxassetid://76266618317808",
+	rasgo_shogun = "rbxassetid://91767316052986",
+	rasgo_trascendente = "rbxassetid://107888798952316",
 	suerte = "rbxassetid://114098318122458",
 	tienda_robux = "rbxassetid://93004325604664",
 	trade = "rbxassetid://118234202800810",
@@ -1379,6 +1387,15 @@ function Ui.image(parent: Instance, name: string): ImageLabel
 	image.Image = Ui.IMAGES[name]
 	image.Parent = parent
 	return image
+end
+
+-- Nombre en Ui.IMAGES del logo de un rasgo (Config.Traits): el suyo propio (`image`, los especiales) o el de lo que
+-- sube (monedas, espada, trébol). nil si no tiene ninguno.
+function Ui.traitLogo(trait): string?
+	if trait.image then
+		return trait.image
+	end
+	return if trait.icon == "coins" then "monedas" elseif trait.icon == "damage" then "espada" elseif trait.icon == "luck" then "suerte" else nil
 end
 
 -- Iconos hechos con marcos, para lo que cambia de color con cada casilla (gemas de objetos, accesorios, pociones...).
@@ -1634,7 +1651,38 @@ end
 
 local tip, tipStroke, tipSource
 local tipBeside = false
-local tipLive: (() -> (string, Color3, boolean?))? = nil
+local tipLive: (() -> (string, Color3, boolean?, any))? = nil
+local tipIcon: ImageLabel? = nil -- logo dentro de una línea del cartel (el texto con RichText no lleva imágenes)
+local tipMeasure: TextLabel? = nil -- copia invisible del cartel para medir dónde cae esa línea
+local TIP_ICON = 26
+
+-- Pone el logo `icon` = { image = nombre de Ui.IMAGES, line = número de línea } al principio de esa línea del cartel.
+-- La línea tiene que empezar con Ui.TIP_ICON_GAP (espacios que le dejan el hueco); va centrada como el resto.
+local function placeTipIcon(text: string, icon)
+	if not icon or not tipIcon or not tipMeasure then
+		if tipIcon then
+			tipIcon.Visible = false
+		end
+		return
+	end
+	local lines = string.split(text, "\n")
+	local line = lines[icon.line]
+	if not line then
+		tipIcon.Visible = false
+		return
+	end
+	local function measure(value: string): Vector2
+		tipMeasure.Text = value
+		return tipMeasure.TextBounds
+	end
+	local above = if icon.line > 1 then measure(table.concat(lines, "\n", 1, icon.line - 1)).Y else 0
+	local size = measure(line)
+	local inner = tip.AbsoluteSize.X - 28 -- menos el relleno de los lados
+	tipIcon.Image = Ui.IMAGES[icon.image] or ""
+	-- El UIPadding del cartel ya desplaza a sus hijos: la posición va contada desde dentro del relleno.
+	tipIcon.Position = UDim2.fromOffset((inner - size.X) / 2, above + (size.Y - TIP_ICON) / 2)
+	tipIcon.Visible = true
+end
 
 -- ¿Tapa algo a `target` donde está el ratón? Pasa cuando una capa opaca se pone encima (como
 -- "Elige una espada" o los ajustes de las tiendas): la casilla sigue debajo y, sin esto, su cartel
@@ -1674,6 +1722,22 @@ local function ensureTip()
 	padding.PaddingLeft = UDim.new(0, 14)
 	padding.PaddingRight = UDim.new(0, 14)
 	padding.Parent = tip
+	tipIcon = Instance.new("ImageLabel")
+	tipIcon.Name = "Icon"
+	tipIcon.Size = UDim2.fromOffset(TIP_ICON, TIP_ICON)
+	tipIcon.BackgroundTransparency = 1
+	tipIcon.ScaleType = Enum.ScaleType.Fit
+	tipIcon.ZIndex = 101
+	tipIcon.Visible = false
+	tipIcon.Parent = tip
+	-- Fuera de la pantalla y transparente: solo sirve para que Roblox calcule TextBounds con el mismo texto.
+	tipMeasure = Ui.label(Ui.screen(), 21)
+	tipMeasure.Name = "TipMeasure"
+	tipMeasure.AutomaticSize = Enum.AutomaticSize.XY
+	tipMeasure.Size = UDim2.fromOffset(0, 0)
+	tipMeasure.Position = UDim2.fromOffset(-5000, -5000)
+	tipMeasure.TextTransparency = 1
+	tipMeasure:FindFirstChildOfClass("UIStroke").Enabled = false
 
 	RunService.RenderStepped:Connect(function()
 		if not tip.Visible then
@@ -1693,9 +1757,12 @@ local function ensureTip()
 			return
 		end
 		if tipLive and not Performance.get() then
-			local text, color = tipLive()
+			local text, color, _, icon = tipLive()
 			tip.Text = text
 			tipStroke.Color = color
+			placeTipIcon(text, icon)
+		elseif tipIcon and tipIcon.Visible then
+			placeTipIcon(tip.Text, tipIcon:GetAttribute("Line") and { image = tipIcon:GetAttribute("Image"), line = tipIcon:GetAttribute("Line") })
 		end
 		local mouse = UserInputService:GetMouseLocation() -- la pantalla Hud ignora la franja de arriba
 		local view = workspace.CurrentCamera.ViewportSize
@@ -1724,12 +1791,19 @@ end
 -- en vez de seguir al ratón.
 -- En pantallas táctiles no hay "pasar el ratón": se enseña con una pulsación larga (0,35 s) y se
 -- quita solo a los 2,5 s de soltar.
+-- Espacios al principio de una línea del cartel que dejan sitio a su logo (ver placeTipIcon).
+Ui.TIP_ICON_GAP = "      "
+
 function Ui.tip(target: GuiObject, getContent: () -> (string, Color3), beside: boolean?)
 	ensureTip()
 	local function open(forceBeside: boolean)
-		local text, color, live = getContent()
+		local text, color, live, icon = getContent()
 		tip.Text = text
 		tipStroke.Color = color
+		-- Con un cuarto valor { image, line }, ese logo va al principio de esa línea.
+		tipIcon:SetAttribute("Image", icon and icon.image)
+		tipIcon:SetAttribute("Line", icon and icon.line)
+		placeTipIcon(text, icon)
 		-- Con un tercer valor `true`, el cartel se vuelve a pedir cada fotograma (texto animado).
 		tipLive = if live then getContent else nil
 		tipSource = target

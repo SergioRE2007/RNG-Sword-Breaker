@@ -131,9 +131,11 @@ function Modifiers.pityLimit(kind: string, index: number): number
 	return math.ceil(Modifiers.odds(kind, index))
 end
 
--- ¿Tiene pity ese resultado? Solo los raros (Config.ModifierPity): el contador de los demás se queda en 0.
+-- ¿Tiene pity ese resultado? Solo los raros (Config.ModifierPity) y los que lo piden con `pity = true` en su entrada:
+-- el contador de los demás se queda en 0.
 function Modifiers.hasPity(kind: string, index: number): boolean
-	return Modifiers.odds(kind, index) >= Config.ModifierPity.MinOdds
+	local entry = Modifiers.KINDS[kind].list[index]
+	return (entry ~= nil and entry.pity == true) or Modifiers.odds(kind, index) >= Config.ModifierPity.MinOdds
 end
 
 function Modifiers.newPity(saved): { [string]: { number } }

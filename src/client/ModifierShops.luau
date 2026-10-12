@@ -29,7 +29,11 @@ local ModifierShops = {}
 local player = Players.LocalPlayer
 local BLACK = Color3.new(0, 0, 0)
 local WHITE = Color3.new(1, 1, 1)
-local SIZE = Vector2.new(1000, 540)
+local SIZE = Vector2.new(1160, 640)
+-- Filas de la lista de resultados (118 de alto): el logo cuadrado y centrado en altura, y el texto a su derecha.
+local ICON_SIZE = 84
+local ICON_X, ICON_Y = 14, (118 - 84) / 2
+local TEXT_X = 112
 local LEFT = 0.53 -- parte del ancho del cuerpo que ocupa la izquierda (Scale)
 -- Capas de la izquierda, de abajo arriba. La interfaz ordena el ZIndex globalmente, así que son
 -- valores absolutos: la ruleta tapa la información de la espada, pero nunca BottomControls (que
@@ -113,23 +117,10 @@ local function displayOrder(kind: string)
 	return result
 end
 
--- Insignia de un rasgo: halo de su color detrás, aro de su color con relieve, disco oscuro dentro y
--- encima el dibujo de lo que sube (moneda, espada, trébol; hexágono en los especiales). Los de nivel
--- (I, II, III) llevan abajo tantas estrellitas como su nivel, para distinguirlos sin leer.
+-- Insignia de un rasgo: el logo de lo que sube (moneda, espada, trébol; los especiales, el suyo propio), sin círculos
+-- alrededor (pedido por el usuario: con el medallón los logos quedaban apretados). Los de nivel (I, II, III) llevan
+-- abajo tantas estrellitas como su nivel, para distinguirlos sin leer.
 local COIN = Color3.fromRGB(255, 205, 60)
-local function circle(parent: Instance, size: number, color: Color3): Frame
-	local frame = Instance.new("Frame")
-	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.fromScale(0.5, 0.5)
-	frame.Size = UDim2.fromScale(size, size)
-	frame.BackgroundColor3 = color
-	frame.BorderSizePixel = 0
-	frame.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.5, 0)
-	corner.Parent = frame
-	return frame
-end
 local function traitBadge(parent: GuiObject, entry)
 	local badge = Instance.new("Frame")
 	badge.Name = "Badge"
@@ -140,37 +131,19 @@ local function traitBadge(parent: GuiObject, entry)
 	badge.Parent = parent
 	local square = Instance.new("UIAspectRatioConstraint")
 	square.Parent = badge
-	local tint = if entry.rainbow then WHITE else entry.color
-
-	for _, layer in { { 1.3, 0.86 }, { 1.12, 0.74 } } do
-		circle(badge, layer[1], tint).BackgroundTransparency = layer[2]
-	end
-	local ring = circle(badge, 0.94, WHITE)
-	Ui.stroke(ring, BLACK, 2)
-	if entry.rainbow then
-		rainbow(ring)
-	else
-		Ui.gradient(ring, tint:Lerp(WHITE, 0.45), tint:Lerp(BLACK, 0.25), 90)
-	end
-	local disc = circle(ring, 0.8, WHITE)
-	Ui.gradient(disc, tint:Lerp(BLACK, 0.35), tint:Lerp(BLACK, 0.7), 90)
-	Ui.stroke(disc, BLACK, 1.5)
 
 	local art = Instance.new("Frame")
 	art.Name = "Art"
 	art.AnchorPoint = Vector2.new(0.5, 0.5)
-	art.Position = UDim2.fromScale(0.5, 0.56)
-	art.Size = UDim2.fromScale(1.25, 1.25)
+	art.Position = UDim2.fromScale(0.5, 0.5)
+	art.Size = UDim2.fromScale(1.2, 1.2)
 	art.BackgroundTransparency = 1
-	art.Parent = disc
-	if entry.icon == "coins" then
-		Ui.image(art, "monedas")
-	elseif entry.icon == "damage" then
-		Ui.image(art, "espada")
-	elseif entry.icon == "luck" then
-		Ui.image(art, "suerte")
+	art.Parent = badge
+	local logo = Ui.traitLogo(entry)
+	if logo then
+		Ui.image(art, logo)
 	else
-		local _, pieces = Ui.hex(disc, 22, tint)
+		local _, pieces = Ui.hex(badge, 22, if entry.rainbow then WHITE else entry.color)
 		for _, piece in pieces do
 			if entry.rainbow then
 				rainbow(piece)
@@ -661,8 +634,8 @@ local function buildShop(kind: string)
 		end
 		-- Icono a la izquierda; arriba el nombre y el % en una etiqueta a la derecha; abajo el efecto a lo ancho.
 		local iconBox = Instance.new("Frame")
-		iconBox.Position = UDim2.fromOffset(12, 17)
-		iconBox.Size = UDim2.fromOffset(62, 58)
+		iconBox.Position = UDim2.fromOffset(ICON_X, ICON_Y)
+		iconBox.Size = UDim2.fromOffset(ICON_SIZE, ICON_SIZE)
 		iconBox.BackgroundTransparency = 1
 		iconBox.Parent = row
 		entryIcon(iconBox, kind, entry)
@@ -689,8 +662,8 @@ local function buildShop(kind: string)
 		limit.Parent = percent
 		percent.Text = Modifiers.formatPercent(Modifiers.percent(kind, index))
 		local title = Ui.label(row, 30)
-		title.Position = UDim2.fromOffset(86, 8)
-		title.Size = UDim2.new(1, -210, 0, 34)
+		title.Position = UDim2.fromOffset(TEXT_X, 8)
+		title.Size = UDim2.new(1, -TEXT_X - 124, 0, 34)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		paintName(title, entry)
 		if kind == "grades" then
@@ -704,8 +677,8 @@ local function buildShop(kind: string)
 			gradient.Parent = title
 		end
 		local detail = Ui.label(row, 20)
-		detail.Position = UDim2.fromOffset(86, 54)
-		detail.Size = UDim2.new(1, -98, 0, 26)
+		detail.Position = UDim2.fromOffset(TEXT_X, 54)
+		detail.Size = UDim2.new(1, -TEXT_X - 12, 0, 26)
 		detail.TextXAlignment = Enum.TextXAlignment.Left
 		detail.TextColor3 = Color3.fromRGB(120, 235, 120)
 		detail.Text = Modifiers.effect(entry)
@@ -715,8 +688,8 @@ local function buildShop(kind: string)
 		detailLimit.Parent = detail
 		local pityLabel = Ui.label(row, 17)
 		pityLabel.Name = "Pity"
-		pityLabel.Position = UDim2.fromOffset(86, 86)
-		pityLabel.Size = UDim2.new(1, -98, 0, 24)
+		pityLabel.Position = UDim2.fromOffset(TEXT_X, 86)
+		pityLabel.Size = UDim2.new(1, -TEXT_X - 12, 0, 24)
 		pityLabel.TextXAlignment = Enum.TextXAlignment.Left
 		pityLabel.TextScaled = true
 		local pityLimit = Instance.new("UITextSizeConstraint")
@@ -1533,7 +1506,7 @@ function ModifierShops.start()
 				bobbing[icon] = nil
 				continue
 			end
-			icon.Position = UDim2.fromOffset(12, 17 + math.sin(now * 2 + data.phase) * 3)
+			icon.Position = UDim2.fromOffset(ICON_X, ICON_Y + math.sin(now * 2 + data.phase) * 3)
 			data.scale.Scale = 1 + math.sin(now * 3 + data.phase) * 0.06
 		end
 		for layer, data in sparkly do

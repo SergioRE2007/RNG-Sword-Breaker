@@ -7,7 +7,6 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -171,6 +170,9 @@ local TIP_FAINT = "#868b9c" -- gris tenue de la probabilidad
 local TIP_VALUE = 25 -- tamaño del número de daño
 local TIP_DAMAGE = "#ff7d5e" -- la palabra "Daño"
 local TIP_GOLD = "#ffd65c" -- y su número
+-- Separador entre las partes del cartel (pedido por el usuario, con una captura de otro juego de referencia): una
+-- línea fina y tenue hecha de texto, porque el cartel es un solo TextLabel.
+local TIP_SEPARATOR = `<font size="11" color="#4c5370">━━━━━━━━━━━━━━━━━━━━</font>`
 
 local function swordTip(copy): (string, Color3, boolean)
 	local sword = Config.Swords[copy.sword]
@@ -179,7 +181,9 @@ local function swordTip(copy): (string, Color3, boolean)
 	local tier = Rarity.tier(rarity)
 	-- Pedido por el usuario: el nombre más grande que el resto y con la animación de su rareza, y la probabilidad más
 	-- pequeña y en gris tenue.
-	local lines = { `<font size="{TIP_TITLE}">{Ui.rarityText(sword.name, tier.color, table.find(Config.RarityTiers, tier))}</font>`, `<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[sword.kind or "sword"].name}` }
+	-- Sin el tipo de arma (pedido por el usuario): debajo del nombre, solo la rareza.
+	local lines = { `<font size="{TIP_TITLE}">{Ui.rarityText(sword.name, tier.color, table.find(Config.RarityTiers, tier))}</font>`, `<font color="{hex(tier.color)}">{tier.name}</font>` }
+	local icon = nil -- logo del rasgo, al principio de su línea (Ui.tip)
 	local grade = Config.Grades[copy.grade]
 	local border = tier.color
 	-- Metal y tamaño (permanentes, salen con el arma): solo el nombre, en una línea. Pedido por el usuario: el cartel
@@ -195,27 +199,35 @@ local function swordTip(copy): (string, Color3, boolean)
 	if #extras > 0 then
 		table.insert(lines, table.concat(extras, " · "))
 	end
+	if trait or grade then
+		table.insert(lines, TIP_SEPARATOR)
+	end
 	if trait then
-		table.insert(lines, `<font color="{hex(trait.color)}">Rasgo:</font> {animatedName(trait)} ({Modifiers.effect(trait)})`)
+		-- Su logo y su nombre, sin "Rasgo:" ni lo que da (pedido por el usuario: el cartel queda más limpio).
+		local logo = Ui.traitLogo(trait)
+		table.insert(lines, (if logo then Ui.TIP_ICON_GAP else "") .. animatedName(trait))
+		icon = if logo then { image = logo, line = #lines } else nil
 		if trait.rainbow then
 			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
 	if grade then
-		table.insert(lines, `<font color="{hex(grade.color)}">Grado:</font> {animatedName(grade)} ({Modifiers.effect(grade)})`)
+		table.insert(lines, `<font color="{hex(grade.color)}">Grado:</font> {animatedName(grade)}`)
 		if grade.rainbow then
 			border = Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
 	-- El daño destaca (pedido por el usuario: no tan plano): la palabra en rojo cálido y el número más grande en dorado.
+	table.insert(lines, TIP_SEPARATOR)
 	table.insert(lines, `<font color="{TIP_DAMAGE}">Daño</font> <font size="{TIP_VALUE}" color="{TIP_GOLD}">{Format.multiplier(Stats.swordDamage(copy))}</font>`)
+	table.insert(lines, TIP_SEPARATOR)
 	if not sword.rarity then
 		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">Espada inicial</font>`)
 	else
 		-- Una sola probabilidad: la del arma entera, con su metal y su tamaño.
 		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">1 entre {Format.short(rarity)}</font>`)
 	end
-	return table.concat(lines, "\n"), border, true -- animado: el nombre lleva el brillo de su rareza
+	return table.concat(lines, "\n"), border, true, icon -- animado: el nombre lleva el brillo de su rareza
 end
 
 local function artifactTip(index: number): (string, Color3)
@@ -453,19 +465,32 @@ function Backpack.start()
 		if sizeDef then
 			Ui.cellTag(cell, string.sub(sizeDef.name, 1, 1), sizeDef.color).Position = UDim2.fromOffset(4, if metalDef then 52 else 30)
 		end
-		if trait then
-			-- Rombo del color del rasgo en la esquina.
+		-- Rasgo arriba a la derecha (su logo) y grado abajo a la derecha (su nombre en su color), pedido por el usuario.
+		local logo = trait and Ui.traitLogo(trait)
+		if logo then
 			local mark = Instance.new("Frame")
 			mark.Name = "Trait"
 			mark.AnchorPoint = Vector2.new(1, 0)
-			mark.Position = UDim2.new(1, -9, 0, 9)
-			mark.Size = UDim2.fromOffset(20, 20)
-			mark.Rotation = 45
-			mark.BackgroundColor3 = trait.color
-			mark.BorderSizePixel = 0
-			mark.ZIndex = 3
+			mark.Position = UDim2.new(1, -2, 0, 2)
+			mark.Size = UDim2.fromOffset(36, 36)
+			mark.BackgroundTransparency = 1
 			mark.Parent = cell
-			Ui.stroke(mark, Color3.new(0, 0, 0), 2)
+			Ui.image(mark, logo).ZIndex = 4
+		end
+		local gradeDef = Config.Grades[copy.grade]
+		if gradeDef then
+			local tag = Ui.label(cell, 16)
+			tag.Name = "Grade"
+			tag.AnchorPoint = Vector2.new(1, 1)
+			tag.Position = UDim2.new(1, -5, 1, -5)
+			tag.Size = UDim2.fromOffset(math.max(24, 8 + 10 * (utf8.len(gradeDef.name) or 1)), 22)
+			tag.BackgroundTransparency = 0
+			tag.BackgroundColor3 = Ui.COLORS.dark
+			tag.TextColor3 = gradeDef.color
+			tag.Text = gradeDef.name
+			tag.ZIndex = 4
+			Ui.round(tag, 6)
+			Ui.stroke(tag, gradeDef.color, 2)
 		end
 		Ui.tip(cell, function()
 			return swordTip(copy)
