@@ -4,6 +4,9 @@
 --   Lang.t(jugador, "Minimum damage {n}", { n = "1.5K" })  -> "Daño mínimo 1,5K" o "Minimum damage 1.5K"
 -- En el cliente el idioma es siempre el del jugador local (da igual a quién se le pase). En el servidor hay que pasar
 -- el jugador que va a leer el texto; sin él sale en inglés.
+-- Qué idioma es: el que el jugador tiene elegido para esta experiencia en el menú de Roblox (Ajustes → Idioma), que
+-- de primeras es el de su cuenta. Lo averigua client/Language al arrancar (Lang.set) y se lo dice al servidor, que lo
+-- guarda en el atributo "Lang" del jugador (server/Language); hasta entonces vale el idioma de su cuenta.
 -- Un texto nuevo = escribirlo en inglés y añadir su entrada en LangEs, con los mismos huecos {así}.
 local Config = require(script.Parent.Config)
 
@@ -36,6 +39,16 @@ end
 
 local localCode: string? = nil
 
+-- "es" o "en" de un código de Roblox ("es-es", "en-us"...).
+function Lang.fromLocale(locale: unknown): string
+	return fromLocale(locale)
+end
+
+-- Solo en el cliente: el idioma del jugador local (client/Language).
+function Lang.set(code: string)
+	localCode = if code == "es" then "es" else "en"
+end
+
 -- "es" o "en": el idioma en el que hay que escribirle a ese jugador. Config.Test.Lang lo fuerza en Studio.
 function Lang.code(player: Player?): string
 	local forced = Config.Test.Lang
@@ -52,6 +65,13 @@ function Lang.code(player: Player?): string
 		return localCode :: string
 	end
 	if player then
+		-- Lo que dijo su cliente (el idioma elegido en el menú de Roblox) manda sobre el de su cuenta.
+		local okSaid, said = pcall(function()
+			return player:GetAttribute("Lang")
+		end)
+		if okSaid and (said == "es" or said == "en") then
+			return said
+		end
 		local ok, locale = pcall(function()
 			return player.LocaleId
 		end)

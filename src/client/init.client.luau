@@ -1,4 +1,5 @@
 -- Arranque del cliente: cada sistema es un módulo hijo con una función start().
+require(script.Language).start() -- lo primero: decide el idioma antes de que nadie escriba un texto
 require(script.Performance).start()
 require(script.Sfx).start()
 require(script.Hud).start()

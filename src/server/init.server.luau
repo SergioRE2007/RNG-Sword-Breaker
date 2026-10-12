@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 require(ReplicatedStorage.Shared.Remotes) -- crea los RemoteEvents antes de que nadie los use
 
 require(script.CollisionGroups).start()
+require(script.Language).start() -- el idioma que dice cada cliente (atributo "Lang"), para los textos del servidor
 require(script.PlayerData).start()
 require(script.Passes).start()
 require(script.Policy).start() -- normas por país: tréboles de Robux y comercio
