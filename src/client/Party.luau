@@ -12,6 +12,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local DungeonInfo = require(ReplicatedStorage.Shared.DungeonInfo)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local DungeonCard = require(script.Parent.DungeonCard)
@@ -109,7 +110,7 @@ end
 -- Ventana ----------------------------------------------------------------------------------------------------------
 
 local function buildWindow()
-	local window, body = Ui.window("Party", "Sala de grupo", Vector2.new(940, 600), function(parent)
+	local window, body = Ui.window("Party", Lang.t(nil, "Party room"), Vector2.new(940, 600), function(parent)
 		Ui.image(parent, "grupo")
 	end)
 
@@ -207,13 +208,13 @@ local function buildWindow()
 	emptyRoom.Size = UDim2.new(1, 0, 0, 60)
 	emptyRoom.TextWrapped = true
 	emptyRoom.TextColor3 = Color3.fromRGB(190, 195, 215)
-	emptyRoom.Text = "No hay grupos abiertos en esta sala.\nCrea uno o entra tú solo."
-	local solo = Ui.button(roomView, "Entrar solo", Ui.COLORS.blue)
+	emptyRoom.Text = Lang.t(nil, "No open parties in this room.\nCreate one or go in alone.")
+	local solo = Ui.button(roomView, Lang.t(nil, "Enter solo"), Ui.COLORS.blue)
 	solo.AnchorPoint = Vector2.new(0, 1)
 	solo.Position = UDim2.new(0, 0, 1, 0)
 	solo.Size = UDim2.new(0.42, -6, 0, 66)
 	solo.TextSize = 26
-	local create = Ui.button(roomView, "Crear grupo", Ui.COLORS.green)
+	local create = Ui.button(roomView, Lang.t(nil, "Create party"), Ui.COLORS.green)
 	create.AnchorPoint = Vector2.new(1, 1)
 	create.Position = UDim2.new(1, 0, 1, 0)
 	create.Size = UDim2.new(0.58, -6, 0, 66)
@@ -254,12 +255,12 @@ local function buildWindow()
 	publicButton.Size = UDim2.new(0.5, -4, 1, 0)
 	publicButton.TextSize = 19
 
-	local invite = Ui.button(partyView, "Invitar", Ui.COLORS.blue)
+	local invite = Ui.button(partyView, Lang.t(nil, "Invite"), Ui.COLORS.blue)
 	invite.AnchorPoint = Vector2.new(0, 1)
 	invite.Position = UDim2.fromScale(0, 1)
 	invite.Size = UDim2.fromOffset(130, 66)
 	invite.TextSize = 24
-	local leave = Ui.button(partyView, "Salir", Ui.COLORS.red)
+	local leave = Ui.button(partyView, Lang.t(nil, "Leave"), Ui.COLORS.red)
 	leave.AnchorPoint = Vector2.new(0, 1)
 	leave.Position = UDim2.new(0, 140, 1, 0)
 	leave.Size = UDim2.fromOffset(110, 66)
@@ -288,7 +289,7 @@ local function buildWindow()
 	pickerTitle.Position = UDim2.fromOffset(14, 8)
 	pickerTitle.Size = UDim2.new(1, -28, 0, 30)
 	pickerTitle.TextXAlignment = Enum.TextXAlignment.Left
-	pickerTitle.Text = "Invitar a un jugador"
+	pickerTitle.Text = Lang.t(nil, "Invite a player")
 	local pickerList = scrollList(picker)
 	pickerList.Position = UDim2.fromOffset(6, 44)
 	pickerList.Size = UDim2.new(1, -12, 1, -118)
@@ -296,8 +297,8 @@ local function buildWindow()
 	pickerEmpty.Position = UDim2.fromOffset(0, 90)
 	pickerEmpty.Size = UDim2.new(1, 0, 0, 30)
 	pickerEmpty.TextColor3 = Color3.fromRGB(190, 195, 215)
-	pickerEmpty.Text = "No hay nadie más en el servidor."
-	local pickerBack = Ui.button(picker, "Volver", Ui.COLORS.gray)
+	pickerEmpty.Text = Lang.t(nil, "There's no one else on the server.")
+	local pickerBack = Ui.button(picker, Lang.t(nil, "Back"), Ui.COLORS.gray)
 	pickerBack.AnchorPoint = Vector2.new(0.5, 1)
 	pickerBack.Position = UDim2.new(0.5, 0, 1, -10)
 	pickerBack.Size = UDim2.fromOffset(180, 50)
@@ -340,7 +341,7 @@ local function buildWindow()
 			return
 		end
 		headGradient.Color = ColorSequence.new(level.color:Lerp(WHITE, 0.25), level.color:Lerp(BLACK, 0.4))
-		zoneName.Text = string.upper(level.name)
+		zoneName.Text = string.upper(Lang.t(nil, level.name))
 		tagline.Text = level.tagline or ""
 		local theme = Config.DungeonThemes[level.id]
 		if zoneShown ~= zone then
@@ -358,14 +359,14 @@ local function buildWindow()
 		local strong = damage >= level.hp
 		local soft = Ui.SOFT
 		local lines = {
-			`<font color="{soft}">Daño recomendado</font>  <font color="{hex(if strong then GOOD else BAD)}">{Format.short(level.hp)}</font>`,
-			`<font color="{soft}">Botín por partida</font>`,
+			`<font color="{soft}">{Lang.t(nil, "Recommended damage")}</font>  <font color="{hex(if strong then GOOD else BAD)}">{Format.short(level.hp)}</font>`,
+			`<font color="{soft}">{Lang.t(nil, "Loot per run")}</font>`,
 		}
 		for _, reward in DungeonInfo.rewards(zone) do
 			table.insert(lines, `<font color="{hex(reward.color)}">{reward.text}</font>`)
 		end
 		local waves = if theme and theme.waves then theme.waves else Config.Dungeon.Waves
-		table.insert(lines, `<font color="{soft}">{#waves} oleadas · {math.floor(Config.Dungeon.TimeLimit / 60)} min</font>`)
+		table.insert(lines, `<font color="{soft}">{Lang.t(nil, "{n} waves · {min} min", { n = #waves, min = math.floor(Config.Dungeon.TimeLimit / 60) })}</font>`)
 		info.Text = table.concat(lines, "\n")
 		local lock = DungeonInfo.lock(zone, damage)
 		if lock then
@@ -374,7 +375,7 @@ local function buildWindow()
 	end
 
 	local function paintRoom()
-		heading.Text = "Grupos de la sala"
+		heading.Text = Lang.t(nil, "Parties in this room")
 		for _, child in roomList:GetChildren() do
 			if child:IsA("Frame") then
 				child:Destroy()
@@ -390,7 +391,7 @@ local function buildWindow()
 			label.TextXAlignment = Enum.TextXAlignment.Left
 			label.TextTruncate = Enum.TextTruncate.AtEnd
 			label.Text = `{other.leader}  <font color="{Ui.SOFT}">{other.size}/{other.max}</font>`
-			local join = Ui.button(frame, "Unirse", Ui.COLORS.green)
+			local join = Ui.button(frame, Lang.t(nil, "Join"), Ui.COLORS.green)
 			join.AnchorPoint = Vector2.new(1, 0.5)
 			join.Position = UDim2.new(1, -10, 0.5, 0)
 			join.Size = UDim2.fromOffset(140, 46)
@@ -405,7 +406,7 @@ local function buildWindow()
 
 	local function paintParty(mine)
 		local isLeader = mine.leader == player.UserId
-		heading.Text = `Jugadores  <font color="{Ui.SOFT}">{#mine.members}/{mine.max}</font>`
+		heading.Text = `{Lang.t(nil, "Players")}  <font color="{Ui.SOFT}">{#mine.members}/{mine.max}</font>`
 		previous.Visible = isLeader and mine.state == "lobby"
 		following.Visible = isLeader and mine.state == "lobby"
 		for _, child in slots:GetChildren() do
@@ -436,7 +437,7 @@ local function buildWindow()
 				name.TextXAlignment = Enum.TextXAlignment.Left
 				name.TextTruncate = Enum.TextTruncate.AtEnd
 				name.Text = if member.userId == mine.leader then `<font color="{hex(GOLD)}">{member.name}</font>` else member.name
-				chip(frame, if member.userId == mine.leader then "LÍDER" else (if member.ready then "LISTO" else "..."), if member.userId == mine.leader then GOLD elseif member.ready then GOOD else Ui.COLORS.gray, UDim2.fromOffset(92, 36), UDim2.new(1, if isLeader and member.userId ~= mine.leader then -56 else -10, 0.5, 0), Vector2.new(1, 0.5))
+				chip(frame, if member.userId == mine.leader then Lang.t(nil, "LEADER") else (if member.ready then Lang.t(nil, "READY") else "..."), if member.userId == mine.leader then GOLD elseif member.ready then GOOD else Ui.COLORS.gray, UDim2.fromOffset(92, 36), UDim2.new(1, if isLeader and member.userId ~= mine.leader then -56 else -10, 0.5, 0), Vector2.new(1, 0.5))
 				if isLeader and member.userId ~= mine.leader and mine.state == "lobby" then
 					local kick = Ui.button(frame, "X", Ui.COLORS.red)
 					kick.AnchorPoint = Vector2.new(1, 0.5)
@@ -453,7 +454,7 @@ local function buildWindow()
 				free.Size = UDim2.new(1, -44, 1, 0)
 				free.TextXAlignment = Enum.TextXAlignment.Left
 				free.TextColor3 = Color3.fromRGB(150, 156, 184)
-				free.Text = "Libre"
+				free.Text = Lang.t(nil, "Free")
 			end
 		end
 
@@ -463,13 +464,13 @@ local function buildWindow()
 			button.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
 			button.Interactable = isLeader
 		end
-		paintOption(loopButton, `Repetir: {if mine.options.loop then "SÍ" else "NO"}`, mine.options.loop)
-		paintOption(publicButton, if mine.options.public then "Grupo abierto" else "Solo invitados", mine.options.public)
+		paintOption(loopButton, Lang.t(nil, "Repeat: {v}", { v = Lang.t(nil, if mine.options.loop then "YES" else "NO") }), mine.options.loop)
+		paintOption(publicButton, Lang.t(nil, if mine.options.public then "Open party" else "Invite only"), mine.options.public)
 
 		-- Botón principal.
 		local starting = mine.state == "starting"
 		if isLeader then
-			main.Text = if starting then "CANCELAR" else "INICIAR"
+			main.Text = Lang.t(nil, if starting then "CANCEL" else "START")
 			main.BackgroundColor3 = if starting then Ui.COLORS.red elseif allReady then Ui.COLORS.green else Ui.COLORS.orange
 		else
 			local me
@@ -479,7 +480,7 @@ local function buildWindow()
 				end
 			end
 			local ready = me and me.ready
-			main.Text = if ready then "QUITAR LISTO" else "¡LISTO!"
+			main.Text = Lang.t(nil, if ready then "NOT READY" else "READY!")
 			main.BackgroundColor3 = if ready then Ui.COLORS.gray else Ui.COLORS.green
 		end
 		invite.Visible = isLeader and mine.state == "lobby" and #mine.members < mine.max
@@ -620,15 +621,15 @@ local function buildWindow()
 			name.Size = UDim2.new(1, -180, 1, 0)
 			name.TextXAlignment = Enum.TextXAlignment.Left
 			name.TextTruncate = Enum.TextTruncate.AtEnd
-			name.Text = if friends[other.UserId] then `{other.DisplayName}  <font color="{hex(GOLD)}">amigo</font>` else other.DisplayName
-			local send = Ui.button(frame, "Invitar", Ui.COLORS.green)
+			name.Text = if friends[other.UserId] then `{other.DisplayName}  <font color="{hex(GOLD)}">{Lang.t(nil, "friend")}</font>` else other.DisplayName
+			local send = Ui.button(frame, Lang.t(nil, "Invite"), Ui.COLORS.green)
 			send.AnchorPoint = Vector2.new(1, 0.5)
 			send.Position = UDim2.new(1, -10, 0.5, 0)
 			send.Size = UDim2.fromOffset(130, 42)
 			send.TextSize = 20
 			send.Activated:Connect(function()
 				request("invite", other.UserId)
-				send.Text = "Enviada"
+				send.Text = Lang.t(nil, "Sent")
 			end)
 		end
 		Ui.layer(pickerList, 11) -- por encima del fondo del selector (que va en la capa 10)
@@ -738,12 +739,12 @@ local function buildInvite()
 	text.Position = UDim2.fromOffset(12, 8)
 	text.Size = UDim2.new(1, -24, 0, 56)
 	text.TextWrapped = true
-	local accept = Ui.button(card, "Aceptar", Ui.COLORS.green)
+	local accept = Ui.button(card, Lang.t(nil, "Accept"), Ui.COLORS.green)
 	accept.AnchorPoint = Vector2.new(1, 1)
 	accept.Position = UDim2.new(0.5, -6, 1, -12)
 	accept.Size = UDim2.fromOffset(180, 48)
 	accept.TextSize = 22
-	local decline = Ui.button(card, "Rechazar", Ui.COLORS.red)
+	local decline = Ui.button(card, Lang.t(nil, "Decline"), Ui.COLORS.red)
 	decline.AnchorPoint = Vector2.new(0, 1)
 	decline.Position = UDim2.new(0.5, 6, 1, -12)
 	decline.Size = UDim2.fromOffset(180, 48)
@@ -768,7 +769,7 @@ local function buildInvite()
 	Remotes.PartyInvite.OnClientEvent:Connect(function(userId: number, name: string, zone: number)
 		local level = Config.Dungeons[zone]
 		from = userId
-		text.Text = `<font color="{hex(GOLD)}">{name}</font> te invita a su grupo\n<font color="{hex(if level then level.color:Lerp(WHITE, 0.25) else WHITE)}">{if level then level.name else "una mazmorra"}</font>`
+		text.Text = `{Lang.t(nil, "{name} invites you to their party", { name = `<font color="{hex(GOLD)}">{name}</font>` })}\n<font color="{hex(if level then level.color:Lerp(WHITE, 0.25) else WHITE)}">{Lang.t(nil, if level then level.name else "a dungeon")}</font>`
 		Ui.open(card)
 		Sfx.play("toast")
 		token += 1

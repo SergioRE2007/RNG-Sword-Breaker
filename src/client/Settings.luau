@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Performance = require(script.Parent.Performance)
 local Ui = require(script.Parent.Ui)
@@ -62,7 +63,7 @@ local function row(parent: Instance, order: number, title: string, hint: string,
 end
 
 function Settings.start()
-	local window, body = Ui.window("Settings", "Ajustes", Vector2.new(560, 772), function(parent) -- seis filas de 104 + 10
+	local window, body = Ui.window("Settings", Lang.t(nil, "Settings"), Vector2.new(560, 772), function(parent) -- seis filas de 104 + 10
 		Ui.image(parent, "ajustes")
 	end)
 
@@ -80,7 +81,7 @@ function Settings.start()
 	padding.Parent = list
 
 	-- Modo rendimiento -------------------------------------------------------------------
-	local performanceRow = row(list, 1, "Modo rendimiento", "Quita partículas, auras, luces, nubes, sombras y animaciones de los menús. Úsalo si el juego va lento (en móvil viene activado).", false, Ui.COLORS.orange)
+	local performanceRow = row(list, 1, Lang.t(nil, "Performance mode"), Lang.t(nil, "Removes particles, auras, lights, clouds, shadows and menu animations. Use it if the game runs slow (on by default on mobile)."), false, Ui.COLORS.orange)
 	local performanceButton = Ui.button(performanceRow, "", Ui.COLORS.gray)
 	performanceButton.AnchorPoint = Vector2.new(1, 0.5)
 	performanceButton.Position = UDim2.new(1, -14, 0.5, 0)
@@ -88,7 +89,7 @@ function Settings.start()
 	performanceButton.TextSize = 26
 	local function paintPerformance()
 		local on = Performance.get()
-		performanceButton.Text = if on then "SÍ" else "NO"
+		performanceButton.Text = Lang.t(nil, if on then "YES" else "NO")
 		performanceButton.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
 	end
 	performanceButton.Activated:Connect(function()
@@ -98,7 +99,7 @@ function Settings.start()
 	paintPerformance()
 
 	-- Volumen de la música ---------------------------------------------------------------
-	local volumeRow = row(list, 2, "Volumen de la música", "Aún no hay música; el volumen queda guardado para cuando llegue.", true, Color3.fromRGB(190, 120, 255))
+	local volumeRow = row(list, 2, Lang.t(nil, "Music volume"), Lang.t(nil, "There is no music yet; the volume is saved for when it arrives."), true, Color3.fromRGB(190, 120, 255))
 	local group = musicGroup()
 	local percent = Ui.label(volumeRow, 22)
 	percent.AnchorPoint = Vector2.new(1, 0)
@@ -118,7 +119,7 @@ function Settings.start()
 	paintVolume(group.Volume)
 
 	-- Volumen de los efectos ---------------------------------------------------------------
-	local effectsRow = row(list, 3, "Volumen de efectos", "Golpes, monedas, tiradas, mejoras y botones.", true, Ui.COLORS.blue)
+	local effectsRow = row(list, 3, Lang.t(nil, "Effects volume"), Lang.t(nil, "Hits, coins, rolls, upgrades and buttons."), true, Ui.COLORS.blue)
 	local effects = Sfx.group()
 	local effectsPercent = Ui.label(effectsRow, 22)
 	effectsPercent.AnchorPoint = Vector2.new(1, 0)
@@ -138,7 +139,7 @@ function Settings.start()
 	paintEffects(effects.Volume)
 
 	-- Volumen del ambiente ---------------------------------------------------------------
-	local ambienceRow = row(list, 4, "Volumen del ambiente", "El sonido de fondo de cada zona, las estaciones y el clima.", true, Color3.fromRGB(60, 200, 190))
+	local ambienceRow = row(list, 4, Lang.t(nil, "Ambience volume"), Lang.t(nil, "The background sound of each zone, the stations and the weather."), true, Color3.fromRGB(60, 200, 190))
 	local ambience = Sfx.ambience()
 	local ambiencePercent = Ui.label(ambienceRow, 22)
 	ambiencePercent.AnchorPoint = Vector2.new(1, 0)
@@ -158,13 +159,13 @@ function Settings.start()
 	paintAmbience(ambience.Volume)
 
 	-- Venta automática -------------------------------------------------------------------
-	local sellRow = row(list, 5,"Venta automática", "Las espadas nuevas menos raras que 1 entre N se venden solas. Admite 1000, 1.5K, 2M... Déjalo vacío para no vender.", false, Ui.COLORS.green)
+	local sellRow = row(list, 5,Lang.t(nil, "Auto-sell"), Lang.t(nil, "New swords less rare than 1 in N are sold automatically. Accepts 1000, 1.5K, 2M... Leave it empty to sell nothing."), false, Ui.COLORS.green)
 	local sellBox = Instance.new("TextBox")
 	sellBox.Name = "AutoSell"
 	sellBox.AnchorPoint = Vector2.new(1, 0.5)
 	sellBox.Position = UDim2.new(1, -14, 0.5, 0)
 	sellBox.Size = UDim2.fromOffset(130, 50)
-	sellBox.PlaceholderText = "no vender"
+	sellBox.PlaceholderText = Lang.t(nil, "don't sell")
 	sellBox.TextSize = 22
 	sellBox.ClearTextOnFocus = false
 	sellBox.Parent = sellRow
@@ -193,7 +194,7 @@ function Settings.start()
 
 	-- Ver hitbox -------------------------------------------------------------------------
 	-- Solo cambia el atributo local "HitboxDebug" del jugador: quien dibuja es client/HitboxDebug.
-	local hitboxRow = row(list, 6, "Ver hitbox", "Dibuja en el suelo tu círculo de ataque, marca en verde lo que puedes elegir y enseña hasta dónde salpican tus armas.", false, Ui.COLORS.red)
+	local hitboxRow = row(list, 6, Lang.t(nil, "Show hitbox"), Lang.t(nil, "Draws your attack circle on the ground, marks in green what you can target and shows how far your weapons splash."), false, Ui.COLORS.red)
 	local hitboxButton = Ui.button(hitboxRow, "", Ui.COLORS.gray)
 	hitboxButton.Name = "Hitbox"
 	hitboxButton.AnchorPoint = Vector2.new(1, 0.5)
@@ -202,7 +203,7 @@ function Settings.start()
 	hitboxButton.TextSize = 26
 	local function paintHitbox()
 		local on = player:GetAttribute("HitboxDebug") == true
-		hitboxButton.Text = if on then "SÍ" else "NO"
+		hitboxButton.Text = Lang.t(nil, if on then "YES" else "NO")
 		hitboxButton.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
 	end
 	hitboxButton.Activated:Connect(function()

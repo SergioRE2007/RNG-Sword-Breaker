@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Performance = require(script.Parent.Performance)
@@ -22,14 +23,14 @@ local GOLD = Color3.fromRGB(255, 205, 60)
 
 -- Lo que sube cada renacimiento: clave de Config.Rebirth, nombre y color.
 local STATS = {
-	{ "coins", "Monedas", Color3.fromRGB(255, 200, 60) },
-	{ "damage", "Daño", Color3.fromRGB(255, 130, 90) },
-	{ "luck", "Suerte de destructibles", Color3.fromRGB(110, 225, 110) },
-	{ "gachaLuck", "Suerte de armas", Color3.fromRGB(190, 130, 255) },
+	{ "coins", Lang.t(nil, "Coins"), Color3.fromRGB(255, 200, 60) },
+	{ "damage", Lang.t(nil, "Damage"), Color3.fromRGB(255, 130, 90) },
+	{ "luck", Lang.t(nil, "Object luck"), Color3.fromRGB(110, 225, 110) },
+	{ "gachaLuck", Lang.t(nil, "Weapon luck"), Color3.fromRGB(190, 130, 255) },
 }
 
 function Rebirth.start()
-	local window, body = Ui.window("Rebirth", "Renacimiento", Vector2.new(520, 592), function(parent)
+	local window, body = Ui.window("Rebirth", Lang.t(nil, "Rebirth"), Vector2.new(520, 592), function(parent)
 		Ui.image(parent, "rebirth")
 	end)
 
@@ -110,7 +111,7 @@ function Rebirth.start()
 	cost.LayoutOrder = 4
 	cost.Size = UDim2.fromScale(1, 0.06)
 
-	local button = Ui.button(content, "Renacer", Ui.COLORS.green)
+	local button = Ui.button(content, Lang.t(nil, "Rebirth now"), Ui.COLORS.green)
 	button.Name = "Rebirth"
 	button.LayoutOrder = 5
 	button.Size = UDim2.fromScale(0.55, 0.12)
@@ -120,7 +121,7 @@ function Rebirth.start()
 	note.LayoutOrder = 6
 	note.Size = UDim2.fromScale(1, 0.045)
 	note.TextColor3 = Color3.fromRGB(190, 195, 215)
-	note.Text = "No pierdes nada: solo gastas las monedas del precio."
+	note.Text = Lang.t(nil, "You lose nothing: you only spend the coins of the price.")
 
 	local function refresh()
 		local current = Stats.rebirths(player)
@@ -128,15 +129,15 @@ function Rebirth.start()
 		local coins = player:GetAttribute("Coins") or 0
 		local capped = current >= Config.Rebirth.max
 		local affordable = not capped and coins >= price
-		count.Text = `Renacimientos: <font color="#{GOLD:ToHex()}">{current}/{Config.Rebirth.max}</font>`
+		count.Text = Lang.t(nil, "Rebirths: {n}", { n = `<font color="#{GOLD:ToHex()}">{current}/{Config.Rebirth.max}</font>` })
 		for _, entry in STATS do
 			local key = entry[1]
 			local now = Config.Rebirth[key] ^ current
 			local after = now * Config.Rebirth[key]
 			rows[key].Text = if capped then `x{Format.multiplier(now)}` else `x{Format.multiplier(now)} <font color="{Ui.SOFT}">→</font> <font color="#7ee07a">x{Format.multiplier(after)}</font>`
 		end
-		cost.Text = if capped then "Máximo alcanzado" else `Precio: <font color="{if affordable then "#ffd24a" else "#ff6a6a"}">{Format.short(price)}</font> monedas`
-		button.Text = if capped then "Máximo alcanzado" else "Renacer"
+		cost.Text = if capped then Lang.t(nil, "Max reached") else Lang.t(nil, "Price: {n} coins", { n = `<font color="{if affordable then "#ffd24a" else "#ff6a6a"}">{Format.short(price)}</font>` })
+		button.Text = if capped then Lang.t(nil, "Max reached") else Lang.t(nil, "Rebirth now")
 		button.Interactable = affordable
 		button.BackgroundColor3 = if affordable then Ui.COLORS.green else Ui.COLORS.gray
 	end

@@ -10,6 +10,7 @@ local ArmorModel = require(ReplicatedStorage.Shared.ArmorModel)
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
@@ -86,8 +87,8 @@ local function pieceTip(piece): (string, Color3)
 	local level = Config.Dungeons[piece.level]
 	local lines = {
 		ArmorStats.name(piece),
-		`<font color="{hex(quality.color)}">{quality.name}</font> <font color="{Ui.SOFT}">· {cfg.Slots[piece.slot].name}</font>`,
-		`<font color="{Ui.SOFT}">Mazmorra:</font> <font color="{hex(level.color)}">{level.name}</font>`,
+		`<font color="{hex(quality.color)}">{Lang.t(nil, quality.name)}</font> <font color="{Ui.SOFT}">· {Lang.t(nil, cfg.Slots[piece.slot].name)}</font>`,
+		`<font color="{Ui.SOFT}">{Lang.t(nil, "Dungeon:")}</font> <font color="{hex(level.color)}">{Lang.t(nil, level.name)}</font>`,
 	}
 	for _, entry in piece.stats do
 		if not entry.bonus then
@@ -123,13 +124,13 @@ function ArmorPane.build(pane: Frame, helpers)
 		cell.Name = "Slot_" .. slot
 		cell.LayoutOrder = order
 		cell.Size = UDim2.fromOffset(SLOT, SLOT)
-		local entry = { cell = cell, stroke = cell:FindFirstChildOfClass("UIStroke"), label = Ui.cellLabel(cell, cfg.Slots[slot].name), piece = nil, shown = nil }
+		local entry = { cell = cell, stroke = cell:FindFirstChildOfClass("UIStroke"), label = Ui.cellLabel(cell, Lang.t(nil, cfg.Slots[slot].name)), piece = nil, shown = nil }
 		slots[slot] = entry
 		Ui.tip(cell, function()
 			if entry.piece then
 				return pieceTip(entry.piece)
 			end
-			return `{cfg.Slots[slot].name}\n<font color="{Ui.SOFT}">Vacío</font>`, Ui.COLORS.gray
+			return `{Lang.t(nil, cfg.Slots[slot].name)}\n<font color="{Ui.SOFT}">{Lang.t(nil, "Empty")}</font>`, Ui.COLORS.gray
 		end, true)
 		cell.Activated:Connect(function()
 			if entry.piece then
@@ -163,7 +164,7 @@ function ArmorPane.build(pane: Frame, helpers)
 	local totalsTitle = Ui.label(totals, 17)
 	totalsTitle.Position = UDim2.fromOffset(0, 5)
 	totalsTitle.Size = UDim2.new(1, 0, 0, 20)
-	totalsTitle.Text = "ARMADURA EQUIPADA"
+	totalsTitle.Text = Lang.t(nil, "EQUIPPED ARMOR")
 	totalsTitle.TextColor3 = GOLD
 	local totalsText = Ui.label(totals, 16)
 	totalsText.Name = "Text"
@@ -199,13 +200,13 @@ function ArmorPane.build(pane: Frame, helpers)
 	Ui.stroke(bar, BLACK, 2)
 	Ui.panel(bar, Color3.fromRGB(46, 42, 78))
 
-	local equipButton = Ui.button(pane, "Equipar", Ui.COLORS.blue)
+	local equipButton = Ui.button(pane, Lang.t(nil, "Equip"), Ui.COLORS.blue)
 	equipButton.Name = "Equip"
 	equipButton.AnchorPoint = Vector2.new(0, 1)
 	equipButton.Position = UDim2.new(0, RIGHT + 4, 1, -12)
 	equipButton.Size = UDim2.new(0.5, -(RIGHT + 16) / 2, 0, BAR)
 	equipButton.TextSize = 22
-	local salvageButton = Ui.button(pane, "Desmontar", Ui.COLORS.red)
+	local salvageButton = Ui.button(pane, Lang.t(nil, "Salvage"), Ui.COLORS.red)
 	salvageButton.Name = "Salvage"
 	salvageButton.AnchorPoint = Vector2.new(1, 1)
 	salvageButton.Position = UDim2.new(1, -12, 1, -12)
@@ -230,10 +231,10 @@ function ArmorPane.build(pane: Frame, helpers)
 		for id, cell in cells do
 			(cell :: any).Select.Visible = id == selected
 		end
-		equipButton.Text = if piece and piece.worn then "Quitar" else "Equipar"
+		equipButton.Text = Lang.t(nil, if piece and piece.worn then "Unequip" else "Equip")
 		equipButton.BackgroundColor3 = if not piece then Ui.COLORS.gray elseif piece.worn then Ui.COLORS.orange else Ui.COLORS.blue
 		local crystals = if piece then ArmorStats.salvage(piece) else 0
-		salvageButton.Text = if not piece then "Desmontar" elseif crystals > 0 then `Desmontar\n+{Format.short(crystals)} cristales` else "Desmontar\nsin cristales"
+		salvageButton.Text = if not piece then Lang.t(nil, "Salvage") elseif crystals > 0 then Lang.t(nil, "Salvage\n+{n} crystals", { n = Format.short(crystals) }) else Lang.t(nil, "Salvage\nno crystals")
 		salvageButton.BackgroundColor3 = if piece then Ui.COLORS.red else Ui.COLORS.gray
 	end
 
@@ -335,17 +336,17 @@ function ArmorPane.build(pane: Frame, helpers)
 			if entry.stroke then
 				entry.stroke.Color = color
 			end
-			entry.label.Text = if piece then mainStat(piece) else cfg.Slots[slot].name
+			entry.label.Text = if piece then mainStat(piece) else Lang.t(nil, cfg.Slots[slot].name)
 		end
 
 		hint.Text = if #pieces == 0
-			then "Sin armadura: cae en las mazmorras del hub."
-			else `Piezas {#pieces}/{cfg.MaxPieces} · elige una y pulsa Equipar`
+			then Lang.t(nil, "No armor: it drops in the hub dungeons.")
+			else Lang.t(nil, "Pieces {n}/{max} · pick one and press Equip", { n = #pieces, max = cfg.MaxPieces })
 		local lines = {}
 		for _, stat in cfg.StatOrder do
 			local total = player:GetAttribute("Armor_" .. stat) or 0
 			local info = cfg.Stats[stat]
-			table.insert(lines, `<font color="{if total > 0 then hex(info.color) else Ui.SOFT}">{ArmorStats.value(stat, total)}</font> <font color="{Ui.SOFT}">{info.name}</font>`)
+			table.insert(lines, `<font color="{if total > 0 then hex(info.color) else Ui.SOFT}">{ArmorStats.value(stat, total)}</font> <font color="{Ui.SOFT}">{Lang.t(nil, info.name)}</font>`)
 		end
 		totalsText.Text = table.concat(lines, "\n")
 	end

@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local MissionList = require(ReplicatedStorage.Shared.MissionList)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Performance = require(script.Parent.Performance)
@@ -30,8 +31,8 @@ local GOLD = Color3.fromRGB(255, 200, 60)
 local CLOSE_DISTANCE = 30 -- se cierra al alejarse del puesto
 
 local PERIODS = {
-	{ "daily", "Misiones diarias", Color3.fromRGB(80, 200, 255) },
-	{ "weekly", "Misiones semanales", Color3.fromRGB(190, 120, 255) },
+	{ "daily", Lang.t(nil, "Daily missions"), Color3.fromRGB(80, 200, 255) },
+	{ "weekly", Lang.t(nil, "Weekly missions"), Color3.fromRGB(190, 120, 255) },
 }
 
 local function timeLeft(seconds: number): string
@@ -54,7 +55,7 @@ local function readState()
 end
 
 function Missions.start()
-	local window, body = Ui.window("Missions", "Misiones", Vector2.new(660, 652), function(parent)
+	local window, body = Ui.window("Missions", Lang.t(nil, "Missions"), Vector2.new(660, 652), function(parent)
 		Ui.image(parent, "misiones")
 	end)
 
@@ -74,7 +75,7 @@ function Missions.start()
 			Ui.setSelected(tabs[key], key == name)
 		end
 	end
-	for order, entry in { { "Missions", "Misiones", Ui.COLORS.blue }, { "Shop", "Comprar", Ui.COLORS.orange } } do
+	for order, entry in { { "Missions", Lang.t(nil, "Missions"), Ui.COLORS.blue }, { "Shop", Lang.t(nil, "Buy"), Ui.COLORS.orange } } do
 		local name = entry[1]
 		local tab = Ui.button(body, entry[2], entry[3])
 		tab.Name = "Tab" .. name
@@ -132,7 +133,7 @@ function Missions.start()
 			local missing = offer.price - (player:GetAttribute("Item_missionToken") or 0)
 			if missing > 0 then
 				Sfx.play("error")
-				Ui.toast(`Te faltan {missing} tickets`, Ui.COLORS.orange)
+				Ui.toast(Lang.t(nil, "You need {n} more tickets", { n = missing }), Ui.COLORS.orange)
 				return
 			end
 			Remotes.BuyTicketItem:FireServer(index)
@@ -235,7 +236,7 @@ function Missions.start()
 		title.Size = UDim2.new(1, -232 - 64, 0, 36)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		title.TextScaled = true
-		title.Text = item.name
+		title.Text = Lang.t(nil, item.name)
 		local titleLimit = Instance.new("UITextSizeConstraint")
 		titleLimit.MaxTextSize = 30
 		titleLimit.MinTextSize = 16
@@ -249,7 +250,7 @@ function Missions.start()
 		desc.TextYAlignment = Enum.TextYAlignment.Top
 		desc.TextWrapped = true
 		desc.TextColor3 = Color3.fromRGB(215, 225, 240)
-		desc.Text = `Elige un objeto de tu parcela: <font color="#{Color3.fromRGB(255, 225, 90):ToHex()}">x{Config.Clover.Luck}</font> de suerte de armas, encima de toda la que ya tengas.`
+		desc.Text = Lang.t(nil, "Pick an object on your plot: {luck} weapon luck, on top of all the luck you already have.", { luck = `<font color="#{Color3.fromRGB(255, 225, 90):ToHex()}">x{Config.Clover.Luck}</font>` })
 		local owned = ownedChip(card)
 
 		local buy = Ui.button(card, `        {offer.price}`, Ui.COLORS.green)
@@ -277,7 +278,7 @@ function Missions.start()
 	stripText.Position = UDim2.fromOffset(14, 0)
 	stripText.Size = UDim2.new(1, -28, 1, 0)
 	stripText.TextXAlignment = Enum.TextXAlignment.Left
-	stripText.Text = `Pociones de tier máximo <font color="{Ui.SOFT}">· {math.floor(Config.Potions.Durations[#Config.Potions.Durations] / 60)} min</font>`
+	stripText.Text = `{Lang.t(nil, "Max tier potions")} <font color="{Ui.SOFT}">· {math.floor(Config.Potions.Durations[#Config.Potions.Durations] / 60)} min</font>`
 
 	-- Las demás ofertas: una tarjeta estrecha por cada una.
 	local row = Instance.new("Frame")
@@ -341,11 +342,11 @@ function Missions.start()
 				return Potions.tip(item.potion.family, tier, player:GetAttribute("Item_" .. offer.item) or 0), item.color
 			end, true)
 			local amount = family.values[tier]
-			value = if family.additive then `+{math.round(amount * 100)} %` else "x" .. string.gsub(Format.multiplier(amount), "%.", ",")
+			value = if family.additive then "+" .. Lang.t(nil, "{n}%", { n = math.round(amount * 100) }) else "x" .. Format.multiplier(amount)
 		else
 			Ui.image(cell, item.image)
 			Ui.tip(cell, function()
-				return `{item.name}\n<font color="{Ui.SOFT}">{item.description}</font>`, item.color
+				return `{Lang.t(nil, item.name)}\n<font color="{Ui.SOFT}">{Lang.t(nil, item.description)}</font>`, item.color
 			end, true)
 		end
 
@@ -355,7 +356,7 @@ function Missions.start()
 		name.Size = UDim2.new(1, -12, 0, 38)
 		name.TextWrapped = true
 		name.TextScaled = true
-		name.Text = if family then family.effect else item.name
+		name.Text = Lang.t(nil, if family then family.effect else item.name)
 		local nameLimit = Instance.new("UITextSizeConstraint")
 		nameLimit.MaxTextSize = 17
 		nameLimit.MinTextSize = 11
@@ -478,7 +479,7 @@ function Missions.start()
 			coin.Parent = row
 			Ui.ticketIcon(coin, GOLD)
 
-			local claim = Ui.button(row, "Cobrar", Ui.COLORS.green)
+			local claim = Ui.button(row, Lang.t(nil, "Claim"), Ui.COLORS.green)
 			claim.AnchorPoint = Vector2.new(1, 0.5)
 			claim.Position = UDim2.new(1, -8, 0.5, 0)
 			claim.Size = UDim2.fromOffset(86, 46)
@@ -518,19 +519,19 @@ function Missions.start()
 			local valid = current ~= nil and current.id == id
 			local progress = if valid then current.progress or {} else {}
 			local claimed = if valid then current.claimed or {} else {}
-			section.countdown.Text = `Se reinicia en {timeLeft(MissionList.secondsLeft(key, now))}`
+			section.countdown.Text = Lang.t(nil, "Resets in {time}", { time = timeLeft(MissionList.secondsLeft(key, now)) })
 			for index, mission in MissionList.pick(key, id) do
 				local row = section.rows[index]
 				row.mission = mission
 				local done = math.min(progress[mission.id] or 0, mission.goal)
-				row.text.Text = mission.text
+				row.text.Text = Lang.t(nil, mission.text)
 				row.reward.Text = `+{mission.reward}`
 				row.fill.Size = UDim2.fromScale(done / mission.goal, 1)
 				row.progress.Text = `{Format.short(math.floor(done))} / {Format.short(mission.goal)}`
 				local isClaimed = claimed[mission.id] == true
 				local ready = not isClaimed and done >= mission.goal
 				-- Verde = se puede cobrar; gris apagado = aún no; oscuro con texto verde = ya cobrada.
-				row.claim.Text = if isClaimed then "Cobrada" else "Cobrar"
+				row.claim.Text = Lang.t(nil, if isClaimed then "Claimed" else "Claim")
 				row.claim.BackgroundColor3 = if ready then Ui.COLORS.green elseif isClaimed then Ui.COLORS.dark else Ui.COLORS.gray
 				row.claim.TextColor3 = if isClaimed then Ui.COLORS.green:Lerp(WHITE, 0.3) elseif ready then WHITE else Color3.fromRGB(175, 178, 190)
 				row.claim.AutoButtonColor = ready

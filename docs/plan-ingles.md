@@ -45,7 +45,7 @@ Estilo "gettext": en el código queda el texto en inglés y una tabla lo pasa a 
 ## Estado
 
 - [x] Parte 1: sistema y datos (hecha el 12 de octubre de 2026; notas debajo)
-- [ ] Parte 2: ventanas
+- [x] Parte 2: ventanas (hecha el 12 de octubre de 2026; notas al final)
 - [ ] Parte 3: HUD, mundo y servidor
 - [ ] Parte 4: repaso
 
@@ -60,3 +60,13 @@ Estilo "gettext": en el código queda el texto en inglés y una tabla lo pasa a 
 - Los textos iguales en los dos idiomas ("VIP", "Aurora", "x2", los grados) también tienen su entrada en `LangEs`, para que no salte el aviso de texto sin traducir.
 - El código de regalo `LANZAMIENTO` se queda como está: es un código que ya vale.
 - `tests/regressions.luau`: la prueba de "ningún texto en español entre comillas" mira solo las carpetas de su lista `DONE` (de momento `src/shared`); al acabar las partes 2 y 3, poner `src` entero. También comprueba que todo texto de `Config` tiene su entrada en `LangEs`: una lista nueva de `Config` con textos se añade ahí.
+
+## Notas de la parte 2 (para las siguientes)
+
+- Las 16 ventanas ya pasan todo por `Lang.t(nil, ...)`; sus textos en español están al final de `LangEs`, una sección "Ventana X" por archivo. Probado en Studio con `Config.Test.Lang` en `"en"` y en `"es"`: sin avisos de textos que falten.
+- Las ventanas de las tiendas de Rasgos y Grados se llaman `Hud.Traits` y `Hud.Grades` desde la parte 1 (su nombre sale de `Modifiers.KINDS[...].title`); `CLAUDE.md` aún dice `Hud.Rasgos` y `Hud.Grados`: corregirlo en la parte 4.
+- Un mismo inglés no puede tener dos españoles, así que hay ingleses distintos a propósito: "Rebirth" (título) y "Rebirth now" (botón Renacer); "Empty" (Vacío), "Nothing equipped" (Vacía) y "Take all out" (Vaciar); "Equipped {n}/{max}" (Equipadas, armas) y "Wearing {n}/{max}" (Equipados, accesorios); "Pick a sword" y "Pick sword"; "Unequip" y "Remove" (los dos "Quitar").
+- Los plurales van con dos frases enteras ("{n} piece will be salvaged..." y "{n} pieces will be salvaged..."), no con trozos.
+- Quedan para la parte 3, aunque se vean dentro de ventanas: los carteles de `Potions.tip`, el título y la mazmorra que `client/Dungeons` le pasa a `DropMenu.show`, el `StatsDock` de Mejoras (lo monta `Hud`) y los avisos que manda el servidor al comprar, canjear o comerciar.
+- `tests/regressions.luau`: la prueba de "ningún texto en español" mira ya `src/shared` y, de `src/client`, los archivos de su lista `WINDOWS`; al acabar la parte 3 se quita la lista y se mira todo `src`. Las piezas del martillo de la forja tenían una con ñ en el nombre ("Puño"): ahora es "Pomo".
+- Herramienta que ayudó: listar los textos entre comillas de un archivo fuera de los comentarios (un script de Node de usar y tirar) y mirar aparte los `.name`, `.desc`, `.short`, `.tag`... que se enseñan sin comillas; estos últimos son los que más se escapan.

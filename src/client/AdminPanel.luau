@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local WeatherInfo = require(ReplicatedStorage.Shared.WeatherInfo)
@@ -85,7 +86,7 @@ local function weatherPanel(pane: Frame, window: Frame)
 	heading.Position = UDim2.fromOffset(PAD + 4, PAD + STATUS + 6)
 	heading.Size = UDim2.new(1, -PAD * 2 - 8, 0, 24)
 	heading.TextXAlignment = Enum.TextXAlignment.Left
-	heading.Text = `Clima de este servidor  <font color="{Ui.SOFT}" size="14">·  lo ve y lo nota todo el que esté dentro</font>`
+	heading.Text = `{Lang.t(nil, "This server's weather")}  <font color="{Ui.SOFT}" size="14">·  {Lang.t(nil, "everyone inside sees it and gets its luck")}</font>`
 
 	-- Una casilla por clima, con el borde del color de su rareza.
 	local grid = Instance.new("Frame")
@@ -117,7 +118,7 @@ local function weatherPanel(pane: Frame, window: Frame)
 		name.Position = UDim2.new(0.5, 0, 1, -5)
 		name.Size = UDim2.new(1, -8, 0, 42)
 		name.TextWrapped = true
-		name.Text = def.name
+		name.Text = Lang.t(nil, def.name)
 		name.ZIndex = 3
 		-- Marca del clima que hay puesto.
 		local tag = Ui.cellTag(cell, "ON", ON)
@@ -127,10 +128,10 @@ local function weatherPanel(pane: Frame, window: Frame)
 		Ui.tip(cell, function()
 			local minutes = math.floor(WeatherInfo.duration(id) / 60 + 0.5)
 			local lines = {
-				`<font color="{hex(def.color:Lerp(WHITE, 0.3))}"><b>{def.name}</b></font>`,
-				`<font color="{hex(tier.color)}">{tier.name}  ·  {WeatherInfo.oddsText(id)}</font>`,
+				`<font color="{hex(def.color:Lerp(WHITE, 0.3))}"><b>{Lang.t(nil, def.name)}</b></font>`,
+				`<font color="{hex(tier.color)}">{Lang.t(nil, tier.name)}  ·  {WeatherInfo.oddsText(id)}</font>`,
 				WeatherInfo.buffText(def),
-				`<font color="{Ui.SOFT}">Pulsa para ponerlo ya: dura {minutes} min.</font>`,
+				`<font color="{Ui.SOFT}">{Lang.t(nil, "Click to set it now: it lasts {n} min.", { n = minutes })}</font>`,
 			}
 			return table.concat(lines, "\n"), def.color
 		end, true)
@@ -156,8 +157,8 @@ local function weatherPanel(pane: Frame, window: Frame)
 			Remotes.AdminWeather:FireServer(send)
 		end)
 	end
-	action("Clear", "Despejar el cielo", Ui.COLORS.blue, 0, "none")
-	action("Auto", "Volver al calendario", Ui.COLORS.green, 1, "auto")
+	action("Clear", Lang.t(nil, "Clear the sky"), Ui.COLORS.blue, 0, "none")
+	action("Auto", Lang.t(nil, "Back to the schedule"), Ui.COLORS.green, 1, "auto")
 
 	-- Estado: se repinta cuando cambia el clima y, con el panel a la vista, el reloj unas veces por segundo.
 	local shownId: string? = "?"
@@ -172,16 +173,16 @@ local function weatherPanel(pane: Frame, window: Frame)
 			end
 		end
 		local forced = workspace:GetAttribute("WeatherForced") == true
-		local origin = if forced then `<font color="{hex(GOLD)}">Puesto a mano</font>` else "Del calendario"
+		local origin = if forced then `<font color="{hex(GOLD)}">{Lang.t(nil, "Set by hand")}</font>` else Lang.t(nil, "From the schedule")
 		local clock = workspace:GetServerTimeNow()
 		local goal = workspace:GetAttribute(if id then "WeatherEnds" else "WeatherNext")
 		local left = PotionInfo.clock(math.max(0, if type(goal) == "number" then goal - clock else 0))
 		if id and def then
-			now.Text = `<font color="{hex(def.color:Lerp(WHITE, 0.45))}">{def.name}</font>  <font color="{Ui.SOFT}" size="15">x{Format.multiplier(def.luck)} de suerte</font>`
-			detail.Text = `{origin}  <font color="{Ui.SOFT}">·  quedan {left}</font>`
+			now.Text = `<font color="{hex(def.color:Lerp(WHITE, 0.45))}">{Lang.t(nil, def.name)}</font>  <font color="{Ui.SOFT}" size="15">{Lang.t(nil, "x{n} luck", { n = Format.multiplier(def.luck) })}</font>`
+			detail.Text = `{origin}  <font color="{Ui.SOFT}">·  {Lang.t(nil, "{left} left", { left = left })}</font>`
 		else
-			now.Text = "Cielo despejado"
-			detail.Text = `{origin}  <font color="{Ui.SOFT}">·  siguiente clima en {left}</font>`
+			now.Text = Lang.t(nil, "Clear sky")
+			detail.Text = `{origin}  <font color="{Ui.SOFT}">·  {Lang.t(nil, "next weather in {left}", { left = left })}</font>`
 		end
 	end
 	for _, attribute in { "Weather", "WeatherEnds", "WeatherNext", "WeatherForced" } do
@@ -202,7 +203,7 @@ end
 -- pestaña, su color, su icono y la función que lo monta.
 local PANELS = {
 	{
-		key = "Weather", name = "Clima", color = Color3.fromRGB(60, 150, 235),
+		key = "Weather", name = Lang.t(nil, "Weather"), color = Color3.fromRGB(60, 150, 235),
 		icon = function(parent: Frame)
 			local badge = WeatherHud.badge(parent, 44, "rain")
 			badge.AnchorPoint = Vector2.new(0.5, 0.5)

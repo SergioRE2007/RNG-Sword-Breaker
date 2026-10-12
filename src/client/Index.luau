@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local IndexInfo = require(ReplicatedStorage.Shared.IndexInfo)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
@@ -110,7 +111,7 @@ local function sideButton(list: Frame, name: string, order: number, title: strin
 end
 
 function Index.start()
-	local window, body = Ui.window("Index", "Índice", Vector2.new(780, 590), function(parent)
+	local window, body = Ui.window("Index", Lang.t(nil, "Index"), Vector2.new(780, 590), function(parent)
 		Ui.image(parent, "indice")
 	end)
 
@@ -186,15 +187,15 @@ function Index.start()
 		grid.CanvasPosition = Vector2.zero
 		render()
 	end
-	local sizeList = column(window, "Sizes", "Tamaño", false)
-	local metalList = column(window, "Metals", "Metal", true)
-	sizeButtons[0] = sideButton(sizeList, "Size_0", 0, "Normal", "Base", NEUTRAL)
+	local sizeList = column(window, "Sizes", Lang.t(nil, "Size"), false)
+	local metalList = column(window, "Metals", Lang.t(nil, "Metal"), true)
+	sizeButtons[0] = sideButton(sizeList, "Size_0", 0, Lang.t(nil, "Normal"), Lang.t(nil, "Base"), NEUTRAL)
 	for index, entry in Config.Sizes do
-		sizeButtons[index] = sideButton(sizeList, "Size_" .. index, index, entry.name, "1 entre " .. Format.short(entry.odds), entry.color)
+		sizeButtons[index] = sideButton(sizeList, "Size_" .. index, index, Lang.t(nil, entry.name), Lang.t(nil, "1 in {n}", { n = Format.short(entry.odds) }), entry.color)
 	end
-	metalButtons[0] = sideButton(metalList, "Metal_0", 0, "Sin metal", "Base", NEUTRAL)
+	metalButtons[0] = sideButton(metalList, "Metal_0", 0, Lang.t(nil, "No metal"), Lang.t(nil, "Base"), NEUTRAL)
 	for index, entry in Config.Metals do
-		metalButtons[index] = sideButton(metalList, "Metal_" .. index, index, entry.name, "1 entre " .. Format.short(entry.odds), entry.color)
+		metalButtons[index] = sideButton(metalList, "Metal_" .. index, index, Lang.t(nil, entry.name), Lang.t(nil, "1 in {n}", { n = Format.short(entry.odds) }), entry.color)
 	end
 	for index, button in sizeButtons do
 		button.Activated:Connect(function()
@@ -215,14 +216,14 @@ function Index.start()
 		local tier = Rarity.tier(rarity)
 		local lines = {
 			Permanent.name(sword, tipMetal, tipSize),
-			`<font color="{hex(tier.color)}">{tier.name}</font> · {Config.WeaponKinds[entry.kind or "sword"].name}`,
+			`<font color="{hex(tier.color)}">{Lang.t(nil, tier.name)}</font> · {Lang.t(nil, Config.WeaponKinds[entry.kind or "sword"].name)}`,
 		}
 		-- El daño y el "1 entre N" ya van en la casilla: aquí no se repiten ni se desglosan (pedido por el usuario).
 		if not entry.rarity then
-			table.insert(lines, `<font color="{Ui.SOFT}">Espada inicial</font>`)
+			table.insert(lines, `<font color="{Ui.SOFT}">{Lang.t(nil, "Starter sword")}</font>`)
 		end
 		if not unlocked then
-			table.insert(lines, `<font color="#ff8a8a">Sin descubrir</font>`)
+			table.insert(lines, `<font color="#ff8a8a">{Lang.t(nil, "Not discovered")}</font>`)
 		end
 		return table.concat(lines, "\n"), if unlocked then tier.color else LOCKED
 	end
@@ -258,7 +259,7 @@ function Index.start()
 		name.Size = UDim2.new(1, -14, 0, 30)
 		name.TextWrapped = true
 		name.TextColor3 = if unlocked then WHITE else LOCKED_NAME
-		name.Text = entry.name
+		name.Text = Lang.t(nil, entry.name)
 		name.ZIndex = 3
 		limit(name, 14, 9)
 
@@ -269,7 +270,7 @@ function Index.start()
 		odds.Position = UDim2.new(0.5, 0, 1, -28)
 		odds.Size = UDim2.new(1, -12, 0, 17)
 		odds.TextColor3 = Color3.fromRGB(205, 212, 232)
-		odds.Text = if entry.rarity then "1 entre " .. Format.short(rarity) else "Inicial"
+		odds.Text = if entry.rarity then Lang.t(nil, "1 in {n}", { n = Format.short(rarity) }) else Lang.t(nil, "Starter")
 		odds.ZIndex = 3
 		limit(odds, 14, 9)
 
@@ -278,7 +279,7 @@ function Index.start()
 		damage.AnchorPoint = Vector2.new(0.5, 1)
 		damage.Position = UDim2.new(0.5, 0, 1, -5)
 		damage.Size = UDim2.new(1, -12, 0, 23)
-		damage.Text = "Daño " .. Format.multiplier(Stats.swordDamage(copy))
+		damage.Text = Lang.t(nil, "Damage {n}", { n = Format.multiplier(Stats.swordDamage(copy)) })
 		damage.ZIndex = 3
 		limit(damage, 20, 10)
 		if unlocked then
@@ -328,13 +329,13 @@ function Index.start()
 		end
 
 		local metalDef, sizeDef = Config.Metals[metal], Config.Sizes[size]
-		viewLabel.Text = `{if metalDef then `<font color="{hex(metalDef.color)}">{metalDef.name}</font>` else "Sin metal"}  ·  {if sizeDef then `<font color="{hex(sizeDef.color)}">{sizeDef.name}</font>` else "Tamaño normal"}`
-		countLabel.Text = `Descubiertas {unlockedHere}/{#list}`
+		viewLabel.Text = `{if metalDef then `<font color="{hex(metalDef.color)}">{Lang.t(nil, metalDef.name)}</font>` else Lang.t(nil, "No metal")}  ·  {if sizeDef then `<font color="{hex(sizeDef.color)}">{Lang.t(nil, sizeDef.name)}</font>` else Lang.t(nil, "Normal size")}`
+		countLabel.Text = Lang.t(nil, "Discovered {n}/{total}", { n = unlockedHere, total = #list })
 		local all = 0
 		for _ in found do
 			all += 1
 		end
-		totalLabel.Text = `<font color="{Ui.SOFT}">Índice entero</font> {all}/{IndexInfo.total()}`
+		totalLabel.Text = `<font color="{Ui.SOFT}">{Lang.t(nil, "Whole Index")}</font> {all}/{IndexInfo.total()}`
 		for index, button in sizeButtons do
 			Ui.setSelected(button, index == size)
 		end
