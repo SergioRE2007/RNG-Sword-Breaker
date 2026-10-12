@@ -1214,17 +1214,34 @@ do
 	equal(#closet.armor, cfg.Armor.MaxPieces, "armadura enorme recortada al tope")
 	equal(closet.armorWorn.chest, 30, "armadura enorme: la puesta sigue")
 
-	-- Sin DataStore: si la carga falla se juega con una partida nueva y no se guarda encima; si falla el guardado, no revienta.
+	-- Sin DataStore: si la carga falla se reintenta y, si sigue fallando, se echa al jugador (nadie juega una partida que
+	-- no se va a guardar) sin tocar lo guardado; si falla el guardado, no revienta.
 	local down = dataStore({ coins = 7 })
 	down.fail = "read"
 	local offline = fixture(nil, down)
-	same(offline.data.read(offline.player), fresh, "carga fallida: partida nueva")
-	offline.data.addCoins(offline.player, 5)
+	equal(offline.player:GetAttribute("Kicked"), nil, "carga fallida: antes de reintentar no se echa a nadie")
+	for _ = 1, 4 do offline.step(cfg.SessionLock.Retry) end
+	equal(offline.data.read(offline.player), nil, "carga fallida: no hay partida")
+	equal(type(offline.player:GetAttribute("Kicked")), "string", "carga fallida: se echa al jugador con un aviso")
 	down.fail = nil
 	offline.save()
 	equal(down.writes, 0, "carga fallida: no se pisa lo guardado")
 	equal(down.value.coins, 7, "carga fallida: lo guardado sigue igual")
 	equal(#offline.warnings, 1, "carga fallida avisada")
+	-- La lectura vuelve a la segunda: entra con lo suyo y guarda con normalidad.
+	local shaky = dataStore({ coins = 7 })
+	shaky.fail = "read"
+	local patient = fixture(nil, shaky)
+	shaky.fail = nil
+	patient.step(cfg.SessionLock.Retry)
+	equal(patient.data.read(patient.player).coins, 7, "carga que falla una vez: entra con lo guardado")
+	equal(patient.player:GetAttribute("Kicked"), nil, "carga que falla una vez: no se echa a nadie")
+	patient.data.addCoins(patient.player, 5)
+	equal(patient.save().coins, 12, "carga que falla una vez: guarda con normalidad")
+	-- Un infinito no se puede guardar: se guarda recortado en vez de fallar el guardado entero.
+	local rich = fixture({ coins = 1 })
+	rich.data.addCoins(rich.player, math.huge)
+	equal(rich.save().coins, 1e300, "monedas infinitas: se guardan recortadas")
 	local readOnlyStore = dataStore({ coins = 5 })
 	local readOnly = fixture(nil, readOnlyStore)
 	readOnlyStore.fail = "write"

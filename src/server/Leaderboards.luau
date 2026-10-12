@@ -4,7 +4,6 @@
 -- publicar o sin acceso a la API en Studio) los paneles enseñan solo a los jugadores de este servidor
 -- y lo avisan abajo. El dinero se guarda en escala logarítmica para que quepan los números enormes.
 local DataStoreService = game:GetService("DataStoreService")
-local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -455,17 +454,6 @@ local function refresh(metric)
 	render(metric, localEntries(metric), false)
 end
 
--- Robux gastados: se suman cuando se completa una compra (pase de juego o producto).
-local function recordPurchase(player: Player?, id: number, infoType: Enum.InfoType)
-	if not player then
-		return
-	end
-	local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, id, infoType)
-	if ok and type(info) == "table" and type(info.PriceInRobux) == "number" then
-		PlayerData.addRobuxSpent(player, info.PriceInRobux)
-	end
-end
-
 function Leaderboards.start()
 	local map = workspace:WaitForChild("Map")
 	local radius = Config.Plot.HubRadius - 12
@@ -475,16 +463,8 @@ function Leaderboards.start()
 		buildBoard(map, metric, Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius), center)
 	end
 
-	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamePassId, purchased)
-		if purchased then
-			recordPurchase(player, gamePassId, Enum.InfoType.GamePass)
-		end
-	end)
-	MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, purchased)
-		if purchased then
-			recordPurchase(Players:GetPlayerByUserId(userId), productId, Enum.InfoType.Product)
-		end
-	end)
+	-- Los Robux gastados los apuntan server/Passes y server/Products al confirmar cada compra con Roblox: los avisos de
+	-- "compra terminada" los puede falsear un cliente con trampas.
 
 	-- Tiempo jugado: se suma por tramos mientras el jugador está dentro.
 	task.spawn(function()

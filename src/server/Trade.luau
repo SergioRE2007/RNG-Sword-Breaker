@@ -80,6 +80,27 @@ local function swordView(copy)
 	return { id = copy.id, sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 }
 end
 
+-- Cómo es una copia, en un texto: para comprobar al cerrar el trato que sigue igual que cuando se aceptó.
+local function swordMark(copy): string
+	return `{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}`
+end
+
+-- Apunta cómo son las espadas que ofrece ese lado (al bloquearse las ofertas).
+local function freeze(side)
+	side.frozen = nil
+	local data = if side.player then PlayerData.read(side.player) else nil
+	if not data then
+		return
+	end
+	side.frozen = {}
+	for id in side.offer.swords do
+		local copy = PlayerData.findSword(data, id)
+		if copy then
+			side.frozen[id] = swordMark(copy)
+		end
+	end
+end
+
 local function pieceView(piece)
 	return { id = piece.id, slot = piece.slot, quality = piece.quality, level = piece.level, stats = piece.stats }
 end
@@ -219,8 +240,14 @@ local function problem(side, other): any
 		end
 	end
 	for id in offer.swords do
-		if not PlayerData.findSword(data, id) or PlayerData.isLocked(data, id) then
+		local copy = PlayerData.findSword(data, id)
+		if not copy or PlayerData.isLocked(data, id) then
 			return why("{name} no longer has one of the swords (or it's equipped or in their bag)", side)
+		end
+		-- Tiene que ser la misma que el otro aceptó: con las ofertas ya bloqueadas se le podía cambiar el rasgo o
+		-- descartar el grado recién tirado en la forja, y el otro recibía un arma peor que la que vio.
+		if side.frozen and side.frozen[id] ~= swordMark(copy) then
+			return why("{name} changed one of the swords after accepting", side)
 		end
 	end
 	for id in offer.armor do
@@ -396,6 +423,8 @@ local function start(playerA: Player, playerB: Player?)
 			session.state = "confirming"
 			-- Las sugerencias solo valen mientras se eligen las ofertas.
 			a.suggest, b.suggest = nil, nil
+			freeze(a)
+			freeze(b)
 		elseif session.state == "confirming" and a.confirmed and b.confirmed then
 			session.state = "countdown"
 			session.ends = workspace:GetServerTimeNow() + cfg.Countdown
@@ -664,6 +693,7 @@ local function onAccept(player: Player, value: unknown)
 		session.state = "editing"
 		for _, each in session.sides do
 			each.accepted, each.confirmed = false, false
+			each.frozen = nil
 		end
 		push(session)
 	end
