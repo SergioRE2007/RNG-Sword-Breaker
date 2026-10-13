@@ -457,9 +457,10 @@ local function buildShop(kind: string)
 	pickerGrid.Parent = pickerList
 
 	local stopper, stopList = overlay("StopAt", Lang.t(nil, if kind == "traits" then "Settings" else "Stop at:"))
+	local STOP_OFF = Color3.fromRGB(44, 46, 66) -- botón de un resultado sin marcar
 	local stopGrid = Instance.new("UIGridLayout")
-	stopGrid.CellSize = UDim2.fromOffset(136, 54) -- más alto: en pantallas pequeñas la ventana se encoge
-	stopGrid.CellPadding = UDim2.fromOffset(8, 8)
+	stopGrid.CellSize = UDim2.new(1 / 3, -8, 0, 54) -- tres por fila; más alto: en pantallas pequeñas la ventana se encoge
+	stopGrid.CellPadding = UDim2.fromOffset(12, 10)
 	stopGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	stopGrid.Parent = stopList
 
@@ -505,11 +506,11 @@ local function buildShop(kind: string)
 		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 		rowLayout.Parent = row
 		for _, stat in Modifiers.PRIORITY do
-			local chip = Ui.button(row, "", Ui.COLORS.cell)
+			-- Cada tipo, un botón de su color con el texto en blanco (en gris oscuro con letras de color se leía mal).
+			local chip = Ui.button(row, "", PRIORITY_COLORS[stat]:Lerp(Color3.new(0, 0, 0), 0.35))
 			chip.Name = stat
 			chip.Size = UDim2.fromScale(0.31, 1)
-			chip.TextSize = 24
-			chip.TextColor3 = PRIORITY_COLORS[stat]
+			chip.TextSize = 22
 			Ui.layer(chip, Z.overlay + 2)
 			priorityChips[stat] = chip
 			chip.Activated:Connect(function()
@@ -536,14 +537,50 @@ local function buildShop(kind: string)
 			continue
 		end
 		local entry = info.list[index]
-		local toggle = Ui.button(stopList, Lang.t(nil, entry.name), Ui.COLORS.cell)
+		-- Pedido por el usuario (verde entero con el nombre en su color no se leía y quedaba feo): apagado, botón
+		-- oscuro con el nombre en el color del rasgo o grado; elegido, el botón entero de ese color con el nombre en
+		-- blanco, borde claro y una marca verde en la esquina. El nombre se encoge para caber en una línea.
+		local tone = if entry.rainbow then Color3.fromRGB(190, 110, 255) else entry.color
+		local toggle = Ui.button(stopList, "", STOP_OFF)
 		toggle.Name = "Stop" .. index
 		toggle.LayoutOrder = position
-		toggle.TextSize = 24
+		-- El nombre va en una etiqueta de dentro, con margen a los lados y por encima del labio del botón.
+		local name = Ui.label(toggle, 20)
+		name.Name = "Title"
+		name.Position = UDim2.fromOffset(10, 4)
+		name.Size = UDim2.new(1, -20, 1, -14)
+		name.Text = Lang.t(nil, entry.name)
+		name.TextScaled = true
+		local nameLimit = Instance.new("UITextSizeConstraint")
+		nameLimit.MaxTextSize = 20
+		nameLimit.MinTextSize = 9
+		nameLimit.Parent = name
 		Ui.layer(toggle, Z.overlay + 2)
-		toggle.TextColor3 = if entry.rainbow then WHITE else entry.color
+		local stroke: UIStroke? = nil -- el borde del botón (el otro UIStroke es el del texto)
+		for _, child in toggle:GetChildren() do
+			if child:IsA("UIStroke") and child.ApplyStrokeMode == Enum.ApplyStrokeMode.Border then
+				stroke = child
+			end
+		end
+		local check = Ui.label(toggle, 15)
+		check.Name = "Check"
+		check.AnchorPoint = Vector2.new(1, 0)
+		check.Position = UDim2.new(1, 5, 0, -5)
+		check.Size = UDim2.fromOffset(22, 22)
+		check.BackgroundTransparency = 0
+		check.BackgroundColor3 = Color3.fromRGB(70, 210, 90)
+		check.Text = "✓"
+		check.ZIndex = Z.overlay + 3
+		Ui.round(check, 11)
+		Ui.stroke(check, Color3.new(0, 0, 0), 2)
 		local function paint()
-			toggle.BackgroundColor3 = if state.stop[index] then Color3.fromRGB(60, 150, 60) else Ui.COLORS.cell
+			local on = state.stop[index] == true
+			toggle.BackgroundColor3 = if on then tone:Lerp(Color3.new(0, 0, 0), 0.3) else STOP_OFF
+			name.TextColor3 = if on then WHITE else tone:Lerp(WHITE, 0.15)
+			check.Visible = on
+			if stroke then
+				stroke.Color = if on then tone:Lerp(WHITE, 0.55) else Color3.new(0, 0, 0)
+			end
 		end
 		toggle.Activated:Connect(function()
 			state.stop[index] = not state.stop[index]
