@@ -304,7 +304,8 @@ local function loadSwords(data, saved)
 		add(1, nil)
 	end
 	equip(equipped)
-	if #loadout == 0 then
+	-- Sin ninguna equipada solo se queda quien las quitó todas (su "loadout" guardado va vacío); lo antiguo, con la primera.
+	if #loadout == 0 and type(saved.loadout) ~= "table" then
 		loadout[1] = swords[1].id
 	end
 	data.swords = swords

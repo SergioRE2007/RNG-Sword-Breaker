@@ -236,7 +236,7 @@ local function copyDamage(copy): number
 end
 
 -- Dejar una copia en la bolsa, o sacarla si ya estaba (o, con "best" / "clear", llenarla con las mejores o vaciarla). Llena, sustituye a la depositada de menos daño; una equipada
--- deja de estarlo (la última equipada no se puede depositar).
+-- deja de estarlo.
 local function onSet(player: Player, id: unknown)
 	local data = PlayerData.read(player)
 	if not data then
@@ -279,10 +279,6 @@ local function onSet(player: Player, id: unknown)
 		end
 		local equipped = table.find(edited.loadout, id)
 		if equipped then
-			if #edited.loadout <= 1 then
-				message = "You can't put your only equipped weapon in the bag"
-				return
-			end
 			table.remove(edited.loadout, equipped)
 		end
 		if #slots < Stats.bagSlots(player) then

@@ -218,7 +218,7 @@ local function copyDamage(copy): number
 end
 
 -- Equipar (Stats.loadoutSlots armas a la vez: las de Config.Loadout.Slots más las del pase). Con un id, pone esa copia o la quita si ya estaba: va al primer
--- hueco libre y, sin huecos, al de la equipada que menos daño hace; la última no se puede quitar. Con "best", deja
+-- hueco libre y, sin huecos, al de la equipada que menos daño hace; se pueden quitar todas (pedido por el usuario). Con "best", deja
 -- equipadas las de más daño de la mochila. Las depositadas en la Bolsa de oro no cuentan para "best", y equipar una
 -- la saca de la bolsa.
 local function onEquip(player: Player, id: unknown)
@@ -262,9 +262,7 @@ local function onEquip(player: Player, id: unknown)
 			table.remove(edited.bag.slots, deposited)
 		end
 		if slot then
-			if #loadout > 1 then
-				table.remove(loadout, slot)
-			end
+			table.remove(loadout, slot)
 		elseif #loadout < Stats.loadoutSlots(player) then
 			table.insert(loadout, id)
 		else

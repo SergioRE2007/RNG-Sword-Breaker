@@ -802,8 +802,10 @@ do
 	local function equip(id) ef.remotes.EquipSword.OnServerEvent:fire(ef.player, id) end
 	local function worn() return table.concat(ef.data.read(ef.player).loadout, ",") end
 	equip(1)
-	equal(worn(), "1", "la última equipada no se quita")
-	for id = 2, slots do equip(id) end
+	equal(worn(), "", "se pueden quitar todas")
+	equal(ef.player:GetAttribute("Loadout"), "", "sin armas, huecos vacíos")
+	equal(eStats.damage(ef.player), 0, "sin armas equipadas no hay daño")
+	for id = 1, slots do equip(id) end
 	equal(worn(), "1,2,3,4", "se equipan hasta llenar los huecos")
 	equal(ef.player:GetAttribute("Loadout"), "1,2,3,4", "huecos publicados")
 	equip(2)

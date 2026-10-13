@@ -56,7 +56,8 @@ function Stats.loadout(player: Player)
 			byId[id] = nil -- un id repetido no cuenta dos veces
 		end
 	end
-	if #result == 0 then
+	-- Sin ninguna equipada (se pueden quitar todas) la lista va vacía; la de "Equipped" solo si aún no hay "Loadout".
+	if #result == 0 and player:GetAttribute("Loadout") == nil then
 		table.insert(result, Stats.equipped(player))
 	end
 	return result

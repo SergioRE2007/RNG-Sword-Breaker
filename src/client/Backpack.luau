@@ -396,6 +396,12 @@ function Backpack.start()
 	local sellButton = action("Sell", Lang.t(nil, "Sell weapons"), Ui.COLORS.red, 198, 100)
 	bestButton.TextSize = 23
 	sellButton.TextSize = 17
+	-- Orden de la lista (pedido por el usuario): por daño (con rasgo y grado) o por rareza (el "1 entre N" del arma
+	-- con su metal y su tamaño), de más a menos. El botón pasa de uno a otro; solo para esta sesión.
+	local sortButton = action("Sort", "", Ui.COLORS.blue, 378, 112)
+	sortButton.TextSize = 17
+	sortButton.TextWrapped = true
+	local swordSort = "damage"
 	-- Candado (pedido por el usuario): con el modo encendido, pulsar un arma la bloquea o desbloquea en vez de
 	-- equiparla. Las bloqueadas no se venden (ni a mano ni solas) ni salen en el comercio; lo valida el servidor.
 	local lockButton = action("Lock", "", Ui.COLORS.gray, 308, 62)
@@ -562,6 +568,32 @@ function Backpack.start()
 	-- Fila de huecos: cada uno es un marco del tamaño de una casilla de la lista, encogido con su UIScale, así la
 	-- casilla de dentro es la misma que la de la lista y no hace falta otra con medidas más pequeñas.
 	local slotHolders, slotCells, slotKeys = {}, {}, {}
+	-- Pone las casillas en el orden elegido: las de más daño (o las más raras) primero; a igualdad, por lo otro.
+	local function orderSwords(copies)
+		local ordered = table.clone(copies)
+		local first, second = Stats.swordDamage, Stats.rarity
+		if swordSort == "rarity" then
+			first, second = second, first
+		end
+		table.sort(ordered, function(a, b)
+			local valueA, valueB = first(a), first(b)
+			if valueA ~= valueB then
+				return valueA > valueB
+			end
+			valueA, valueB = second(a), second(b)
+			if valueA ~= valueB then
+				return valueA > valueB
+			end
+			return a.id < b.id
+		end)
+		for position, copy in ordered do
+			local cell = swordCells[copy.id]
+			if cell then
+				cell.LayoutOrder = position
+			end
+		end
+	end
+
 	local function syncSlots(copies, worn: { number })
 		local total = math.max(Stats.loadoutSlots(player), #worn)
 		-- Con los huecos del pase (8) van más pequeños para caber en la misma fila.
@@ -602,7 +634,7 @@ function Backpack.start()
 				cell = swordCell(holder, copy, false, false)
 				cell.Name = "Sword"
 				cell.Activated:Connect(function()
-					-- Quitar la del hueco (la última equipada no se puede: el servidor no la quita).
+					-- Quitar la del hueco.
 					pressSword(copy)
 				end)
 			else
@@ -668,18 +700,21 @@ function Backpack.start()
 				cellKeys[id] = nil
 			end
 		end
-		-- Las de más daño primero (con metal, tamaño y rasgo incluidos).
-		local ordered = table.clone(copies)
-		table.sort(ordered, function(a, b)
-			return Stats.swordDamage(a) > Stats.swordDamage(b)
-		end)
-		for position, copy in ordered do
-			local cell = swordCells[copy.id]
-			if cell then
-				cell.LayoutOrder = position
-			end
-		end
+		orderSwords(copies)
 	end
+
+	local function paintSort()
+		local byDamage = swordSort == "damage"
+		sortButton.Text = Lang.t(nil, if byDamage then "Sort: damage" else "Sort: rarity")
+		sortButton.BackgroundColor3 = if byDamage then Ui.COLORS.blue else Ui.COLORS.purple
+	end
+	paintSort()
+	sortButton.Activated:Connect(function()
+		swordSort = if swordSort == "damage" then "rarity" else "damage"
+		paintSort()
+		orderSwords(Stats.swords(player))
+		swordGrid.CanvasPosition = Vector2.zero
+	end)
 
 	-- Al abrir la pestaña de espadas, las primeras casillas entran una tras otra.
 	onShow.Swords = function()
