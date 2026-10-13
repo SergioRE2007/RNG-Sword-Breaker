@@ -206,6 +206,7 @@ function Destructibles.boost(part: Instance, luck: number): boolean
 		return false
 	end
 	object.boosted = true
+	object.clover = luck -- Gacha lo descuenta al medir lo difícil que era el arma: lo del trébol se celebra
 	object.luck *= luck
 	part:SetAttribute("Luck", object.luck)
 	part:SetAttribute("Clover", true)
