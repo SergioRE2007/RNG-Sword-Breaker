@@ -46,7 +46,7 @@ local EVENTS = {
 	-- Cinemáticas de las tiradas más raras (client/RollCinematic), con grabaciones propias (tanda `cinematica` de
 	-- tools/sonidos/generar.mjs): la estrella que cae y su impacto; el herrero que aparece, sus martillazos y el
 	-- temple; la supernova que nace, se encoge y estalla, y la explosión dorada de la absoluta.
-	cine_fall = { 133183668076375, 0.6, 1, 1 },
+	cine_fall = { { 72651967546338, 124214242227217 }, 0.6, 1, 1 }, -- las de la estrella del clima: las propias no le gustaron al usuario
 	cine_impact = { 110621823743010, 0.65, 1, 1 },
 	cine_smith = { 127781840916115, 0.6, 1, 1 },
 	cine_hammer = { 99789138675800, 0.65, 1, 1 },
