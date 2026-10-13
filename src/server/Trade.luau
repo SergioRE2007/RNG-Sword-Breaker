@@ -354,6 +354,31 @@ local function give(side, pack)
 	end)
 end
 
+-- Copia profunda de lo que toca un trato, para deshacerlo si el cambio falla a medias.
+local TOUCHED = { "coins", "gems", "items", "swords", "nextSwordId", "armor", "armorWorn", "nextArmorId", "artifacts", "gear" }
+local function deepCopy(value)
+	if type(value) ~= "table" then
+		return value
+	end
+	local out = {}
+	for key, item in value do
+		out[key] = deepCopy(item)
+	end
+	return out
+end
+local function snapshot(data)
+	local copy = {}
+	for _, field in TOUCHED do
+		copy[field] = deepCopy(data[field])
+	end
+	return copy
+end
+local function restore(data, copy)
+	for _, field in TOUCHED do
+		data[field] = deepCopy(copy[field])
+	end
+end
+
 local function complete(session)
 	local a, b = session.sides[1], session.sides[2]
 	local reason = problem(a, b) or problem(b, a)
@@ -363,9 +388,29 @@ local function complete(session)
 		end, BAD)
 		return
 	end
-	local fromA, fromB = take(a), take(b)
-	give(a, fromB)
-	give(b, fromA)
+	-- El cambio va de una vez: si algo falla a medias (se le había quitado a uno y aún no le había llegado al otro), se
+	-- deja a los dos como estaban. Pasó (un jugador dio cristales y al otro no le llegaron).
+	local before = {}
+	for _, side in session.sides do
+		if side.player then
+			before[side.player] = snapshot(PlayerData.read(side.player))
+		end
+	end
+	local ok, err = pcall(function()
+		local fromA, fromB = take(a), take(b)
+		give(a, fromB)
+		give(b, fromA)
+	end)
+	if not ok then
+		warn(`[Trade] Exchange failed, undone: {err}`)
+		for player, copy in before do
+			PlayerData.editArmor(player, function(data)
+				restore(data, copy)
+			end)
+		end
+		close(session, "Trade failed: nothing was exchanged", BAD)
+		return
+	end
 	-- Se guardan los dos ya: si solo se guardara el primero que se va (y el servidor se cerrara mal antes de guardar al
 	-- otro), lo cambiado quedaría en los dos lados.
 	for _, side in session.sides do
