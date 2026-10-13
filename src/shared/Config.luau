@@ -340,10 +340,9 @@ Config.Water = { Depth = 6, Transparency = 0.35, WaveHeight = 0.12, WaveSpeed = 
 -- carteles) y "color" el del evento. Lo que se ve de cada uno (luz, cielo, partículas) está en client/WeatherDefs.
 -- Un clima nuevo = una entrada aquí, su id en `Order` (por rareza) y su aspecto en WeatherDefs.
 -- Eventos de admin (server/AdminEvents, panel "Eventos" del menú de admin): un administrador multiplica un stat para
--- todos durante un rato, en su servidor o en todos. MaxMult y MaxMinutes = topes de una orden (para que un dedazo no
--- rompa la economía); MaxMessage = letras del mensaje grande. Cada stat entra en un solo sitio (Stats.boost).
+-- todos durante un rato, en su servidor o en todos. El multiplicador no tiene tope (pedido por el usuario: lo quiere
+-- para probar y para sus eventos); MaxMinutes = lo que puede durar una orden; MaxMessage = letras del mensaje grande. Cada stat entra en un solo sitio (Stats.boost).
 Config.AdminEvents = {
-	MaxMult = 10,
 	MaxMinutes = 180,
 	MaxMessage = 120,
 	BannerTime = 8, -- segundos que se queda en pantalla el mensaje grande

@@ -287,7 +287,7 @@ local function boost(admin: Player, stat: unknown, mult: unknown, minutes: unkno
 	if AdminEvents.boost(stat, mult, minutes, global) then
 		print(`[Admin] {admin.Name} starts x{mult} {stat} for {minutes} min{if global then " on all servers" else ""}`)
 	else
-		Tell.notice(admin, BAD, "That event isn't valid: up to x{mult} and {minutes} min", { mult = Config.AdminEvents.MaxMult, minutes = Config.AdminEvents.MaxMinutes })
+		Tell.notice(admin, BAD, "That event isn't valid: more than x1 and up to {minutes} min", { minutes = Config.AdminEvents.MaxMinutes })
 	end
 end
 

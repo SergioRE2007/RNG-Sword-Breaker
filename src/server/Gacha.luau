@@ -107,7 +107,12 @@ local function draw(player: Player, boost: number, source: string, info)
 	-- suerte de armas. Así "1 entre 1.000" es una de cada 1.000 tiradas con cualquier suerte, clima o poción, y un
 	-- objeto mejor de lo normal se celebra más porque es raro que salga. Medido contra el objeto de siempre salían de
 	-- 4 a 7 veces más, y con un clima de suerte de cajas una estrella cada 3 tiradas. (Solo mide: no cambia lo que sale.)
-	local usual = if source == "object" then base * ObjectSpec.meanLuck(Stats.luck(player) * Stats.spawnLuck(player), Stats.objectLuck(player)) else base
+	-- La suerte media es la de cuando apareció el objeto (`info.usual`, de Destructibles), no la de ahora: medida al
+	-- romperlo, un objeto que salió con una poción, un clima, un evento o más suerte equipada (o antes de renacer) y
+	-- se rompía después llenaba la pantalla de cinemáticas (simulado: con x4 de suerte de cajas ya acabada, 1 de cada
+	-- 75 tiradas; con un evento de x100, 1 de cada 3).
+	local mean = if info and type(info.usual) == "number" and info.usual > 0 then info.usual else ObjectSpec.meanLuck(Stats.luck(player) * Stats.spawnLuck(player), Stats.objectLuck(player))
+	local usual = if source == "object" then base * mean else base
 	local clover = if info and type(info.clover) == "number" then math.max(info.clover, 1) else 1
 	local odds = Permanent.rollOdds(index, metal, size, usual)
 	-- El Trébol de la suerte no cuenta (pedido por el usuario: lo que saca de más se celebra): su tirada se mide
