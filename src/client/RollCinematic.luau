@@ -65,10 +65,11 @@ local TILT = CFrame.Angles(0, 0, math.rad(-22))
 local STUCK = 170 -- grados del arma clavada de punta en el cráter de la estrella (casi boca abajo)
 local SCREEN = Vector2.new(1100, 700) -- por debajo de este tamaño de pantalla la tarjeta se encoge (como el HUD)
 local CARD = Vector2.new(460, 176)
+local CARD_HOME = UDim2.fromScale(0.5, 0.88) -- sitio de la tarjeta (su borde de abajo)
 -- Segundos que tarda el "1 entre N" en subir hasta su número, por nivel de RollReveal.
 local COUNT = { [2] = 0.5, [3] = 0.8, [4] = 1.1, [5] = 2.2, [6] = 3 }
 -- Capas de la interfaz (la del juego ordena el ZIndex globalmente; aquí también).
-local Z = { bars = 1, rays = 2, card = 3, rim = 4, chip = 5, text = 6, skip = 7, cover = 20 }
+local Z = { rays = 1, bars = 2, card = 3, rim = 4, chip = 5, text = 6, skip = 7, cover = 20 }
 
 local current = nil -- la escena en marcha
 local waiting = 0 -- las que esperan turno
@@ -468,9 +469,13 @@ local function sealOn(s, position: Vector3, texture: string, color: Color3, size
 	return base
 end
 
+-- Para las tiradas que se enseñan en el mundo (client/RollReveal): de `s` solo usan `s.folder`, la carpeta donde
+-- crean sus piezas.
+RollCinematic.fx = { pillar = pillar, embers = embers, flames = flames, dustRing = dustRing }
+
 -- El arma ---------------------------------------------------------------------------------
 
--- Modelo del arma de verdad, anclado y con el giro en su centro, encogido al mínimo. Devuelve también cuánto hay
+--Modelo del arma de verdad, anclado y con el giro en su centro, encogido al mínimo. Devuelve también cuánto hay
 -- que escalarlo para que mida `display` studs (lo usa también RollReveal).
 function RollCinematic.sword(index: number, metal: number?, parent: Instance, display: number?): (Model, number)
 	local model = Instance.new("Model")
@@ -595,7 +600,7 @@ local function buildGui(s, info)
 	local holder = Instance.new("Frame")
 	holder.Name = "Card"
 	holder.AnchorPoint = Vector2.new(0.5, 1)
-	holder.Position = UDim2.fromScale(0.5, 0.88)
+	holder.Position = CARD_HOME
 	holder.Size = UDim2.fromOffset(CARD.X, CARD.Y)
 	holder.BackgroundTransparency = 1
 	holder.Parent = gui
@@ -609,6 +614,13 @@ local function buildGui(s, info)
 	rays.ImageColor3 = if info.level >= 6 then GOLD else bright
 	rays.ImageTransparency = 1
 	rays.ZIndex = Z.rays
+	-- Segunda tanda de rayos, más corta y clara, girando al revés: se enciende cuando el número llega.
+	local rays2 = Ui.image(holder, "boton_rayos")
+	rays2.Name = "RaysInner"
+	rays2.Size = UDim2.fromOffset(CARD.X * 0.9, CARD.X * 0.9)
+	rays2.ImageColor3 = (if info.level >= 6 then GOLD else bright):Lerp(WHITE, 0.6)
+	rays2.ImageTransparency = 1
+	rays2.ZIndex = Z.rays
 
 	local plate = Instance.new("Frame")
 	plate.Name = "Plate"
@@ -641,6 +653,23 @@ local function buildGui(s, info)
 	gloss.ZIndex = Z.rim
 	gloss.Parent = holder
 	Ui.round(gloss, 12)
+	-- Brillo que recorre la tarjeta en diagonal: un marco blanco cuyo degradado solo deja ver una franja, que se
+	-- mueve con `Offset` (sin recortes ni piezas giradas: un hijo girado se sale del recorte).
+	local sheen = Instance.new("Frame")
+	sheen.Name = "Sheen"
+	sheen.AnchorPoint = Vector2.new(0.5, 0.5)
+	sheen.Position = UDim2.fromScale(0.5, 0.5)
+	sheen.Size = UDim2.new(1, -10, 1, -10)
+	sheen.BackgroundColor3 = WHITE
+	sheen.BorderSizePixel = 0
+	sheen.ZIndex = Z.rim
+	sheen.Parent = holder
+	Ui.round(sheen, 14)
+	local band = Instance.new("UIGradient")
+	band.Rotation = 20
+	band.Transparency = seq({ { 0, 1 }, { 0.38, 1 }, { 0.5, 0.6 }, { 0.62, 1 }, { 1, 1 } })
+	band.Offset = Vector2.new(-1, 0)
+	band.Parent = sheen
 
 	local content = Instance.new("Frame")
 	content.Name = "Content"
@@ -736,7 +765,7 @@ local function buildGui(s, info)
 
 	gui.Parent = player:WaitForChild("PlayerGui")
 	s.gui = gui
-	s.ui = { cover = cover, line = line, lineStroke = lineStroke, holder = holder, scale = scale, factor = factor, rays = rays, lineSize = line.TextSize, chipScale = chipScale, name = name, odds = odds, oddsScale = oddsScale }
+	s.ui = { cover = cover, line = line, lineStroke = lineStroke, holder = holder, scale = scale, factor = factor, rays = rays, rays2 = rays2, band = band, lineSize = line.TextSize, chipScale = chipScale, name = name, odds = odds, oddsScale = oddsScale }
 end
 
 -- Fundido de la tapa: a `transparency` en `seconds`.
@@ -769,15 +798,51 @@ local function setLine(s, text: string, color: Color3)
 	tween(ui.line, 0.22, { TextSize = size }, Enum.EasingStyle.Back)
 end
 
--- La tarjeta: salta la rareza, luego el nombre y, lo último, el "1 entre N" subiendo hasta su número.
+-- El brillo cruza la tarjeta de lado a lado.
+local function sweep(s)
+	local band = s.ui.band
+	band.Offset = Vector2.new(-1, 0)
+	tween(band, 0.55, { Offset = Vector2.new(1, 0) }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+end
+
+-- Sacudida de la tarjeta, que se va apagando. Va por su cuenta: no corta la secuencia.
+local function jolt(s, power: number, seconds: number)
+	local holder = s.ui.holder
+	local total = seconds * SLOW
+	local elapsed = 0
+	local connection
+	connection = RunService.RenderStepped:Connect(function(dt)
+		elapsed += dt
+		local left = 1 - elapsed / total
+		if left <= 0 or not holder.Parent then
+			connection:Disconnect()
+			holder.Position = CARD_HOME
+			holder.Rotation = 0
+			return
+		end
+		holder.Position = CARD_HOME + UDim2.fromOffset(rng:NextNumber(-1, 1) * power * left, rng:NextNumber(-1, 1) * power * left)
+		holder.Rotation = rng:NextNumber(-1, 1) * power * 0.22 * left
+	end)
+end
+
+-- La tarjeta: entra de golpe, salta la rareza, luego el nombre y, lo último, el "1 entre N" subiendo hasta su
+-- número, que se planta con una sacudida.
 local function card(s, info)
 	local ui = s.ui
 	local roll = info.roll
 	ui.line.Text = Ui.upper(Lang.t(nil, info.line))
 	ui.line.TextColor3 = if info.level >= 6 then GOLD else info.bright
 	showLine(s)
-	tween(ui.scale, 0.28, { Scale = ui.factor }, Enum.EasingStyle.Back)
-	wait(s, 0.12)
+	-- Sube ladeada desde abajo, pasándose de tamaño, y al asentarse da un golpe de zoom y la recorre el brillo.
+	ui.holder.Rotation = -9
+	ui.holder.Position = CARD_HOME + UDim2.fromScale(0, 0.1)
+	tween(ui.scale, 0.3, { Scale = ui.factor }, Enum.EasingStyle.Back)
+	tween(ui.holder, 0.3, { Rotation = 0, Position = CARD_HOME }, Enum.EasingStyle.Back)
+	wait(s, 0.2)
+	s.punch = math.min(s.punch, -3)
+	s.shake = math.max(s.shake, 0.12)
+	tween(ui.rays, 0.3, { ImageTransparency = 0.8 })
+	sweep(s)
 	tween(ui.chipScale, 0.22, { Scale = 1 }, Enum.EasingStyle.Back)
 	Sfx.play("tick", 1, 1)
 	wait(s, 0.2)
@@ -795,12 +860,23 @@ local function card(s, info)
 	end)
 	-- Llegó: golpe del número, rayos detrás y destello del color de la rareza.
 	ui.odds.TextColor3 = if info.level >= 6 then GOLD else info.bright:Lerp(WHITE, 0.25)
-	ui.oddsScale.Scale = 1.45
-	tween(ui.oddsScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
-	tween(ui.rays, 0.3, { ImageTransparency = 0.55 })
+	ui.oddsScale.Scale = 1.7
+	tween(ui.oddsScale, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+	-- Los rayos de detrás dan un fogonazo: crecen de golpe y vuelven, y los de dentro se encienden.
+	local size = ui.rays.Size
+	ui.rays.Size = UDim2.fromOffset(size.X.Offset * 1.35, size.Y.Offset * 1.35)
+	ui.rays.ImageTransparency = 0.25
+	tween(ui.rays, 0.5, { ImageTransparency = 0.5, Size = size }, Enum.EasingStyle.Back)
+	ui.rays2.ImageTransparency = 0.15
+	tween(ui.rays2, 0.6, { ImageTransparency = 0.7 })
+	sweep(s)
+	jolt(s, 9, 0.4)
 	cover(s, info.bright, 0.7, 1, 0.45)
 	Sfx.play(if info.level >= 4 then "win" else "rare")
-	s.shake = math.max(s.shake, 0.25)
+	s.shake = math.max(s.shake, 0.3)
+	s.punch = math.min(s.punch, -6)
+	s.blur.Size = 10
+	tween(s.blur, 0.4, { Size = 0 })
 end
 
 -- La escena -----------------------------------------------------------------------------
@@ -928,9 +1004,12 @@ local function newScene(info)
 			held.model:PivotTo(CFrame.new(held.position + Vector3.new(0, math.sin(held.bob * 2.6) * 0.12 * held.spin / 2.5, 0)) * CFrame.Angles(0, held.yaw, 0) * held.tilt)
 		end
 		for _, ray in s.spinning do
-			ray.part.CFrame = CFrame.new(ray.centre) * CFrame.Angles(0, 0, s.clock * ray.speed) * ray.tilt
+			-- `own`: gira sobre su propio eje ya inclinado (un disco ladeado), no alrededor del de la cámara.
+			local turn = CFrame.Angles(0, 0, s.clock * ray.speed)
+			ray.part.CFrame = CFrame.new(ray.centre) * (if ray.own then ray.tilt * turn else turn * ray.tilt)
 		end
 		s.ui.rays.Rotation = s.clock * 40
+		s.ui.rays2.Rotation = -s.clock * 26
 	end)
 	return s
 end
@@ -2199,34 +2278,44 @@ function THEMES.nova(s, info)
 	stardust(core, color, 80, 40, 2.4)
 	ring(s, centre, 2, 60, bright, 0.7, CFrame.Angles(math.rad(12), 0, 0))
 	rays(s, centre - Vector3.new(0, 0, 4), if jackpot then 9 else 6, 60, bright)
-	shine(core, bright, 16, 12)
+	-- En la absoluta el destello de detrás va más pequeño: a su tamaño normal quemaba a blanco el centro y tapaba
+	-- la galaxia (y la punta del arma).
+	shine(core, bright, if jackpot then 7 else 16, 12)
 	if jackpot then
 		-- La absoluta: una galaxia espiral dorada girando detrás del arma.
 		-- Por delante de los rayos (que la taparían) y justo detrás del arma. Hecha con puntos de luz en tres
-		-- brazos: la textura de remolino del pack, a ese tamaño, no se veía.
-		local base = point(s, centre - Vector3.new(0, 0, 2.5))
+		-- brazos: la textura de remolino del pack, a ese tamaño, no se veía. Pequeña (tiene que caber entera en el
+		-- plano: con 21 studs de radio solo se veían manchas sueltas), con muchos puntos pequeños y de oro hondo
+		-- (aclarados salían beige) y un poco ladeada.
+		local base = point(s, centre - Vector3.new(0, 0, 3.5))
+		local deep = Color3.fromRGB(255, 170, 40)
+		local function spot(position: Vector3, shade: Color3, size: number, alpha: number)
+			local at = Instance.new("Attachment")
+			at.Position = position
+			at.Parent = base
+			emitter(at, {
+				Texture = TEX.halo,
+				Color = ColorSequence.new(shade),
+				LightEmission = 1,
+				Rate = 1 / SLOW,
+				Lifetime = life(1.4, 1.6),
+				Speed = NumberRange.new(0),
+				LockedToPart = true,
+				Size = seq({ { 0, size * 0.5 }, { 0.5, size }, { 1, size * 0.5 } }),
+				Transparency = seq({ { 0, 1 }, { 0.3, alpha }, { 0.7, alpha }, { 1, 1 } }),
+			}, 1)
+		end
+		-- Los brazos empiezan fuera del arma y sin núcleo: con puntos hasta el centro se sumaban en una mancha
+		-- blanca que se comía el arma.
 		for arm = 0, 2 do
-			for index = 1, 22 do
-				local t = index / 22
-				local angle = arm * math.pi * 2 / 3 + t * 3.6
-				local reach = 21 * (0.08 + 0.92 * t)
-				local spot = Instance.new("Attachment")
-				spot.Position = Vector3.new(math.cos(angle) * reach, math.sin(angle) * reach, 0)
-				spot.Parent = base
-				emitter(spot, {
-					Texture = TEX.halo,
-					Color = ColorSequence.new(GOLD:Lerp(WHITE, 0.5 * (1 - t))),
-					LightEmission = 1,
-					Rate = 1.6 / SLOW,
-					Lifetime = life(1.2, 1.6),
-					Speed = NumberRange.new(0),
-					LockedToPart = true,
-					Size = seq({ { 0, 0 }, { 0.5, lerp(7, 2.5, t) }, { 1, 0 } }),
-					Transparency = seq({ { 0, 1 }, { 0.5, lerp(0.5, 0.72, t) }, { 1, 1 } }),
-				}, 1)
+			for index = 1, 24 do
+				local t = index / 24
+				local angle = arm * math.pi * 2 / 3 + t * 3.6 + rng:NextNumber(-0.08, 0.08)
+				local reach = 10 * (0.42 + 0.58 * t) + rng:NextNumber(-0.3, 0.3)
+				spot(Vector3.new(math.cos(angle) * reach, math.sin(angle) * reach, 0), GOLD:Lerp(deep, 0.4 + 0.6 * t), lerp(1.7, 1, t), 0.3)
 			end
 		end
-		table.insert(s.spinning, { part = base, centre = base.Position, speed = 0.3, tilt = CFrame.identity })
+		table.insert(s.spinning, { part = base, centre = base.Position, speed = 0.35, tilt = CFrame.Angles(math.rad(-25), 0, math.rad(-14)), own = true })
 	end
 	animate(s, 0.5, function(t)
 		held.spin = lerp(7, 2.5, t)
