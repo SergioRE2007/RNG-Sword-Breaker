@@ -128,9 +128,11 @@ local function draw(player: Player, boost: number, source: string, info)
 		warnFull(player)
 	end
 	local stored: number? = nil -- id de la copia guardada: solo lo pone quien de verdad la mete en sus datos
+	local soldCoins = 0 -- monedas de lo que se vende solo en esta tirada (la copia que deja su sitio o el arma nueva)
 	if rarity >= data.autoSell and (not full or spare ~= nil) then
 		PlayerData.edit(player, function(edited)
 			if spare then
+				soldCoins = Stats.sellCoins(edited.swords[spare])
 				table.remove(edited.swords, spare)
 				edited.gems += Config.Gacha.SellValue
 			end
@@ -145,8 +147,13 @@ local function draw(player: Player, boost: number, source: string, info)
 		BestRoll.submit(player, index, metal, size)
 	else
 		PlayerData.addGems(player, Config.Gacha.SellValue)
+		soldCoins = Stats.sellCoins({ sword = index, metal = metal, size = size })
+	end
+	if soldCoins > 0 then
+		PlayerData.addCoins(player, soldCoins)
 	end
 	local extra = if info then table.clone(info) else {}
+	extra.coins = if kept then nil else soldCoins -- lo que ha dado la venta automática de esta arma
 	extra.boost = boost
 	extra.odds = odds
 	extra.baseOdds = Config.Swords[index].rarity or 1
@@ -302,12 +309,13 @@ local function onSellMany(player: Player, ids: unknown)
 		if type(id) ~= "number" or id ~= id or id <= 0 or id % 1 ~= 0 then return end
 		wanted[id] = true
 	end
-	local sold = 0
+	local sold, coins = 0, 0
 	-- Sin esperas entre validar y retirar. El equipo se vuelve a comprobar en el estado real.
 	PlayerData.edit(player, function(edited)
 		for index = #edited.swords, 1, -1 do
 			local copy = edited.swords[index]
 			if wanted[copy.id] and not PlayerData.isLocked(edited, copy.id) then
+				coins += Stats.sellCoins(copy)
 				table.remove(edited.swords, index)
 				sold += 1
 			end
@@ -315,7 +323,8 @@ local function onSellMany(player: Player, ids: unknown)
 		edited.gems += sold * Config.Gacha.SellValue
 	end)
 	if sold > 0 then
-		Tell.notice(player, Config.RarityTiers[1].color, "Sold {n} weapons · +{gems} gems", { n = sold, gems = Format.short(sold * Config.Gacha.SellValue, player) })
+		PlayerData.addCoins(player, coins)
+		Tell.notice(player, Config.RarityTiers[1].color, "Sold {n} weapons · +{coins} coins", { n = sold, coins = Format.short(coins, player) })
 	end
 end
 

@@ -130,12 +130,12 @@ local function buildUi()
 	decision.Name = "Decision"
 	decision.AnchorPoint = Vector2.new(0.5, 0.5)
 	decision.Position = UDim2.fromScale(0.5, 0.5)
-	decision.Size = UDim2.fromOffset(470, 300)
+	decision.Size = UDim2.fromOffset(500, 372)
 	decision.Visible = false
 	decision.ZIndex = 30
 	decision.Parent = root
-	Ui.round(decision, 14)
-	Ui.stroke(decision, BLACK, 4)
+	Ui.round(decision, 16)
+	Ui.stroke(decision, BLACK, 5)
 	Ui.panel(decision, Color3.fromRGB(44, 40, 90))
 	-- Entra como las ventanas pequeñas; se cierra al instante (su Visible decide si se puede martillar).
 	local decisionScale = Instance.new("UIScale")
@@ -147,42 +147,135 @@ local function buildUi()
 	decisionBody.BackgroundTransparency = 1
 	decisionBody.ZIndex = 31
 	decisionBody.Parent = decision
-	local decisionTitle = Ui.label(decisionBody, 30)
-	decisionTitle.Position = UDim2.fromOffset(0, 14)
-	decisionTitle.Size = UDim2.new(1, 0, 0, 40)
+	-- Pedido por el usuario (el de antes, cuatro textos sueltos sobre un panel, le parecía muy feo): cabecera de
+	-- color como las ventanas, el grado en una placa de su color con rayos que laten detrás, el aviso en una
+	-- franja dorada y "Quedarme" como botón principal, más grande que "Reforjar".
+	local decisionHeader = Instance.new("Frame")
+	decisionHeader.Name = "Header"
+	decisionHeader.Size = UDim2.new(1, 0, 0, 56)
+	decisionHeader.BackgroundColor3 = WHITE
+	decisionHeader.BorderSizePixel = 0
+	decisionHeader.ClipsDescendants = true
+	decisionHeader.Parent = decisionBody
+	Ui.round(decisionHeader, 16)
+	Ui.gradient(decisionHeader, Color3.fromRGB(255, 150, 60), Color3.fromRGB(225, 70, 90), 8)
+	Ui.stripes(decisionHeader, Vector2.new(500, 56), 26, 0.88)
+	local decisionTitle = Ui.label(decisionHeader, 30)
+	decisionTitle.Name = "Title"
+	decisionTitle.Position = UDim2.fromOffset(14, 0)
+	decisionTitle.Size = UDim2.new(1, -28, 1, 0)
 	decisionTitle.Text = Lang.t(nil, "REFORGE THIS GRADE?")
-	local decisionGrade = Ui.label(decisionBody, 64)
-	decisionGrade.Position = UDim2.fromOffset(0, 62)
-	decisionGrade.Size = UDim2.new(1, 0, 0, 80)
-	local decisionInfo = Ui.label(decisionBody, 22)
-	decisionInfo.Position = UDim2.fromOffset(0, 146)
-	decisionInfo.Size = UDim2.new(1, 0, 0, 30)
-	local decisionOld = Ui.label(decisionBody, 20)
-	decisionOld.Position = UDim2.fromOffset(0, 182)
-	decisionOld.Size = UDim2.new(1, 0, 0, 30)
+	decisionTitle.TextScaled = true
+	local titleLimit = Instance.new("UITextSizeConstraint")
+	titleLimit.MaxTextSize = 30
+	titleLimit.MinTextSize = 16
+	titleLimit.Parent = decisionTitle
+
+	-- Placa del grado: rayos detrás, nombre grande y, debajo, lo que da en una pastilla oscura.
+	local decisionCard = Instance.new("Frame")
+	decisionCard.Name = "Card"
+	decisionCard.AnchorPoint = Vector2.new(0.5, 0)
+	decisionCard.Position = UDim2.new(0.5, 0, 0, 72)
+	decisionCard.Size = UDim2.new(1, -48, 0, 150)
+	decisionCard.BackgroundColor3 = WHITE
+	decisionCard.BorderSizePixel = 0
+	decisionCard.ClipsDescendants = true
+	decisionCard.Parent = decisionBody
+	Ui.round(decisionCard, 14)
+	local decisionCardStroke = Ui.stroke(decisionCard, BLACK, 4)
+	local decisionCardColors = Instance.new("UIGradient")
+	decisionCardColors.Rotation = 90
+	decisionCardColors.Parent = decisionCard
+	local raysBox = Instance.new("Frame")
+	raysBox.Name = "Rays"
+	raysBox.AnchorPoint = Vector2.new(0.5, 0.5)
+	raysBox.Position = UDim2.fromScale(0.5, 0.42)
+	raysBox.Size = UDim2.fromOffset(520, 520)
+	raysBox.BackgroundTransparency = 1
+	raysBox.Parent = decisionCard
+	local decisionRays = Ui.image(raysBox, "boton_rayos")
+	decisionRays.ImageTransparency = 0.72
+	-- Laten en vez de girar: lo girado no lo recorta la placa y se saldría de ella.
+	TweenService:Create(decisionRays, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { ImageTransparency = 0.5 }):Play()
+	local decisionGrade = Ui.label(decisionCard, 64)
+	decisionGrade.Name = "Grade"
+	decisionGrade.Position = UDim2.fromOffset(10, 8)
+	decisionGrade.Size = UDim2.new(1, -20, 0, 88)
+	decisionGrade.TextScaled = true
+	decisionGrade:FindFirstChildOfClass("UIStroke").Thickness = 4
+	local gradeLimit = Instance.new("UITextSizeConstraint")
+	gradeLimit.MaxTextSize = 68
+	gradeLimit.MinTextSize = 24
+	gradeLimit.Parent = decisionGrade
+	local infoPill = Instance.new("Frame")
+	infoPill.Name = "Info"
+	infoPill.AnchorPoint = Vector2.new(0.5, 1)
+	infoPill.Position = UDim2.new(0.5, 0, 1, -12)
+	infoPill.Size = UDim2.new(1, -60, 0, 36)
+	infoPill.BackgroundColor3 = Color3.fromRGB(24, 22, 40)
+	infoPill.BackgroundTransparency = 0.15
+	infoPill.BorderSizePixel = 0
+	infoPill.Parent = decisionCard
+	Ui.round(infoPill, 18)
+	Ui.stroke(infoPill, BLACK, 2)
+	local decisionInfo = Ui.label(infoPill, 21)
+	decisionInfo.Size = UDim2.new(1, -16, 1, 0)
+	decisionInfo.Position = UDim2.fromOffset(8, 0)
+	decisionInfo.TextTruncate = Enum.TextTruncate.AtEnd
+
+	-- Aviso: franja dorada con un "!" delante.
+	local warning = Instance.new("Frame")
+	warning.Name = "Warning"
+	warning.AnchorPoint = Vector2.new(0.5, 0)
+	warning.Position = UDim2.new(0.5, 0, 0, 234)
+	warning.Size = UDim2.new(1, -48, 0, 40)
+	warning.BackgroundColor3 = Color3.fromRGB(255, 205, 70)
+	warning.BackgroundTransparency = 0.82
+	warning.BorderSizePixel = 0
+	warning.Parent = decisionBody
+	Ui.round(warning, 10)
+	Ui.stroke(warning, Color3.fromRGB(255, 205, 70), 2)
+	local bang = Ui.label(warning, 22)
+	bang.Name = "Bang"
+	bang.AnchorPoint = Vector2.new(0, 0.5)
+	bang.Position = UDim2.new(0, 8, 0.5, 0)
+	bang.Size = UDim2.fromOffset(26, 26)
+	bang.BackgroundTransparency = 0
+	bang.BackgroundColor3 = Color3.fromRGB(255, 190, 50)
+	bang.Text = "!"
+	Ui.round(bang, 13)
+	Ui.stroke(bang, BLACK, 2)
+	local decisionOld = Ui.label(warning, 18)
+	decisionOld.Position = UDim2.fromOffset(42, 0)
+	decisionOld.Size = UDim2.new(1, -50, 1, 0)
+	decisionOld.TextXAlignment = Enum.TextXAlignment.Left
+	decisionOld.TextColor3 = Color3.fromRGB(255, 232, 150)
+	decisionOld.TextScaled = true
+	local oldLimit = Instance.new("UITextSizeConstraint")
+	oldLimit.MaxTextSize = 18
+	oldLimit.MinTextSize = 11
+	oldLimit.Parent = decisionOld
+
 	local decisionButtons = Instance.new("Frame")
-	decisionButtons.Size = UDim2.new(1, -40, 0, 64)
+	decisionButtons.Name = "Buttons"
+	decisionButtons.Size = UDim2.new(1, -48, 0, 64)
 	decisionButtons.AnchorPoint = Vector2.new(0.5, 1)
-	decisionButtons.Position = UDim2.new(0.5, 0, 1, -20)
+	decisionButtons.Position = UDim2.new(0.5, 0, 1, -18)
 	decisionButtons.BackgroundTransparency = 1
 	decisionButtons.ZIndex = 31
 	decisionButtons.Parent = decisionBody
-	local decisionLayout = Instance.new("UIListLayout")
-	decisionLayout.FillDirection = Enum.FillDirection.Horizontal
-	decisionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	decisionLayout.Padding = UDim.new(0, 18)
-	decisionLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	decisionLayout.Parent = decisionButtons
 	local skipButton = Ui.button(decisionButtons, Lang.t(nil, "Reforge"), Ui.COLORS.red)
 	skipButton.Name = "Skip"
-	skipButton.LayoutOrder = 1
-	skipButton.Size = UDim2.fromOffset(200, 60)
-	skipButton.TextSize = 28
+	skipButton.AnchorPoint = Vector2.new(0, 1)
+	skipButton.Position = UDim2.fromScale(0, 1)
+	skipButton.Size = UDim2.new(0.38, -6, 0, 54)
+	skipButton.TextSize = 22
 	local keepButton = Ui.button(decisionButtons, Lang.t(nil, "Keep it"), Ui.COLORS.green)
 	keepButton.Name = "Keep"
-	keepButton.LayoutOrder = 2
-	keepButton.Size = UDim2.fromOffset(200, 60)
-	keepButton.TextSize = 28
+	keepButton.AnchorPoint = Vector2.new(1, 1)
+	keepButton.Position = UDim2.fromScale(1, 1)
+	keepButton.Size = UDim2.new(0.62, -6, 0, 64)
+	keepButton.TextSize = 30
 	Ui.layer(decision, 30) -- todo en una capa: manda el orden del árbol y el relieve queda encima
 
 	local flash = Instance.new("Frame")
@@ -225,7 +318,7 @@ local function buildUi()
 	gradeInfo.Position = UDim2.fromScale(0, 0.62)
 	gradeInfo.Size = UDim2.fromScale(1, 0.3)
 
-	ui = { decision = decision, decisionGrade = decisionGrade, decisionInfo = decisionInfo, decisionOld = decisionOld, skip = skipButton, keep = keepButton, gui = gui, gradeBox = gradeBox, gradeScale = gradeScale, gradeLabel = gradeLabel, gradeRainbow = gradeRainbow, gradeInfo = gradeInfo, hint = hint, cost = cost, exit = exit, weapon = weapon, auto = auto, settings = settings, flash = flash, big = big, bigScale = bigScale }
+	ui = { decisionCardColors = decisionCardColors, decisionCardStroke = decisionCardStroke, decisionRays = decisionRays, decision = decision, decisionGrade = decisionGrade, decisionInfo = decisionInfo, decisionOld = decisionOld, skip = skipButton, keep = keepButton, gui = gui, gradeBox = gradeBox, gradeScale = gradeScale, gradeLabel = gradeLabel, gradeRainbow = gradeRainbow, gradeInfo = gradeInfo, hint = hint, cost = cost, exit = exit, weapon = weapon, auto = auto, settings = settings, flash = flash, big = big, bigScale = bigScale }
 end
 
 local function refreshUi()
@@ -578,7 +671,12 @@ local function confirmReforge(): boolean
 	end
 	local percent = Modifiers.formatPercent(Modifiers.percent("grades", index))
 	ui.decisionGrade.Text = Lang.t(nil, "Grade {name}", { name = Lang.t(nil, entry.name) })
-	ui.decisionGrade.TextColor3 = if entry.rainbow then WHITE else entry.color
+	-- El nombre en blanco sobre la placa del color del grado (oscurecida, para que se lea).
+	local tone = if entry.rainbow then Color3.fromRGB(190, 110, 255) else entry.color
+	ui.decisionGrade.TextColor3 = WHITE
+	ui.decisionCardColors.Color = ColorSequence.new(tone:Lerp(BLACK, 0.25), tone:Lerp(BLACK, 0.68))
+	ui.decisionCardStroke.Color = tone:Lerp(BLACK, 0.75)
+	ui.decisionRays.ImageColor3 = tone:Lerp(WHITE, 0.5)
 	ui.decisionInfo.Text = `{Modifiers.effect(entry)} · {percent}`
 	ui.decisionOld.Text = Lang.t(nil, "It's the one you wanted: if you reforge, you lose it")
 	ui.decision.Visible = true

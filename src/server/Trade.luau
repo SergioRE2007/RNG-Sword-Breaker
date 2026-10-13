@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Stats = require(ReplicatedStorage.Shared.Stats)
 local Armor = require(script.Parent.Armor)
 local PlayerData = require(script.Parent.PlayerData)
 local Lang = require(ReplicatedStorage.Shared.Lang)
@@ -272,8 +273,9 @@ local function problem(side, other): any
 		return why("{name} doesn't have room for that much armor", side)
 	end
 	for index in incoming.artifacts do
-		if table.find(data.artifacts, index) and not offer.artifacts[index] then
-			return why("{name} already has the accessory {item}", side, Config.Artifacts[index].name)
+		-- Se pueden tener repetidos, hasta el tope de copias (un trato mueve una copia de cada accesorio).
+		if Stats.copies(data.artifacts, index) >= Config.ArtifactCopies and not offer.artifacts[index] then
+			return why("{name} can't hold more of the accessory {item}", side, Config.Artifacts[index].name)
 		end
 	end
 	return nil
@@ -314,8 +316,9 @@ local function take(side)
 			local position = table.find(data.artifacts, index)
 			if position then
 				table.remove(data.artifacts, position)
+				-- Si era su última copia, deja de llevarlo puesto.
 				local worn = table.find(data.gear, index)
-				if worn then
+				if worn and not table.find(data.artifacts, index) then
 					table.remove(data.gear, worn)
 				end
 				table.insert(pack.artifacts, index)
@@ -346,7 +349,7 @@ local function give(side, pack)
 			data.nextArmorId += 1
 		end
 		for _, index in pack.artifacts do
-			if not table.find(data.artifacts, index) then
+			if Stats.copies(data.artifacts, index) < Config.ArtifactCopies then
 				table.insert(data.artifacts, index)
 			end
 		end

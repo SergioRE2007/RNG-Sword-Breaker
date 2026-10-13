@@ -144,20 +144,39 @@ local function onEquip(player: Player, id: unknown)
 	end)
 end
 
-local function onSalvage(player: Player, id: unknown)
+-- Desmonta una pieza (id) o varias de una vez (lista de ids; pedido por el usuario: de una en una era muy lento).
+-- De la lista solo cuentan los ids enteros de piezas que tiene y que NO lleva puestas: lo equipado se desmonta
+-- solo de una en una, a propósito.
+local function onSalvage(player: Player, ids: unknown)
 	local data = PlayerData.read(player)
 	if not data then
 		return
 	end
-	local piece, position = find(data, id)
-	if not piece then
-		return
+	local many = type(ids) == "table"
+	local wanted, count = {}, 0
+	for _, id in if many then ids :: { unknown } else { ids } do
+		count += 1
+		if count > cfg.MaxPieces then
+			return
+		end
+		if type(id) ~= "number" or id ~= id or id <= 0 or id % 1 ~= 0 then
+			return
+		end
+		wanted[id] = true
 	end
-	local crystals = ArmorStats.salvage(piece)
+	-- Sin esperas entre validar y retirar: todo dentro del mismo cambio.
 	PlayerData.editArmor(player, function(edited)
-		table.remove(edited.armor, position)
-		if edited.armorWorn[piece.slot] == piece.id then
-			edited.armorWorn[piece.slot] = nil
+		local crystals = 0
+		for position = #edited.armor, 1, -1 do
+			local piece = edited.armor[position]
+			local worn = edited.armorWorn[piece.slot] == piece.id
+			if wanted[piece.id] and not (many and worn) then
+				crystals += ArmorStats.salvage(piece)
+				table.remove(edited.armor, position)
+				if worn then
+					edited.armorWorn[piece.slot] = nil
+				end
+			end
 		end
 		edited.items[CRYSTAL] += crystals
 	end)

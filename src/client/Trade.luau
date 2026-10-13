@@ -685,8 +685,13 @@ local function buildTrade()
 				add(armorCell(stock, piece), piece.id, -(piece.level * 100 + piece.quality))
 			end
 		elseif tab == "artifacts" then
+			-- Una casilla por accesorio aunque tenga copias repetidas: un trato mueve una copia de cada uno.
+			local seen = {}
 			for _, index in Stats.list(player, "Artifacts") do
-				add(artifactCell(stock, index), index, -index)
+				if not seen[index] then
+					seen[index] = true
+					add(artifactCell(stock, index), index, -index)
+				end
 			end
 		end
 		paintStock()

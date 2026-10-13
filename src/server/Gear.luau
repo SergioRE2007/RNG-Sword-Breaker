@@ -12,8 +12,9 @@ local Tell = require(script.Parent.Tell)
 
 local Gear = {}
 
--- Se llama cuando el jugador rompe un objeto. Prueba del artefacto más raro al más común,
--- saltando los que ya tiene.
+-- Se llama cuando el jugador rompe un objeto. Prueba del artefacto más raro al más común, saltando los que ya
+-- tiene repetidos hasta el tope (Config.ArtifactCopies; pedido por el usuario: se pueden tener varios iguales,
+-- para comerciar con los que sobran). Sin tope, con la suerte alta caería uno con cada objeto.
 function Gear.onBroken(player: Player)
 	local data = PlayerData.read(player)
 	if not data then
@@ -22,13 +23,15 @@ function Gear.onBroken(player: Player)
 	local luck = Stats.luck(player)
 	for index = #Config.Artifacts, 1, -1 do
 		local artifact = Config.Artifacts[index]
-		if not table.find(data.artifacts, index) and Chance.roll(luck / artifact.rarity) then
+		local owned = Stats.copies(data.artifacts, index)
+		if owned < Config.ArtifactCopies and Chance.roll(luck / artifact.rarity) then
 			PlayerData.edit(player, function(edited)
 				table.insert(edited.artifacts, index)
 				table.sort(edited.artifacts)
 			end)
 			Tell.notice(player, artifact.color, "Accessory: {name}!", { name = Lang.t(player, artifact.name) })
-			if artifact.rarity / luck >= Config.AnnounceOdds then
+			-- Solo se anuncia a todos el primero: los repetidos no son noticia.
+			if owned == 0 and artifact.rarity / luck >= Config.AnnounceOdds then
 				Tell.all(artifact.color, function(reader)
 					return Lang.t(reader, "{player} found {name} (1 in {n})!", {
 						player = player.DisplayName,

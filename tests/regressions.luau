@@ -928,8 +928,10 @@ do
 			local level = d.upgrades[name]
 			ok = ok and type(level) == "number" and level >= 0 and level <= upgrade.maxLevel and level % 1 == 0
 		end
-		for position, index in d.artifacts do
-			ok = ok and cfg.Artifacts[index] ~= nil and table.find(d.artifacts, index) == position
+		local artifactCopies = {}
+		for _, index in d.artifacts do
+			artifactCopies[index] = (artifactCopies[index] or 0) + 1
+			ok = ok and cfg.Artifacts[index] ~= nil and artifactCopies[index] <= cfg.ArtifactCopies
 		end
 		ok = ok and #d.gear <= cfg.GearSlots
 		for position, index in d.gear do
@@ -1193,7 +1195,7 @@ do
 	equal(bits.items.missionToken, 7, "objeto guardado como texto")
 	equal(bits.items.inventado, nil, "objeto que no existe")
 	equal(bits.items[potionKey], 0, "objeto que no es un número")
-	same(bits.artifacts, { 2, 1 }, "accesorios: solo los que existen, sin repetir")
+	same(bits.artifacts, { 2, 2, 1 }, "accesorios: solo los que existen (los repetidos valen)")
 	same(bits.gear, { 2, 1 }, "equipados: solo los que se tienen, sin repetir")
 	same(bits.index, { code(4, 1, 1) }, "índice roto limpio")
 	equal(bits.pity.traits[1], 0, "pity que no es una tabla")
@@ -1207,7 +1209,7 @@ do
 	for index = 1, 100 do wearing[index] = 1 + index % math.min(5, lastArtifact) end
 	local codes = table.create(10000, code(4, 1, 1))
 	local lists = stable({ artifacts = owned, gear = wearing, index = codes }, "listas enormes")
-	equal(#lists.artifacts, math.min(5, lastArtifact), "accesorios repetidos miles de veces")
+	equal(#lists.artifacts, math.min(5, lastArtifact) * cfg.ArtifactCopies, "accesorios repetidos miles de veces: hasta el tope de copias")
 	equal(#lists.gear, math.min(cfg.GearSlots, lastArtifact), "equipados recortados a los huecos")
 	equal(#lists.index, 1, "índice repetido miles de veces")
 	for _, bad in { "x", 5, true } do

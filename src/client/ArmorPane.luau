@@ -76,6 +76,32 @@ local function preview(cell: GuiObject, piece)
 	viewport.CurrentCamera = camera
 end
 
+-- X roja sobre las piezas marcadas para desmontar, como la del menú de vender armas.
+local MARK_COLOR = Color3.fromRGB(235, 45, 55)
+local function salvageMark(cell: GuiObject): Frame
+	local mark = Instance.new("Frame")
+	mark.Name = "SalvageMark"
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.BackgroundTransparency = 1
+	mark.Visible = false
+	mark.ZIndex = 5
+	mark.Parent = cell
+	for _, turn in { 45, -45 } do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Position = UDim2.fromScale(0.5, 0.5)
+		bar.Size = UDim2.fromScale(0.95, 0.15)
+		bar.Rotation = turn
+		bar.BackgroundColor3 = MARK_COLOR
+		bar.BackgroundTransparency = 0.25
+		bar.BorderSizePixel = 0
+		bar.ZIndex = 5
+		bar.Parent = mark
+		Ui.round(bar, 6)
+	end
+	return mark
+end
+
 -- Stat principal de la pieza para el pie de la casilla: el primero de su lista.
 local function mainStat(piece): string
 	local first = piece.stats[1]
@@ -213,24 +239,23 @@ function ArmorPane.build(pane: Frame, helpers)
 	bestButton.Position = UDim2.new(0.5, (RIGHT - 8) / 2, 1, -12)
 	bestButton.Size = UDim2.new(1 / 3, -(RIGHT + 28) / 3, 0, BAR)
 	bestButton.TextSize = 19
-	bestButton.Activated:Connect(function()
-		if #ArmorStats.pieces(player) > 0 then
-			Sfx.play("equip")
-			Remotes.EquipArmor:FireServer("best")
-		else
-			Sfx.play("error")
-		end
-	end)
-	local salvageButton = Ui.button(pane, Lang.t(nil, "Salvage"), Ui.COLORS.red)
+	local salvageButton = Ui.button(pane, Lang.t(nil, "Salvage several"), Ui.COLORS.red)
 	salvageButton.Name = "Salvage"
 	salvageButton.AnchorPoint = Vector2.new(1, 1)
 	salvageButton.Position = UDim2.new(1, -12, 1, -12)
 	salvageButton.Size = UDim2.new(1 / 3, -(RIGHT + 28) / 3, 0, BAR)
 	salvageButton.TextSize = 19
+	equipButton.TextWrapped = true
 
 	local selected: number? = nil
 	local cells = {} -- [id] = casilla
 	local shownRaw: string? = nil
+	-- Desmontar varias (pedido por el usuario: de una en una era muy lento): el botón Desmontar entra en este modo,
+	-- en el que pulsar una pieza la marca con una X; los otros dos botones pasan a "Todas las sin equipar" y
+	-- "Cancelar", y Desmontar pide un segundo toque para confirmar. Las equipadas no se marcan.
+	local salvaging = false
+	local marked = {} -- [id] = true
+	local confirming = false
 
 	local function find(id: number?)
 		for _, piece in ArmorStats.pieces(player) do
@@ -244,29 +269,105 @@ function ArmorPane.build(pane: Frame, helpers)
 	local function paintSelection()
 		local piece = find(selected)
 		for id, cell in cells do
-			(cell :: any).Select.Visible = id == selected
+			local item = cell :: any
+			item.Select.Visible = not salvaging and id == selected
+			item.SalvageMark.Visible = salvaging and marked[id] == true
 		end
+		if salvaging then
+			local count, crystals = 0, 0
+			for _, other in ArmorStats.pieces(player) do
+				if marked[other.id] then
+					count += 1
+					crystals += ArmorStats.salvage(other)
+				end
+			end
+			if count == 0 then
+				confirming = false
+			end
+			equipButton.Text = Lang.t(nil, "Select all")
+			equipButton.TextSize = 18
+			salvageButton.TextSize = 15
+			equipButton.BackgroundColor3 = Ui.COLORS.blue
+			bestButton.Text = Lang.t(nil, "Cancel")
+			bestButton.BackgroundColor3 = Ui.COLORS.gray
+			salvageButton.Text = Lang.t(nil, if confirming then "Sure? {n}\n+{crystals} crystals" else "Salvage {n}\n+{crystals} crystals", { n = count, crystals = Format.short(crystals) })
+			salvageButton.BackgroundColor3 = if count > 0 then Ui.COLORS.red else Ui.COLORS.gray
+			return
+		end
+		equipButton.TextSize = 22
+		salvageButton.TextSize = 19
+		bestButton.Text = Lang.t(nil, "Equip best")
+		bestButton.BackgroundColor3 = Ui.COLORS.green
 		equipButton.Text = Lang.t(nil, if piece and piece.worn then "Unequip" else "Equip")
 		equipButton.BackgroundColor3 = if not piece then Ui.COLORS.gray elseif piece.worn then Ui.COLORS.orange else Ui.COLORS.blue
-		local crystals = if piece then ArmorStats.salvage(piece) else 0
-		salvageButton.Text = if not piece then Lang.t(nil, "Salvage") elseif crystals > 0 then Lang.t(nil, "Salvage\n+{n} crystals", { n = Format.short(crystals) }) else Lang.t(nil, "Salvage\nno crystals")
-		salvageButton.BackgroundColor3 = if piece then Ui.COLORS.red else Ui.COLORS.gray
+		salvageButton.Text = Lang.t(nil, "Salvage several")
+		salvageButton.BackgroundColor3 = Ui.COLORS.red
+	end
+
+	local function refreshHint()
+		local pieces = ArmorStats.pieces(player)
+		hint.Text = if #pieces == 0
+			then Lang.t(nil, "No armor: it drops in the hub dungeons.")
+			elseif salvaging then Lang.t(nil, "Tap the pieces you want to salvage")
+			else Lang.t(nil, "Pieces {n}/{max} · pick one and press Equip", { n = #pieces, max = cfg.MaxPieces })
+		hint.TextColor3 = if salvaging then Ui.COLORS.red:Lerp(WHITE, 0.45) else WHITE
+	end
+
+	local function setSalvaging(on: boolean)
+		salvaging = on
+		confirming = false
+		table.clear(marked)
+		-- Entra con la pieza elegida ya marcada, si no la lleva puesta.
+		local piece = find(selected)
+		if on and piece and not piece.worn then
+			marked[piece.id] = true
+		end
+		refreshHint()
+		paintSelection()
 	end
 
 	equipButton.Activated:Connect(function()
-		if find(selected) then
+		if salvaging then
+			confirming = false
+			for _, piece in ArmorStats.pieces(player) do
+				marked[piece.id] = if piece.worn then nil else true
+			end
+			paintSelection()
+		elseif find(selected) then
 			Sfx.play("equip")
 			Remotes.EquipArmor:FireServer(selected)
 		else
 			Sfx.play("error")
 		end
 	end)
-	salvageButton.Activated:Connect(function()
-		if find(selected) then
-			Remotes.SalvageArmor:FireServer(selected)
-			selected = nil
+	-- "Equipar mejores" (la mejor pieza de cada hueco, elegida en el servidor) o, desmontando, "Cancelar".
+	bestButton.Activated:Connect(function()
+		if salvaging then
+			setSalvaging(false)
+		elseif #ArmorStats.pieces(player) > 0 then
+			Sfx.play("equip")
+			Remotes.EquipArmor:FireServer("best")
 		else
 			Sfx.play("error")
+		end
+	end)
+	salvageButton.Activated:Connect(function()
+		if not salvaging then
+			setSalvaging(true)
+		elseif next(marked) == nil then
+			Sfx.play("error")
+		elseif not confirming then
+			confirming = true
+			paintSelection()
+		else
+			local ids = {}
+			for id in marked do
+				table.insert(ids, id)
+			end
+			Sfx.play("sell")
+			Remotes.SalvageArmor:FireServer(ids)
+			selected = nil
+			setSalvaging(false)
 		end
 	end)
 
@@ -294,8 +395,19 @@ function ArmorPane.build(pane: Frame, helpers)
 			Ui.tip(cell, function()
 				return pieceTip(find(piece.id) or piece)
 			end, true)
+			salvageMark(cell)
 			cell.Activated:Connect(function()
-				selected = piece.id
+				if salvaging then
+					local current = find(piece.id)
+					if not current or current.worn then
+						Sfx.play("error")
+						return
+					end
+					confirming = false
+					marked[piece.id] = if marked[piece.id] then nil else true
+				else
+					selected = piece.id
+				end
 				paintSelection()
 			end)
 			cells[piece.id] = cell
@@ -321,6 +433,13 @@ function ArmorPane.build(pane: Frame, helpers)
 		end
 		if not find(selected) then
 			selected = nil
+		end
+		-- Las marcadas que ya no están (o que se han equipado) dejan de estarlo.
+		for id in marked do
+			local piece = find(id)
+			if not piece or piece.worn then
+				marked[id] = nil
+			end
 		end
 		paintSelection()
 
@@ -354,9 +473,7 @@ function ArmorPane.build(pane: Frame, helpers)
 			entry.label.Text = if piece then mainStat(piece) else Lang.t(nil, cfg.Slots[slot].name)
 		end
 
-		hint.Text = if #pieces == 0
-			then Lang.t(nil, "No armor: it drops in the hub dungeons.")
-			else Lang.t(nil, "Pieces {n}/{max} · pick one and press Equip", { n = #pieces, max = cfg.MaxPieces })
+		refreshHint()
 		local lines = {}
 		for _, stat in cfg.StatOrder do
 			local total = player:GetAttribute("Armor_" .. stat) or 0
@@ -369,6 +486,9 @@ function ArmorPane.build(pane: Frame, helpers)
 	return {
 		refresh = refresh,
 		show = function()
+			-- Al volver a la pestaña, el modo de desmontar varias empieza apagado.
+			salvaging, confirming = false, false
+			table.clear(marked)
 			helpers.character(viewport)
 			refresh()
 		end,

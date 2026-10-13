@@ -584,7 +584,12 @@ local function load(player: Player)
 				end
 				if type(saved.artifacts) == "table" then
 					for _, index in saved.artifacts do
-						if type(index) == "number" and Config.Artifacts[index] and not table.find(data.artifacts, index) then
+						-- Repetidos sí, hasta el tope de copias de cada uno.
+						local copies = 0
+						for _, owned in data.artifacts do
+							copies += if owned == index then 1 else 0
+						end
+						if type(index) == "number" and Config.Artifacts[index] and copies < Config.ArtifactCopies then
 							table.insert(data.artifacts, index)
 						end
 					end

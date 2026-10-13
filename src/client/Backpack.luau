@@ -952,6 +952,11 @@ function Backpack.start()
 			Sfx.play("equip")
 			Remotes.ToggleGear:FireServer(index)
 		end)
+		-- Cuántas copias tiene (se pueden tener repetidos, Config.ArtifactCopies): "x2" arriba a la izquierda.
+		local copies = Ui.cellTag(cell, "", Ui.COLORS.dark)
+		copies.Name = "Copies"
+		copies.Size = UDim2.fromOffset(32, 22)
+		copies.Visible = false
 		gearCells[index] = cell
 	end
 
@@ -984,8 +989,11 @@ function Backpack.start()
 			then Lang.t(nil, "Break objects to get accessories.")
 			else Lang.t(nil, "Wearing {n}/{max}", { n = #worn, max = Config.GearSlots })
 		for index, cell in gearCells do
-			cell.Visible = table.find(artifacts, index) ~= nil
+			local owned = Stats.copies(artifacts, index)
+			cell.Visible = owned > 0
 			cell.Select.Visible = table.find(worn, index) ~= nil
+			cell.Copies.Visible = owned > 1
+			cell.Copies.Text = "x" .. owned
 		end
 		for slot, entry in slots do
 			local index = worn[slot]
