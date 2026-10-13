@@ -844,15 +844,18 @@ local function buildShop(kind: string)
 			end
 		end
 		local worn = Stats.list(player, "Loadout")
-		-- De la más rara a la más común; dentro de la misma rareza, de más a menos daño.
+		-- Como en la mochila: de más a menos daño; a igualdad, la más rara (arma, metal y tamaño) primero.
 		local copies = Stats.swords(player)
 		table.sort(copies, function(a, b)
-			-- La espada inicial no tiene rareza: cuenta como la más común.
-			local rarityA, rarityB = Config.Swords[a.sword].rarity or 1, Config.Swords[b.sword].rarity or 1
+			local damageA, damageB = Stats.swordDamage(a), Stats.swordDamage(b)
+			if damageA ~= damageB then
+				return damageA > damageB
+			end
+			local rarityA, rarityB = Stats.rarity(a), Stats.rarity(b)
 			if rarityA ~= rarityB then
 				return rarityA > rarityB
 			end
-			return Stats.swordDamage(a) > Stats.swordDamage(b)
+			return a.id < b.id
 		end)
 		for position, copy in copies do
 			local sword = Config.Swords[copy.sword]
