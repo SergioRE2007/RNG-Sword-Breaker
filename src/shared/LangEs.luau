@@ -928,4 +928,12 @@ return {
 	["Luck for everyone"] = "Suerte para todos",
 	["Next weather"] = "Próximo clima",
 	["WEATHER EVENT"] = "EVENTO DE CLIMA",
+	-- Pantalla de carga (src/first/Loading)
+	["Loading"] = "Cargando",
+	["Skip"] = "Saltar",
+	["Break the objects in your plot to get weapons!"] = "¡Rompe los objetos de tu parcela para conseguir armas!",
+	["Rarer objects drop rarer weapons."] = "Los objetos más raros sueltan armas más raras.",
+	["Leave your spare weapons in the Gold Bag to earn coins."] = "Deja en la Bolsa de oro las armas que te sobren para ganar monedas.",
+	["Dungeons drop armor and crystals."] = "Las mazmorras sueltan armadura y cristales.",
+	["Daily missions give tickets for the Shop."] = "Las misiones diarias dan tickets para la Tienda.",
 }
