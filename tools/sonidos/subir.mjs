@@ -21,7 +21,8 @@ for (const file of fs.readdirSync(folder).filter((name) => /\.(mp3|wav)$/.test(n
 		assetType: "Audio",
 		displayName: name,
 		description: "Efecto de sonido del juego",
-		creationContext: { creator: { userId: String(userId) } },
+		// Con "g" delante el id es de un grupo ("g1002188803"): el audio es del grupo y suena en sus experiencias.
+		creationContext: { creator: userId.startsWith("g") ? { groupId: userId.slice(1) } : { userId: String(userId) } },
 	}));
 	form.append("fileContent", new Blob([fs.readFileSync(path.join(folder, file))], { type: file.endsWith(".wav") ? "audio/wav" : "audio/mpeg" }), file);
 	const response = await fetch("https://apis.roblox.com/assets/v1/assets", { method: "POST", headers: { "x-api-key": key }, body: form });

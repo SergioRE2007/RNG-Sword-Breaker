@@ -97,6 +97,18 @@ const BATCHES = {
 		s("forge_hit", 0.7, "Forja: martillazo", "Blacksmith hammer striking hot metal on an anvil, single heavy metallic clang with sparks, punchy, short", 3),
 		s("forge_super", 1.5, "Forja: súper martillazo", "Massive blacksmith hammer strike on an anvil, huge ringing metallic clang with a magical burst of sparks, epic, short", 2),
 	],
+	// Cinemáticas de las tiradas más raras (client/RollCinematic): estrella fugaz, herrero y supernova.
+	cinematica: [
+		s("cine_fall", 2.6, "Estrella: cae del cielo", "Shooting star falling from the sky, long descending magical whistle with a sparkling shimmering tail, getting closer and louder, no impact, cinematic game sound", 2),
+		s("cine_impact", 2.5, "Estrella: impacto en el suelo", "Falling star crashing into the ground, deep heavy boom with a bright magical sparkle burst and scattering debris, cinematic game sound", 2),
+		s("cine_smith", 2.5, "Herrero: aparece el gigante", "Giant ghostly blacksmith spirit appearing, deep ominous rumbling swell with a low ethereal male choir, dark and powerful, cinematic game sound", 2),
+		s("cine_hammer", 1.5, "Herrero: martillazo", "Colossal hammer striking an anvil in a vast hall, single huge ringing metallic clang with a deep boom and long echo, cinematic", 2),
+		s("cine_quench", 3.0, "Herrero: el último martillazo y el temple", "Massive final hammer strike on an anvil followed by a red-hot blade quenched in water, huge clang then a loud long steam hiss with a magical shimmer, cinematic", 2),
+		s("cine_star", 2.5, "Supernova: aparece la estrella", "A giant star igniting in deep space, low cosmic hum swelling up with a soft shimmering glow, vast and mysterious, cinematic game sound", 2),
+		s("cine_collapse", 3.0, "Supernova: la estrella se encoge", "Star collapsing inward, energy being sucked in, rising tension riser accelerating and rising in pitch, ending in an abrupt cut to silence, cinematic", 2),
+		s("cine_boom", 4.0, "Supernova: estalla", "Supernova explosion in space, enormous deep cosmic blast with a bright shockwave and a long shimmering sparkling tail, epic cinematic game sound", 2),
+		s("cine_gold", 4.0, "Supernova absoluta: explosión dorada", "Second golden explosion, huge bright magical blast followed by a triumphant heavenly choir and a rain of sparkling chimes, legendary jackpot, epic cinematic game sound", 2),
+	],
 	mazmorra: [
 		s("wave", 1.2, "Empieza una oleada", "Enemy wave incoming, short dramatic war drum hit with a low horn stab, game alert sound", 2),
 		s("hurt", 0.5, "Te hacen daño", "Player taking damage, short blunt punch impact with a soft thud, cartoon game hit sound, no voice, dry", 3),

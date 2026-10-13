@@ -43,11 +43,18 @@ local EVENTS = {
 	reveal_4 = { 109717760520982, 0.7, 1, 1 },
 	reveal_5 = { 118337535145235, 0.8, 1, 1 },
 	collect = { 126460414904264, 0.4, 1, 1 },
-	-- Cinemáticas de las tiradas más raras (client/RollCinematic): con las grabaciones de los climas (estrella que
-	-- cae, meteorito y trueno).
-	cine_fall = { { 72651967546338, 124214242227217 }, 0.6, 1, 1 },
-	cine_impact = { { 131981585599369, 98682835409009 }, 0.6, 1, 1 },
-	cine_boom = { { 86071521322650, 84604130470234, 138904498013191 }, 0.7, 1, 1 },
+	-- Cinemáticas de las tiradas más raras (client/RollCinematic), con grabaciones propias (tanda `cinematica` de
+	-- tools/sonidos/generar.mjs): la estrella que cae y su impacto; el herrero que aparece, sus martillazos y el
+	-- temple; la supernova que nace, se encoge y estalla, y la explosión dorada de la absoluta.
+	cine_fall = { { 72651967546338, 124214242227217 }, 0.6, 1, 1 }, -- las de la estrella del clima: las propias no le gustaron al usuario
+	cine_impact = { 110621823743010, 0.65, 1, 1 },
+	cine_smith = { 127781840916115, 0.6, 1, 1 },
+	cine_hammer = { 99789138675800, 0.65, 1, 1 },
+	cine_quench = { 139987737672670, 0.7, 1, 1 },
+	cine_star = { 110268782806283, 0.55, 1, 1 },
+	cine_collapse = { 78094098936022, 0.6, 1, 1 },
+	cine_boom = { 105828901664866, 0.75, 1, 1 },
+	cine_gold = { 137654449349961, 0.8, 1, 1 },
 	roll = { 108088062003601, 0.5, 1, 1 },
 	rare = { 113476440126433, 0.65, 1, 1 },
 	win = { 107352736766334, 0.7, 1, 1 },
@@ -95,6 +102,11 @@ local EVENTS = {
 -- diez veces más que otra. Con esto todas suenan igual de fuertes y el volumen de `EVENTS` es el de verdad.
 -- Las que no están aquí ya venían bien.
 local GAIN = {
+	[137654449349961] = 0.88, -- cine_gold_1
+	[99789138675800] = 8.24, -- cine_hammer_1
+	[110621823743010] = 0.89, -- cine_impact_1
+	[139987737672670] = 1.12, -- cine_quench_1
+	[110268782806283] = 1.11, -- cine_star_1
 	[119069323046508] = 1.20, -- break_crystal_1
 	[124381482851282] = 1.36, -- break_crystal_2
 	[84485501183800] = 1.61, -- break_crystal_3
