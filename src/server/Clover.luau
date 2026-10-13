@@ -17,7 +17,6 @@ local Clover = {}
 -- Trébol de prueba de los administradores (menú de admin, server/AdminCommands): [jugador] = suerte a medida. Mientras
 -- lo tiene puesto, sus tréboles dan esa suerte en vez de Config.Clover.Luck y no gastan ninguno. No se guarda.
 local custom: { [Player]: number } = {}
-local MAX_CUSTOM = 1e15
 
 local cfg = Config.Clover
 local BAD = Color3.fromRGB(255, 110, 110)
@@ -58,7 +57,7 @@ end
 -- Pone (o quita, con 0) el trébol de prueba de ese jugador. Quien llama ya ha comprobado que es administrador.
 -- Devuelve la suerte que queda puesta (0 = ninguna), o nil si el número no vale.
 function Clover.setCustom(player: Player, luck: unknown): number?
-	if type(luck) ~= "number" or luck ~= luck or luck < 0 or luck > MAX_CUSTOM then
+	if type(luck) ~= "number" or luck ~= luck or luck < 0 or luck == math.huge then
 		return nil
 	end
 	custom[player] = if luck >= 1 then luck else nil

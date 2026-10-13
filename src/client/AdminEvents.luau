@@ -182,9 +182,9 @@ function AdminEvents.build(pane: Frame, window: Frame)
 		-- Con coma o con punto: "2,5" vale.
 		local value = tonumber((string.gsub(mult.Text, ",", ".")))
 		local time = tonumber(minutes.Text)
-		if not value or value <= 1 or value > cfg.MaxMult or not time or time < 1 or time > cfg.MaxMinutes then
+		if not value or value <= 1 or value == math.huge or not time or time < 1 or time > cfg.MaxMinutes then
 			Sfx.play("error")
-			Ui.toast(Lang.t(nil, "That event isn't valid: up to x{mult} and {minutes} min", { mult = cfg.MaxMult, minutes = cfg.MaxMinutes }), Ui.COLORS.orange)
+			Ui.toast(Lang.t(nil, "That event isn't valid: more than x1 and up to {minutes} min", { minutes = cfg.MaxMinutes }), Ui.COLORS.orange)
 			return
 		end
 		AdminScope.command("boost", chosen, value, math.floor(time))

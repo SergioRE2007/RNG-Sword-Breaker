@@ -842,7 +842,7 @@ return {
 	["No events right now"] = "Ahora no hay ningún evento",
 	["Start event"] = "Empezar evento",
 	["Admin event! x{n} {stat} for everyone for {minutes} min."] = "¡Evento de admin! x{n} {stat} para todos durante {minutes} min.",
-	["That event isn't valid: up to x{mult} and {minutes} min"] = "Ese evento no vale: como mucho x{mult} y {minutes} min",
+	["That event isn't valid: more than x1 and up to {minutes} min"] = "Ese evento no vale: más de x1 y como mucho {minutes} min",
 	["Box luck"] = "Suerte de cajas",
 	["Trait luck"] = "Suerte de rasgos",
 	["Grade luck"] = "Suerte de grados",

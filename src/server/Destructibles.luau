@@ -98,6 +98,11 @@ local function rollSpec(owner: Player)
 	local spec = ObjectSpec.roll(def, Stats.objectLuck(owner))
 	spec.def = def
 	spec.typeOdds = def.rarity / luck
+	-- Suerte media por tirada de lo que le aparecía al dueño en este momento: con ella mide Gacha lo difícil que era
+	-- cada arma. Se apunta al aparecer y no al romperse: si entre medias se acaba una poción, un clima o un evento, se
+	-- quita la suerte equipada o renace, el objeto valdría mucho más que "lo de siempre" y casi todas sus tiradas
+	-- llevarían cinemática.
+	spec.usual = ObjectSpec.meanLuck(luck, Stats.objectLuck(owner))
 	return spec
 end
 
@@ -157,6 +162,7 @@ local function spawnIn(plot)
 		size = spec.size,
 		scale = spec.scale,
 		luck = spec.luck,
+		usual = spec.usual,
 		rolls = spec.rolls,
 		reward = spec.reward,
 	}

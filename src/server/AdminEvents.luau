@@ -46,7 +46,7 @@ local function valid(stat: unknown, mult: unknown, ends: unknown): boolean
 	if type(stat) ~= "string" or not cfg.Stats[stat] then
 		return false
 	end
-	if type(mult) ~= "number" or mult ~= mult or mult <= 1 or mult > cfg.MaxMult then
+	if type(mult) ~= "number" or mult ~= mult or mult <= 1 or mult == math.huge then
 		return false
 	end
 	local left = if type(ends) == "number" and ends == ends then ends - unix() else 0
