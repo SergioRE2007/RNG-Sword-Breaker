@@ -225,22 +225,26 @@ local function pillar(s, position: Vector3, height: number, width: number, color
 	local low, high = Instance.new("Attachment"), Instance.new("Attachment")
 	high.Position = Vector3.new(0, height, 0)
 	low.Parent, high.Parent = base, base
-	local beam = Instance.new("Beam")
-	beam.Attachment0, beam.Attachment1 = low, high
-	beam.FaceCamera = true
-	beam.Segments = 1
-	beam.LightEmission = 1
-	beam.LightInfluence = 0
-	beam.Color = ColorSequence.new(color:Lerp(WHITE, 0.5), color)
-	beam.Transparency = seq({ { 0, 0.15 }, { 0.6, 0.45 }, { 1, 1 } })
-	beam.Width0, beam.Width1 = width * 0.2, width * 0.2
-	beam.Parent = base
-	tween(beam, 0.1, { Width0 = width, Width1 = width * 0.7 })
-	task.delay(0.1 * SLOW, function()
-		if beam.Parent then
-			tween(beam, seconds, { Width0 = 0, Width1 = 0 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-		end
-	end)
+	-- Tres capas, de la ancha y tenue al núcleo: una sola se ve como un rectángulo de canto duro.
+	for _, layer in { { 1, 0.86 }, { 0.6, 0.72 }, { 0.28, 0.35 } } do
+		local wide = width * layer[1]
+		local beam = Instance.new("Beam")
+		beam.Attachment0, beam.Attachment1 = low, high
+		beam.FaceCamera = true
+		beam.Segments = 1
+		beam.LightEmission = 1
+		beam.LightInfluence = 0
+		beam.Color = ColorSequence.new(color:Lerp(WHITE, 0.5), color)
+		beam.Transparency = seq({ { 0, layer[2] }, { 0.6, lerp(layer[2], 1, 0.4) }, { 1, 1 } })
+		beam.Width0, beam.Width1 = wide * 0.2, wide * 0.2
+		beam.Parent = base
+		tween(beam, 0.1, { Width0 = wide, Width1 = wide * 0.7 })
+		task.delay(0.1 * SLOW, function()
+			if beam.Parent then
+				tween(beam, seconds, { Width0 = 0, Width1 = 0 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			end
+		end)
+	end
 	Debris:AddItem(base, (seconds + 0.1) * SLOW + 0.1)
 end
 
@@ -1227,6 +1231,8 @@ function THEMES.smith(s, info)
 	local iron = Color3.fromRGB(104, 106, 126)
 	local gold = Color3.fromRGB(222, 168, 74)
 	local glow = {} -- lo que brilla (ojos, runas, brasas): naranja hasta el temple
+	local dim = {} -- lo demás del herrero: al final se queda en silueta oscura
+	local hot = Color3.fromRGB(255, 132, 44) -- naranja hondo: más claro, el resplandor se come la cara
 	local function dress(model: Model?, looks: { [string]: { any } }, list: { BasePart }?)
 		if not model then
 			return
@@ -1254,8 +1260,8 @@ function THEMES.smith(s, info)
 		Stone = { iron, Enum.Material.Metal },
 		Black = { Color3.fromRGB(20, 16, 22), Enum.Material.SmoothPlastic },
 		Gold = { gold, Enum.Material.Metal },
-		Paper = { EMBER, Enum.Material.Neon },
-		Wood = { Color3.fromRGB(92, 62, 44), Enum.Material.Wood },
+		Paper = { hot, Enum.Material.Neon },
+		Wood = { Color3.fromRGB(58, 40, 32), Enum.Material.Wood },
 		Water = { Color3.fromRGB(90, 170, 220), Enum.Material.Glass },
 	}
 	dress(PropModel.place(s.folder, "SmithForge", origin), set)
@@ -1277,9 +1283,9 @@ function THEMES.smith(s, info)
 		Stone = { iron, Enum.Material.Metal },
 		Black = { Color3.fromRGB(34, 24, 26), Enum.Material.SmoothPlastic },
 		Gold = { gold, Enum.Material.Metal },
-		Paper = { EMBER, Enum.Material.Neon },
-		White = { Color3.fromRGB(206, 200, 214), Enum.Material.SmoothPlastic },
-		Wood = { Color3.fromRGB(92, 62, 44), Enum.Material.Wood },
+		Paper = { hot, Enum.Material.Neon },
+		White = { Color3.fromRGB(128, 124, 144), Enum.Material.SmoothPlastic },
+		Wood = { Color3.fromRGB(58, 40, 32), Enum.Material.Wood },
 	}
 	local ghost = {}
 	local body = {}
@@ -1290,6 +1296,9 @@ function THEMES.smith(s, info)
 	end
 	for _, part in ghost do
 		part.Transparency = 1
+		if part.Name ~= "Paper" then
+			table.insert(dim, part)
+		end
 	end
 
 	-- Luces: la fragua, el yunque, un relleno frío y una de contra detrás del gigante.
@@ -1304,8 +1313,8 @@ function THEMES.smith(s, info)
 		return light, holder
 	end
 	local furnace = lamp(at(-11.5, 5, -3.5), EMBER, 2.4, 30)
-	local fire = lamp(at(2, 7, 4), EMBER, 1.6, 30)
-	local fill = lamp(at(-10, 20, 16), Color3.fromRGB(170, 190, 255), 1.3, 60)
+	local fire = lamp(at(2, 7, 4), EMBER, 1, 30)
+	local fill = lamp(at(-10, 20, 16), Color3.fromRGB(170, 190, 255), 0.8, 60)
 	local rim = lamp(at(0, 17, -17), EMBER, 1.6, 40)
 
 	-- Brasas y humo: la boca de la fragua, su chimenea y la niebla de la que sale el gigante.
@@ -1388,7 +1397,7 @@ function THEMES.smith(s, info)
 	local RAISED = { fist = Vector3.new(8.5, 21, -9), handle = Vector3.new(0.1, 0.8, -0.6), face = Vector3.new(0, 0.6, 0.8), lean = -8, twist = 12, nod = -6, turn = 6 }
 	local BIG = { fist = Vector3.new(7.5, 23, -10.5), handle = Vector3.new(0, 0.55, -0.85), face = Vector3.new(0, 0.85, 0.55), lean = -12, twist = 16, nod = -14, turn = 8 }
 	local IMPACT = { fist = Vector3.new(7, 7.8, -5), handle = Vector3.new(-3.5, -0.4, 5), face = Vector3.new(0, -1, 0), lean = 13, twist = -8, nod = 24, turn = -6 }
-	local REST = { fist = Vector3.new(9.5, 8.2, -3), handle = Vector3.new(0.1, -1, 0.25), face = Vector3.new(0, 0.2, 1), lean = 6, twist = -4, nod = 20, turn = -8 }
+	local REST = { fist = Vector3.new(11, 7.4, -6.5), handle = Vector3.new(0.3, -1, -0.1), face = Vector3.new(0, 0.1, 1), lean = 5, twist = -4, nod = 18, turn = -6 }
 	local pose = table.clone(READY)
 	pose.rise = -3
 	pose.hold = Vector3.zero -- el puño que sujeta, relativo al escenario (lo pone `carry`)
@@ -1451,9 +1460,9 @@ function THEMES.smith(s, info)
 	local camRise = look(Vector3.new(5, 2.4, 24), Vector3.new(-1, 12.5, -6))
 	local camWide = look(Vector3.new(-7, 7.5, 35), Vector3.new(0.5, 10.5, -3))
 	local camAnvil = look(Vector3.new(-6.5, 5.6, 12), Vector3.new(3.2, 5.2, 0))
-	local camLow = look(Vector3.new(0.5, 2.6, 13.5), Vector3.new(2.5, 13.5, -6))
+	local camLow = look(Vector3.new(0, 5.4, 16), Vector3.new(2.5, 13.5, -6))
 	local camFinal = look(Vector3.new(-4.5, 8, 27), Vector3.new(1.5, 8.5, -2))
-	local camShow = look(Vector3.new(1.5, 10.2, 17.5), Vector3.new(1.5, 9.4, 2.5))
+	local camShow = look(Vector3.new(1.5, 12.2, 24), Vector3.new(1.5, 11.6, 4))
 	s.cam, s.fov = camRise, 64
 
 	-- 1. Sale de la niebla: aparece el cuerpo, se le encienden los ojos y las runas, y la cámara sube por él.
@@ -1462,7 +1471,7 @@ function THEMES.smith(s, info)
 	for _, part in ghost do
 		tween(part, 0.6, { Transparency = if part.Name == "Water" then 0.2 else 0 })
 	end
-	tween(aura, 0.6, { OutlineTransparency = 0.15 })
+	tween(aura, 0.6, { OutlineTransparency = 0.45 })
 	mist:Emit(20)
 	animate(s, 1, function(t)
 		pose.rise = lerp(-3, 0, outCubic(t))
@@ -1524,7 +1533,7 @@ function THEMES.smith(s, info)
 		s.shake = 0.4 + hit * 0.2
 		s.punch = -5 - hit * 2
 		fire.Brightness = 8
-		tween(fire, 0.4, { Brightness = 1.6 })
+		tween(fire, 0.4, { Brightness = 1 })
 		Sfx.play("cine_hammer", 1, 0.85 + hit * 0.1)
 		forgeSparks(spot, EMBER, 40 + hit * 30, 34 + hit * 6)
 		sparks(spot, EMBER, 16 + hit * 10, 22, 0.9)
@@ -1533,8 +1542,8 @@ function THEMES.smith(s, info)
 		ring(s, at(1.5, 0.3, 0), 6, 22 + hit * 6, EMBER, 0.6)
 		held.outline.FillColor = EMBER:Lerp(WHITE, hit * 0.3)
 		for _, part in glow do
-			part.Color = WHITE
-			tween(part, 0.5, { Color = EMBER })
+			part.Color = hot:Lerp(WHITE, 0.6)
+			tween(part, 0.5, { Color = hot })
 		end
 		-- Parada de imagen: el golpe se queda clavado un instante antes de rebotar.
 		wait(s, 0.05)
@@ -1591,17 +1600,17 @@ function THEMES.smith(s, info)
 	end
 	tween(held.outline, 0.7, { FillTransparency = 0.88, OutlineColor = bright, FillColor = WHITE })
 	tween(aura, 0.7, { OutlineColor = bright })
-	tween(fire, 0.6, { Color = color, Brightness = 1.6 })
-	tween(rim, 0.6, { Color = color, Brightness = 2.4 })
+	tween(fire, 0.6, { Color = color, Brightness = 1 })
+	tween(rim, 0.6, { Color = color, Brightness = 1.3 })
 	tween(furnace, 0.6, { Color = color })
 	tween(heat, 0.6, { Color = bright })
-	tween(fill, 0.6, { Brightness = 1.7, Color = bright:Lerp(WHITE, 0.4) })
+	tween(fill, 0.6, { Brightness = 1.1, Color = bright:Lerp(WHITE, 0.4) })
 	wait(s, 0.07)
 	move(READY, 0.3, outBack)
 	wait(s, 0.25)
 
 	-- 5. Baja el martillo, levanta el arma hacia la cámara y la suelta: se queda flotando y girando.
-	local lifted = at(1.5, 9.6, 2.5)
+	local lifted = at(1.5, 11, 5)
 	local struck = s.cam
 	local released = Vector3.new(-4.5, 8.5, -1)
 	move(REST, 1, smooth, 0, function(t)
@@ -1617,13 +1626,14 @@ function THEMES.smith(s, info)
 		s.cam = struck:Lerp(camShow, e)
 		s.fov = lerp(58, 50, e)
 	end)
-	rays(s, lifted - Vector3.new(0, 0, 3), 6, 34, bright)
-	sprite(point(s, lifted), TEX.shine, bright, 12, 6, 14, 1)
-	-- El gigante se queda detrás, apagado, para que mande el arma.
-	for _, part in ghost do
-		tween(part, 0.9, { Transparency = 0.6 })
+	sprite(point(s, lifted), TEX.shine, bright, 13, 6, 14, 1)
+	-- El gigante se queda detrás en silueta oscura, con sus runas encendidas, para que mande el arma.
+	local shadow = color:Lerp(BLACK, 0.88)
+	for _, part in dim do
+		tween(part, 0.9, { Color = shadow })
 	end
-	tween(aura, 0.9, { OutlineTransparency = 0.5 })
+	tween(fill, 0.9, { Brightness = 0.3 })
+	tween(fire, 0.9, { Brightness = 0.5 })
 	card(s, info)
 	animate(s, 1.1, function(t)
 		s.cam = camShow * CFrame.new(0, 0, -1.4 * t)
