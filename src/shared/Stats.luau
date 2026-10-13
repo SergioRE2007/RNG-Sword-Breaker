@@ -290,9 +290,11 @@ function Stats.bagHit(player: Player, copy, noPotion: boolean?): number
 end
 
 -- Monedas que saca de la bolsa un golpe de esa copia: las de su daño (BagInfo.coins) por la mejora "bagBoost", que es
--- lo único que las multiplica.
-function Stats.bagCoins(player: Player, copy, noPotion: boolean?): number
-	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * upgrade(player, "bagBoost")
+-- lo único que las multiplica, y por lo que sube cada bolsa vaciada (BagInfo.boost de la bolsa `stage`; sin ella, la
+-- bolsa por la que va el jugador).
+function Stats.bagCoins(player: Player, copy, noPotion: boolean?, stage: number?): number
+	local boost = BagInfo.boost(stage or player:GetAttribute("BagStage") or 1)
+	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * upgrade(player, "bagBoost") * boost
 end
 
 -- Lo que tiene el jugador de la moneda con la que se paga una mejora (`currency` de Config.Upgrades): monedas, gemas
@@ -316,10 +318,10 @@ end
 -- Monedas por segundo que sacan de su Bolsa de oro las armas depositadas: cada una da un golpe cada
 -- Config.GoldBag.HitTime segundos, sea del tipo que sea (allí no hay salpicadura que compense a las lentas), y cada
 -- golpe saca BagInfo.coins de su daño.
-function Stats.bagRate(player: Player, noPotion: boolean?): number
+function Stats.bagRate(player: Player, noPotion: boolean?, stage: number?): number
 	local total = 0
 	for _, copy in Stats.deposited(player) do
-		total += Stats.bagCoins(player, copy, noPotion)
+		total += Stats.bagCoins(player, copy, noPotion, stage)
 	end
 	return total / Config.GoldBag.HitTime
 end

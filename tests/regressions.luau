@@ -1550,6 +1550,10 @@ do
 	equal(stage == 2 and taken == 40 and emptied == 1, true, "bolsa: lo que sobra sale de la siguiente")
 	stage, taken, emptied = info.advance(1, 0, 100 + 400 + 1600 + 50)
 	equal(stage == 4 and taken == 50 and emptied == 3, true, "bolsa: varias vaciadas de una vez")
+	local got
+	stage, taken, emptied, got = info.collect(1, 0, 100 + 200 + 50)
+	equal(stage == 3 and taken == 200 and emptied == 2 and got == 700, true, "bolsa: cada vaciada dobla lo que sacan los golpes")
+	equal(info.boost(1) == 1 and info.boost(4) == 8, true, "bolsa: x2 por bolsa vaciada")
 	stage, taken, emptied = info.advance(1, 30, 0)
 	equal(stage == 1 and taken == 30 and emptied == 0, true, "bolsa: sin monedas no pasa nada")
 	local clean = info.sanitize({ stage = "x", taken = -5, seen = 0 / 0, slots = { 1 } })
@@ -1629,13 +1633,15 @@ do
 	table3(cfg, 2)
 	bf.data.edit(who, function(d) d.bag.taken = 0 end)
 	bf.step(1)
-	local wantStage, wantTaken, wantEmptied = info.advance(1, 0, rate)
+	local wantStage, wantTaken, wantEmptied, wantCoins = info.collect(1, 0, rate)
 	equal(wantEmptied >= 1, true, "con bolsas pequeñas cae alguna")
 	equal(bf.data.read(who).bag.stage, wantStage, "pasa a la bolsa que toca")
 	equal(bf.data.read(who).bag.taken, wantTaken, "con lo que sobra sacado de ella")
 	local events = bf.remotes.BagEvent.sent
 	equal(events[#events][2] == "emptied" and events[#events][3].stage == wantStage and events[#events][3].bags == wantEmptied, true, "aviso de bolsa vaciada")
-	equal(bf.data.read(who).coins, rate * 2, "vaciar una bolsa no da monedas de más")
+	equal(wantCoins > rate, true, "cada bolsa vaciada sube lo que saca cada golpe")
+	equal(bf.data.read(who).coins, rate + math.floor(wantCoins), "se cobra lo que sale, con la subida de cada bolsa")
+	equal(who:GetAttribute("BagRate"), rate * info.boost(wantStage), "y el ritmo publicado es el de la bolsa nueva")
 	equal(bf.data.read(who).coins % 1, 0, "se pagan monedas enteras")
 
 	-- Lo ganado fuera: sale, vuelve una hora después y se cobra de golpe (sin tope de tiempo).
@@ -1655,8 +1661,9 @@ do
 	equal(returned.coins > leftCoins, true, "fuera: se cobra al volver")
 	local awayEvent = back.remotes.BagEvent.sent[1]
 	equal(awayEvent[2] == "away" and awayEvent[3].coins > 0 and awayEvent[3].seconds >= 3500, true, "fuera: se le avisa con lo ganado")
-	local expectedCoins = math.floor(back.load("src/shared/Stats").bagRate(back.player, true) * awayEvent[3].seconds)
-	local expectedStage = back.load("src/shared/BagInfo").advance(leftStage, saved.bag.taken, expectedCoins)
+	local awayBase = back.load("src/shared/Stats").bagRate(back.player, true, 1) * awayEvent[3].seconds
+	local expectedStage, _, _, expectedCoins = back.load("src/shared/BagInfo").collect(leftStage, saved.bag.taken, awayBase)
+	expectedCoins = math.floor(expectedCoins)
 	equal(awayEvent[3].coins, expectedCoins, "fuera: lo de un golpe por segundo de cada arma")
 	equal(returned.coins, leftCoins + expectedCoins, "fuera: eso es lo que se cobra")
 	equal(returned.bag.stage, expectedStage, "fuera: la misma cuenta de bolsas que conectado")

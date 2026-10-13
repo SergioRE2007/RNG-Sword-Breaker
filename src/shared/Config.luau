@@ -238,6 +238,7 @@ Config.GoldBag = {
 	Double = 2,
 	First = 1000,
 	Growth = 4,
+	StageBoost = 2, -- cada bolsa vaciada multiplica por esto lo que saca cada golpe (BagInfo.boost), pedido por el usuario
 	MinAway = 60,
 }
 

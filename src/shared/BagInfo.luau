@@ -23,6 +23,11 @@ function BagInfo.size(stage: number): number
 	return Config.GoldBag.First * Config.GoldBag.Growth ^ (math.max(stage, 1) - 1)
 end
 
+-- Por cuánto se multiplica lo que saca cada golpe yendo por la bolsa nº `stage`: StageBoost por cada bolsa vaciada.
+function BagInfo.boost(stage: number): number
+	return (Config.GoldBag.StageBoost or 1) ^ (math.max(stage, 1) - 1)
+end
+
 -- Sacar `coins` monedas yendo por la bolsa `stage`, de la que ya se habían sacado `taken`. Devuelve la bolsa y lo
 -- sacado en las que queda, y las bolsas vaciadas por el camino.
 function BagInfo.advance(stage: number, taken: number, coins: number): (number, number, number)
@@ -43,6 +48,33 @@ function BagInfo.advance(stage: number, taken: number, coins: number): (number, 
 		emptied += 1
 	end
 	return stage, taken, emptied
+end
+
+-- Lo mismo contando con que cada bolsa vaciada sube lo que saca cada golpe (BagInfo.boost): `base` son las monedas
+-- que sacarían los golpes en la primera bolsa. Devuelve la bolsa, lo sacado en ella, las bolsas vaciadas y las
+-- monedas que han salido de verdad.
+function BagInfo.collect(stage: number, taken: number, base: number): (number, number, number, number)
+	local emptied, coins = 0, 0
+	if not (base > 0) then
+		return stage, taken, emptied, coins
+	end
+	for _ = 1, MAX_STEPS do
+		local size = BagInfo.size(stage)
+		local mult = BagInfo.boost(stage)
+		local gain = base * mult
+		local left = math.max(size - taken, 0)
+		if gain < left or not (size < math.huge) or not (mult < math.huge) then
+			taken += gain
+			coins += gain
+			break
+		end
+		coins += left
+		base -= left / mult
+		stage += 1
+		taken = 0
+		emptied += 1
+	end
+	return stage, taken, emptied, coins
 end
 
 -- Lo guardado en data.bag, revisado: { stage = bolsa por la que va, taken = monedas ya sacadas de esa bolsa, slots =
