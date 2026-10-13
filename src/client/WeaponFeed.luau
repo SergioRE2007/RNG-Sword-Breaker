@@ -1,5 +1,5 @@
 -- Aviso de arma recogida (librería sin start(), la llama client/RollReveal cuando un arma llega al jugador). Pedido
--- por el usuario: con la presentación en el mundo no se sabía qué había tocado. A la derecha, debajo del clima, sale
+-- por el usuario: con la presentación en el mundo no se sabía qué había tocado. A la derecha, a media altura, sale
 -- una tarjeta por arma con su casilla (modelo 3D y borde de su rareza), la rareza, el nombre y el "1 entre N"; la nueva
 -- entra arriba empujando a las demás y cada una se va sola a los pocos segundos (más rato cuanto más rara). Si llega
 -- otra igual mientras sigue a la vista, la tarjeta no se repite: suma un "x2", "x3"...
@@ -23,9 +23,9 @@ local BLACK = Color3.new(0, 0, 0)
 local CARD = Vector2.new(250, 64)
 local CELL = 54
 local MARGIN = 14 -- al borde derecho
-local BELOW = 8 -- separación con el panel del clima, que va encima
+local TOP = 0.44 -- a qué altura de la pantalla empieza la columna (0 = arriba del todo)
 local GAP = 6
-local MAX_CARDS = 5
+local MAX_CARDS = 4
 local STAY = 3.5 -- segundos a la vista de un arma Común
 local STAY_PER_TIER = 0.6 -- y cuánto más por cada nivel de rareza
 -- Capas (la interfaz ordena el ZIndex globalmente): las de la casilla (Ui.cell, WeaponPreview) van de 0 a 3.
@@ -40,7 +40,7 @@ local function tween(instance: Instance, seconds: number, props, style: Enum.Eas
 	return created
 end
 
--- La columna de tarjetas, pegada a la derecha y por debajo del panel del clima (o arriba del todo si no lo hay).
+-- La columna de tarjetas, pegada a la derecha.
 local function column(): Frame
 	if list then
 		return list
@@ -59,23 +59,9 @@ local function column(): Frame
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	layout.Parent = frame
 
-	local hudScale = root:FindFirstChildOfClass("UIScale") :: UIScale
-	local function place()
-		local top = MARGIN
-		local weather = root:FindFirstChild("Weather")
-		if weather and weather:IsA("GuiObject") and weather.Visible and weather.AbsoluteSize.Y > 0 then
-			local bottom = weather.AbsolutePosition.Y + weather.AbsoluteSize.Y - root.AbsolutePosition.Y
-			top = math.max(top, bottom / hudScale.Scale + BELOW)
-		end
-		frame.Position = UDim2.new(1, -MARGIN, 0, top)
-	end
-	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
-	local weather = root:FindFirstChild("Weather")
-	if weather and weather:IsA("GuiObject") then
-		weather:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
-		weather:GetPropertyChangedSignal("Visible"):Connect(place)
-	end
-	place()
+	-- A media altura (pedido por el usuario: arriba tapaba la lista de jugadores de Roblox, Ajustes y los demás
+	-- botones de esa esquina). Abajo quedan la tira de pociones y los avisos.
+	frame.Position = UDim2.new(1, -MARGIN, TOP, 0)
 	list = frame
 	return frame
 end

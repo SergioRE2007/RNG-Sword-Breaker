@@ -94,6 +94,23 @@ function Stats.swordDamage(copy): number
 	return Config.Swords[copy.sword].damage * (if trait then trait.damage or 1 else 1) * (if grade then grade.damage or 1 else 1) * Permanent.damageMult(copy)
 end
 
+-- Monedas que da vender una copia (a mano o con la venta automática): su daño por Config.Gacha.SellCoins, sin
+-- pasar por ningún multiplicador de monedas.
+function Stats.sellCoins(copy): number
+	return math.floor(Stats.swordDamage(copy) * Config.Gacha.SellCoins)
+end
+
+-- Cuántas copias hay de un accesorio en una lista de índices (data.artifacts o el atributo "Artifacts").
+function Stats.copies(list: { number }, index: number): number
+	local total = 0
+	for _, owned in list do
+		if owned == index then
+			total += 1
+		end
+	end
+	return total
+end
+
 -- Rareza total ("1 entre N") de una copia: la del arma por las de su metal y su tamaño.
 function Stats.rarity(copy): number
 	return Permanent.rarity(copy.sword, copy.metal, copy.size)

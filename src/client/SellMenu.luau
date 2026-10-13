@@ -188,7 +188,7 @@ function SellMenu.start()
 	end)
 
 	paint = function()
-		local count = 0
+		local count, coins = 0, 0
 		for id, cell in cells do
 			-- Elegida: fondo rojo y la X, sin el borde blanco de seleccionado (pedido por el usuario).
 			cell.SellMark.Visible = selected[id] == true
@@ -198,10 +198,13 @@ function SellMenu.start()
 			if glow then
 				glow.BackgroundColor3 = base
 			end
-			if selected[id] then count += 1 end
+			if selected[id] then
+				count += 1
+				coins += cell:GetAttribute("Coins") or 0
+			end
 		end
 		if count == 0 then confirming = false end
-		summary.Text = Lang.t(nil, if confirming then "Confirm sale? {count} · +{gems} gems" else "Selected: {count} · +{gems} gems", { count = count, gems = Format.short(count * Config.Gacha.SellValue) })
+		summary.Text = Lang.t(nil, if confirming then "Confirm sale? {count} · +{coins} coins" else "Selected: {count} · +{coins} coins", { count = count, coins = Format.short(coins) })
 		buttons.Sell.Text = if confirming then Lang.t(nil, "Confirm sale") else Lang.t(nil, "Sell selected")
 		buttons.Sell.Interactable = count > 0
 	end
@@ -231,6 +234,7 @@ function SellMenu.start()
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = position
 			cell:SetAttribute("Base", tier.color) -- color de su fondo sin elegir
+			cell:SetAttribute("Coins", Stats.sellCoins(copy)) -- monedas que da venderla
 			sellMark(cell)
 			cell.InputBegan:Connect(function(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then

@@ -189,6 +189,7 @@ Config.Gacha = {
 	AuraOdds = 500, -- desde aquí el aura se ve en el personaje (también para los demás)
 	AnnounceOdds = 25000, -- desde aquí se anuncia el arma a todo el servidor
 	SellValue = 0, -- gemas por vender una espada (a mano o con la venta automática). 0: las gemas salen de la parcela
+	SellCoins = 30, -- monedas por vender una espada, por cada punto de su daño (Stats.sellCoins; a mano y con la venta automática). Tal cual, sin multiplicadores de monedas
 }
 
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
@@ -307,6 +308,7 @@ Config.Rebirth = { max = 5, costs = { 3.5e7, 1e11, 3.5e15, 1.9e20, 2.2e25 }, coi
 -- no deben pasar de la rareza del objeto más raro; antes llegaban a x1000 y x1e6 y lo rompían todo). Las "rarity" son
 -- NÚMEROS GENERADOS por tools/equilibrio para que cada uno caiga a su hora (de los 5 min a las 155 h): no los retoques.
 Config.GearSlots = 3
+Config.ArtifactCopies = 5 -- copias de un mismo accesorio que se pueden tener (para comerciar con las que sobran); equipado solo va uno de cada
 Config.Artifacts = {
 	{ name = "Copper Amulet", stat = "coins", mult = 1.5, rarity = 1100, color = Color3.fromRGB(200, 120, 70), image = "acc_amuleto_cobre" },
 	{ name = "Sharp Ring", stat = "damage", mult = 2, rarity = 46000, color = Color3.fromRGB(200, 205, 210), image = "acc_anillo_afilado" },

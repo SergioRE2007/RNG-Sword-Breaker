@@ -24,6 +24,7 @@ local WHITE = Color3.new(1, 1, 1)
 local CELL = Vector2.new(132, 170) -- más alta que ancha: nombre arriba, arma en medio y los dos números abajo
 local SIDE = Vector2.new(104, 58) -- botones de tamaño y de metal, pegados por fuera a los lados de la ventana
 local NEUTRAL = Ui.COLORS.gray -- botones "Normal" y "Sin metal"
+local HEADING = Color3.fromRGB(255, 215, 90) -- títulos de las columnas de los lados
 local LOCKED = Color3.fromRGB(78, 80, 94) -- casilla sin descubrir
 local LOCKED_MODEL = Color3.fromRGB(105, 105, 122) -- tinte de su arma
 local LOCKED_NAME = Color3.fromRGB(165, 171, 192)
@@ -61,16 +62,28 @@ local function column(window: GuiObject, name: string, heading: string, right: b
 	holder.BackgroundTransparency = 1
 	holder.Parent = window
 
-	-- (El texto va en una etiqueta de dentro: el degradado del relieve teñiría el de la propia pieza.)
+	-- Título de la columna (pedido por el usuario: en una pastilla con relieve parecía un botón más): solo el texto,
+	-- en dorado y más grande, con una raya debajo que lo separa de los botones.
 	local title = Instance.new("Frame")
 	title.Name = "Heading"
 	title.Size = UDim2.new(1, 0, 0, 26)
+	title.BackgroundTransparency = 1
 	title.Parent = holder
-	Ui.pill(title, Color3.fromRGB(70, 62, 120), 9)
-	local titleText = Ui.label(title, 15)
-	titleText.Size = UDim2.fromScale(1, 1)
-	titleText.Text = heading
-	titleText.ZIndex = 2
+	local titleText = Ui.label(title, 20)
+	titleText.Size = UDim2.new(1, 0, 1, -5)
+	titleText.Text = Ui.upper(heading)
+	titleText.TextColor3 = HEADING
+	limit(titleText, 20, 12)
+	local rule = Instance.new("Frame")
+	rule.Name = "Rule"
+	rule.AnchorPoint = Vector2.new(0.5, 1)
+	rule.Position = UDim2.fromScale(0.5, 1)
+	rule.Size = UDim2.new(1, -8, 0, 4)
+	rule.BackgroundColor3 = HEADING
+	rule.BorderSizePixel = 0
+	rule.Parent = title
+	Ui.round(rule, 2)
+	Ui.stroke(rule, Color3.new(0, 0, 0), 1.5)
 
 	local list = Instance.new("Frame")
 	list.Name = "List"
@@ -188,12 +201,12 @@ function Index.start()
 		render()
 	end
 	local sizeList = column(window, "Sizes", Lang.t(nil, "Size"), false)
-	local metalList = column(window, "Metals", Lang.t(nil, "Metal"), true)
+	local metalList = column(window, "Metals", Lang.t(nil, "Material"), true)
 	sizeButtons[0] = sideButton(sizeList, "Size_0", 0, Lang.t(nil, "Normal"), Lang.t(nil, "Base"), NEUTRAL)
 	for index, entry in Config.Sizes do
 		sizeButtons[index] = sideButton(sizeList, "Size_" .. index, index, Lang.t(nil, entry.name), Lang.t(nil, "1 in {n}", { n = Format.short(entry.odds) }), entry.color)
 	end
-	metalButtons[0] = sideButton(metalList, "Metal_0", 0, Lang.t(nil, "No metal"), Lang.t(nil, "Base"), NEUTRAL)
+	metalButtons[0] = sideButton(metalList, "Metal_0", 0, Lang.t(nil, "No material"), Lang.t(nil, "Base"), NEUTRAL)
 	for index, entry in Config.Metals do
 		metalButtons[index] = sideButton(metalList, "Metal_" .. index, index, Lang.t(nil, entry.name), Lang.t(nil, "1 in {n}", { n = Format.short(entry.odds) }), entry.color)
 	end
@@ -329,7 +342,7 @@ function Index.start()
 		end
 
 		local metalDef, sizeDef = Config.Metals[metal], Config.Sizes[size]
-		viewLabel.Text = `{if metalDef then `<font color="{hex(metalDef.color)}">{Lang.t(nil, metalDef.name)}</font>` else Lang.t(nil, "No metal")}  ·  {if sizeDef then `<font color="{hex(sizeDef.color)}">{Lang.t(nil, sizeDef.name)}</font>` else Lang.t(nil, "Normal size")}`
+		viewLabel.Text = `{if metalDef then `<font color="{hex(metalDef.color)}">{Lang.t(nil, metalDef.name)}</font>` else Lang.t(nil, "No material")}  ·  {if sizeDef then `<font color="{hex(sizeDef.color)}">{Lang.t(nil, sizeDef.name)}</font>` else Lang.t(nil, "Normal size")}`
 		countLabel.Text = Lang.t(nil, "Discovered {n}/{total}", { n = unlockedHere, total = #list })
 		local all = 0
 		for _ in found do
