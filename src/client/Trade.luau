@@ -675,8 +675,8 @@ local function buildTrade()
 		if tab == "swords" then
 			local worn = Stats.list(player, "Loadout")
 			for _, copy in Stats.swords(player) do
-				-- Las equipadas y las de la Bolsa de oro no se pueden dar.
-				if not table.find(worn, copy.id) and not Stats.isDeposited(player, copy.id) then
+				-- Las equipadas, las de la Bolsa de oro y las bloqueadas con el candado de la mochila no se pueden dar.
+				if not copy.locked and not table.find(worn, copy.id) and not Stats.isDeposited(player, copy.id) then
 					add(swordCell(stock, copy), copy.id, -math.floor(math.log10(Stats.rarity(copy)) * 1000))
 				end
 			end

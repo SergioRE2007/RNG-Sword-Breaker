@@ -1506,6 +1506,28 @@ function Ui.amuletIcon(parent: Instance, color: Color3)
 	shine(stone, UDim2.fromScale(0.3, 0.3), UDim2.fromScale(0.3, 0.3))
 end
 
+-- Candado (armas bloqueadas de la mochila): arco gris y cuerpo de `color` con su ojo de cerradura; con `open`, el
+-- arco subido y ladeado.
+function Ui.lockIcon(parent: Instance, color: Color3, open: boolean?)
+	local holder = iconHolder(parent, 0)
+	holder.Position = UDim2.fromScale(0.5, 0.5)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	local shackle = piece(holder, UDim2.fromScale(0.5, 0.62), UDim2.fromScale(if open then 0.6 else 0.5, if open then 0.3 else 0.38), WHITE, 100)
+	shackle.Name = "Shackle"
+	shackle.BackgroundTransparency = 1
+	local line = shackle:FindFirstChildOfClass("UIStroke")
+	if line then
+		line.Color = Color3.fromRGB(205, 210, 225)
+		line.Thickness = 4
+	end
+	local body = piece(holder, UDim2.fromScale(0.74, 0.5), UDim2.fromScale(0.5, 0.7), color, 5)
+	body.Name = "Body"
+	Ui.gradient(body, WHITE, Color3.fromRGB(170, 150, 110), 90)
+	local hole = piece(body, UDim2.fromScale(0.2, 0.36), UDim2.fromScale(0.5, 0.48), BLACK, 100)
+	hole.Name = "Keyhole"
+	return holder
+end
+
 -- Icono de un accesorio de Config.Artifacts: su imagen (`image`) o, si no tiene, el colgante de su color.
 function Ui.artifactIcon(parent: Instance, artifact)
 	if artifact.image and Ui.IMAGES[artifact.image] then
