@@ -109,6 +109,25 @@ const BATCHES = {
 		s("cine_boom", 4.0, "Supernova: estalla", "Supernova explosion in space, enormous deep cosmic blast with a bright shockwave and a long shimmering sparkling tail, epic cinematic game sound", 2),
 		s("cine_gold", 4.0, "Supernova absoluta: explosión dorada", "Second golden explosion, huge bright magical blast followed by a triumphant heavenly choir and a rain of sparkling chimes, legendary jackpot, epic cinematic game sound", 2),
 	],
+	// Segunda tanda de las cinemáticas: los nueve de arriba rehechos con descripciones más concretas, y capas nuevas
+	// (subidón, rayo, fragua, y la tarjeta: entra, contador y el número que se planta).
+	cinematica2: [
+		s("cine_fall", 3.0, "Estrella: cae del cielo", "A comet streaking down through the atmosphere, airy whoosh that starts far and quiet and rushes closer, pitch falling steadily, with a fizzing crackling fiery tail, no explosion at the end, cinematic sound effect"),
+		s("cine_impact", 2.5, "Estrella: impacto en el suelo", "Meteor slamming into the earth, one sharp crack then a very deep sub bass boom, rocks and dirt scattering, short rumbling tail, powerful cinematic impact sound effect"),
+		s("cine_smith", 3.0, "Herrero: aparece el gigante", "A colossal ancient giant awakening in a dark forge, deep slow rumble swelling up, heavy chains rattling, a low breathing roar of fire, ominous and huge, cinematic sound effect"),
+		s("cine_hammer", 1.5, "Herrero: martillazo", "One single gigantic sledgehammer blow on a massive iron anvil, hard bright metallic clang with a heavy low thud underneath and a short ringing tail, close and punchy, cinematic sound effect"),
+		s("cine_quench", 3.0, "Herrero: el temple", "Red-hot sword blade plunged into water, sudden violent sizzling steam hiss that slowly fades into soft bubbling, with a faint metallic ring, close recording, sound effect"),
+		s("cine_star", 3.0, "Supernova: aparece la estrella", "A giant star igniting in deep space, deep sub bass hum fading in with a slow pulsing throb and a faint glassy shimmer on top, vast and calm, cinematic sound effect"),
+		s("cine_collapse", 3.0, "Supernova: la estrella se encoge", "Reverse suction riser, air and energy being sucked inward faster and faster, rising in pitch and intensity, ending in a sudden hard cut to total silence, cinematic sound effect"),
+		s("cine_boom", 4.0, "Supernova: estalla", "Gigantic explosion in space, sharp bright crack immediately followed by a huge deep sub bass shockwave and a long rumbling, slowly fading tail with distant glittering debris, epic cinematic sound effect"),
+		s("cine_gold", 4.0, "Supernova absoluta: explosión dorada", "Legendary jackpot burst, bright magical explosion followed by a triumphant heavenly choir chord and cascading golden chimes and sparkles, glorious, epic cinematic game reward sound"),
+		s("cine_riser", 2.0, "Subidón antes de un momento gordo", "Short cinematic tension riser, whooshing swell with rising pitch and shimmering high tones building up fast, ending abruptly with no impact, trailer sound effect"),
+		s("cine_bolt", 1.5, "Herrero: rayo del temple", "A single huge lightning bolt striking metal right in front, sharp electric crack with a bright zap and a short deep thunder slap, magical, cinematic sound effect"),
+		s("cine_forge", 3.0, "Herrero: fragua y fuelle", "Blacksmith bellows pumping twice into a roaring coal forge, two deep whooshes of air with fire flaring up and crackling embers, close recording, sound effect"),
+		s("cine_card", 0.8, "Tarjeta: entra de golpe", `Game reward card slamming onto the screen, quick whoosh into a punchy low thud with a small bright sparkle, ${DRY}, short`),
+		s("cine_tick", 0.5, "Tarjeta: el contador sube (una nota)", `One single short bright plucked chime note, clean and percussive like a marimba tick, ${DRY}, very short`),
+		s("cine_stamp", 1.2, "Tarjeta: el número se planta", `Big number stamping into place, heavy punchy impact with a bright metallic shing and a short sparkling shimmer, satisfying game reward hit, ${DRY}`),
+	],
 	mazmorra: [
 		s("wave", 1.2, "Empieza una oleada", "Enemy wave incoming, short dramatic war drum hit with a low horn stab, game alert sound", 2),
 		s("hurt", 0.5, "Te hacen daño", "Player taking damage, short blunt punch impact with a soft thud, cartoon game hit sound, no voice, dry", 3),

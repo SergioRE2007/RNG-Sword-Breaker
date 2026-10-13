@@ -43,18 +43,26 @@ local EVENTS = {
 	reveal_4 = { 109717760520982, 0.7, 1, 1 },
 	reveal_5 = { 118337535145235, 0.8, 1, 1 },
 	collect = { 126460414904264, 0.4, 1, 1 },
-	-- Cinemáticas de las tiradas más raras (client/RollCinematic), con grabaciones propias (tanda `cinematica` de
-	-- tools/sonidos/generar.mjs): la estrella que cae y su impacto; el herrero que aparece, sus martillazos y el
-	-- temple; la supernova que nace, se encoge y estalla, y la explosión dorada de la absoluta.
-	cine_fall = { { 72651967546338, 124214242227217 }, 0.6, 1, 1 }, -- las de la estrella del clima: las propias no le gustaron al usuario
-	cine_impact = { 110621823743010, 0.65, 1, 1 },
-	cine_smith = { 127781840916115, 0.6, 1, 1 },
-	cine_hammer = { 99789138675800, 0.65, 1, 1 },
-	cine_quench = { 139987737672670, 0.7, 1, 1 },
-	cine_star = { 110268782806283, 0.55, 1, 1 },
-	cine_collapse = { 78094098936022, 0.6, 1, 1 },
-	cine_boom = { 105828901664866, 0.75, 1, 1 },
-	cine_gold = { 137654449349961, 0.8, 1, 1 },
+	-- Cinemáticas de las tiradas más raras (client/RollCinematic), con grabaciones propias elegidas de oído por el
+	-- usuario (tanda `cinematica2` de tools/sonidos/generar.mjs, pasadas por recortar.mjs): la estrella que cae y
+	-- su impacto; el herrero que aparece, la fragua, sus martillazos, el rayo y el temple (suavizado al empezar:
+	-- le sonaba saturado); la supernova que nace, se encoge y estalla, y la explosión dorada de la absoluta; el
+	-- subidón de antes de cada momento gordo, y la tarjeta: entra, cada nota del contador y el número que se planta.
+	cine_fall = { 124306542603393, 0.6, 1, 1 },
+	cine_impact = { 88645231536833, 0.65, 1, 1 },
+	cine_smith = { 91032441737326, 0.6, 1, 1 },
+	cine_forge = { 78394901469121, 0.5, 1, 1 },
+	cine_hammer = { 123618013184387, 0.65, 1, 1 },
+	cine_bolt = { 117621325029680, 0.6, 1, 1 },
+	cine_quench = { 99615299440655, 0.65, 1, 1 },
+	cine_star = { 125153214898517, 0.55, 1, 1 },
+	cine_collapse = { 121144135828707, 0.6, 1, 1 },
+	cine_boom = { 106888584236799, 0.75, 1, 1 },
+	cine_gold = { 131970846892314, 0.8, 1, 1 },
+	cine_riser = { 121575662567666, 0.45, 1, 1 },
+	cine_card = { 71342869987247, 0.45, 1, 1 },
+	cine_tick = { 132700812824975, 0.35, 1, 1 },
+	cine_stamp = { 124660331019582, 0.55, 1, 1 },
 	roll = { 108088062003601, 0.5, 1, 1 },
 	rare = { 113476440126433, 0.65, 1, 1 },
 	win = { 107352736766334, 0.7, 1, 1 },
@@ -102,11 +110,10 @@ local EVENTS = {
 -- diez veces más que otra. Con esto todas suenan igual de fuertes y el volumen de `EVENTS` es el de verdad.
 -- Las que no están aquí ya venían bien.
 local GAIN = {
-	[137654449349961] = 0.88, -- cine_gold_1
-	[99789138675800] = 8.24, -- cine_hammer_1
-	[110621823743010] = 0.89, -- cine_impact_1
-	[139987737672670] = 1.12, -- cine_quench_1
-	[110268782806283] = 1.11, -- cine_star_1
+	[124306542603393] = 2.38, -- cine_fall_3
+	[123618013184387] = 4.55, -- cine_hammer_1
+	[125153214898517] = 1.18, -- cine_star_2
+	[132700812824975] = 5.00, -- cine_tick_2
 	[119069323046508] = 1.20, -- break_crystal_1
 	[124381482851282] = 1.36, -- break_crystal_2
 	[84485501183800] = 1.61, -- break_crystal_3
