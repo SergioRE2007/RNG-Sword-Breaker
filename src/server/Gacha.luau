@@ -100,26 +100,21 @@ local function draw(player: Player, boost: number, source: string, info)
 	local index, metal, size = Permanent.rollWeapon(luck)
 	local rarity = Permanent.rarity(index, metal, size)
 	Index.record(player, index, metal, size) -- al Índice va todo lo que sale, se quede o se venda solo
-	-- Lo difícil que era para el jugador ("1 entre N"): es lo que mide el espectáculo, el aura y el aviso. La menor
-	-- de dos cuentas, porque las dos se pasan de largo por un lado:
-	--  · contra la suerte de sus objetos de siempre: un objeto mejor de lo normal da armas que para él son difíciles,
-	--    y con mucha suerte de destructibles un arma rara deja de ser noticia;
-	--  · lo raro que era el objeto por lo difícil que era el arma con la suerte de ese objeto: un objeto rarísimo da
-	--    armas buenas casi siempre, y eso es tan probable como que salga el objeto, no más.
-	-- (`usual` solo mide: no cambia lo que sale.)
-	-- Las dos son la probabilidad de sacar algo así de raro o más (Permanent.rollOdds), no la de esa arma sola: hay
-	-- cientos de combinaciones igual de raras y, midiendo la suya, las cinemáticas salían de 9 a 30 veces más de lo
-	-- que dice Config.Gacha.RevealOdds. La suerte de siempre cuenta también la de cajas del momento (poción, clima,
-	-- evento: Stats.spawnLuck; la de armas ya va en `base`), para que no las disparen. El Trébol de la suerte no
-	-- cuenta en ninguna de las dos (pedido por el usuario): lo que saca de más sí se celebra.
-	local usual = if source == "object" then base * ObjectSpec.usualLuck(Stats.luck(player) * Stats.spawnLuck(player)) else base
-	local objectOdds = if info and type(info.objectOdds) == "number" then math.max(info.objectOdds, 1) else 1
+	-- Lo difícil que era para el jugador ("1 entre N"): es lo que mide el espectáculo, el aura y el aviso. Es la
+	-- probabilidad de que una tirada suya cualquiera saque algo así de raro o más: Permanent.rollOdds (no la de esa
+	-- combinación sola: hay cientos igual de raras) con la suerte media de los objetos que le aparecen ahora mismo
+	-- (ObjectSpec.meanLuck: tipo, rareza y tamaño con la suerte de destructibles y la de cajas del momento) por su
+	-- suerte de armas. Así "1 entre 1.000" es una de cada 1.000 tiradas con cualquier suerte, clima o poción, y un
+	-- objeto mejor de lo normal se celebra más porque es raro que salga. Medido contra el objeto de siempre salían de
+	-- 4 a 7 veces más, y con un clima de suerte de cajas una estrella cada 3 tiradas. (Solo mide: no cambia lo que sale.)
+	local usual = if source == "object" then base * ObjectSpec.meanLuck(Stats.luck(player) * Stats.spawnLuck(player), Stats.objectLuck(player)) else base
 	local clover = if info and type(info.clover) == "number" then math.max(info.clover, 1) else 1
-	local odds = math.min(Permanent.rollOdds(index, metal, size, usual), Permanent.rollOdds(index, metal, size, luck / clover) * objectOdds)
-	-- Con trébol, como mínimo la primera cinemática (pedido por el usuario: es de pago y tiene que sentirse; por la
-	-- suerte sola salía en 2 de cada 3 tiradas, que su tirada típica cae justo en ese borde).
+	local odds = Permanent.rollOdds(index, metal, size, usual)
+	-- El Trébol de la suerte no cuenta (pedido por el usuario: lo que saca de más se celebra): su tirada se mide
+	-- contra la suerte que tenía ese objeto sin él, así que un trébol de xN da tiradas de alrededor de "1 entre N".
+	-- Y como mínimo la primera cinemática: es de pago y tiene que sentirse (por la suerte sola salía en 2 de cada 3).
 	if clover > 1 then
-		odds = math.max(odds, Config.Gacha.RevealOdds[2])
+		odds = math.max(odds, Permanent.rollOdds(index, metal, size, luck / clover), Config.Gacha.RevealOdds[2])
 	end
 	-- Con la mochila llena, un arma más rara que la peor copia que el jugador no ha tocado se queda con su sitio.
 	local full = #data.swords >= Config.MaxSwords

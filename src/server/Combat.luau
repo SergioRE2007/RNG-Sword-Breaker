@@ -102,7 +102,7 @@ local function hitObject(player: Player, part: BasePart, damage: number, slot: n
 		PlayerData.addGems(player, gems)
 	end
 	-- Tiradas de arma del objeto: cuántas y con qué suerte se decidió al aparecer (tipo, rareza y tamaño).
-	Gacha.give(player, object.luck, "object", object.rolls, { name = broken.name, quality = object.quality, origin = origin, box = box, objectOdds = object.odds, clover = object.clover })
+	Gacha.give(player, object.luck, "object", object.rolls, { name = broken.name, quality = object.quality, origin = origin, box = box, clover = object.clover })
 	Traits.onBroken(player, broken)
 	Gear.onBroken(player)
 	Potions.onBroken(player, broken, object)

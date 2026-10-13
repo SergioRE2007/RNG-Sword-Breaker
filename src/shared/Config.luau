@@ -175,10 +175,9 @@ Config.Gacha = {
 	FreeRoll = false, -- true: vuelven los botones "Tirar" y "Auto" y la tirada gratis cada RollTime segundos de antes de que las armas salieran de los objetos
 	RollTime = 2, -- (sin uso: con FreeRoll el tiempo por tirada es el de la mejora "Velocidad de aparición", Stats.rollTime)
 	MinRollTime = 0.5, -- (solo con FreeRoll) nunca se tira más rápido que esto
-	-- Lo difícil que era un arma para el jugador ("1 entre N", Permanent.odds: arma, metal y tamaño, contra la suerte
-	-- de sus objetos de siempre, ObjectSpec.usualLuck, y sin pasar de lo raro que era el objeto que se la ha dado:
-	-- la cuenta está en server/Gacha) decide cuánto se celebra. Como son tres tiradas a la vez, llegar a un N es
-	-- más fácil de lo que suena.
+	-- Lo difícil que era un arma para el jugador ("1 entre N": la probabilidad de que una tirada suya cualquiera
+	-- saque algo así de raro o más, Permanent.rollOdds con la suerte media de sus objetos, ObjectSpec.meanLuck; la
+	-- cuenta está en server/Gacha) decide cuánto se celebra: "1 entre 1.000" es una de cada 1.000 tiradas.
 	-- Las tiradas se enseñan en el mundo (client/RollReveal): la energía sale del objeto roto, se destapa el arma y
 	-- vuela al jugador. Desde estos "1 entre N" sube de nivel el espectáculo: Normal por debajo del primero, y luego
 	-- Genial (en el mundo, más cargada) y las cuatro con cinemática (client/RollCinematic): Estrella fugaz, Herrero
