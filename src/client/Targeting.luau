@@ -56,12 +56,12 @@ end
 -- Si la pieza está dentro del círculo del jugador. `radius` = otro radio (para acercarse más, o con margen).
 function Targeting.inCircle(part: BasePart, radius: number?): boolean
 	local root = Targeting.root()
-	return root ~= nil and Hitbox.within(part, root.Position, radius or Stats.reach(player))
+	return root ~= nil and Hitbox.within(part, root.Position, radius or Stats.reach(player, CollectionService:HasTag(part, "Enemy")))
 end
 
 -- Lo más cercano al jugador de lo que puede atacar. Con `radius`, solo lo que esté dentro de ese círculo; `skip` =
--- piezas que no cuentan hasta la hora (os.clock) que llevan apuntada.
-function Targeting.nearest(radius: number?, skip: { [BasePart]: number }?): BasePart?
+-- piezas que no cuentan hasta la hora (os.clock) que llevan apuntada; `enemiesOnly` = solo enemigos de mazmorra.
+function Targeting.nearest(radius: number?, skip: { [BasePart]: number }?, enemiesOnly: boolean?): BasePart?
 	local root = Targeting.root()
 	if not root then
 		return nil
@@ -70,6 +70,9 @@ function Targeting.nearest(radius: number?, skip: { [BasePart]: number }?): Base
 	local best, bestDistance = nil, math.huge
 	for _, part in Targeting.candidates() do
 		if skip and (skip[part] or 0) > now then
+			continue
+		end
+		if enemiesOnly and not CollectionService:HasTag(part, "Enemy") then
 			continue
 		end
 		local distance = (part.Position - root.Position).Magnitude - math.max(part.Size.X, part.Size.Z) / 2

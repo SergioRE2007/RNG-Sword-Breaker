@@ -3,8 +3,9 @@
 -- encendidos y se publica en los atributos "AutoClick" y "AutoFarm" del jugador:
 --   Autoclicker: gratis para quien esté en el grupo del juego (Config.AutoClicker.group). El "me gusta" no se puede
 --     comprobar: Roblox no le dice a un juego quién le ha dado like.
---   Auto: ventaja "autoFarm" de un pase de juego, y solo dentro de tu parcela (al salir de ella se apaga solo).
---     Encendido, el círculo de ataque cubre la parcela entera (Stats.reach): las armas llegan a todo sin moverse.
+--   Auto: ventaja "autoFarm" de un pase de juego, dentro de tu parcela o de una mazmorra (fuera se apaga solo).
+--     Encendido, el círculo de ataque cubre la parcela entera o, en la mazmorra, a todos los enemigos (Stats.reach):
+--     las armas llegan a todo sin moverse.
 --   Pelea automática de mazmorra (botón "Auto" del panel de la partida, client/Dungeons): como el autoclicker, gratis
 --     para quien esté en el grupo (pedido por el usuario). Se publica en "AutoFight".
 -- No se guardan: los tres entran apagados.
@@ -84,11 +85,23 @@ local function setGroup(player: Player, mode: string)
 	end
 end
 
+-- Dónde vale el Auto: tu parcela o una mazmorra (pedido por el usuario: allí las armas llegan a cualquier enemigo de
+-- tu partida, Stats.reach).
+-- El lobby subterráneo también cuenta, para que no se apague al bajar a por una partida.
+local LOBBY_BELOW = -28 -- Y por debajo de la cual se está en el lobby de mazmorras (server/DungeonLobby)
+local function autoArea(player: Player): boolean
+	if inPlot(player) or (player:GetAttribute("Dungeon") or 0) > 0 then
+		return true
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	return root ~= nil and root.Position.Y < LOBBY_BELOW
+end
+
 local function setFarm(player: Player)
 	if not Stats.perk(player, "autoFarm") then
 		Remotes.AutoDenied:FireClient(player, "farm")
-	elseif not inPlot(player) then
-		Tell.notice(player, ORANGE, "Go to your plot to turn Auto on")
+	elseif not autoArea(player) then
+		Tell.notice(player, ORANGE, "Go to your plot or a dungeon to turn Auto on")
 	else
 		player:SetAttribute("AutoFarm", true)
 	end
@@ -116,12 +129,12 @@ function AutoPlay.start()
 		member[player] = nil
 		lastCheck[player] = nil
 	end)
-	-- El Auto solo vale en tu parcela: al salir de ella (andando, viajando o entrando en una mazmorra) se apaga.
+	-- El Auto solo vale en tu parcela o en una mazmorra: al salir de ellas (andando o viajando) se apaga.
 	task.spawn(function()
 		while true do
 			task.wait(1)
 			for _, player in Players:GetPlayers() do
-				if player:GetAttribute("AutoFarm") == true and not inPlot(player) then
+				if player:GetAttribute("AutoFarm") == true and not autoArea(player) then
 					player:SetAttribute("AutoFarm", false)
 				end
 			end

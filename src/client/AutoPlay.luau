@@ -58,11 +58,15 @@ local function run()
 		if not Targeting.root() then
 			continue
 		end
-		-- Dentro de una mazmorra manda su propio Auto (client/Dungeons).
 		if Targeting.current() then
 			continue -- ya tienen objetivo: el servidor las pasa solas al siguiente
 		end
-		if on("AutoFarm") and (player:GetAttribute("Dungeon") or 0) == 0 then
+		local inDungeon = (player:GetAttribute("Dungeon") or 0) ~= 0
+		if on("AutoFarm") and inDungeon then
+			-- En la mazmorra el Auto llega a cualquier enemigo de la partida, sin andar (Stats.reach); los objetos de la
+			-- parcela no cuentan.
+			SwordController.attack(Targeting.nearest(Stats.reach(player, true), nil, true))
+		elseif on("AutoFarm") then
 			-- El Auto no mueve al personaje (pedido por el usuario: antes iba andando de objeto en objeto): con él
 			-- encendido el círculo cubre la parcela entera (Stats.reach), así que vale el objeto más cercano, esté donde esté.
 			SwordController.attack(Targeting.nearest(Stats.reach(player) - MARGIN))

@@ -142,7 +142,7 @@ end
 -- las armas siguen solas con el objeto más cercano del círculo, sin esperar a que el cliente lo pida (pedido por el
 -- usuario: se quedaban un momento paradas entre objeto y objeto).
 local function release(player: Player, attack, root: BasePart)
-	local radius = Stats.reach(player)
+	local radius = Stats.reach(player, attack.enemy)
 	local nextTarget: BasePart? = nil
 	if attack.enemy then
 		nextTarget = Dungeons.nearest(player, attack.at, root.Position, radius)
@@ -178,7 +178,7 @@ local function onAttack(player: Player, part: unknown)
 	if not enemy and not Destructibles.owns(player, part) then
 		return
 	end
-	if not Hitbox.within(part, root.Position, Stats.reach(player) + LAG) then
+	if not Hitbox.within(part, root.Position, Stats.reach(player, enemy) + LAG) then
 		return
 	end
 	setTarget(player, part, enemy)
@@ -195,7 +195,7 @@ local function step(dt: number)
 	elapsed = 0
 	local now = os.clock()
 	for player, attack in attacks do
-		local reach = Stats.reach(player) + Config.Loadout.Leash
+		local reach = Stats.reach(player, attack.enemy) + Config.Loadout.Leash
 		local root = rootOf(player)
 		if not root then
 			setTarget(player, nil)
