@@ -12,6 +12,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local AdminScope = require(script.Parent.AdminScope)
+local Clover = require(script.Parent.Clover)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 
@@ -313,6 +314,53 @@ function AdminTools.server(pane: Frame, window: Frame)
 	amount.Text = "10"
 	gifts(content, top + 28 + ROW + GAP, amount, function(key: string, count: number)
 		AdminScope.command("give", 0, key, count)
+	end)
+
+	-- Trébol de prueba (pedido por el usuario, para probar las cinemáticas de tirada): suerte a medida, sin gastar
+	-- tréboles y solo para quien lo pide. "Usar" lo pone, cierra el menú y deja elegir el objeto; mientras está puesto,
+	-- los tréboles de la mochila también dan esa suerte. "Quitar" vuelve al trébol normal.
+	local cloverTop = top + 28 + ROW + GAP + GIFT * 2 + GAP + 10
+	local cloverTitle = heading(content, "CloverTitle", "", cloverTop)
+	local cloverRow = Instance.new("Frame")
+	cloverRow.Name = "CloverRow"
+	cloverRow.Position = UDim2.fromOffset(0, cloverTop + 28)
+	cloverRow.Size = UDim2.new(1, 0, 0, ROW)
+	cloverRow.BackgroundTransparency = 1
+	cloverRow.Parent = content
+	local luck = field(cloverRow, "Luck", Lang.t(nil, "Luck (for example 10K)"), 0)
+	luck.Size = UDim2.new(1, -(120 + GAP) * 2, 1, 0)
+	luck.Text = "10K"
+	local use = Ui.button(cloverRow, Lang.t(nil, "Use"), Ui.COLORS.green)
+	use.Name = "Use"
+	use.AnchorPoint = Vector2.new(1, 0)
+	use.Position = UDim2.new(1, -(120 + GAP), 0, 0)
+	use.Size = UDim2.new(0, 120, 1, 0)
+	use.TextSize = 18
+	local off = Ui.button(cloverRow, Lang.t(nil, "Remove"), Ui.COLORS.red)
+	off.Name = "Off"
+	off.AnchorPoint = Vector2.new(1, 0)
+	off.Position = UDim2.fromScale(1, 0)
+	off.Size = UDim2.new(0, 120, 1, 0)
+	off.TextSize = 18
+	local function paintClover()
+		local now = player:GetAttribute("CloverTest")
+		cloverTitle.Text = if type(now) == "number" then Lang.t(nil, "Test clover: x{n} on", { n = Format.short(now) }) else Lang.t(nil, "Test clover: custom luck, costs nothing")
+	end
+	player:GetAttributeChangedSignal("CloverTest"):Connect(paintClover)
+	paintClover()
+	use.Activated:Connect(function()
+		local value = Format.parse(luck.Text)
+		if not value or value < 1 then
+			Sfx.play("error")
+			Ui.toast(Lang.t(nil, "Type the luck first (for example 10K)"), Ui.COLORS.orange)
+			return
+		end
+		Remotes.AdminCommand:FireServer("clover", value)
+		Ui.close(window)
+		Clover.pick(true)
+	end)
+	off.Activated:Connect(function()
+		Remotes.AdminCommand:FireServer("clover", 0)
 	end)
 
 	-- Cuánta gente hay y cuánto lleva abierto: se repinta con el panel a la vista.

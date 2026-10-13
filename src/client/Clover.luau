@@ -151,12 +151,13 @@ local function build()
 	hover = light
 end
 
--- Entra en el modo de elegir objeto. No hace nada sin tréboles.
-function Clover.pick()
+-- Entra en el modo de elegir objeto. No hace nada sin tréboles, salvo con `test` (el trébol de prueba del menú de
+-- admin, que no gasta ninguno: el servidor comprueba que lo tiene puesto).
+function Clover.pick(test: boolean?)
 	if active then
 		return
 	end
-	if (player:GetAttribute("Item_" .. cfg.Item) or 0) < 1 then
+	if not test and not player:GetAttribute("CloverTest") and (player:GetAttribute("Item_" .. cfg.Item) or 0) < 1 then
 		Sfx.play("error")
 		Ui.toast(Lang.t(nil, "You have no clovers: get them in the Shop or with tickets"), Ui.COLORS.orange)
 		return
