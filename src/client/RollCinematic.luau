@@ -24,6 +24,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
+local PropModel = require(ReplicatedStorage.Shared.PropModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 
@@ -199,6 +200,69 @@ local function sparks(parent: Instance, color: Color3, count: number, speed: num
 		Size = seq({ { 0, size }, { 1, 0 } }),
 		Transparency = seq({ { 0, 0 }, { 1, 1 } }),
 	}, count)
+end
+
+-- Chispas de fragua: saltan hacia arriba en abanico y caen con su peso.
+local function forgeSparks(parent: Instance, color: Color3, count: number, speed: number)
+	emitter(parent, {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(WHITE, color),
+		LightEmission = 1,
+		Lifetime = NumberRange.new(0.6 * SLOW, 1.3 * SLOW),
+		Speed = NumberRange.new(speed * 0.35 / SLOW, speed / SLOW),
+		SpreadAngle = Vector2.new(75, 75),
+		EmissionDirection = Enum.NormalId.Top,
+		Acceleration = Vector3.new(0, -60 / (SLOW * SLOW), 0),
+		Drag = 0.8 / SLOW,
+		Size = seq({ { 0, 0.75 }, { 0.6, 0.45 }, { 1, 0 } }),
+		Transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),
+	}, count)
+end
+
+-- Columna de luz que sube desde `position`: se abre de golpe y se va cerrando.
+local function pillar(s, position: Vector3, height: number, width: number, color: Color3, seconds: number)
+	local base = point(s, position)
+	local low, high = Instance.new("Attachment"), Instance.new("Attachment")
+	high.Position = Vector3.new(0, height, 0)
+	low.Parent, high.Parent = base, base
+	local beam = Instance.new("Beam")
+	beam.Attachment0, beam.Attachment1 = low, high
+	beam.FaceCamera = true
+	beam.Segments = 1
+	beam.LightEmission = 1
+	beam.LightInfluence = 0
+	beam.Color = ColorSequence.new(color:Lerp(WHITE, 0.5), color)
+	beam.Transparency = seq({ { 0, 0.15 }, { 0.6, 0.45 }, { 1, 1 } })
+	beam.Width0, beam.Width1 = width * 0.2, width * 0.2
+	beam.Parent = base
+	tween(beam, 0.1, { Width0 = width, Width1 = width * 0.7 })
+	task.delay(0.1 * SLOW, function()
+		if beam.Parent then
+			tween(beam, seconds, { Width0 = 0, Width1 = 0 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		end
+	end)
+	Debris:AddItem(base, (seconds + 0.1) * SLOW + 0.1)
+end
+
+-- Rayo en zigzag de `from` a `to`: un núcleo blanco dentro de un resplandor del color, que se apaga.
+local function bolt(s, from: Vector3, to: Vector3, color: Color3, width: number, seconds: number)
+	local points = { from }
+	local steps = 8
+	local span = (to - from).Magnitude
+	for index = 1, steps - 1 do
+		table.insert(points, from:Lerp(to, index / steps) + rng:NextUnitVector() * span * 0.05)
+	end
+	table.insert(points, to)
+	for index = 1, #points - 1 do
+		local a, b = points[index], points[index + 1]
+		local long = (b - a).Magnitude
+		local cframe = CFrame.lookAt((a + b) / 2, b)
+		for _, layer in { { WHITE, width * 0.35, 0 }, { color, width, 0.55 } } do
+			local part = piece(s, Enum.PartType.Block, Vector3.new(layer[2], layer[2], long), cframe, layer[1], layer[3])
+			tween(part, seconds, { Transparency = 1, Size = Vector3.new(0.05, 0.05, long) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			Debris:AddItem(part, seconds * SLOW + 0.1)
+		end
+	end
 end
 
 -- Polvo de estrellas que sale hacia fuera.
@@ -653,6 +717,7 @@ local function release(s)
 		s.haze.Density = s.hazeWas
 	end
 	s.correction:Destroy()
+	s.blur:Destroy()
 	s.folder:Destroy()
 end
 
@@ -665,6 +730,7 @@ local function newScene(info)
 		cam = camera.CFrame,
 		fov = camera.FieldOfView,
 		shake = 0,
+		punch = 0,
 		clock = 0,
 		spinning = {},
 		hidden = hideUi(),
@@ -678,6 +744,12 @@ local function newScene(info)
 	correction.Name = "RollCinematic"
 	correction.Parent = Lighting
 	s.correction = correction
+	-- Desenfoque para los golpes gordos: a 0 no se nota.
+	local blur = Instance.new("BlurEffect")
+	blur.Name = "RollCinematic"
+	blur.Size = 0
+	blur.Parent = Lighting
+	s.blur = blur
 	buildGui(s, info)
 	camera.CameraType = Enum.CameraType.Scriptable
 
@@ -690,7 +762,12 @@ local function newScene(info)
 			s.shake *= math.exp(-dt * 7 / SLOW)
 		end
 		camera.CFrame = s.cam * jolt
-		camera.FieldOfView = s.fov
+		-- `punch`: golpe de zoom que se va solo (negativo = se acerca).
+		camera.FieldOfView = s.fov + s.punch
+		s.punch *= math.exp(-dt * 8 / SLOW)
+		if s.tick then
+			s.tick(dt) -- lo que mueva la escena cada fotograma (el herrero)
+		end
 		if s.haze then
 			s.haze.Density = 0 -- cada fotograma: el ciclo de día y el clima la van cambiando
 		end
@@ -878,8 +955,8 @@ function THEMES.star(s, info)
 	end)
 end
 
--- Herrero celestial: un gigante espectral forja el arma a martillazos; con el último se templa y se ve cuál es.
-function THEMES.smith(s, info)
+-- El herrero de antes, hecho con piezas: solo sale si faltan las mallas de Blender (Shared.MapMeshesPatch).
+local function smithOfParts(s, info)
 	local color, bright = info.color, info.bright
 	local spirit = color:Lerp(BLACK, 0.7) -- cuerpo oscuro: lo dibujan el contorno de luz y las dos luces
 	cover(s, BLACK, 1, 0, 0.18)
@@ -1088,6 +1165,468 @@ function THEMES.smith(s, info)
 	card(s, info)
 	animate(s, 1.1, function(t)
 		s.cam = camShow * CFrame.new(0, 0, -1.2 * t)
+	end)
+end
+
+-- Herrero celestial: un gigante espectral saca la hoja al rojo de la fragua, la forja a martillazos en el yunque y,
+-- con el último, le cae un rayo, se templa y se ve cuál es. Hasta entonces todo va en naranja de fragua: el color
+-- de la rareza no se ve hasta el temple. El herrero es un modelo de Blender en piezas (smith() de
+-- tools/blender/crear_mapa_japones.py) que se mueve por articulaciones: el cuerpo se dobla por la cintura, la
+-- cabeza por el cuello y cada brazo se resuelve desde el hombro hasta donde tiene que estar el puño.
+-- Medidas del modelo, en studs desde el centro del escenario: las mismas que en el script de Blender.
+local SMITH = {
+	waist = Vector3.new(0, 5, -7),
+	neck = Vector3.new(0, 15.6, -6.6),
+	shoulder = Vector3.new(6.5, 14, -6.5), -- el del martillo; el otro, con la X cambiada de signo
+	upper = 6.5, -- del hombro al codo
+	fore = 6.9, -- del codo al centro del puño
+	grip = Vector3.new(16, 4, 0), -- por dónde se coge el martillo en el modelo
+}
+local SMITH_BODY = { "SmithTorso", "SmithHead", "SmithArmA", "SmithForeA", "SmithArmB", "SmithForeB", "SmithHammer" }
+
+-- Dónde queda el codo (y el puño, si no llega) de un brazo que va de `shoulder` a `target`, doblado hacia `pole`.
+local function reach(shoulder: Vector3, target: Vector3, pole: Vector3): (Vector3, Vector3)
+	local toward = target - shoulder
+	local far = math.clamp(toward.Magnitude, 1, SMITH.upper + SMITH.fore - 0.05)
+	local dir = toward.Unit
+	local along = (SMITH.upper ^ 2 - SMITH.fore ^ 2 + far ^ 2) / (2 * far)
+	local out = math.sqrt(math.max(SMITH.upper ^ 2 - along ^ 2, 0))
+	local bend = pole - dir * pole:Dot(dir)
+	bend = if bend.Magnitude > 0.01 then bend.Unit else Vector3.xAxis
+	return shoulder + dir * along + bend * out, shoulder + dir * far
+end
+
+-- Marco de un hueso modelado colgando hacia abajo: va de `from` a `to` con su cara de delante mirando a `front`.
+local function bone(from: Vector3, to: Vector3, front: Vector3): CFrame
+	local up = (from - to).Unit
+	local right = up:Cross(front)
+	right = if right.Magnitude > 0.01 then right.Unit else up:Cross(Vector3.xAxis).Unit
+	return CFrame.fromMatrix(from, right, up)
+end
+
+function THEMES.smith(s, info)
+	if not PropModel.has("SmithTorso") then
+		return smithOfParts(s, info)
+	end
+	local color, bright = info.color, info.bright
+	cover(s, BLACK, 1, 0, 0.18)
+	wait(s, 0.18)
+	local centre = stage(s)
+	local origin = CFrame.new(centre)
+	local function at(x: number, y: number, z: number): Vector3
+		return centre + Vector3.new(x, y, z)
+	end
+	local function look(from: Vector3, to: Vector3): CFrame
+		return CFrame.lookAt(centre + from, centre + to)
+	end
+
+	-- Decorado: suelo, sellos, fragua con monolitos y yunque.
+	piece(s, Enum.PartType.Cylinder, Vector3.new(0.6, 76, 76), CFrame.new(at(0, -0.3, 0)) * FLAT, Color3.fromRGB(22, 20, 32), 0, Enum.Material.Slate)
+	sealOn(s, at(0, 0.1, 0), TEX.seal, EMBER, 30, 20, 14)
+	sealOn(s, at(0, 0.15, 0), TEX.seal2, EMBER:Lerp(WHITE, 0.3), 19, 20, -22)
+	local iron = Color3.fromRGB(104, 106, 126)
+	local gold = Color3.fromRGB(222, 168, 74)
+	local glow = {} -- lo que brilla (ojos, runas, brasas): naranja hasta el temple
+	local function dress(model: Model?, looks: { [string]: { any } }, list: { BasePart }?)
+		if not model then
+			return
+		end
+		for _, part in model:GetChildren() do
+			if part:IsA("BasePart") then
+				local found = looks[part.Name]
+				if found then
+					part.Color = found[1]
+					part.Material = found[2]
+				end
+				part.CastShadow = false
+				if part.Name == "Paper" then
+					part.Transparency = 0
+					table.insert(glow, part)
+				end
+				if list then
+					table.insert(list, part)
+				end
+			end
+		end
+	end
+	local set = {
+		StoneDark = { Color3.fromRGB(50, 48, 64), Enum.Material.Slate },
+		Stone = { iron, Enum.Material.Metal },
+		Black = { Color3.fromRGB(20, 16, 22), Enum.Material.SmoothPlastic },
+		Gold = { gold, Enum.Material.Metal },
+		Paper = { EMBER, Enum.Material.Neon },
+		Wood = { Color3.fromRGB(92, 62, 44), Enum.Material.Wood },
+		Water = { Color3.fromRGB(90, 170, 220), Enum.Material.Glass },
+	}
+	dress(PropModel.place(s.folder, "SmithForge", origin), set)
+	dress(PropModel.place(s.folder, "SmithAnvil", origin), set)
+
+	-- El herrero: piel de sombra, hierro, oro y cuero, con el contorno de luz.
+	local figure = Instance.new("Model")
+	figure.Name = "Smith"
+	figure.Parent = s.folder
+	local aura = Instance.new("Highlight")
+	aura.DepthMode = Enum.HighlightDepthMode.Occluded
+	aura.OutlineColor = EMBER
+	aura.FillColor = EMBER
+	aura.FillTransparency = 1
+	aura.OutlineTransparency = 1
+	aura.Parent = figure
+	local skin = {
+		StoneDark = { Color3.fromRGB(44, 46, 70), Enum.Material.SmoothPlastic },
+		Stone = { iron, Enum.Material.Metal },
+		Black = { Color3.fromRGB(34, 24, 26), Enum.Material.SmoothPlastic },
+		Gold = { gold, Enum.Material.Metal },
+		Paper = { EMBER, Enum.Material.Neon },
+		White = { Color3.fromRGB(206, 200, 214), Enum.Material.SmoothPlastic },
+		Wood = { Color3.fromRGB(92, 62, 44), Enum.Material.Wood },
+	}
+	local ghost = {}
+	local body = {}
+	for _, name in SMITH_BODY do
+		local model = PropModel.place(figure, name, origin)
+		dress(model, skin, ghost)
+		body[name] = model
+	end
+	for _, part in ghost do
+		part.Transparency = 1
+	end
+
+	-- Luces: la fragua, el yunque, un relleno frío y una de contra detrás del gigante.
+	local function lamp(position: Vector3, tone: Color3, brightness: number, range: number): (PointLight, Part)
+		local holder = point(s, position)
+		local light = Instance.new("PointLight")
+		light.Color = tone
+		light.Brightness = brightness
+		light.Range = range
+		light.Shadows = false
+		light.Parent = holder
+		return light, holder
+	end
+	local furnace = lamp(at(-11.5, 5, -3.5), EMBER, 2.4, 30)
+	local fire = lamp(at(2, 7, 4), EMBER, 1.6, 30)
+	local fill = lamp(at(-10, 20, 16), Color3.fromRGB(170, 190, 255), 1.3, 60)
+	local rim = lamp(at(0, 17, -17), EMBER, 1.6, 40)
+
+	-- Brasas y humo: la boca de la fragua, su chimenea y la niebla de la que sale el gigante.
+	emitter(point(s, at(-12.9, 3, -5.2), 3), {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(WHITE, EMBER),
+		LightEmission = 1,
+		Rate = 26 / SLOW,
+		Lifetime = NumberRange.new(1.2 * SLOW, 2.4 * SLOW),
+		Speed = NumberRange.new(2 / SLOW, 6 / SLOW),
+		SpreadAngle = Vector2.new(40, 40),
+		Acceleration = Vector3.new(0, 4 / (SLOW * SLOW), 0),
+		Size = seq({ { 0, 0.5 }, { 1, 0 } }),
+		Transparency = seq({ { 0, 0 }, { 0.7, 0.2 }, { 1, 1 } }),
+	})
+	emitter(point(s, at(-14.4, 22, -9.5), 2), {
+		Texture = SMOKE,
+		Color = ColorSequence.new(Color3.fromRGB(70, 62, 70)),
+		Rate = 5 / SLOW,
+		Lifetime = NumberRange.new(2.5 * SLOW, 3.5 * SLOW),
+		Speed = NumberRange.new(3 / SLOW, 5 / SLOW),
+		SpreadAngle = Vector2.new(12, 12),
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-10 / SLOW, 10 / SLOW),
+		Size = seq({ { 0, 2 }, { 1, 8 } }),
+		Transparency = seq({ { 0, 1 }, { 0.2, 0.6 }, { 1, 1 } }),
+	})
+	local mist = emitter(point(s, at(0, 2, -7), 10), {
+		Texture = SMOKE,
+		Color = ColorSequence.new(Color3.fromRGB(60, 62, 96)),
+		LightEmission = 0.4,
+		Rate = 16 / SLOW,
+		Lifetime = NumberRange.new(2 * SLOW, 3 * SLOW),
+		Speed = NumberRange.new(0.6 / SLOW, 1.6 / SLOW),
+		SpreadAngle = Vector2.new(70, 70),
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-12 / SLOW, 12 / SLOW),
+		Size = seq({ { 0, 5 }, { 1, 11 } }),
+		Transparency = seq({ { 0, 1 }, { 0.3, 0.6 }, { 1, 1 } }),
+	}, 12)
+	-- Motas de ceniza que flotan por todo el escenario: dan fondo a los planos.
+	emitter(point(s, at(0, 12, 4), 50), {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(EMBER),
+		LightEmission = 1,
+		Rate = 22 / SLOW,
+		Lifetime = NumberRange.new(2 * SLOW, 3.5 * SLOW),
+		Speed = NumberRange.new(0.4 / SLOW, 1.4 / SLOW),
+		SpreadAngle = Vector2.new(180, 180),
+		Acceleration = Vector3.new(0, 1.2 / (SLOW * SLOW), 0),
+		Size = seq({ { 0, 0 }, { 0.3, 0.28 }, { 1, 0 } }),
+		Transparency = seq({ { 0, 1 }, { 0.3, 0.2 }, { 1, 1 } }),
+	}, 30)
+
+	-- El arma, al rojo: se ve la forma, no los colores. Empieza con la hoja metida en la fragua.
+	local lying = at(1.5, 4.5, 0)
+	local held = weapon(s, info, at(-12.4, 3.7, -4.6), 7)
+	held.tilt = CFrame.Angles(0, 0, -math.pi / 2)
+	held.scale = 1
+	held.yaw = math.pi
+	held.outline.FillColor = EMBER
+	held.outline.FillTransparency = 0
+	held.outline.OutlineColor = WHITE
+	local heat, heatAt = lamp(held.position, EMBER, 1.2, 12)
+	local trail = emitter(heatAt, {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(WHITE, EMBER),
+		LightEmission = 1,
+		Lifetime = NumberRange.new(0.4 * SLOW, 0.8 * SLOW),
+		Speed = NumberRange.new(1 / SLOW, 4 / SLOW),
+		SpreadAngle = Vector2.new(180, 180),
+		Acceleration = Vector3.new(0, -14 / (SLOW * SLOW), 0),
+		Size = seq({ { 0, 0.55 }, { 1, 0 } }),
+		Transparency = seq({ { 0, 0 }, { 1, 1 } }),
+	})
+
+	-- La postura: adónde va cada puño, cómo va el martillo y cuánto se dobla el cuerpo. La escena solo cambia esta
+	-- tabla; el bucle de la escena coloca las piezas cada fotograma (y lo hace respirar).
+	local READY = { fist = Vector3.new(8, 11, -2.5), handle = Vector3.new(-0.4, 0.75, 0.5), face = Vector3.new(0, -0.3, 1), lean = 4, twist = 0, nod = 14, turn = -6 }
+	local RAISED = { fist = Vector3.new(8.5, 21, -9), handle = Vector3.new(0.1, 0.8, -0.6), face = Vector3.new(0, 0.6, 0.8), lean = -8, twist = 12, nod = -6, turn = 6 }
+	local BIG = { fist = Vector3.new(7.5, 23, -10.5), handle = Vector3.new(0, 0.55, -0.85), face = Vector3.new(0, 0.85, 0.55), lean = -12, twist = 16, nod = -14, turn = 8 }
+	local IMPACT = { fist = Vector3.new(7, 7.8, -5), handle = Vector3.new(-3.5, -0.4, 5), face = Vector3.new(0, -1, 0), lean = 13, twist = -8, nod = 24, turn = -6 }
+	local REST = { fist = Vector3.new(9.5, 8.2, -3), handle = Vector3.new(0.1, -1, 0.25), face = Vector3.new(0, 0.2, 1), lean = 6, twist = -4, nod = 20, turn = -8 }
+	local pose = table.clone(READY)
+	pose.rise = -3
+	pose.hold = Vector3.zero -- el puño que sujeta, relativo al escenario (lo pone `carry`)
+	local function carry()
+		-- El puño que sujeta va en el mango: el arma tumbada, con la punta hacia donde diga su giro.
+		pose.hold = (held.position - centre) + CFrame.Angles(0, held.yaw, 0):VectorToWorldSpace(Vector3.new(-3.7, 0.2, 0))
+	end
+	carry()
+	local strikeAt = at(3.5, 4.6, 0)
+	s.tick = function()
+		local breath = math.sin(s.clock * 1.7) * 0.14
+		local torso = CFrame.new(centre + Vector3.new(0, pose.rise + breath, 0))
+			* CFrame.new(SMITH.waist)
+			* CFrame.Angles(math.rad(pose.lean), math.rad(pose.twist), 0)
+			* CFrame.new(-SMITH.waist)
+		body.SmithTorso:PivotTo(torso)
+		body.SmithHead:PivotTo(torso * CFrame.new(SMITH.neck) * CFrame.Angles(math.rad(pose.nod), math.rad(pose.turn), 0) * CFrame.new(-SMITH.neck))
+		local front = -torso.LookVector
+		local grip = centre + pose.fist
+		for _, arm in { { 1, "A", grip }, { -1, "B", centre + pose.hold } } do
+			local rest = SMITH.shoulder * Vector3.new(arm[1], 1, 1)
+			local shoulder = torso * rest
+			local elbow, fist = reach(shoulder, arm[3], torso:VectorToWorldSpace(Vector3.new(arm[1], 0.15, -0.7)))
+			body["SmithArm" .. arm[2]]:PivotTo(bone(shoulder, elbow, front) * CFrame.new(-rest))
+			body["SmithFore" .. arm[2]]:PivotTo(bone(elbow, fist, front) * CFrame.new(-(rest - Vector3.new(0, SMITH.upper, 0))))
+			if arm[1] == 1 then
+				grip = fist
+			end
+		end
+		local handle = pose.handle.Unit
+		local face = pose.face - handle * pose.face:Dot(handle)
+		face = if face.Magnitude > 0.01 then face.Unit else Vector3.zAxis
+		body.SmithHammer:PivotTo(CFrame.fromMatrix(grip, handle:Cross(face), handle) * CFrame.new(-SMITH.grip))
+		heatAt.Position = held.position
+		-- La fragua parpadea.
+		furnace.Brightness = 2.2 + math.noise(s.clock * 3.1, 0.5) * 0.9
+	end
+	-- Lleva la postura hasta `target` en `seconds`; `arc` saca el puño hacia delante a mitad de camino (el martillo
+	-- baja por delante, no a través del hombro) y `extra(avance)` va con cada fotograma.
+	local function move(target, seconds: number, ease: (number) -> number, arc: number?, extra: ((number) -> ())?)
+		local from = table.clone(pose)
+		animate(s, seconds, function(t)
+			local e = ease(t)
+			pose.fist = from.fist:Lerp(target.fist, e) + Vector3.new(0, 0, (arc or 0) * math.sin(math.clamp(e, 0, 1) * math.pi))
+			pose.handle = from.handle.Unit:Lerp(target.handle.Unit, e)
+			pose.face = from.face:Lerp(target.face, e)
+			for _, key in { "lean", "twist", "nod", "turn" } do
+				pose[key] = lerp(from[key], target[key], e)
+			end
+			if extra then
+				extra(t)
+			end
+		end)
+	end
+	local function accelerate(t: number): number
+		return t * t * t
+	end
+
+	-- Planos de cámara.
+	local camRise = look(Vector3.new(5, 2.4, 24), Vector3.new(-1, 12.5, -6))
+	local camWide = look(Vector3.new(-7, 7.5, 35), Vector3.new(0.5, 10.5, -3))
+	local camAnvil = look(Vector3.new(-6.5, 5.6, 12), Vector3.new(3.2, 5.2, 0))
+	local camLow = look(Vector3.new(0.5, 2.6, 13.5), Vector3.new(2.5, 13.5, -6))
+	local camFinal = look(Vector3.new(-4.5, 8, 27), Vector3.new(1.5, 8.5, -2))
+	local camShow = look(Vector3.new(1.5, 10.2, 17.5), Vector3.new(1.5, 9.4, 2.5))
+	s.cam, s.fov = camRise, 64
+
+	-- 1. Sale de la niebla: aparece el cuerpo, se le encienden los ojos y las runas, y la cámara sube por él.
+	cover(s, BLACK, 0, 1, 0.45)
+	Sfx.play("cine_smith")
+	for _, part in ghost do
+		tween(part, 0.6, { Transparency = if part.Name == "Water" then 0.2 else 0 })
+	end
+	tween(aura, 0.6, { OutlineTransparency = 0.15 })
+	mist:Emit(20)
+	animate(s, 1, function(t)
+		pose.rise = lerp(-3, 0, outCubic(t))
+		s.cam = camRise * CFrame.new(0, 1.6 * smooth(t), -2.5 * t)
+	end)
+
+	-- 2. Saca la hoja de la fragua y la deja en el yunque, soltando brasas.
+	s.cam, s.fov = camWide, 60
+	trail.Rate = 60 / SLOW
+	local start = held.position
+	animate(s, 0.8, function(t)
+		local e = smooth(t)
+		held.position = start:Lerp(lying, e) + Vector3.new(0, math.sin(e * math.pi) * 5, math.sin(e * math.pi) * 3)
+		held.yaw = math.pi * (1 - e)
+		carry()
+		pose.nod = lerp(14, 22, e)
+		pose.turn = lerp(-22, -4, e)
+		s.cam = camWide * CFrame.new(0, 0, -3 * e)
+	end)
+	trail.Rate = 0
+	Sfx.play("forge_hit", 0.5, 0.8)
+	sparks(point(s, lying), EMBER, 14, 14, 0.7)
+
+	-- 3. Tres martillazos, cada uno más fuerte y desde un plano distinto. Con cada uno la hoja se pone más blanca.
+	local function strike(hit: number, last: boolean)
+		local from, to
+		if hit == 1 then
+			from, to = camWide * CFrame.new(0, 0, -3), camWide * CFrame.new(0, 0, -6)
+		elseif hit == 2 then
+			from, to = camAnvil, camAnvil * CFrame.new(0, 0.4, -1.5)
+		else
+			from, to = camLow, camLow * CFrame.new(0, 0.6, -2)
+		end
+		s.cam, s.fov = from, if hit == 3 then 70 elseif hit == 2 then 52 else 60
+		if last then
+			-- El último se carga: las runas del martillo se van poniendo blancas y todo tiembla un poco.
+			Sfx.play("charge", 0.9, 0.7)
+			for _, part in body.SmithHammer:GetChildren() do
+				if part.Name == "Paper" then
+					tween(part, 0.8, { Color = WHITE })
+				end
+			end
+			tween(aura, 0.8, { OutlineColor = WHITE })
+		end
+		move(if last then BIG else RAISED, if last then 0.85 else 0.46, outCubic, 0, function(t)
+			s.cam = from:Lerp(to, smooth(t))
+			if last then
+				s.shake = math.max(s.shake, 0.08 * t)
+			end
+		end)
+		wait(s, if last then 0.24 else 0.07)
+		if last then
+			s.cam, s.fov = camFinal, 58
+		end
+		move(IMPACT, if last then 0.12 else 0.1, accelerate, 6)
+	end
+	local function clang(hit: number)
+		local spot = point(s, strikeAt)
+		s.shake = 0.4 + hit * 0.2
+		s.punch = -5 - hit * 2
+		fire.Brightness = 8
+		tween(fire, 0.4, { Brightness = 1.6 })
+		Sfx.play("cine_hammer", 1, 0.85 + hit * 0.1)
+		forgeSparks(spot, EMBER, 40 + hit * 30, 34 + hit * 6)
+		sparks(spot, EMBER, 16 + hit * 10, 22, 0.9)
+		sprite(spot, TEX.nova, EMBER:Lerp(WHITE, 0.4), 7 + hit * 2, 0.35, 200, 1, true)
+		ring(s, strikeAt - Vector3.new(0, 0.5, 0), 2, 13 + hit * 4, EMBER, 0.4)
+		ring(s, at(1.5, 0.3, 0), 6, 22 + hit * 6, EMBER, 0.6)
+		held.outline.FillColor = EMBER:Lerp(WHITE, hit * 0.3)
+		for _, part in glow do
+			part.Color = WHITE
+			tween(part, 0.5, { Color = EMBER })
+		end
+		-- Parada de imagen: el golpe se queda clavado un instante antes de rebotar.
+		wait(s, 0.05)
+		move(READY, 0.2, outBack)
+	end
+	for hit = 1, 2 do
+		strike(hit, false)
+		clang(hit)
+		wait(s, 0.05)
+	end
+	strike(3, true)
+
+	-- 4. El último: cae un rayo del color de la rareza, la hoja se templa y todo lo que brillaba cambia a ese color.
+	Sfx.play("cine_quench")
+	Sfx.play("reveal_5")
+	cover(s, bright:Lerp(WHITE, 0.6), 0.05, 1, 0.7)
+	s.shake = 1.5
+	s.punch = -14
+	s.blur.Size = 22
+	tween(s.blur, 0.6, { Size = 0 })
+	bolt(s, at(1.5, 80, -4), strikeAt, bright, 1.6, 0.5)
+	bolt(s, at(-9, 80, 3), strikeAt, bright, 0.8, 0.4)
+	bolt(s, at(12, 80, 2), strikeAt, bright, 0.8, 0.45)
+	pillar(s, at(3.5, 4, 0), 80, 9, bright, 1.1)
+	local spot = point(s, strikeAt)
+	forgeSparks(spot, color, 160, 48)
+	sparks(spot, color, 90, 40, 1.3)
+	stardust(spot, color, 60, 28, 1.9)
+	sprite(spot, TEX.nova, bright, 26, 0.7, -240, 1, true)
+	for wave = 1, 3 do
+		task.delay((wave - 1) * 0.12 * SLOW, function()
+			if not s.released then
+				ring(s, at(1.5, 0.3, 0), 4, 40 + wave * 10, bright, 0.7)
+			end
+		end)
+	end
+	sealOn(s, at(0, 0.2, 0), TEX.seal, color, 32, 10, 30)
+	sealOn(s, at(0, 0.25, 0), TEX.seal2, bright, 20, 10, -44)
+	emitter(point(s, at(1.5, 4.4, 0), 6), {
+		Texture = SMOKE,
+		Color = ColorSequence.new(WHITE),
+		Rate = 14 / SLOW,
+		Lifetime = NumberRange.new(1 * SLOW, 1.8 * SLOW),
+		Speed = NumberRange.new(5 / SLOW, 11 / SLOW),
+		SpreadAngle = Vector2.new(22, 22),
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-20 / SLOW, 20 / SLOW),
+		Size = seq({ { 0, 1.5 }, { 1, 7 } }),
+		Transparency = seq({ { 0, 0.45 }, { 1, 1 } }),
+	}, 20)
+	for _, part in glow do
+		part.Color = WHITE
+		tween(part, 0.7, { Color = bright })
+	end
+	tween(held.outline, 0.7, { FillTransparency = 0.88, OutlineColor = bright, FillColor = WHITE })
+	tween(aura, 0.7, { OutlineColor = bright })
+	tween(fire, 0.6, { Color = color, Brightness = 1.6 })
+	tween(rim, 0.6, { Color = color, Brightness = 2.4 })
+	tween(furnace, 0.6, { Color = color })
+	tween(heat, 0.6, { Color = bright })
+	tween(fill, 0.6, { Brightness = 1.7, Color = bright:Lerp(WHITE, 0.4) })
+	wait(s, 0.07)
+	move(READY, 0.3, outBack)
+	wait(s, 0.25)
+
+	-- 5. Baja el martillo, levanta el arma hacia la cámara y la suelta: se queda flotando y girando.
+	local lifted = at(1.5, 9.6, 2.5)
+	local struck = s.cam
+	local released = Vector3.new(-4.5, 8.5, -1)
+	move(REST, 1, smooth, 0, function(t)
+		local e = smooth(t)
+		held.position = lying:Lerp(lifted, e)
+		held.tilt = CFrame.Angles(0, 0, math.rad(lerp(-90, -22, e)))
+		held.spin = 2.5 * e
+		if t < 0.55 then
+			carry()
+		else
+			pose.hold = pose.hold:Lerp(released, 0.08)
+		end
+		s.cam = struck:Lerp(camShow, e)
+		s.fov = lerp(58, 50, e)
+	end)
+	rays(s, lifted - Vector3.new(0, 0, 3), 6, 34, bright)
+	sprite(point(s, lifted), TEX.shine, bright, 12, 6, 14, 1)
+	-- El gigante se queda detrás, apagado, para que mande el arma.
+	for _, part in ghost do
+		tween(part, 0.9, { Transparency = 0.6 })
+	end
+	tween(aura, 0.9, { OutlineTransparency = 0.5 })
+	card(s, info)
+	animate(s, 1.1, function(t)
+		s.cam = camShow * CFrame.new(0, 0, -1.4 * t)
 	end)
 end
 

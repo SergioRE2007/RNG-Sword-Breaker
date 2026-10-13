@@ -1217,13 +1217,210 @@ def gold_sack(p):
         p.add("Gold", cyl(0.8, 0.18, 10), T(3.4 + rng.uniform(-0.07, 0.07), 0.36 + k * 0.19, -19.9 + rng.uniform(-0.07, 0.07)))
 
 
+# El herrero de la cinemática de tirada (client/RollCinematic, tema "smith"). Estas medidas son las mismas que usa
+# el juego para mover las piezas (SMITH en RollCinematic): si cambian aquí, cambian allí.
+SMITH_WAIST = (0.0, 5.0, -7.0)  # por donde se dobla el cuerpo
+SMITH_NECK = (0.0, 15.6, -6.6)
+SMITH_SHOULDER = (6.5, 14.0, -6.5)  # el del martillo; el otro, con la X cambiada de signo
+SMITH_UPPER = 6.5  # del hombro al codo
+SMITH_FORE = 6.9  # del codo al centro del puño
+SMITH_HAMMER = (16.0, 4.0, 0.0)  # por dónde se coge el martillo, que se modela aparte, de pie
+SMITH_HEAD = 6.2  # del agarre al centro de la cabeza del martillo
+
+
+def smith(p):
+    """Herrero espectral gigante y su fragua, para la cinemática de tirada. Al contrario que el resto de piezas, mira
+    a +Z (a la cámara de la escena) y su origen es el centro del escenario, así que cada cosa va ya en su sitio.
+    Sale en piezas con el mismo origen para moverlas por separado: SmithTorso (sale del suelo como un genio),
+    SmithHead, SmithArmA/SmithForeA (el brazo del martillo, a +X, modelado colgando recto del hombro), SmithArmB/
+    SmithForeB (el que sujeta el arma), SmithHammer (de pie, a un lado), SmithAnvil y SmithForge (fragua, barril de
+    temple y monolitos de runas). Papeles: StoneDark = piel, Stone = hierro, Black = cuero, Gold = adornos,
+    Paper = lo que brilla (ojos, runas, brasas), White = cuernos y barba, Wood y Water."""
+    rng = random.Random(41)
+    wx, wy, wz = SMITH_WAIST
+
+    # --- Torso ---
+    p.group = "Torso"
+    # Cola de espíritu: sale del suelo y se ensancha hasta la cintura.
+    p.add("StoneDark", lathe([(0.5, 0), (1.5, 0.8), (2.6, 2.2), (3.7, 3.8), (4.3, 5.2), (4.4, 6.2)], 14), T(0, 0, wz) @ S(1, 1, 0.8))
+    p.add("StoneDark", sphere(1, 14, 8), T(0, 7.2, wz) @ S(4.7, 3.0, 3.5))  # barriga
+    p.add("StoneDark", sphere(1, 16, 8), T(0, 11.2, -6.8) @ S(6.3, 4.3, 4.0))  # pecho
+    for side in (-1, 1):
+        p.add("StoneDark", sphere(1, 10, 6), T(side * 2.5, 11.9, -3.9) @ S(2.7, 2.1, 1.5))  # pectorales
+        p.add("StoneDark", sphere(1, 10, 6), T(side * 4.6, 14.3, -6.9) @ S(2.6, 1.6, 2.4))  # trapecios
+    p.add("StoneDark", cyl(2.3, 2.2, 12, 1.9), T(0, 14.0, -6.6))  # cuello
+    # Cinturón ancho con hebilla, y delantal de cuero con tirantes.
+    p.add("Black", lathe([(4.55, 0), (4.75, 0.3), (4.75, 1.3), (4.55, 1.6)], 16), T(0, 4.9, wz) @ S(1, 1, 0.8))
+    p.add("Gold", box(2.4, 2.0, 0.5), T(0, 5.7, wz + 3.75))
+    p.add("Paper", box(1.2, 1.0, 0.2), T(0, 5.7, wz + 4.05) @ R("Z", 45) @ S(0.8, 0.8, 1))
+    apron = T(0, 8.6, -2.95) @ R("X", 9)
+    p.add("Black", frustum(6.2, 0.45, 5.0, 0.45, 6.6), apron)
+    p.add("Black", frustum(4.6, 0.4, 6.0, 0.4, 3.4), T(0, 3.2, -3.3) @ R("X", -6))
+    for side in (-1, 1):
+        p.branch("Black", (side * 2.4, 11.7, -2.6), (side * 3.6, 14.9, -5.6), 0.5, 0.5, 4)
+        p.add("Gold", cyl(0.42, 0.25, 8), T(side * 2.4, 11.2, -2.42) @ R("X", 90))
+    # Núcleo de runa en el pecho, con su aro.
+    core = T(0, 12.6, -2.72) @ R("X", 84)
+    p.add("Gold", torus(1.25, 0.24, 14, 5), core)
+    p.add("Paper", sphere(1, 10, 6), core @ S(1.0, 0.45, 1.0))
+    # Hombreras de hierro con remaches de oro y pinchos.
+    for side in (-1, 1):
+        sx, sy, sz = side * SMITH_SHOULDER[0], SMITH_SHOULDER[1], SMITH_SHOULDER[2]
+        cap = T(sx + side * 0.3, sy + 0.5, sz) @ R("Z", -side * 22)
+        p.add("Stone", lathe([(3.0, 0), (2.9, 0.7), (2.3, 1.6), (1.2, 2.2), (0, 2.4)], 12), cap)
+        p.add("Gold", torus(2.95, 0.22, 14, 5), cap @ T(0, 0.15, 0))
+        for degrees in (-50, 0, 50):
+            a = math.radians(degrees)
+            p.add("Gold", spike(0.42, 1.9, 5), cap @ T(1.5 * math.sin(a) * side, 1.75, 1.5 * math.cos(a) * 0.4) @ R("Z", -side * 18 * math.sin(a) - side * 10))
+    # Chimeneas de fragua en la espalda, con la boca encendida.
+    for side in (-1, 1):
+        pipe = T(side * 2.9, 12.2, -9.6) @ R("X", -16) @ R("Z", -side * 9)
+        p.add("Stone", cyl(1.05, 6.4, 10, 0.9), pipe)
+        p.add("Gold", torus(1.02, 0.22, 10, 5), pipe @ T(0, 6.2, 0))
+        p.add("Gold", torus(1.1, 0.2, 10, 5), pipe @ T(0, 2.6, 0))
+        p.add("Paper", cyl(0.75, 0.12, 10), pipe @ T(0, 6.38, 0))
+
+    # --- Cabeza ---
+    p.group = "Head"
+    hx, hy, hz = 0.0, 18.2, -6.1
+    p.add("StoneDark", sphere(1, 14, 8), T(hx, hy, hz) @ S(2.55, 2.75, 2.65))
+    p.add("StoneDark", sphere(1, 10, 6), T(hx, hy - 1.7, hz + 0.9) @ S(2.0, 1.4, 1.9))  # mandíbula
+    p.add("StoneDark", box(0.75, 1.5, 0.8), T(hx, hy - 0.35, hz + 2.75) @ R("X", -14))  # nariz
+    # Casco: cúpula de hierro, banda de oro, cresta y protector de nariz.
+    helm = T(hx, hy + 0.35, hz - 0.1)
+    p.add("Stone", lathe([(2.9, 0), (2.85, 0.9), (2.3, 2.0), (1.2, 2.7), (0, 2.95)], 14), helm)
+    p.add("Gold", lathe([(3.0, 0), (3.05, 0.25), (3.05, 0.75), (2.95, 0.95)], 14), helm @ T(0, -0.35, 0))
+    p.add("Gold", sweep([(0, 0.4, 2.95), (0, 2.1, 2.3), (0, 3.15, 0.3), (0, 2.6, -1.9), (0, 1.0, -2.9)], rect(0.5, 0.45)), helm)
+    p.add("Stone", box(0.55, 1.9, 0.35), T(hx, hy - 0.1, hz + 2.95))
+    p.add("Paper", box(0.5, 0.5, 0.2), helm @ T(0, 0.25, 3.02) @ R("Z", 45))  # gema de la frente
+    # Cuernos curvos hacia arriba.
+    for side in (-1, 1):
+        horn = [(side * 2.6, hy + 1.2, hz), (side * 4.3, hy + 1.3, hz + 0.2), (side * 5.5, hy + 2.5, hz + 0.6),
+                (side * 5.7, hy + 4.2, hz + 1.0), (side * 5.0, hy + 5.6, hz + 1.3)]
+        p.add("White", sweep(horn, circle(0.95, 8), [1.0, 0.92, 0.7, 0.42, 0.08]))
+        p.add("Gold", torus(1.0, 0.2, 10, 5), T(side * 3.3, hy + 1.25, hz + 0.08) @ R("Z", 90))
+    # Ojos encendidos en sus cuencas, y cejas.
+    for side in (-1, 1):
+        p.add("Black", sphere(1, 8, 5), T(side * 1.05, hy + 0.1, hz + 2.3) @ S(0.82, 0.6, 0.5))
+        p.add("Paper", sphere(1, 8, 5), T(side * 1.05, hy + 0.08, hz + 2.48) @ S(0.55, 0.32, 0.4))
+        p.add("White", box(1.3, 0.34, 0.5), T(side * 1.1, hy + 0.72, hz + 2.55) @ R("Z", -side * 16))
+    # Barba en tres trenzas con anillos, y bigote.
+    for bx, long, wide in ((0, 4.3, 1.5), (-1.55, 4.0, 1.05), (1.55, 4.0, 1.05)):
+        top = (bx, hy - 1.9, hz + 2.3)
+        tip = (bx * 1.15, hy - 1.9 - long, hz + 3.1)
+        m, shape = limb(top, tip, wide, wide * 0.35, 8)
+        p.add("White", shape, m)
+        ring_at = Vector(top).lerp(Vector(tip), 0.72)
+        p.add("Gold", torus(wide * 0.62, 0.17, 8, 4), T(*ring_at) @ R("X", 8))
+    p.add("White", sphere(1, 10, 5), T(hx, hy - 1.75, hz + 2.2) @ S(2.25, 1.0, 1.0))
+    for side in (-1, 1):
+        p.branch("White", (side * 0.2, hy - 1.2, hz + 2.95), (side * 2.5, hy - 2.0, hz + 2.5), 0.42, 0.14, 6)
+
+    # --- Brazos: colgando rectos del hombro (el juego los gira por hombro y codo) ---
+    for side, tag in ((1, "A"), (-1, "B")):
+        sx, sy, sz = side * SMITH_SHOULDER[0], SMITH_SHOULDER[1], SMITH_SHOULDER[2]
+        elbow = sy - SMITH_UPPER
+        p.group = "Arm" + tag
+        p.add("StoneDark", sphere(1, 10, 6), T(sx, sy - 0.2, sz) @ S(2.15, 2.0, 2.15))
+        p.branch("StoneDark", (sx, sy, sz), (sx, elbow, sz), 1.85, 1.45, 10)
+        p.add("StoneDark", sphere(1, 10, 6), T(sx + side * 0.2, sy - 2.9, sz + 0.35) @ S(1.95, 2.3, 2.0))  # bíceps
+        p.add("Gold", torus(1.72, 0.26, 12, 5), T(sx, sy - 4.9, sz))
+        p.add("Paper", torus(1.7, 0.1, 12, 4), T(sx, sy - 4.45, sz))
+        p.add("StoneDark", sphere(1.5, 10, 6), T(sx, elbow, sz))
+        p.group = "Fore" + tag
+        fist = elbow - SMITH_FORE
+        p.branch("StoneDark", (sx, elbow, sz), (sx, fist + 1.2, sz), 1.45, 1.6, 10)
+        # Brazal de hierro con cantos de oro y una runa.
+        p.add("Stone", lathe([(1.75, 0), (2.0, 0.3), (2.05, 3.0), (1.8, 3.4)], 12), T(sx, fist + 1.7, sz))
+        for y in (fist + 1.85, fist + 4.9):
+            p.add("Gold", torus(2.02, 0.2, 12, 5), T(sx, y, sz))
+        p.add("Paper", box(0.5, 1.8, 0.14), T(sx, fist + 3.4, sz + 2.02))
+        for y in (3.9, 3.2):
+            p.add("Paper", box(1.0, 0.34, 0.14), T(sx + 0.42, fist + y, sz + 2.02) @ R("Z", 38))
+        # Puño: palma y cuatro nudillos.
+        p.add("StoneDark", sphere(1, 10, 6), T(sx, fist, sz) @ S(1.75, 1.6, 1.8))
+        for k in range(4):
+            p.add("StoneDark", sphere(0.62, 6, 4), T(sx - 1.05 + k * 0.7, fist - 0.55, sz + 1.35))
+        p.add("StoneDark", sphere(0.7, 6, 4), T(sx - side * 1.5, fist + 0.2, sz + 0.9))  # pulgar
+
+    # --- Martillo: de pie, cogido por SMITH_HAMMER; la cabeza pega con las caras de +Z y -Z ---
+    p.group = "Hammer"
+    gx, gy, gz = SMITH_HAMMER
+    p.add("Wood", cyl(0.5, 8.6, 8, 0.42), T(gx, gy - 2.2, gz))
+    p.add("Gold", sphere(0.75, 8, 5), T(gx, gy - 2.4, gz))
+    for y in (-1.2, -0.4, 0.4, 1.2):
+        p.add("Black", torus(0.52, 0.14, 8, 4), T(gx, gy + y, gz))
+    top = gy + SMITH_HEAD
+    p.add("Stone", box(3.3, 3.2, 4.4), T(gx, top, gz))
+    for face in (-1, 1):
+        p.add("Stone", frustum(3.3, 3.2, 2.7, 2.6, 0.7), T(gx, top, gz + face * 2.55) @ R("X", 90 * face))
+        p.add("Gold", box(3.6, 3.5, 0.55), T(gx, top, gz + face * 1.5))
+        for sign in (-1, 1):
+            p.add("Paper", box(0.14, 1.9, 0.5), T(gx + sign * 1.68, top, gz + face * 0.55))
+    for sign in (-1, 1):
+        p.add("Paper", box(0.14, 0.5, 1.9), T(gx + sign * 1.68, top + 0.55, gz) @ R("X", 0))
+    p.add("Gold", cyl(0.75, 0.5, 8), T(gx, top + 1.6, gz))
+    p.add("Gold", spike(0.55, 1.5, 6), T(gx, top + 2.0, gz))
+    p.add("Gold", cyl(0.7, 0.5, 8), T(gx, top - 2.1, gz))
+
+    # --- Yunque sobre su tocón: la cara de arriba queda a y = 4 ---
+    p.group = "Anvil"
+    ax = 1.5
+    p.add("Wood", cyl(3.5, 1.25, 12, 3.3), T(ax, 0, 0) @ S(1.25, 1, 1))
+    for y in (0.3, 0.95):
+        p.add("Black", torus(3.42, 0.14, 14, 4), T(ax, y, 0) @ S(1.25, 1, 1))
+    p.add("Stone", frustum(6.4, 3.6, 5.0, 2.8, 0.8), T(ax, 1.65, 0))
+    p.add("Stone", frustum(3.6, 2.2, 3.3, 2.0, 0.9), T(ax, 2.5, 0))
+    p.add("Stone", frustum(7.4, 2.9, 9.0, 3.3, 1.05), T(ax, 3.475, 0))
+    p.add("Gold", box(9.02, 0.2, 3.34), T(ax, 3.1, 0))
+    m, shape = limb((ax + 4.3, 3.45, 0), (ax + 8.4, 3.75, 0), 1.05, 0.12, 10)  # el cuerno
+    p.add("Stone", shape, m @ S(1.4, 1, 0.55))
+    p.add("Stone", box(1.6, 0.6, 3.0), T(ax - 4.6, 3.3, 0))  # el talón
+    for face in (-1, 1):
+        for k in range(5):
+            p.add("Paper", box(0.55, 0.42, 0.12), T(ax - 2.4 + k * 1.2, 3.55, face * 1.62) @ R("Z", 45 if k % 2 else 0))
+
+    # --- Fragua, barril de temple y monolitos de runas ---
+    p.group = "Forge"
+    fx, fz = -15.0, -9.0
+    forge = T(fx, 0, fz) @ R("Y", 28)
+    p.add("StoneDark", frustum(10.0, 8.0, 8.6, 6.8, 5.6), forge @ T(0, 2.8, 0))
+    p.add("Stone", frustum(9.2, 7.4, 9.6, 7.8, 0.7), forge @ T(0, 5.95, 0))
+    p.add("StoneDark", frustum(6.6, 5.2, 3.4, 3.0, 7.0), forge @ T(0, 9.8, -0.6))  # campana
+    p.add("StoneDark", cyl(1.6, 9.0, 10, 1.35), forge @ T(0, 13.0, -0.6))  # chimenea
+    p.add("Stone", torus(1.6, 0.32, 10, 5), forge @ T(0, 21.7, -0.6))
+    p.add("Black", box(5.4, 3.3, 0.6), forge @ T(0, 3.0, 3.75))  # la boca
+    p.add("Stone", frame(3.3, 2.7, 0.7), forge @ T(0, 3.0, 3.6) @ R("X", 90) @ S(1, 1, 0.62))
+    for k in range(9):
+        coal = forge @ T(rng.uniform(-2.1, 2.1), 1.9 + rng.uniform(0, 0.7), 3.7 + rng.uniform(0, 0.9))
+        p.add("Paper" if k % 3 else "Black", blob((0.7, 0.55, 0.7), 60 + k, 6, 4, 0.25), coal)
+    p.add("Stone", box(6.0, 0.5, 2.2), forge @ T(0, 1.2, 4.6))  # repisa
+    # Barril de temple, con agua.
+    barrel = T(11.5, 0, 3.5)
+    p.add("Wood", lathe([(2.2, 0), (2.65, 1.2), (2.65, 2.6), (2.3, 3.8)], 12), barrel)
+    for y in (0.7, 3.1):
+        p.add("Black", torus(2.55, 0.15, 14, 4), barrel @ T(0, y, 0))
+    p.add("Water", cyl(2.2, 0.1, 12), barrel @ T(0, 3.55, 0))
+    # Monolitos en arco, detrás: cada uno con su runa.
+    for index, degrees in enumerate((-64, -40, -16, 16, 40, 64)):
+        a = math.radians(degrees)
+        tall = 10.0 + 4.5 * math.cos(a * 1.4) + rng.uniform(-1, 1)
+        stone = T(24 * math.sin(a), 0, -6 - 20 * math.cos(a)) @ R("Y", degrees) @ R("Z", rng.uniform(-5, 5))
+        p.add("StoneDark", frustum(3.4, 2.2, 2.2, 1.5, tall), stone @ T(0, tall / 2, 0))
+        p.add("StoneDark", frustum(2.2, 1.5, 0.9, 0.7, 1.2), stone @ T(0, tall + 0.6, 0))
+        p.add("Paper", box(0.5, tall * 0.42, 0.14), stone @ T(0, tall * 0.56, 0.98))
+        lean = 40 if index % 3 else -40
+        for k, height in enumerate((0.7, 0.58) if index % 2 else (0.7, 0.44)):
+            p.add("Paper", box(1.2, 0.4, 0.14), stone @ T(0.45 if lean > 0 else -0.45, tall * height, 0.98 - 0.04 * k) @ R("Z", lean))
+
+
 ANIMALS = ["Panda", "RedPanda", "Tiger", "Fox", "Tanuki", "Deer", "Crane"]
 PIECES = {
     "Sakura": sakura, "SakuraB": sakura_b, "Maple": maple, "Pine": pine, "Bamboo": bamboo, "Torii": torii,
     "StoneLantern": stone_lantern, "Chochin": chochin, "Pagoda": pagoda, "Bridge": bridge, "Shrine": shrine,
     "Rocks": rocks, "Lotus": lotus, "Bonsai": bonsai, "Fence": fence, "Komainu": komainu,
     "Koinobori": koinobori, "Temple": temple, "Panda": panda, "RedPanda": red_panda, "Tiger": tiger, "Fox": fox, "Tanuki": tanuki,
-    "Deer": deer, "Crane": crane, "Fuji": fuji, "GoldSack": gold_sack,
+    "Deer": deer, "Crane": crane, "Fuji": fuji, "GoldSack": gold_sack, "Smith": smith,
 }
 
 
@@ -1232,6 +1429,7 @@ VIEWS = {
     "Temple": [(47.0, 150.0, 28.0, 9.0), (30.0, 100.0, 35.0, -22.0), (22.0, 62.0, 12.0, 4.0)],
     "Torii": [(9.0, 34.0, 25.0, 8.0)],
     "Bridge": [(2.5, 34.0, 30.0, 18.0)],
+    "Smith": [(11.0, 62.0, 170.0, 8.0), (11.0, 62.0, 215.0, 14.0), (17.0, 16.0, 180.0, 2.0), (4.0, 22.0, 195.0, 20.0)],
     "GoldSack": [(6.0, 32.0, 28.0, 16.0), (6.0, 32.0, 200.0, 12.0), (9.5, 14.0, 10.0, 34.0), (4.0, 50.0, 205.0, 38.0)],
 }
 
