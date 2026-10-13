@@ -51,7 +51,7 @@ local SLOW = if RunService:IsStudio() then Config.Test.RevealSlow or 1 else 1
 local SKIP = "RollCinematic:skip" -- lo que "lanza" una escena al saltarla: corta la secuencia donde esté
 local MAX_WAITING = 2 -- cinemáticas esperando turno; las que lleguen de más se enseñan en el mundo
 local GRACE = 0.6 -- segundos hasta que sale el botón de saltar
-local TIMEOUT = 20 -- red de seguridad: ninguna dura tanto
+local TIMEOUT = 35 -- red de seguridad: ninguna dura tanto
 local STAGE_UP = 700 -- studs por encima de la cámara a los que se monta el escenario
 local STAGE_HALF = 90 -- media arista del cubo negro
 local DISPLAY = 5 -- studs que mide el arma enseñada
@@ -59,7 +59,7 @@ local TILT = CFrame.Angles(0, 0, math.rad(-22))
 local SCREEN = Vector2.new(1100, 700) -- por debajo de este tamaño de pantalla la tarjeta se encoge (como el HUD)
 local CARD = Vector2.new(460, 176)
 -- Segundos que tarda el "1 entre N" en subir hasta su número, por nivel de RollReveal.
-local COUNT = { [2] = 0.5, [3] = 0.8, [4] = 1.1, [5] = 1.4, [6] = 1.8 }
+local COUNT = { [2] = 0.5, [3] = 0.8, [4] = 1.1, [5] = 2.2, [6] = 3 }
 -- Capas de la interfaz (la del juego ordena el ZIndex globalmente; aquí también).
 local Z = { bars = 1, rays = 2, card = 3, rim = 4, chip = 5, text = 6, skip = 7, cover = 20 }
 
@@ -522,7 +522,7 @@ local function buildGui(s, info)
 
 	gui.Parent = player:WaitForChild("PlayerGui")
 	s.gui = gui
-	s.ui = { cover = cover, line = line, lineStroke = lineStroke, holder = holder, scale = scale, factor = factor, rays = rays, chipScale = chipScale, name = name, odds = odds, oddsScale = oddsScale }
+	s.ui = { cover = cover, line = line, lineStroke = lineStroke, holder = holder, scale = scale, factor = factor, rays = rays, lineSize = line.TextSize, chipScale = chipScale, name = name, odds = odds, oddsScale = oddsScale }
 end
 
 -- Fundido de la tapa: a `transparency` en `seconds`.
@@ -541,10 +541,26 @@ local function showLine(s)
 	end
 end
 
+-- Cambia la frase de arriba de golpe (la escalera de rarezas de la supernova), con un salto.
+local function setLine(s, text: string, color: Color3)
+	local ui = s.ui
+	ui.line.Text = Ui.upper(text)
+	ui.line.TextColor3 = color
+	ui.line.TextTransparency = 0
+	if ui.lineStroke then
+		ui.lineStroke.Transparency = 0
+	end
+	local size = ui.lineSize
+	ui.line.TextSize = math.round(size * 1.5)
+	tween(ui.line, 0.22, { TextSize = size }, Enum.EasingStyle.Back)
+end
+
 -- La tarjeta: salta la rareza, luego el nombre y, lo último, el "1 entre N" subiendo hasta su número.
 local function card(s, info)
 	local ui = s.ui
 	local roll = info.roll
+	ui.line.Text = Ui.upper(Lang.t(nil, info.line))
+	ui.line.TextColor3 = if info.level >= 6 then GOLD else info.bright
 	showLine(s)
 	tween(ui.scale, 0.28, { Scale = ui.factor }, Enum.EasingStyle.Back)
 	wait(s, 0.12)
@@ -1071,7 +1087,11 @@ function THEMES.smith(s, info)
 	end)
 end
 
--- Supernova: una estrella se encoge tragando luz, calla un instante y estalla; el arma queda en el núcleo.
+-- Supernova: lo más raro del juego, así que va despacio y sube por pasos (pedido por el usuario: la primera versión
+-- le pareció muy rápida). La estrella late y va subiendo de rareza, un color detrás de otro y cada vez más deprisa,
+-- hasta la del arma; se encoge tragando luz, calla un instante y estalla. El arma sale como una silueta blanca,
+-- revienta en sus colores y el "1 entre N" sube contando; al llegar, otra explosión (dos y lluvia de estrellas en
+-- la absoluta).
 function THEMES.nova(s, info)
 	local color, bright = info.color, info.bright
 	local jackpot = info.level >= 6
@@ -1081,7 +1101,7 @@ function THEMES.nova(s, info)
 	local function camAt(distance: number, height: number): CFrame
 		return CFrame.lookAt(centre + Vector3.new(distance * 0.18, height, distance), centre)
 	end
-	s.cam, s.fov = camAt(48, 3), 70
+	s.cam, s.fov = camAt(52, 3), 70
 
 	-- Campo de estrellas y la estrella.
 	local field = point(s, centre, 110)
@@ -1095,17 +1115,28 @@ function THEMES.nova(s, info)
 		Size = seq({ { 0, 0 }, { 0.5, 1.3 }, { 1, 0 } }),
 		Transparency = seq({ { 0, 1 }, { 0.5, 0.2 }, { 1, 1 } }),
 	}, 60)
-	local hot = bright:Lerp(WHITE, 0.3)
-	local star = piece(s, Enum.PartType.Ball, Vector3.one * 9, CFrame.new(centre), hot, 0)
+	-- Escalera de rarezas: de unas cuantas por debajo hasta la del arma.
+	local last = 1
+	for index, tier in Config.RarityTiers do
+		if tier.name == info.tier.name then
+			last = index
+		end
+	end
+	local steps = {}
+	for index = math.max(1, last - (if jackpot then 7 else 5)), last do
+		table.insert(steps, Config.RarityTiers[index])
+	end
+	local tone = steps[1].color
+	local star = piece(s, Enum.PartType.Ball, Vector3.one * 7, CFrame.new(centre), tone:Lerp(WHITE, 0.3), 0)
 	local lamp = Instance.new("PointLight")
-	lamp.Color = bright
+	lamp.Color = tone
 	lamp.Brightness = 3
 	lamp.Range = 60
 	lamp.Parent = star
 	local core = point(s, centre)
 	local corona = emitter(core, {
 		Texture = TEX.shine,
-		Color = ColorSequence.new(bright),
+		Color = ColorSequence.new(tone),
 		LightEmission = 1,
 		Rate = 12,
 		Lifetime = NumberRange.new(0.9, 1.2),
@@ -1116,14 +1147,53 @@ function THEMES.nova(s, info)
 		Size = seq({ { 0, 16 }, { 0.5, 26 }, { 1, 16 } }),
 		Transparency = seq({ { 0, 1 }, { 0.5, 0.35 }, { 1, 1 } }),
 	})
-	sprite(core, TEX.halo, bright, 30, 4, 0, 1)
-	cover(s, BLACK, 0, 1, 0.35)
+	cover(s, BLACK, 0, 1, 0.4)
 	Sfx.play("orb")
-	animate(s, 0.7, function(t)
-		s.cam = camAt(lerp(48, 44, t), 3)
-	end)
 
-	-- 1. Se encoge: traga luz de alrededor, cada vez más deprisa, y todo se oscurece.
+	-- 1. Late y sube de rareza, cada paso más deprisa, más grande y más agudo; la cámara se va acercando.
+	local distance = 52
+	local size = 7
+	local function beat(seconds: number, grow: number)
+		local from, to = size, size + grow
+		local near = distance - 1.4
+		local far = distance
+		animate(s, seconds, function(t)
+			-- Salta de tamaño y se asienta.
+			star.Size = Vector3.one * (lerp(from, to, outCubic(t)) + math.sin(t * math.pi) * 1.6)
+			distance = lerp(far, near, t)
+			s.cam = camAt(distance, 3)
+		end)
+		size = to
+	end
+	setLine(s, Lang.t(nil, steps[1].name), steps[1].color:Lerp(WHITE, 0.3))
+	beat(0.9, 0)
+	for index = 2, #steps do
+		local tier = steps[index]
+		local final = index == #steps
+		tone = tier.color
+		local light = tone:Lerp(WHITE, 0.3)
+		star.Color = light
+		lamp.Color = tone
+		corona.Color = ColorSequence.new(tone)
+		setLine(s, Lang.t(nil, tier.name), light)
+		cover(s, light, 0.72, 1, 0.3)
+		s.shake = 0.25 + index * 0.1
+		ring(s, centre, 6, 60 + index * 8, light, 0.6, CFrame.Angles(math.rad(14), 0, math.rad(index * 23 - 60)))
+		sparks(core, tone, 20 + index * 8, 40, 1.4)
+		Sfx.play("charge", 1, 2 ^ ((index - 1) * 2 / 12))
+		if final then
+			-- Es esta: se queda, con su estallido.
+			Sfx.play("rare")
+			sprite(core, TEX.nova, light, 40, 0.8, -200, 1, true)
+			stardust(core, tone, 60, 50, 2.6)
+			beat(1.1, 2.5)
+		else
+			beat(lerp(0.62, 0.3, (index - 2) / math.max(#steps - 2, 1)), 0.7)
+		end
+	end
+	local hot = bright:Lerp(WHITE, 0.3)
+
+	-- 2. Se encoge: traga luz de alrededor, cada vez más deprisa, y todo se oscurece.
 	local whirl = emitter(core, {
 		Texture = TEX.vortex,
 		Color = ColorSequence.new(color),
@@ -1134,51 +1204,62 @@ function THEMES.nova(s, info)
 		Rotation = NumberRange.new(0, 360),
 		RotSpeed = NumberRange.new(260 / SLOW),
 		LockedToPart = true,
-		Size = seq({ { 0, 26 }, { 1, 2 } }),
-		Transparency = seq({ { 0, 1 }, { 0.3, 0.5 }, { 1, 1 } }),
+		Size = seq({ { 0, 30 }, { 1, 2 } }),
+		Transparency = seq({ { 0, 1 }, { 0.3, 0.45 }, { 1, 1 } }),
 	})
-	tween(s.correction, 1.6, { Brightness = -0.25 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	local collapse = if jackpot then 3 else 2.4
+	tween(s.correction, collapse, { Brightness = -0.25 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	tween(s.ui.line, collapse * 0.6, { TextTransparency = 1 })
+	if s.ui.lineStroke then
+		tween(s.ui.lineStroke, collapse * 0.6, { Transparency = 1 })
+	end
 	local note = -1
-	animate(s, if jackpot then 2 else 1.6, function(t)
+	local full, wide = size, distance
+	animate(s, collapse, function(t)
 		local e = t * t
-		star.Size = Vector3.one * lerp(9, 0.6, e)
+		star.Size = Vector3.one * lerp(full, 0.6, e)
+		star.Color = hot
 		lamp.Range = lerp(60, 14, e)
-		s.cam = camAt(lerp(44, 30, e), 3 - 2 * e)
-		s.fov = lerp(70, 44, e)
-		s.shake = math.max(s.shake, 0.12 * e)
-		if rng:NextNumber() < 0.25 + 0.6 * t then
-			local streak = piece(s, Enum.PartType.Ball, Vector3.one * 0.4, CFrame.new(centre + rng:NextUnitVector() * rng:NextNumber(20, 36)), bright, 0.2)
-			tween(streak, 0.3, { Position = centre, Size = Vector3.one * 0.15 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			Debris:AddItem(streak, 0.3 * SLOW + 0.05)
+		s.cam = camAt(lerp(wide, 28, e), 3 - 2 * e)
+		s.fov = lerp(70, 42, e)
+		s.shake = math.max(s.shake, 0.22 * e)
+		for _ = 1, 2 do
+			if rng:NextNumber() < 0.2 + 0.7 * t then
+				local streak = piece(s, Enum.PartType.Ball, Vector3.one * 0.45, CFrame.new(centre + rng:NextUnitVector() * rng:NextNumber(22, 40)), bright, 0.2)
+				tween(streak, 0.32, { Position = centre, Size = Vector3.one * 0.15 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				Debris:AddItem(streak, 0.32 * SLOW + 0.05)
+			end
 		end
-		local now = math.floor(t * 9)
+		-- Latidos que se van juntando.
+		local now = math.floor(e * 16)
 		if now ~= note then
 			note = now
 			Sfx.play("charge", 0.9, 2 ^ (now / 12))
+			ring(s, centre, 44 - now * 2, 2, bright, 0.3, CFrame.Angles(math.rad(14), 0, math.rad(now * 31)))
 		end
 	end)
 
-	-- 2. Silencio: un punto en la oscuridad.
+	-- 3. Silencio: un punto en la oscuridad.
 	whirl.Enabled = false
 	corona.Enabled = false
 	star.Size = Vector3.one * 0.3
 	lamp.Brightness = 0.4
-	wait(s, 0.5)
+	wait(s, 0.8)
 
-	-- 3. Estalla.
-	local function explode(tone: Color3, power: number)
-		cover(s, tone:Lerp(WHITE, 0.75), 0, 1, 0.6)
+	-- 4. Estalla.
+	local function explode(shade: Color3, power: number)
+		cover(s, shade:Lerp(WHITE, 0.75), 0, 1, 0.6)
 		s.shake = 1.6 * power
 		Sfx.play("cine_boom")
-		fading(s, Enum.PartType.Ball, CFrame.new(centre), Vector3.one, Vector3.one * 90 * power, tone, 0.3, 0.9)
+		fading(s, Enum.PartType.Ball, CFrame.new(centre), Vector3.one, Vector3.one * 90 * power, shade, 0.3, 0.9)
 		fading(s, Enum.PartType.Ball, CFrame.new(centre), Vector3.one, Vector3.one * 40 * power, WHITE, 0.2, 0.45)
-		ring(s, centre, 2, 110 * power, tone, 0.9, CFrame.Angles(math.rad(90), 0, math.rad(18)))
-		ring(s, centre, 2, 90 * power, WHITE, 0.75, CFrame.Angles(math.rad(70), 0, math.rad(-35)))
-		ring(s, centre, 2, 70 * power, tone, 1.1, CFrame.Angles(math.rad(105), 0, math.rad(60)))
+		ring(s, centre, 2, 110 * power, shade, 0.9, CFrame.Angles(math.rad(10), 0, math.rad(18)))
+		ring(s, centre, 2, 90 * power, WHITE, 0.75, CFrame.Angles(math.rad(-16), 0, math.rad(-35)))
+		ring(s, centre, 2, 70 * power, shade, 1.1, CFrame.Angles(math.rad(22), 0, math.rad(60)))
 		local burst = point(s, centre)
-		sprite(burst, TEX.nova, tone, 46 * power, 0.9, -200, 1, true)
-		stardust(burst, tone, 140, 70, 3)
-		sparks(burst, tone, 110, 60, 1.8)
+		sprite(burst, TEX.nova, shade, 46 * power, 0.9, -200, 1, true)
+		stardust(burst, shade, 140, 70, 3)
+		sparks(burst, shade, 110, 60, 1.8)
 	end
 	star:Destroy()
 	explode(bright, 1)
@@ -1190,24 +1271,41 @@ function THEMES.nova(s, info)
 	glow.Range = 50
 	glow.Parent = core
 
-	-- 4. El arma, en el núcleo.
+	-- 5. El arma sale del núcleo como una silueta de luz, girando deprisa, mientras la cámara se acerca...
 	local held = weapon(s, info, centre, 6)
-	held.spin = 16
-	local wide = camAt(30, 1)
+	held.spin = 22
+	held.outline.FillTransparency = 0
+	held.outline.OutlineColor = WHITE
+	local back = camAt(28, 1)
 	local near = CFrame.lookAt(centre + Vector3.new(0, -0.6, 15.5), centre + Vector3.new(0, -2.6, 0))
-	s.fov = 90
-	animate(s, 0.9, function(t)
-		held.scale = outBack(math.min(t * 2.2, 1))
-		held.spin = lerp(16, 2.5, outCubic(t))
-		s.cam = wide:Lerp(near, outCubic(t))
-		s.fov = lerp(90, 52, outCubic(t))
+	s.fov = 92
+	animate(s, 1.5, function(t)
+		local e = outCubic(t)
+		held.scale = outBack(math.min(t * 1.8, 1))
+		held.spin = lerp(22, 7, e)
+		s.cam = back:Lerp(near, e)
+		s.fov = lerp(92, 52, e)
 	end)
+	wait(s, 0.25)
+	-- ...y revienta en sus colores.
+	tween(held.outline, 0.35, { FillTransparency = 0.88, OutlineColor = bright })
+	cover(s, bright:Lerp(WHITE, 0.6), 0.2, 1, 0.5)
+	s.shake = 0.8
+	Sfx.play("reveal_4")
+	sprite(core, TEX.nova, bright, 26, 0.7, 220, 1, true)
+	stardust(core, color, 80, 40, 2.4)
+	ring(s, centre, 2, 60, bright, 0.7, CFrame.Angles(math.rad(12), 0, 0))
 	rays(s, centre - Vector3.new(0, 0, 4), if jackpot then 9 else 6, 60, bright)
-	sprite(core, TEX.shine, bright, 16, 8, 16, 1)
+	sprite(core, TEX.shine, bright, 16, 12, 16, 1)
+	animate(s, 0.5, function(t)
+		held.spin = lerp(7, 2.5, t)
+	end)
+
+	-- 6. La tarjeta, con el número subiendo; al llegar, otra explosión.
 	card(s, info)
+	explode(if jackpot then GOLD else bright, if jackpot then 0.8 else 0.55)
 	if jackpot then
-		-- Premio gordo: una segunda explosión dorada y lluvia de estrellas.
-		explode(GOLD, 0.8)
+		-- Premio gordo: lluvia de estrellas y una explosión más.
 		emitter(point(s, centre + Vector3.new(0, 26, 0), 50), {
 			Texture = TEX.star,
 			Color = ColorSequence.new(WHITE, GOLD),
@@ -1220,9 +1318,13 @@ function THEMES.nova(s, info)
 			Size = seq({ { 0, 1.8 }, { 1, 0.4 } }),
 			Transparency = seq({ { 0, 0.1 }, { 0.8, 0.3 }, { 1, 1 } }),
 		})
+		wait(s, 0.7)
+		explode(bright, 0.7)
+		Sfx.play("win")
 	end
-	animate(s, if jackpot then 2 else 1.2, function(t)
-		s.cam = near * CFrame.new(0, 0, -1.4 * t)
+	local hold = if jackpot then 3 else 2.2
+	animate(s, hold, function(t)
+		s.cam = near * CFrame.Angles(0, math.rad(lerp(-5, 5, smooth(t))), 0) * CFrame.new(0, 0, -1.4 * t)
 	end)
 end
 
