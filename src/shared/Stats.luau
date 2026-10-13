@@ -289,13 +289,37 @@ function Stats.bagHit(player: Player, copy, noPotion: boolean?): number
 	return if noPotion then damage / Stats.potion(player, "damage") / Stats.boost("damage") else damage
 end
 
+-- Monedas que saca de la bolsa un golpe de esa copia: las de su daño (BagInfo.coins) por la mejora "bagBoost", que es
+-- lo único que las multiplica.
+function Stats.bagCoins(player: Player, copy, noPotion: boolean?): number
+	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * upgrade(player, "bagBoost")
+end
+
+-- Lo que tiene el jugador de la moneda con la que se paga una mejora (`currency` de Config.Upgrades): monedas, gemas
+-- o monedas de bolsa ("bag"). Estas no se guardan: son una por bolsa vaciada (BagStage - 1) menos lo gastado en las
+-- mejoras que se pagan con ellas.
+function Stats.wallet(player: Player, currency: string?): number
+	if currency == "gems" then
+		return player:GetAttribute("Gems") or 0
+	elseif currency ~= "bag" then
+		return player:GetAttribute("Coins") or 0
+	end
+	local coins = (player:GetAttribute("BagStage") or 1) - 1
+	for name, entry in Config.Upgrades do
+		if entry.currency == "bag" then
+			coins -= Upgrades.spent(name, player:GetAttribute("Upgrade_" .. name) or 0)
+		end
+	end
+	return math.max(coins, 0)
+end
+
 -- Monedas por segundo que sacan de su Bolsa de oro las armas depositadas: cada una da un golpe cada
 -- Config.GoldBag.HitTime segundos, sea del tipo que sea (allí no hay salpicadura que compense a las lentas), y cada
 -- golpe saca BagInfo.coins de su daño.
 function Stats.bagRate(player: Player, noPotion: boolean?): number
 	local total = 0
 	for _, copy in Stats.deposited(player) do
-		total += BagInfo.coins(Stats.bagHit(player, copy, noPotion))
+		total += Stats.bagCoins(player, copy, noPotion)
 	end
 	return total / Config.GoldBag.HitTime
 end
@@ -362,7 +386,7 @@ end
 -- Monedas: la mejora "Fortuna", artefactos, los rasgos de las armas equipadas, renacimientos y los pases (ventaja
 -- "coins"). Los grados ya no dan monedas: multiplican el daño de su arma (Stats.swordDamage).
 function Stats.coins(player: Player): number
-	return upgrade(player, "fortune") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins") * Stats.boost("coins")
+	return upgrade(player, "fortune") * upgrade(player, "bagBoost") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins") * Stats.boost("coins")
 end
 
 function Stats.gems(player: Player): number

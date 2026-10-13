@@ -102,7 +102,7 @@ function BagMenu.pointed(point: Vector2): boolean
 end
 
 local function coinsPerHit(copy): number
-	return BagInfo.coins(Stats.bagHit(player, copy))
+	return Stats.bagCoins(player, copy)
 end
 
 local function swordTip(copy, line: string)

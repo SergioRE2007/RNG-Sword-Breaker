@@ -143,7 +143,8 @@ for name, times in objetivo.mejoras do
 	pistas[name] = times
 end
 for _, name in Config.UpgradeOrder do
-	assert(pistas[name], "falta el calendario de la mejora " .. name .. " en objetivo.mejoras")
+	-- (Las de monedas de bolsa van con precios puestos a mano: no tienen calendario.)
+	assert(pistas[name] or Config.Upgrades[name].currency == "bag", "falta el calendario de la mejora " .. name .. " en objetivo.mejoras")
 end
 assert(#objetivo.renacer == Config.Rebirth.max, "objetivo.renacer no tiene un tiempo por renacimiento")
 pistas.rebirth = objetivo.renacer

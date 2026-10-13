@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Stats = require(ReplicatedStorage.Shared.Stats)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
@@ -51,6 +52,8 @@ local Z_LINE = -4
 local Z_NODE = -3
 local Z_FRONT = 10
 
+-- Nombre de la moneda de cada mejora (`currency` de Config.Upgrades) en el cartel de su nodo.
+local CURRENCY = { coins = "coins", gems = "gems", bag = "bag coins" }
 local ICONS = {
 	box = function(parent)
 		Ui.image(parent, "objetos")
@@ -60,6 +63,9 @@ local ICONS = {
 	end,
 	luck = function(parent)
 		Ui.image(parent, "suerte")
+	end,
+	bag = function(parent)
+		Ui.image(parent, "bolsa")
 	end,
 	orb = Ui.orbIcon,
 	gem = Ui.gemIcon,
@@ -619,7 +625,7 @@ function SkillTree.start()
 
 				Ui.tip(node.button, function()
 					local owned = (player:GetAttribute("Upgrade_" .. name) or 0) >= level
-					local currency = Lang.t(nil, if upgrade.currency == "gems" then "gems" else "coins")
+					local currency = Lang.t(nil, CURRENCY[upgrade.currency or "coins"])
 					local state = if owned
 						then `<font color="#6fe07a">{Lang.t(nil, "Bought")}</font>`
 						else `{Format.short(Upgrades.cost(name, level - 1))} {currency}`
@@ -643,13 +649,11 @@ function SkillTree.start()
 		if not built then
 			build()
 		end
-		local coins = player:GetAttribute("Coins") or 0
-		local gems = player:GetAttribute("Gems") or 0
 		local canBuy = false
 		for _, name in Config.UpgradeOrder do
 			local upgrade = Config.Upgrades[name]
 			local level = player:GetAttribute("Upgrade_" .. name) or 0
-			local balance = if upgrade.currency == "gems" then gems else coins
+			local balance = Stats.wallet(player, upgrade.currency)
 			local affordable = level < upgrade.maxLevel and balance >= Upgrades.cost(name, level)
 			canBuy = canBuy or affordable
 			for index = 1, upgrade.maxLevel do
@@ -764,7 +768,7 @@ function SkillTree.start()
 		end
 	end)
 	player.AttributeChanged:Connect(function(attribute)
-		if attribute == "Coins" or attribute == "Gems" or string.sub(attribute, 1, 8) == "Upgrade_" then
+		if attribute == "Coins" or attribute == "Gems" or attribute == "BagStage" or string.sub(attribute, 1, 8) == "Upgrade_" then
 			refresh()
 		end
 	end)

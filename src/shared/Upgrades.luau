@@ -22,6 +22,15 @@ function Upgrades.cost(name: string, level: number): number
 	return math.floor(upgrade.cost * upgrade.growth ^ level)
 end
 
+-- Lo gastado en esa mejora hasta tener `level` niveles.
+function Upgrades.spent(name: string, level: number): number
+	local total = 0
+	for bought = 0, level - 1 do
+		total += Upgrades.cost(name, bought)
+	end
+	return total
+end
+
 -- "%s" en display = número abreviado (x1.5, x2.25K...); el resto son formatos de string.format.
 function Upgrades.display(name: string, level: number): string
 	local display = Config.Upgrades[name].display
