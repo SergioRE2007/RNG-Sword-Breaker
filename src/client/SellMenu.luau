@@ -1,6 +1,10 @@
 -- Selección múltiple y confirmación de venta. El servidor comprueba de nuevo cada copia.
+-- Arrastrar (pedido por el usuario): apretar sobre un arma y pasar por encima de otras las elige todas (o las quita,
+-- si la primera ya estaba elegida), como una selección con el ratón; cerca del borde de la lista, la lista se desplaza.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
@@ -13,9 +17,13 @@ local Ui = require(script.Parent.Ui)
 
 local SellMenu = {}
 local player = Players.LocalPlayer
-local window, refresh, paint
+local window, refresh, paint, startPaint
 local selected, cells = {}, {}
 local confirming = false
+local painting: boolean? = nil -- mientras se arrastra: true = ir eligiendo, false = ir quitando
+local pointer: Vector2? = nil -- dónde está el dedo o el ratón, en las mismas coordenadas que AbsolutePosition
+local EDGE = 40 -- píxeles junto al borde de la lista en los que, arrastrando, se desplaza
+local EDGE_SPEED = 700 -- píxeles por segundo que se desplaza entonces
 
 -- X roja y medio transparente encima de las armas elegidas (pedido por el usuario: es un menú de vender, que se vea
 -- que se van). Dos barras cruzadas, por encima de todo lo de la casilla (vista 3D, daño, rasgo y grado: hasta 4).
@@ -102,6 +110,83 @@ function SellMenu.start()
 		button.TextSize = 20
 		buttons[spec[1]] = button
 	end
+	-- Arrastrar para elegir ---------------------------------------------------------------
+	local function screenPoint(input: InputObject): Vector2
+		-- Mismo origen que AbsolutePosition (debajo de la franja de arriba de Roblox, aunque el Hud la tape: su
+		-- AbsolutePosition es (0, -58)), así que no hay que sumarle nada.
+		return Vector2.new(input.Position.X, input.Position.Y)
+	end
+	local function inside(object: GuiObject, point: Vector2): boolean
+		local corner, size = object.AbsolutePosition, object.AbsoluteSize
+		return point.X >= corner.X and point.Y >= corner.Y and point.X <= corner.X + size.X and point.Y <= corner.Y + size.Y
+	end
+	-- Pone la casilla que haya bajo el puntero como toque (solo las que se ven dentro de la lista). Por encima o por
+	-- debajo de la lista cuenta su borde, que es lo que va pasando mientras se desplaza sola.
+	local function paintUnder()
+		if painting == nil or not pointer then
+			return
+		end
+		local top = stock.AbsolutePosition.Y
+		local point = Vector2.new(pointer.X, math.clamp(pointer.Y, top + 2, top + stock.AbsoluteSize.Y - 2))
+		if not inside(stock, point) then
+			return
+		end
+		for id, cell in cells do
+			if inside(cell, point) then
+				local want = if painting then true else nil
+				if selected[id] ~= want then
+					selected[id] = want
+					confirming = false
+					Sfx.play("click", 0.35)
+					paint()
+				end
+				return
+			end
+		end
+	end
+	local function stopPaint()
+		painting, pointer = nil, nil
+		stock.ScrollingEnabled = true
+	end
+	function startPaint(id: number, input: InputObject)
+		painting = not selected[id]
+		pointer = screenPoint(input)
+		-- En pantallas táctiles el dedo arrastra la selección, no la lista (se desplaza sola en los bordes).
+		stock.ScrollingEnabled = false
+		paintUnder()
+	end
+	UserInputService.InputChanged:Connect(function(input)
+		if painting ~= nil and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			pointer = screenPoint(input)
+			paintUnder()
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			stopPaint()
+		end
+	end)
+	RunService.RenderStepped:Connect(function(dt)
+		if painting == nil or not pointer then
+			return
+		end
+		if not window.Visible then
+			stopPaint()
+			return
+		end
+		-- Junto al borde de arriba o de abajo de la lista, se desplaza hacia ese lado y sigue eligiendo.
+		local top, bottom = stock.AbsolutePosition.Y, stock.AbsolutePosition.Y + stock.AbsoluteSize.Y
+		local direction = if pointer.Y < top + EDGE then -1 elseif pointer.Y > bottom - EDGE then 1 else 0
+		if direction ~= 0 then
+			local limit = math.max(0, stock.AbsoluteCanvasSize.Y - stock.AbsoluteWindowSize.Y)
+			local y = math.clamp(stock.CanvasPosition.Y + direction * EDGE_SPEED * dt, 0, limit)
+			if y ~= stock.CanvasPosition.Y then
+				stock.CanvasPosition = Vector2.new(stock.CanvasPosition.X, y)
+				paintUnder()
+			end
+		end
+	end)
+
 	paint = function()
 		local count = 0
 		for id, cell in cells do
@@ -147,7 +232,16 @@ function SellMenu.start()
 			cell.LayoutOrder = position
 			cell:SetAttribute("Base", tier.color) -- color de su fondo sin elegir
 			sellMark(cell)
-			cell.Activated:Connect(function()
+			cell.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					startPaint(copy.id, input)
+				end
+			end)
+			cell.Activated:Connect(function(input)
+				-- Con mando o teclado no hay arrastre: pulsar la cambia, como antes.
+				if input and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+					return
+				end
 				confirming = false
 				selected[copy.id] = if selected[copy.id] then nil else true
 				paint()
