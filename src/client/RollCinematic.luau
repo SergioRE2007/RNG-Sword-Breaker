@@ -516,8 +516,9 @@ end
 
 -- El número sube de 1 a `target` en `seconds`, por multiplicación (vale igual con 150 que con 1 Sp): arranca
 -- deprisa y frena al llegar. `paint(texto abreviado, llegó)` lo escribe; cada tramo suena un tic más agudo.
--- `step`, opcional, se llama cada fotograma (para cortar: puede lanzar).
-function RollCinematic.countUp(target: number, seconds: number, paint: (string, boolean) -> (), step: (() -> ())?)
+-- `step`, opcional, se llama cada fotograma (para cortar: puede lanzar). `sound`: el tic (el de la tarjeta de la
+-- cinemática tiene el suyo).
+function RollCinematic.countUp(target: number, seconds: number, paint: (string, boolean) -> (), step: (() -> ())?, sound: string?)
 	local total = seconds * SLOW
 	local elapsed = 0
 	local note = -1
@@ -531,7 +532,7 @@ function RollCinematic.countUp(target: number, seconds: number, paint: (string, 
 		local now = math.floor(eased * 14)
 		if now ~= note then
 			note = now
-			Sfx.play("tick", 0.7, 2 ^ (now / 12))
+			Sfx.play(sound or "tick", 0.7, 2 ^ (now / 12))
 		end
 	end
 	paint(Format.short(target), true)
@@ -834,6 +835,7 @@ local function card(s, info)
 	ui.line.TextColor3 = if info.level >= 6 then GOLD else info.bright
 	showLine(s)
 	-- Sube ladeada desde abajo, pasándose de tamaño, y al asentarse da un golpe de zoom y la recorre el brillo.
+	Sfx.play("cine_card")
 	ui.holder.Rotation = -9
 	ui.holder.Position = CARD_HOME + UDim2.fromScale(0, 0.1)
 	tween(ui.scale, 0.3, { Scale = ui.factor }, Enum.EasingStyle.Back)
@@ -857,7 +859,7 @@ local function card(s, info)
 		ui.odds.Text = if arrived then Permanent.describeOdds(roll.index, roll.metal, roll.size) else Lang.t(nil, "1 in {n}", { n = text })
 	end, function()
 		check(s)
-	end)
+	end, "cine_tick")
 	-- Llegó: golpe del número, rayos detrás y destello del color de la rareza.
 	ui.odds.TextColor3 = if info.level >= 6 then GOLD else info.bright:Lerp(WHITE, 0.25)
 	ui.oddsScale.Scale = 1.7
@@ -872,6 +874,7 @@ local function card(s, info)
 	sweep(s)
 	jolt(s, 9, 0.4)
 	cover(s, info.bright, 0.7, 1, 0.45)
+	Sfx.play("cine_stamp")
 	Sfx.play(if info.level >= 4 then "win" else "rare")
 	s.shake = math.max(s.shake, 0.3)
 	s.punch = math.min(s.punch, -6)
@@ -1104,6 +1107,7 @@ function THEMES.star(s, info)
 	wait(s, 0.3)
 
 	-- 3. Un destello en lo alto, y cae: cabeza de fuego y cola larga.
+	Sfx.play("cine_riser")
 	local star = piece(s, Enum.PartType.Ball, Vector3.one * 3.2, CFrame.new(sky), bright, 0)
 	local lamp = Instance.new("PointLight")
 	lamp.Color = bright
@@ -1791,6 +1795,7 @@ function THEMES.smith(s, info)
 	end)
 
 	-- 2. Saca la hoja de la fragua y la deja en el yunque, soltando brasas.
+	Sfx.play("cine_forge")
 	s.cam, s.fov = camWide, 60
 	trail.Rate = 60 / SLOW
 	local start = held.position
@@ -1821,6 +1826,7 @@ function THEMES.smith(s, info)
 		if last then
 			-- El último se carga: las runas del martillo se van poniendo blancas y todo tiembla un poco.
 			Sfx.play("charge", 0.9, 0.7)
+			Sfx.play("cine_riser")
 			for _, part in body.SmithHammer:GetChildren() do
 				if part.Name == "Paper" then
 					tween(part, 0.8, { Color = WHITE })
@@ -1876,6 +1882,7 @@ function THEMES.smith(s, info)
 	s.punch = -14
 	s.blur.Size = 22
 	tween(s.blur, 0.6, { Size = 0 })
+	Sfx.play("cine_bolt")
 	bolt(s, at(1.5, 80, -4), strikeAt, bright, 1.6, 0.5)
 	bolt(s, at(-9, 80, 3), strikeAt, bright, 0.8, 0.4)
 	bolt(s, at(12, 80, 2), strikeAt, bright, 0.8, 0.45)
@@ -2254,6 +2261,7 @@ function THEMES.nova(s, info)
 	glow.Parent = core
 
 	-- 5. El arma sale del núcleo como una silueta de luz, girando deprisa, mientras la cámara se acerca...
+	Sfx.play("cine_riser")
 	local held = weapon(s, info, centre, 6)
 	held.spin = 22
 	held.outline.FillTransparency = 0
