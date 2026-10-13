@@ -67,7 +67,7 @@ local SUCK = id(16951208736) -- remolino que cae hacia dentro
 local NOVA = id(17086022111) -- estallido de puntas
 
 -- Las mismas texturas, para quien las use fuera de las auras (las tiradas raras: client/RollReveal y RollCinematic).
-WeaponAuraDefs.textures = { star = STAR4, stardust = STARDUST, shine = SHINE, halo = HALO, seal = SEAL_A, seal2 = SEAL_B, wave = SEAL_WAVE, nova = NOVA, portal = PORTAL, vortex = SUCK }
+WeaponAuraDefs.textures = { star = STAR4, stardust = STARDUST, shine = SHINE, halo = HALO, seal = SEAL_A, seal2 = SEAL_B, wave = SEAL_WAVE, nova = NOVA, portal = PORTAL, vortex = SUCK, fire = FIRE_FLIP, disc = DISC }
 WeaponAuraDefs.PILLAR = id(3029306948) -- textura de la columna de luz (capa "pillar")
 
 -- Rareza mínima (posición en Config.RarityTiers) para llevar aura: 4 = Épica. Las de menos no llevan nada,
