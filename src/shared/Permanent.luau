@@ -97,6 +97,30 @@ function Permanent.rollWeapon(luck: number): (number, number, number)
 	return last.sword, last.metal, last.size
 end
 
+-- "1 entre N" de que una tirada con esa suerte saque algo tan raro como esa arma o más (cualquier combinación de
+-- su rareza total para arriba). No es Permanent.odds, que mide esa combinación sola: hay cientos igual de raras, y
+-- que salga alguna es mucho más fácil. Es lo que mide el espectáculo de una tirada (server/Gacha).
+function Permanent.rollOdds(sword: number, metal: number?, size: number?, luck: number): number
+	local rarity = Permanent.rarity(sword, metal, size)
+	-- Probabilidad de que no salga ninguna de las más raras: se suma en logaritmos, que con probabilidades diminutas
+	-- restar de 1 pierde el número.
+	local sum = 0
+	for _, combo in Permanent.combos() do
+		if combo.rarity < rarity then
+			break
+		end
+		local chance = luck / combo.rarity
+		if chance >= 1 then
+			return 1
+		end
+		sum += if chance < 1e-6 then chance else -math.log(1 - chance)
+	end
+	if sum <= 0 then
+		return 1
+	end
+	return math.max(1 / (if sum < 1e-6 then sum else 1 - math.exp(-sum)), 1)
+end
+
 -- Tira un modificador de la lista: se prueba del más raro al más común y la suerte multiplica cada
 -- probabilidad (como con las armas). Devuelve su posición, o 0 si no sale ninguno. (Las armas ya no tiran así su
 -- metal y su tamaño: ver Permanent.rollWeapon. Lo usa la calidad de la armadura.)

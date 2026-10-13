@@ -107,9 +107,15 @@ local function draw(player: Player, boost: number, source: string, info)
 	--  · lo raro que era el objeto por lo difícil que era el arma con la suerte de ese objeto: un objeto rarísimo da
 	--    armas buenas casi siempre, y eso es tan probable como que salga el objeto, no más.
 	-- (`usual` solo mide: no cambia lo que sale.)
-	local usual = if source == "object" then base * ObjectSpec.usualLuck(Stats.luck(player)) else base
+	-- Las dos son la probabilidad de sacar algo así de raro o más (Permanent.rollOdds), no la de esa arma sola: hay
+	-- cientos de combinaciones igual de raras y, midiendo la suya, las cinemáticas salían de 9 a 30 veces más de lo
+	-- que dice Config.Gacha.RevealOdds. La suerte de siempre cuenta también la de cajas del momento (poción, clima,
+	-- evento: Stats.spawnLuck; la de armas ya va en `base`), para que no las disparen. El Trébol de la suerte no
+	-- cuenta en ninguna de las dos (pedido por el usuario): lo que saca de más sí se celebra.
+	local usual = if source == "object" then base * ObjectSpec.usualLuck(Stats.luck(player) * Stats.spawnLuck(player)) else base
 	local objectOdds = if info and type(info.objectOdds) == "number" then math.max(info.objectOdds, 1) else 1
-	local odds = math.min(Permanent.odds(index, metal, size, usual), Permanent.odds(index, metal, size, luck) * objectOdds)
+	local clover = if info and type(info.clover) == "number" then math.max(info.clover, 1) else 1
+	local odds = math.min(Permanent.rollOdds(index, metal, size, usual), Permanent.rollOdds(index, metal, size, luck / clover) * objectOdds)
 	-- Con la mochila llena, un arma más rara que la peor copia que el jugador no ha tocado se queda con su sitio.
 	local full = #data.swords >= Config.MaxSwords
 	local spare = if full and rarity >= data.autoSell then worstSpare(data, rarity) else nil
