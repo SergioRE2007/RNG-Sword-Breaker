@@ -315,6 +315,16 @@ local function owners()
 	end
 end
 
+-- Tras renacer (PlayerData.rebirth ya ha dejado la bolsa en la primera): se tira el pico de monedas pendiente y se
+-- vuelve a publicar cómo va.
+function GoldBag.refresh(player: Player)
+	local data = PlayerData.read(player)
+	if data then
+		carry[player] = nil
+		publish(player, data, true)
+	end
+end
+
 function GoldBag.start()
 	local folder = Instance.new("Folder")
 	folder.Name = "Bolsas"

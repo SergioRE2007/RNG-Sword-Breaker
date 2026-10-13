@@ -26,7 +26,8 @@ local NAMES = {
 	"ToggleGear", -- cliente -> servidor: (artifactIndex) equipar o quitar un artefacto
 	"Notice", -- servidor -> cliente: (text, color) aviso en pantalla solo para él
 	"Announce", -- servidor -> clientes: (text, color) aviso de algo muy raro
-	"Rebirth", -- cliente -> servidor: pagar el siguiente renacimiento (solo monedas, no quita nada)
+	"Rebirth", -- cliente -> servidor: renacer (hace falta el precio en monedas; quita monedas, gemas, mejoras y la bolsa)
+	"Reborn", -- servidor -> todos: (jugador, renacimientos que lleva, monedas y gemas que tenía) acaba de renacer
 	"BuyPassTickets", -- cliente -> servidor: (clave de Config.Gamepasses) comprar ese pase con tickets de misión
 	"BuyTicketItem", -- cliente -> servidor: (posición en Config.Tickets.Shop) comprar ese objeto con tickets de misión
 	"UseClover", -- cliente -> servidor: (objeto de una parcela, tuya o de otro) gastar un Trébol de la suerte en él
