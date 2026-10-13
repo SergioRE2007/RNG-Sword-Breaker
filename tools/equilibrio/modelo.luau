@@ -511,13 +511,14 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		local bolsaNueva = false -- ha vaciado alguna bolsa desde la última vuelta de compras (hay monedas de bolsa nuevas)
 		res.bolsa = { ganado = 0, stage = 1 }
 		local function cobrarBolsa()
-			local coins = bolsaRate * bolsaPend * reales
+			local base = bolsaRate * bolsaPend * reales
 			bolsaPend = 0
-			if coins <= 0 or not conBolsa then
+			if base <= 0 or not conBolsa then
 				return
 			end
 			local antes = bolsa.stage
-			bolsa.stage, bolsa.taken = BagInfo.advance(bolsa.stage, bolsa.taken, coins)
+			local coins
+			bolsa.stage, bolsa.taken, _, coins = BagInfo.collect(bolsa.stage, bolsa.taken, base)
 			bolsaNueva = bolsaNueva or bolsa.stage > antes
 			estado.coins += coins
 			res.ganado += coins
@@ -583,7 +584,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			coinMult = Stats.coins(player)
 			gacha = Stats.gachaLuck(player)
 			spawnTime = Stats.spawnTime(player)
-			bolsaRate = Stats.bagRate(player, true)
+			bolsaRate = Stats.bagRate(player, true, 1) -- en la primera bolsa: lo que sube cada una lo pone BagInfo.collect
 			local otros = math.max(Upgrades.value("capacity", estado.upgrades.capacity or 0) - 1, 0)
 			armas, andanada, ritmo = {}, 0, 0
 			for slot, copy in Stats.loadout(player) do

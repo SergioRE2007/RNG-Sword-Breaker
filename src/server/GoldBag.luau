@@ -166,7 +166,7 @@ end
 -- Publica cómo va la bolsa si la bolsa o el ritmo han cambiado (o siempre con `force`).
 local function publish(player: Player, data, force: boolean?)
 	local bag = data.bag
-	local rate = Stats.bagRate(player)
+	local rate = Stats.bagRate(player, false, bag.stage)
 	local last = sent[player]
 	if not force and last and last.stage == bag.stage and math.abs(last.rate - rate) <= math.abs(rate) * 1e-6 then
 		return
@@ -182,12 +182,13 @@ end
 local function hit(player: Player, data, seconds: number, noPotion: boolean?): (number, number)
 	local bag = data.bag
 	-- Se pagan monedas enteras: el pico se guarda para el siguiente cobro (con números enormes ya no hay pico).
-	local total = Stats.bagRate(player, noPotion) * seconds + (carry[player] or 0)
+	-- Cada bolsa vaciada por el camino sube lo que saca cada golpe: lo cuenta BagInfo.collect.
+	local emptied, coins
+	bag.stage, bag.taken, emptied, coins = BagInfo.collect(bag.stage, bag.taken, Stats.bagRate(player, noPotion, 1) * seconds)
+	local total = coins + (carry[player] or 0)
 	local whole = if total < 1e15 then math.floor(total) else total
 	carry[player] = if total < 1e15 then total - whole else 0
-	local emptied = 0
 	if whole > 0 then
-		bag.stage, bag.taken, emptied = BagInfo.advance(bag.stage, bag.taken, whole)
 		PlayerData.addCoins(player, whole)
 	end
 	return whole, emptied
