@@ -1,6 +1,8 @@
--- Ventana de Renacimiento: se paga solo con monedas, no quita nada y multiplica para siempre las
--- monedas, el daño y las suertes. Se abre con el botón "Renacer" del menú de la izquierda. El
--- servidor cobra y cuenta (Rebirth); aquí solo se enseñan los números y se pide.
+-- Ventana de Renacimiento: hace falta tener su precio en monedas y quita todas las monedas, las gemas y las
+-- mejoras, y devuelve la Bolsa de oro a la primera; a cambio multiplica para siempre las monedas, el daño y las
+-- suertes. Se abre con el botón "Renacer" del menú de la izquierda. El servidor comprueba y reinicia (Rebirth);
+-- aquí se enseñan los números, se pide (con un segundo toque: ya no es gratis) y, cuando el servidor avisa con
+-- Reborn, se enseña la cinemática (RollCinematic.playRebirth) o, si no puede salir, un aviso.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -11,6 +13,7 @@ local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Performance = require(script.Parent.Performance)
+local RollCinematic = require(script.Parent.RollCinematic)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 
@@ -20,6 +23,8 @@ local player = Players.LocalPlayer
 local WHITE = Color3.new(1, 1, 1)
 local BLACK = Color3.new(0, 0, 0)
 local GOLD = Color3.fromRGB(255, 205, 60)
+local CONFIRM = 3 -- segundos que dura el "¿Seguro?" del botón
+local NEAR = 180 -- studs: más lejos no se ve el destello de otro jugador que renace
 
 -- Lo que sube cada renacimiento: clave de Config.Rebirth, nombre y color.
 local STATS = {
@@ -120,8 +125,15 @@ function Rebirth.start()
 	local note = Ui.label(content, 16)
 	note.LayoutOrder = 6
 	note.Size = UDim2.fromScale(1, 0.045)
-	note.TextColor3 = Color3.fromRGB(190, 195, 215)
-	note.Text = Lang.t(nil, "You lose nothing: you only spend the coins of the price.")
+	note.TextColor3 = Color3.fromRGB(255, 150, 150)
+	note.TextScaled = true
+	note.Text = Lang.t(nil, "You lose your coins, gems, upgrades and Gold Bag. Weapons and gear stay.")
+	local noteLimit = Instance.new("UITextSizeConstraint")
+	noteLimit.MaxTextSize = 16
+	noteLimit.MinTextSize = 10
+	noteLimit.Parent = note
+
+	local asking = 0 -- hasta cuándo (os.clock) el botón pregunta "¿Seguro?"
 
 	local function refresh()
 		local current = Stats.rebirths(player)
@@ -137,41 +149,66 @@ function Rebirth.start()
 			rows[key].Text = if capped then `x{Format.multiplier(now)}` else `x{Format.multiplier(now)} <font color="{Ui.SOFT}">→</font> <font color="#7ee07a">x{Format.multiplier(after)}</font>`
 		end
 		cost.Text = if capped then Lang.t(nil, "Max reached") else Lang.t(nil, "Price: {n} coins", { n = `<font color="{if affordable then "#ffd24a" else "#ff6a6a"}">{Format.short(price)}</font>` })
-		button.Text = if capped then Lang.t(nil, "Max reached") else Lang.t(nil, "Rebirth now")
+		local sure = affordable and os.clock() < asking
+		button.Text = if capped then Lang.t(nil, "Max reached") elseif sure then Lang.t(nil, "Sure?") else Lang.t(nil, "Rebirth now")
 		button.Interactable = affordable
-		button.BackgroundColor3 = if affordable then Ui.COLORS.green else Ui.COLORS.gray
+		button.BackgroundColor3 = if sure then Ui.COLORS.red elseif affordable then Ui.COLORS.green else Ui.COLORS.gray
 	end
 
+	-- El primer toque pregunta; el segundo, antes de CONFIRM segundos, renace.
 	button.Activated:Connect(function()
-		Remotes.Rebirth:FireServer()
-	end)
-
-	-- Al subir el contador: destello dorado en la ventana, la estrella da un salto y suena.
-	local last = Stats.rebirths(player)
-	local flash = Instance.new("Frame")
-	flash.Name = "Flash"
-	flash.Size = UDim2.fromScale(1, 1)
-	flash.BackgroundColor3 = GOLD
-	flash.BackgroundTransparency = 1
-	flash.BorderSizePixel = 0
-	flash.ZIndex = 30
-	flash.Active = false
-	flash.Parent = body
-	Ui.round(flash, 12)
-	player:GetAttributeChangedSignal("Rebirths"):Connect(function()
-		local now = Stats.rebirths(player)
-		if now > last then
-			Sfx.play("rebirth")
-			if not Performance.get() then
-				flash.BackgroundTransparency = 0.35
-				TweenService:Create(flash, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
-				starScale.Scale = 1.5
-				TweenService:Create(starScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-			end
+		if os.clock() < asking then
+			asking = 0
+			Remotes.Rebirth:FireServer()
+		else
+			asking = os.clock() + CONFIRM
+			local mine = asking
+			starScale.Scale = 1.3
+			TweenService:Create(starScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+			task.delay(CONFIRM, function()
+				if asking == mine then
+					refresh()
+				end
+			end)
 		end
-		last = now
 		refresh()
 	end)
+
+	-- Alguien ha renacido. Si soy yo: se cierran las ventanas y sale la cinemática; al volver (o si no pudo salir,
+	-- con un aviso), el destello en el mundo, que es lo único que ven los demás.
+	local function burst(who: Player)
+		local character = who.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root and not Performance.get() and (root.Position - workspace.CurrentCamera.CFrame.Position).Magnitude < NEAR then
+			RollCinematic.rebirthBurst(root.Position)
+		end
+		return root
+	end
+	Remotes.Reborn.OnClientEvent:Connect(function(who: Player, count: number, coins: number, gems: number)
+		if who ~= player then
+			local root = burst(who)
+			if root then
+				Sfx.play("rebirth", nil, nil, root)
+			end
+			return
+		end
+		Ui.closeAll()
+		local waited = 0
+		while Ui.anyOpen() and waited < 1.5 do
+			waited += task.wait()
+		end
+		local rows = {}
+		for _, entry in STATS do
+			local mult = Config.Rebirth[entry[1]]
+			table.insert(rows, { name = entry[2], color = entry[3], before = mult ^ (count - 1), after = mult ^ count })
+		end
+		if not RollCinematic.playRebirth({ count = count, coins = coins or 0, gems = gems or 0, rows = rows }) then
+			Sfx.play("rebirth")
+			Ui.toast(Lang.t(nil, "Rebirth {count}! Coins x{n} and more forever", { count = count, n = Format.multiplier(Config.Rebirth.coins ^ count) }), GOLD)
+		end
+		burst(player)
+	end)
+	player:GetAttributeChangedSignal("Rebirths"):Connect(refresh)
 	player:GetAttributeChangedSignal("Coins"):Connect(function()
 		if window.Visible then
 			refresh()

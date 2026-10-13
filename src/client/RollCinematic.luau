@@ -5,6 +5,8 @@
 --   star  — cae una estrella fugaz sobre el sitio del objeto roto y el arma sale del cráter de luz.
 --   smith — un herrero espectral gigante la forja a martillazos en un yunque; el último la templa.
 --   nova  — una estrella se encoge, calla y estalla; el arma queda girando en el núcleo.
+--   rebirth — la de renacer (la pide client/Rebirth con `playRebirth`, sin arma): monedas y gemas se van, las
+--             mejoras se apagan y caen sobre la silueta del personaje, silencio, y renace con alas de luz.
 -- Al final de todas sale la tarjeta del arma (rareza, nombre y su "1 entre N"), y el número sube contando hasta el
 -- suyo (`RollCinematic.countUp`, que también usa el cartel del mundo de RollReveal).
 -- Solo se ve una a la vez (las demás esperan turno, MAX_WAITING como mucho) y todo lo que toca (cámara, Hud,
@@ -52,7 +54,7 @@ local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local BASE = if RunService:IsStudio() then Config.Test.RevealSlow or 1 else 1
 -- Ritmo de cada tema: por cuánto se alargan todos sus tiempos (pedido por el usuario, que las vio a su velocidad
 -- de partida y le parecieron rápidas: la estrella y el herrero, bastante más lentas; las supernovas, un poco).
-local PACE = { star = 2.4, smith = 2.4, nova = 1.2 }
+local PACE = { star = 2.4, smith = 2.4, nova = 1.2, rebirth = 1 }
 local SLOW = BASE -- lo que vale ahora mismo: BASE por el ritmo del tema en marcha
 local SKIP = "RollCinematic:skip" -- lo que "lanza" una escena al saltarla: corta la secuencia donde esté
 local MAX_WAITING = 2 -- cinemáticas esperando turno; las que lleguen de más se enseñan en el mundo
@@ -684,62 +686,66 @@ local function buildGui(s, info)
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.Parent = content
 
-	local rarityText = Ui.upper(Lang.t(nil, info.tier.name))
-	local chip = Instance.new("Frame")
-	chip.Name = "Rarity"
-	chip.LayoutOrder = 1
-	chip.Size = UDim2.fromOffset(TextService:GetTextSize(rarityText, 22, Ui.FONT, Vector2.new(1000, 34)).X + 40, 34)
-	chip.BackgroundColor3 = WHITE
-	chip.BorderSizePixel = 0
-	chip.ZIndex = Z.chip
-	chip.Parent = content
-	Ui.round(chip, 11)
-	Ui.gradient(chip, color:Lerp(WHITE, 0.25), color:Lerp(BLACK, 0.4), 90)
-	Ui.stroke(chip, BLACK, 3)
-	local chipText = Ui.label(chip, 22)
-	chipText.Size = UDim2.fromScale(1, 1)
-	chipText.Text = rarityText
-	chipText.ZIndex = Z.text
-	local chipScale = Instance.new("UIScale")
-	chipScale.Scale = 0
-	chipScale.Parent = chip
+	-- Lo del arma (chapa de rareza, nombre y "1 entre N"): la cinemática de renacer no trae arma y no lo lleva.
+	local chipScale, name, odds, oddsScale
+	if info.roll then
+		local rarityText = Ui.upper(Lang.t(nil, info.tier.name))
+		local chip = Instance.new("Frame")
+		chip.Name = "Rarity"
+		chip.LayoutOrder = 1
+		chip.Size = UDim2.fromOffset(TextService:GetTextSize(rarityText, 22, Ui.FONT, Vector2.new(1000, 34)).X + 40, 34)
+		chip.BackgroundColor3 = WHITE
+		chip.BorderSizePixel = 0
+		chip.ZIndex = Z.chip
+		chip.Parent = content
+		Ui.round(chip, 11)
+		Ui.gradient(chip, color:Lerp(WHITE, 0.25), color:Lerp(BLACK, 0.4), 90)
+		Ui.stroke(chip, BLACK, 3)
+		local chipText = Ui.label(chip, 22)
+		chipText.Size = UDim2.fromScale(1, 1)
+		chipText.Text = rarityText
+		chipText.ZIndex = Z.text
+		chipScale = Instance.new("UIScale")
+		chipScale.Scale = 0
+		chipScale.Parent = chip
 
-	local roll = info.roll
-	local sword = Config.Swords[roll.index]
-	local nameColor = if roll.metal and roll.metal > 0 then Config.Metals[roll.metal].color else sword.color
-	local name = Ui.label(content, 27)
-	name.Name = "Title"
-	name.LayoutOrder = 2
-	name.Size = UDim2.new(1, -28, 0, 34)
-	name.TextScaled = true
-	name.Text = Permanent.name(roll.index, roll.metal, roll.size)
-	name.TextColor3 = nameColor:Lerp(WHITE, 0.4)
-	name.TextTransparency = 1
-	name.ZIndex = Z.text
-	local limit = Instance.new("UITextSizeConstraint")
-	limit.MaxTextSize = 27
-	limit.MinTextSize = 14
-	limit.Parent = name
+		local roll = info.roll
+		local sword = Config.Swords[roll.index]
+		local nameColor = if roll.metal and roll.metal > 0 then Config.Metals[roll.metal].color else sword.color
+		name = Ui.label(content, 27)
+		name.Name = "Title"
+		name.LayoutOrder = 2
+		name.Size = UDim2.new(1, -28, 0, 34)
+		name.TextScaled = true
+		name.Text = Permanent.name(roll.index, roll.metal, roll.size)
+		name.TextColor3 = nameColor:Lerp(WHITE, 0.4)
+		name.TextTransparency = 1
+		name.ZIndex = Z.text
+		local limit = Instance.new("UITextSizeConstraint")
+		limit.MaxTextSize = 27
+		limit.MinTextSize = 14
+		limit.Parent = name
 
-	local odds = Ui.label(content, 44)
-	odds.Name = "Odds"
-	odds.LayoutOrder = 3
-	odds.Size = UDim2.new(1, -28, 0, 54)
-	odds.Text = ""
-	odds.TextColor3 = WHITE
-	odds.ZIndex = Z.text
-	local oddsScale = Instance.new("UIScale")
-	oddsScale.Parent = odds
+		odds = Ui.label(content, 44)
+		odds.Name = "Odds"
+		odds.LayoutOrder = 3
+		odds.Size = UDim2.new(1, -28, 0, 54)
+		odds.Text = ""
+		odds.TextColor3 = WHITE
+		odds.ZIndex = Z.text
+		oddsScale = Instance.new("UIScale")
+		oddsScale.Parent = odds
 
-	if not roll.kept then
-		local sold = Ui.label(content, 16)
-		sold.Name = "Sold"
-		sold.LayoutOrder = 4
-		sold.Size = UDim2.new(1, -28, 0, 18)
-		sold.Text = Lang.t(nil, "sold")
-		sold.TextColor3 = Ui.COLORS.orange
-		sold.ZIndex = Z.text
-		chip.Size = UDim2.fromOffset(chip.Size.X.Offset, 30)
+		if not roll.kept then
+			local sold = Ui.label(content, 16)
+			sold.Name = "Sold"
+			sold.LayoutOrder = 4
+			sold.Size = UDim2.new(1, -28, 0, 18)
+			sold.Text = Lang.t(nil, "sold")
+			sold.TextColor3 = Ui.COLORS.orange
+			sold.ZIndex = Z.text
+			chip.Size = UDim2.fromOffset(chip.Size.X.Offset, 30)
+		end
 	end
 
 	-- Saltar: solo con su botón (un clic cualquiera no vale: el jugador va haciendo clic para atacar y se la saltaría
@@ -2415,6 +2421,485 @@ function THEMES.nova(s, info)
 	end)
 end
 
+-- Renacer ---------------------------------------------------------------------------------
+
+local FLAME = Color3.fromRGB(255, 120, 40) -- puntas de las alas y llamaradas
+local SPENT = Color3.fromRGB(96, 96, 122) -- una mejora apagada (gris: más oscura no se ve contra el escenario)
+
+-- Lo que la escena de renacer pone en pantalla: lo que se va (monedas y gemas bajando a cero), el título con la
+-- estrella y el número, y una ficha por estadística con lo que multiplica ahora. `info.rows` = { { name, color,
+-- before, after } }.
+local function rebirthGui(s, info)
+	local factor = s.ui.factor
+	local holder = Instance.new("Frame")
+	holder.Name = "Rebirth"
+	holder.Size = UDim2.fromScale(1, 1)
+	holder.BackgroundTransparency = 1
+	holder.Parent = s.gui
+	s.ui.extra = holder
+
+	local lost = Instance.new("Frame")
+	lost.Name = "Lost"
+	lost.AnchorPoint = Vector2.new(0.5, 1)
+	lost.Position = UDim2.fromScale(0.5, 0.86) -- abajo: arriba los tapaban las monedas que suben
+	lost.Size = UDim2.fromOffset(520, 56)
+	lost.BackgroundTransparency = 1
+	lost.Visible = false
+	lost.Parent = holder
+	local lostScale = Instance.new("UIScale")
+	lostScale.Scale = 0
+	lostScale.Parent = lost
+	local lostLayout = Instance.new("UIListLayout")
+	lostLayout.FillDirection = Enum.FillDirection.Horizontal
+	lostLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	lostLayout.Padding = UDim.new(0, 30)
+	lostLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	lostLayout.Parent = lost
+	local counters = {}
+	for index, entry in { { "monedas", info.coins, Color3.fromRGB(255, 214, 80) }, { "gemas", info.gems, Color3.fromRGB(205, 140, 255) } } do
+		local row = Instance.new("Frame")
+		row.Name = if index == 1 then "Coins" else "Gems"
+		row.LayoutOrder = index
+		row.Size = UDim2.fromOffset(230, 56)
+		row.BackgroundTransparency = 1
+		row.Parent = lost
+		local icon = Ui.image(row, entry[1])
+		icon.AnchorPoint = Vector2.new(0, 0.5)
+		icon.Position = UDim2.fromScale(0, 0.5)
+		icon.Size = UDim2.fromOffset(52, 52)
+		icon.ZIndex = Z.text
+		local text = Ui.label(row, 36)
+		text.Name = "Amount"
+		text.Position = UDim2.fromOffset(62, 0)
+		text.Size = UDim2.new(1, -62, 1, 0)
+		text.TextXAlignment = Enum.TextXAlignment.Left
+		text.TextColor3 = entry[3]
+		text.Text = Format.short(entry[2])
+		text.ZIndex = Z.text
+		counters[index] = { label = text, amount = entry[2] }
+	end
+
+	local title = Instance.new("Frame")
+	title.Name = "Title"
+	title.AnchorPoint = Vector2.new(0.5, 0)
+	title.Position = UDim2.fromScale(0.5, 0.11)
+	title.Size = UDim2.fromOffset(700, 156)
+	title.BackgroundTransparency = 1
+	title.Visible = false
+	title.Parent = holder
+	local titleScale = Instance.new("UIScale")
+	titleScale.Parent = title
+	local star = Ui.image(title, "rebirth")
+	star.Name = "Star"
+	star.AnchorPoint = Vector2.new(0.5, 0)
+	star.Position = UDim2.fromScale(0.5, 0)
+	star.Size = UDim2.fromOffset(92, 92)
+	star.ZIndex = Z.text
+	local text = Ui.label(title, 56)
+	text.Name = "Text"
+	text.Position = UDim2.fromOffset(0, 94)
+	text.Size = UDim2.new(1, 0, 0, 60)
+	text.Text = Ui.upper(Lang.t(nil, "Rebirth {n}", { n = info.count }))
+	text.TextColor3 = GOLD
+	text.ZIndex = Z.text
+
+	local width = #info.rows * 232 + (#info.rows - 1) * 12
+	local stats = Instance.new("Frame")
+	stats.Name = "Stats"
+	stats.AnchorPoint = Vector2.new(0.5, 1)
+	stats.Position = UDim2.fromScale(0.5, 0.885)
+	stats.Size = UDim2.fromOffset(width, 86)
+	stats.BackgroundTransparency = 1
+	stats.Parent = holder
+	local statsScale = Instance.new("UIScale")
+	statsScale.Scale = math.min(factor, (workspace.CurrentCamera.ViewportSize.X - 32) / width)
+	statsScale.Parent = stats
+	local statsLayout = Instance.new("UIListLayout")
+	statsLayout.FillDirection = Enum.FillDirection.Horizontal
+	statsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	statsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	statsLayout.Padding = UDim.new(0, 12)
+	statsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	statsLayout.Parent = stats
+	local rows = {}
+	for index, entry in info.rows do
+		-- El hueco lo guarda un marco fijo; lo que salta es la ficha de dentro (un UIScale movería a las vecinas).
+		local slot = Instance.new("Frame")
+		slot.Name = "Stat" .. index
+		slot.LayoutOrder = index
+		slot.Size = UDim2.fromOffset(232, 86)
+		slot.BackgroundTransparency = 1
+		slot.Parent = stats
+		local chip = Instance.new("Frame")
+		chip.Name = "Chip"
+		chip.AnchorPoint = Vector2.new(0.5, 0.5)
+		chip.Position = UDim2.fromScale(0.5, 0.5)
+		chip.Size = UDim2.fromScale(1, 1)
+		chip.BackgroundColor3 = WHITE
+		chip.BorderSizePixel = 0
+		chip.ZIndex = Z.card
+		chip.Parent = slot
+		Ui.round(chip, 14)
+		Ui.gradient(chip, Color3.fromRGB(58, 52, 92):Lerp(entry.color, 0.22), Color3.fromRGB(20, 18, 36), 90)
+		Ui.stroke(chip, entry.color:Lerp(BLACK, 0.25), 4)
+		local chipScale = Instance.new("UIScale")
+		chipScale.Scale = 0
+		chipScale.Parent = chip
+		local name = Ui.label(chip, 19)
+		name.Name = "Name"
+		name.Position = UDim2.fromOffset(8, 8)
+		name.Size = UDim2.new(1, -16, 0, 26)
+		name.TextScaled = true
+		name.TextColor3 = entry.color
+		name.Text = entry.name
+		name.ZIndex = Z.text
+		local limit = Instance.new("UITextSizeConstraint")
+		limit.MaxTextSize = 19
+		limit.MinTextSize = 11
+		limit.Parent = name
+		local value = Ui.label(chip, 27)
+		value.Name = "Value"
+		value.Position = UDim2.fromOffset(8, 38)
+		value.Size = UDim2.new(1, -16, 0, 38)
+		value.Text = `x{Format.multiplier(entry.before)} <font color="#b9bdd6">→</font> <font color="#7ee07a">x{Format.multiplier(entry.after)}</font>`
+		value.ZIndex = Z.text
+		rows[index] = chipScale
+	end
+	return { lost = lost, lostScale = lostScale, counters = counters, title = title, titleScale = titleScale, rows = rows, factor = factor }
+end
+
+-- Copia del personaje para el escenario: quieta, sin nada que brille y con un contorno que la deja en silueta.
+local function ghost(s, centre: Vector3): (Model?, Highlight?)
+	local character = player.Character
+	if not character then
+		return nil, nil
+	end
+	local was = character.Archivable
+	character.Archivable = true
+	local copy = character:Clone()
+	character.Archivable = was
+	if not copy then
+		return nil, nil
+	end
+	copy.Name = "Ghost"
+	for _, item in copy:GetDescendants() do
+		if item:IsA("BaseScript") or item:IsA("Sound") or item:IsA("BillboardGui") or item:IsA("ForceField") or item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") or item:IsA("Light") or item:IsA("Highlight") then
+			item:Destroy()
+		elseif item:IsA("BasePart") then
+			item.Anchored = true
+			item.CanCollide = false
+			item.CanQuery = false
+			item.CanTouch = false
+			item.CastShadow = false
+		elseif item:IsA("Humanoid") then
+			item.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+			item.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+		end
+	end
+	copy:PivotTo(CFrame.lookAt(centre, centre + Vector3.zAxis))
+	copy.Parent = s.folder
+	local outline = Instance.new("Highlight")
+	outline.DepthMode = Enum.HighlightDepthMode.Occluded
+	outline.FillColor = BLACK
+	outline.FillTransparency = 0
+	outline.OutlineColor = GOLD
+	outline.OutlineTransparency = 0.25
+	outline.Parent = copy
+	return copy, outline
+end
+
+-- Renacer: en el sitio de verdad, las monedas y las gemas se le van al jugador hacia el cielo mientras sus
+-- contadores bajan a cero; en el escenario negro, las mejoras (un aro de luces por rama del árbol) se apagan una a
+-- una y caen sobre su silueta; silencio; y renace: explosión dorada, alas de luz, la estrella con el número y lo que
+-- multiplica cada cosa a partir de ahora.
+function THEMES.rebirth(s, info)
+	local ui = s.ui
+	local extra = rebirthGui(s, info)
+	local root = rootPart()
+	local start = if root then root.Position else s.saved.cframe.Position
+	local facing = (if root then root.CFrame.LookVector else Vector3.zAxis) * Vector3.new(1, 0, 1)
+	facing = if facing.Magnitude > 0.1 then facing.Unit else Vector3.zAxis
+	local side = Vector3.yAxis:Cross(facing)
+	local function spot(): Vector3
+		local now = rootPart()
+		return if now then now.Position else start
+	end
+	-- La cámara da la vuelta por delante del jugador, sin nada del mapa en medio.
+	local function eyeAt(angle: number, far: number): CFrame
+		local at = spot()
+		local focus = at + Vector3.new(0, 0.6, 0)
+		local eye = clearView(s, focus, at + (facing * math.cos(angle) + side * math.sin(angle)) * far + Vector3.new(0, 3.2, 0))
+		return CFrame.lookAt(eye, focus)
+	end
+
+	-- 1. Lo pierde todo: la imagen se queda sin color y las monedas y las gemas se le van hacia arriba.
+	Sfx.play("cine_riser")
+	-- Oscurece más que apaga el color: sin color del todo, las monedas que se van salían grises.
+	tween(s.correction, 1.6, { Saturation = -0.35, Contrast = 0.25, Brightness = -0.22, TintColor = Color3.fromRGB(175, 170, 215) })
+	-- Sus armas en órbita, fuera: con sus auras tapaban la escena.
+	local weapons = workspace:FindFirstChild("OrbitWeapons")
+	local mine = weapons and weapons:FindFirstChild(player.Name)
+	if mine then
+		for _, item in mine:GetDescendants() do
+			vanish(s, item)
+		end
+		table.insert(s.watching, mine.DescendantAdded:Connect(function(item)
+			vanish(s, item)
+		end))
+	end
+	local from = s.saved.cframe
+	animate(s, 0.7, function(t)
+		s.cam = from:Lerp(eyeAt(math.rad(-28), 14), smooth(t))
+		s.fov = lerp(s.saved.fov, 58, t)
+	end)
+	showLine(s)
+	extra.lost.Visible = true
+	tween(extra.lostScale, 0.25, { Scale = extra.factor }, Enum.EasingStyle.Back)
+	local floor = start - Vector3.new(0, 2.8, 0)
+	sealOn(s, floor + Vector3.new(0, 0.2, 0), TEX.seal, GOLD, 15, 3.6, -40)
+	local drain = point(s, start, 2)
+	local streams = {}
+	for _, entry in { { Ui.IMAGES.monedas, 44 }, { Ui.IMAGES.gemas, 24 } } do
+		table.insert(streams, emitter(drain, {
+			Texture = entry[1],
+			LightEmission = 0.15,
+			Rate = entry[2] / SLOW,
+			Lifetime = life(1.1, 1.7),
+			Speed = NumberRange.new(12 / SLOW, 22 / SLOW),
+			SpreadAngle = Vector2.new(38, 38),
+			EmissionDirection = Enum.NormalId.Top,
+			Acceleration = Vector3.new(0, 16 / (SLOW * SLOW), 0),
+			Rotation = NumberRange.new(0, 360),
+			RotSpeed = NumberRange.new(-200 / SLOW, 200 / SLOW),
+			Size = seq({ { 0, 0 }, { 0.12, 0.62 }, { 0.7, 0.5 }, { 1, 0.1 } }),
+			Transparency = seq({ { 0, 0 }, { 0.7, 0.1 }, { 1, 1 } }),
+		}))
+	end
+	local note, crack = -1, 0
+	animate(s, 3.3, function(t)
+		drain.Position = spot()
+		s.cam = eyeAt(math.rad(lerp(-28, 34, smooth(t))), lerp(14, 11, t))
+		s.fov = lerp(58, 50, t)
+		local eased = 1 - (1 - t) ^ 2
+		for _, counter in extra.counters do
+			local amount = counter.amount
+			counter.label.Text = if t >= 1 or amount < 1 then "0" else Format.short(math.max(1, math.floor(amount ^ (1 - eased))))
+		end
+		local now = math.floor(eased * 16)
+		if now ~= note then
+			note = now
+			Sfx.play("cine_tick", 0.7, 1.6 * 2 ^ (-now / 12))
+		end
+		if t >= crack then
+			crack += 0.22
+			cracks(s, floor + Vector3.new(0, 0.15, 0), GOLD, 5, 9 + 10 * t, 0.9)
+			s.shake = math.max(s.shake, 0.08 + 0.12 * t)
+		end
+	end)
+	for _, stream in streams do
+		stream.Enabled = false
+	end
+	Sfx.play("cine_collapse")
+	cover(s, BLACK, 1, 0, 0.35)
+	wait(s, 0.45)
+	extra.lost.Visible = false
+	ui.line.TextTransparency = 1
+	if ui.lineStroke then
+		ui.lineStroke.Transparency = 1
+	end
+
+	-- 2. Escenario: su silueta flota y las mejoras, un aro de luces por rama, giran a su alrededor.
+	local centre = stage(s)
+	s.correction.TintColor = WHITE
+	s.correction.Brightness = 0
+	local body, outline = ghost(s, centre)
+	local orbs = {}
+	for index, name in Config.UpgradeOrder do
+		local group = {
+			parts = {},
+			radius = 4.4 + index * 1.15,
+			speed = (if index % 2 == 0 then -1 else 1) * rng:NextNumber(0.8, 1.3),
+			tilt = CFrame.Angles(math.rad(rng:NextNumber(-16, 16)), 0, math.rad(rng:NextNumber(-16, 16))),
+		}
+		local color = Config.Upgrades[name].color
+		for _ = 1, 10 do
+			local part = piece(s, Enum.PartType.Ball, Vector3.one * 0.45, CFrame.new(centre), color, 0)
+			local a, b = Instance.new("Attachment"), Instance.new("Attachment")
+			a.Position, b.Position = Vector3.new(0, 0.2, 0), Vector3.new(0, -0.2, 0)
+			a.Parent, b.Parent = part, part
+			local trail = Instance.new("Trail")
+			trail.Attachment0, trail.Attachment1 = a, b
+			trail.Color = ColorSequence.new(color)
+			trail.Transparency = seq({ { 0, 0.3 }, { 1, 1 } })
+			trail.WidthScale = seq({ { 0, 1 }, { 1, 0 } })
+			trail.Lifetime = 0.45 * SLOW
+			trail.LightEmission = 1
+			trail.FaceCamera = true
+			trail.Parent = part
+			table.insert(group.parts, part)
+		end
+		orbs[index] = group
+	end
+	local wings = {}
+	local turn, pull, dist, open, lift = 0, 1, 15, 0, 0.4 -- lift: a qué altura mira la cámara (más = personaje más abajo)
+	s.tick = function(dt)
+		turn += dt / SLOW
+		for _, group in orbs do
+			for index, part in group.parts do
+				local angle = turn * group.speed + index / #group.parts * math.pi * 2
+				part.CFrame = CFrame.new(centre) * group.tilt * CFrame.new(math.cos(angle) * group.radius * pull, 0, math.sin(angle) * group.radius * pull)
+			end
+		end
+		if body then
+			local at = centre + Vector3.new(0, math.sin(turn * 1.4) * 0.25, 0)
+			body:PivotTo(CFrame.lookAt(at, at + Vector3.zAxis))
+		end
+		for _, wing in wings do
+			local flap = math.sin(turn * 2.2 - wing.phase * 0.9) * 0.09
+			wing.tip.Position = wing.root:Lerp(CFrame.Angles(0, 0, wing.sign * flap) * wing.target, open)
+		end
+		s.cam = CFrame.lookAt(centre + Vector3.new(math.sin(turn * 0.25) * 1.5, lift + 0.4, dist), centre + Vector3.new(0, lift, 0))
+	end
+	s.fov = 50
+	cover(s, BLACK, 0, 1, 0.6)
+	wait(s, 0.7)
+	-- Se apagan rama a rama, cada una con una nota más grave.
+	for index, group in orbs do
+		Sfx.play("cine_tick", 0.9, 2 ^ (-index * 2 / 12))
+		for _, part in group.parts do
+			tween(part, 0.25, { Color = SPENT, Transparency = 0.45 })
+			local trail = part:FindFirstChildOfClass("Trail")
+			if trail then
+				trail.Enabled = false
+			end
+		end
+		s.shake = math.max(s.shake, 0.06)
+		wait(s, 0.34)
+	end
+	wait(s, 0.2)
+	-- Caen sobre él y todo se encoge en un punto.
+	Sfx.play("cine_collapse")
+	local core = point(s, centre)
+	sprite(core, TEX.vortex, GOLD, 16, 1, -300, 1)
+	animate(s, 0.9, function(t)
+		pull = 1 - t * t * t
+		dist = lerp(15, 10.5, smooth(t))
+	end)
+	for _, group in orbs do
+		for _, part in group.parts do
+			part:Destroy()
+		end
+	end
+	table.clear(orbs)
+	cover(s, BLACK, 1, 0, 0.12)
+	wait(s, 0.9)
+
+	-- 3. Renace: explosión dorada, la silueta se enciende con sus colores y se le abren unas alas de luz.
+	local back = point(s, centre + Vector3.new(0, 0.8, -1.2))
+	local lamp = Instance.new("PointLight")
+	lamp.Color = GOLD:Lerp(WHITE, 0.5)
+	lamp.Brightness = 3
+	lamp.Range = 34
+	lamp.Parent = point(s, centre + Vector3.new(0, 2, 7))
+	for _, sign in { -1, 1 } do
+		for feather = 1, 6 do
+			local f = (feather - 1) / 5
+			local angle = math.rad(lerp(68, -30, f))
+			local long = lerp(8.5, 4.2, f)
+			local a, b = Instance.new("Attachment"), Instance.new("Attachment")
+			a.Position = Vector3.new(sign * 0.4, 0.2 - f * 0.8, 0)
+			b.Position = a.Position
+			a.Parent, b.Parent = back, back
+			local beam = Instance.new("Beam")
+			beam.Attachment0, beam.Attachment1 = a, b
+			beam.FaceCamera = true
+			beam.Segments = 1
+			beam.Texture = TEX.halo
+			beam.TextureMode = Enum.TextureMode.Stretch
+			beam.TextureLength = 1
+			beam.LightEmission = 1
+			beam.LightInfluence = 0
+			beam.Color = ColorSequence.new(GOLD:Lerp(WHITE, 0.45), FLAME)
+			beam.Transparency = NumberSequence.new(0)
+			beam.Brightness = 2
+			beam.Width0, beam.Width1 = 3.4, 1.6
+			beam.Parent = back
+			-- El nervio de la pluma: una línea fina y viva por dentro del resplandor, que se afila hacia la punta.
+			local quill = Instance.new("Beam")
+			quill.Attachment0, quill.Attachment1 = a, b
+			quill.FaceCamera = true
+			quill.Segments = 1
+			quill.LightEmission = 1
+			quill.LightInfluence = 0
+			quill.Color = ColorSequence.new(WHITE, GOLD)
+			quill.Transparency = seq({ { 0, 0.15 }, { 0.7, 0.35 }, { 1, 1 } })
+			quill.Width0, quill.Width1 = 0.75, 0.05
+			quill.Parent = back
+			table.insert(wings, { tip = b, root = a.Position, target = Vector3.new(sign * math.cos(angle) * long, math.sin(angle) * long, -0.4), sign = sign, phase = f })
+		end
+	end
+	dist, lift = 17, 1.1
+	Sfx.play("cine_boom")
+	Sfx.play("cine_gold")
+	Sfx.play("rebirth")
+	cover(s, Color3.fromRGB(255, 240, 190), 0, 1, 0.8)
+	s.shake = 1.3
+	s.punch = 16
+	s.blur.Size = 18
+	tween(s.blur, 0.6, { Size = 0 })
+	tween(s.correction, 0.4, { Brightness = 0.05, Saturation = 0.25 })
+	if outline then
+		outline.FillColor = WHITE
+		tween(outline, 1, { FillTransparency = 1 })
+	end
+	local burst = point(s, centre)
+	sprite(burst, TEX.nova, GOLD, 40, 1.3, 120, 1, true)
+	stardust(burst, GOLD, 70, 34, 1.6)
+	flames(burst, FLAME, 28, 30, 7)
+	sparks(burst, GOLD, 90, 46, 0.7)
+	-- Ondas: aros de cara a la cámara que se abren (las de `ring` son discos y aquí, con la cámara algo por encima,
+	-- se veían como una losa de luz que llenaba el plano).
+	sprite(burst, TEX.wave, WHITE, 46, 0.8, 0, 1, true)
+	sprite(burst, TEX.wave, GOLD, 70, 1.2, 0, 1, true)
+	pillar(s, centre - Vector3.new(0, 16, 0), 50, 10, GOLD, 2.6)
+	-- Resplandor redondo detrás (el destello de haces, TEX.shine, a este tamaño son tres bandas sueltas).
+	sprite(back, TEX.halo, GOLD, 26, 9, 0, 1)
+	sprite(back, TEX.star, GOLD:Lerp(WHITE, 0.5), 15, 9, 12, 1)
+	embers(point(s, centre - Vector3.new(0, 3, 0), 6), GOLD, 34, 9)
+	wait(s, 0.3)
+	animate(s, 0.55, function(t)
+		open = outBack(t)
+		dist = lerp(17, 15, t)
+	end)
+	wait(s, 0.6)
+
+	-- La estrella y el número caen de golpe; luego, una a una, lo que multiplica cada cosa.
+	extra.title.Visible = true
+	extra.titleScale.Scale = extra.factor * 3
+	tween(extra.titleScale, 0.28, { Scale = extra.factor }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	wait(s, 0.28)
+	Sfx.play("cine_stamp")
+	s.shake = math.max(s.shake, 0.45)
+	s.punch = math.min(s.punch, -7)
+	s.blur.Size = 10
+	tween(s.blur, 0.4, { Size = 0 })
+	cover(s, GOLD, 0.6, 1, 0.5)
+	stardust(burst, GOLD, 30, 22, 1.2)
+	wait(s, 0.7)
+	for index, row in extra.rows do
+		Sfx.play("cine_tick", 1, 2 ^ ((index - 1) * 2 / 12))
+		tween(row, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+		s.punch = math.min(s.punch, -2)
+		wait(s, 0.36)
+	end
+	Sfx.play("win")
+	cover(s, GOLD, 0.75, 1, 0.5)
+	flames(burst, FLAME, 16, 22, 5)
+	animate(s, 2.6, function(t)
+		dist = lerp(15, 13, smooth(t))
+	end)
+end
+
 -- Entrada -------------------------------------------------------------------------------
 
 local function free(): boolean
@@ -2467,7 +2952,7 @@ function RollCinematic.play(theme: string, info): boolean
 			end
 		end)
 	end
-	info.color = info.tier.color
+	info.color = info.color or info.tier.color
 	info.bright = info.color:Lerp(WHITE, 0.35)
 	SLOW = BASE * (PACE[theme] or 1)
 	local s = newScene(info)
@@ -2488,6 +2973,9 @@ function RollCinematic.play(theme: string, info): boolean
 		release(s)
 		s.ui.holder.Visible = false
 		s.ui.line.Visible = false
+		if s.ui.extra then
+			s.ui.extra.Visible = false
+		end
 		tween(s.ui.cover, 0.3, { BackgroundTransparency = 1 })
 		task.wait(0.3 * SLOW)
 	else
@@ -2497,6 +2985,36 @@ function RollCinematic.play(theme: string, info): boolean
 	SLOW = BASE
 	current = nil
 	return true
+end
+
+-- La cinemática de renacer (client/Rebirth). `info` = { count, coins, gems (lo que tenía), rows = { { name, color,
+-- before, after } } }. Devuelve false si no se pudo enseñar (modo Rendimiento, ajuste apagado, otra escena...).
+function RollCinematic.playRebirth(info): boolean
+	if not RollCinematic.reserve() then
+		return false
+	end
+	info.color = GOLD
+	info.level = 6
+	info.line = "You leave everything behind..."
+	return RollCinematic.play("rebirth", info)
+end
+
+-- Lo que se ve en el mundo donde alguien acaba de renacer (también los demás jugadores): columna de luz, onda,
+-- polvo y llamaradas. `position` = el centro del personaje.
+function RollCinematic.rebirthBurst(position: Vector3)
+	local folder = Instance.new("Folder")
+	folder.Name = "RebirthBurst"
+	folder.Parent = workspace
+	Debris:AddItem(folder, 6 * SLOW)
+	local s = { folder = folder }
+	local floor = position - Vector3.new(0, 2.8, 0)
+	pillar(s, floor, 46, 9, GOLD, 2.2)
+	ring(s, floor + Vector3.new(0, 0.3, 0), 3, 50, GOLD, 0.9)
+	dustRing(s, floor + Vector3.new(0, 0.4, 0), Color3.fromRGB(214, 196, 150), 14, 30)
+	local burst = point(s, position)
+	flames(burst, FLAME, 18, 22, 5)
+	stardust(burst, GOLD, 40, 26, 1.3)
+	embers(point(s, floor, 5), GOLD, 26, 2.5)
 end
 
 return RollCinematic

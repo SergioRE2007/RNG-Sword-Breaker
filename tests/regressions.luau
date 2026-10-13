@@ -387,23 +387,47 @@ local piece, kept = f.load("src/server/Armor").give(player, 1, 1)
 equal(kept, true, "armadura recibida")
 equal(data.read(player).armorWorn[piece.slot], nil, "armadura nueva no se equipa")
 
--- Renacimiento: cinco compras, ninguna sexta, ni cobro por intento fallido.
+-- Renacimiento: cinco, ningún sexto, y cada uno quita monedas, gemas, mejoras y la bolsa, pero no lo demás.
+roblox.implementMethod("Workspace", "GetServerTimeNow", function() return 0 end)
 f.load("src/server/Rebirth").start()
-data.edit(player, function(d) d.coins = 1e100 end)
+local keptSwords, keptArtifacts, keptCrystals = #data.read(player).swords, #data.read(player).artifacts, data.read(player).items.traitCrystal
 for count = 1, 5 do
-	f.advance(1)
+	data.edit(player, function(d)
+		d.coins, d.gems = 1e100, 500
+		d.upgrades.luck, d.upgrades.fortune, d.upgrades.bagBoost = 3, 2, 1
+		d.bag.stage, d.bag.taken = 4, 10
+	end)
+	f.advance(3)
 	f.remotes.Rebirth.OnServerEvent:fire(player)
-	equal(data.read(player).rebirths, count, "renacimiento " .. count)
+	local d = data.read(player)
+	equal(d.rebirths, count, "renacimiento " .. count)
+	equal(d.coins, 0, "renacer quita las monedas")
+	equal(d.gems, 0, "renacer quita las gemas")
+	for name, level in d.upgrades do
+		equal(level, 0, "renacer quita la mejora " .. name)
+	end
+	equal(d.bag.stage, 1, "renacer devuelve la bolsa a la primera")
+	equal(d.bag.taken, 0, "renacer deja la bolsa entera")
+	equal(player:GetAttribute("Upgrade_luck"), 0, "mejoras publicadas a cero")
+	equal(player:GetAttribute("BagStage"), 1, "bolsa publicada")
+	equal(#d.swords, keptSwords, "renacer no quita armas")
+	equal(#d.artifacts, keptArtifacts, "renacer no quita accesorios")
+	equal(d.items.traitCrystal, keptCrystals, "renacer no quita objetos")
 end
-local coins = data.read(player).coins
-f.advance(1)
+equal(#f.remotes.Reborn.sent, 5, "un aviso por renacimiento")
+data.edit(player, function(d) d.coins = 1e100; d.gems = 7; d.upgrades.luck = 2 end)
+f.advance(3)
 f.remotes.Rebirth.OnServerEvent:fire(player)
 equal(data.read(player).rebirths, 5, "máximo cinco")
-equal(data.read(player).coins, coins, "sexto sin cobro")
+equal(data.read(player).coins, 1e100, "sexto sin quitar monedas")
+equal(data.read(player).gems, 7, "sexto sin quitar gemas")
+equal(data.read(player).upgrades.luck, 2, "sexto sin quitar mejoras")
 data.edit(player, function(d) d.rebirths = 0; d.coins = 0 end)
-f.advance(1)
+f.advance(3)
 f.remotes.Rebirth.OnServerEvent:fire(player)
 equal(data.read(player).rebirths, 0, "sin dinero no renace")
+equal(data.read(player).upgrades.luck, 2, "sin dinero no pierde las mejoras")
+data.edit(player, function(d) d.upgrades.luck = 0; d.gems = 0 end)
 
 -- Tiendas reales: triple cuenta tres; no avanza sin pago; descartar no deshace el Pity.
 f.load("src/server/ModifierShops").start()
@@ -617,7 +641,6 @@ f.workspace:SetAttribute("Weather", "")
 near(stats.spawnLuck(f.player) / spawnBefore, 1, "despejado: la suerte vuelve a ser la de antes")
 
 -- Eventos de admin (Stats.boost): el multiplicador entra solo en su stat y se va al caducar.
-roblox.implementMethod("Workspace", "GetServerTimeNow", function() return 0 end)
 local damageBefore, coinsBefore = stats.damage(f.player), stats.coins(f.player)
 f.workspace:SetAttribute("Boost_luck", 3)
 f.workspace:SetAttribute("BoostEnd_luck", 60)

@@ -1107,11 +1107,17 @@ function Modelo.nuevo(shared, mundo, objetivo)
 						if estado.rebirths < Config.Rebirth.max then
 							local cost = Stats.rebirthCost(player)
 							if estado.coins >= cost then
-								estado.coins -= cost
+								-- Renacer lo quita todo (PlayerData.rebirth): monedas, gemas, mejoras y la bolsa a la primera.
+								-- Solo aquí, en el jugador que juega de verdad: el calendario de `objetivo` no lo cuenta.
+								estado.coins, estado.gems = 0, 0
+								for name in estado.upgrades do
+									estado.upgrades[name] = 0
+								end
+								bolsa.stage, bolsa.taken = 1, 0
 								estado.rebirths += 1
 								attrs.Rebirths = estado.rebirths
 								res.renacer[estado.rebirths] = t
-								bought = true
+								bought = false
 							end
 						end
 					end

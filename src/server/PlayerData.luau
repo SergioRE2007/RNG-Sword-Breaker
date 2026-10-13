@@ -937,13 +937,35 @@ function PlayerData.addRobuxSpent(player: Player, robux: number)
 	end
 end
 
--- Suma un renacimiento (el cobro lo hace quien llama, con trySpend).
-function PlayerData.addRebirth(player: Player)
+-- Renacer (pedido por el usuario: ahora sí quita cosas): hace falta tener `cost` monedas y, de una sola vez, se
+-- pierden todas las monedas, todas las gemas y todas las mejoras, la Bolsa de oro vuelve a la primera (con ella se
+-- van las monedas de bolsa, que se cuentan por bolsas vaciadas) y se suma un renacimiento. Armas, accesorios,
+-- armadura, objetos y las armas dejadas en la bolsa se quedan. Devuelve false, sin tocar nada, si no puede.
+function PlayerData.rebirth(player: Player, cost: number): boolean
 	local session = sessions[player]
-	if session and session.data.rebirths < Config.Rebirth.max then
-		session.data.rebirths += 1
-		publish(player)
+	if not session then
+		return false
 	end
+	local data = session.data
+	if data.rebirths >= Config.Rebirth.max or not (data.coins >= cost) then
+		return false
+	end
+	-- Con dinero infinito (modo de pruebas) las monedas y las gemas no se tocan.
+	if data.coins ~= math.huge then
+		data.coins = 0
+	end
+	if data.gems ~= math.huge then
+		data.gems = 0
+	end
+	for name in data.upgrades do
+		data.upgrades[name] = 0
+	end
+	data.bag.stage = 1
+	data.bag.taken = 0
+	data.bag.seen = os.time()
+	data.rebirths += 1
+	publish(player)
+	return true
 end
 
 -- Tipo (índice de Config.Swords) de la espada equipada.
