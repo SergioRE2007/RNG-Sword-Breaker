@@ -1,9 +1,10 @@
--- Compra de mejoras, con monedas o con gemas según la mejora. Las espadas salen del gacha (ver Gacha).
+-- Compra de mejoras, con monedas, gemas o monedas de bolsa según la mejora. Las espadas salen del gacha (ver Gacha).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
+local Stats = require(ReplicatedStorage.Shared.Stats)
 local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
 
@@ -19,9 +20,16 @@ local function buy(player: Player, name: string): boolean
 	if level >= upgrade.maxLevel then
 		return false
 	end
-	local spend = if upgrade.currency == "gems" then PlayerData.trySpendGems else PlayerData.trySpend
-	if not spend(player, Upgrades.cost(name, level)) then
-		return false
+	if upgrade.currency == "bag" then
+		-- Las monedas de bolsa no se restan: lo gastado sale del nivel comprado (Stats.wallet).
+		if Stats.wallet(player, "bag") < Upgrades.cost(name, level) then
+			return false
+		end
+	else
+		local spend = if upgrade.currency == "gems" then PlayerData.trySpendGems else PlayerData.trySpend
+		if not spend(player, Upgrades.cost(name, level)) then
+			return false
+		end
 	end
 	PlayerData.setUpgrade(player, name, level + 1)
 	Missions.add(player, "upgrades")

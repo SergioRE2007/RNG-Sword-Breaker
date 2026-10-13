@@ -508,6 +508,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		-- y de cada cita de la agenda).
 		local bolsa = { stage = 1, taken = 0 }
 		local bolsaRate, bolsaPend = 0, 0
+		local bolsaNueva = false -- ha vaciado alguna bolsa desde la última vuelta de compras (hay monedas de bolsa nuevas)
 		res.bolsa = { ganado = 0, stage = 1 }
 		local function cobrarBolsa()
 			local coins = bolsaRate * bolsaPend * reales
@@ -515,7 +516,9 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			if coins <= 0 or not conBolsa then
 				return
 			end
+			local antes = bolsa.stage
 			bolsa.stage, bolsa.taken = BagInfo.advance(bolsa.stage, bolsa.taken, coins)
+			bolsaNueva = bolsaNueva or bolsa.stage > antes
 			estado.coins += coins
 			res.ganado += coins
 			res.bolsa.ganado += coins
@@ -901,7 +904,8 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			minCost, minGems = math.huge, math.huge
 			for _, name in Config.UpgradeOrder do
 				local level = estado.upgrades[name]
-				if level < Config.Upgrades[name].maxLevel and not (opts.sinSuerte and name == "luck") then
+				-- (Las de monedas de bolsa no cuentan: no tienen calendario y sus últimos niveles no se alcanzan.)
+				if level < Config.Upgrades[name].maxLevel and not (opts.sinSuerte and name == "luck") and Config.Upgrades[name].currency ~= "bag" then
 					if Config.Upgrades[name].currency == "gems" then
 						minGems = math.min(minGems, Upgrades.cost(name, level))
 					else
@@ -1074,7 +1078,8 @@ function Modelo.nuevo(shared, mundo, objetivo)
 					end
 				end
 				-- Compras ("Mejorar todo" de server/Shop, y renacer en cuanto llega).
-				if estado.coins >= minCost or estado.gems >= minGems then
+				if estado.coins >= minCost or estado.gems >= minGems or bolsaNueva then
+					bolsaNueva = false
 					local bought = true
 					while bought do
 						bought = false
@@ -1083,7 +1088,14 @@ function Modelo.nuevo(shared, mundo, objetivo)
 							if level < Config.Upgrades[name].maxLevel and not (opts.sinSuerte and name == "luck") then
 								local cost = Upgrades.cost(name, level)
 								local wallet = if Config.Upgrades[name].currency == "gems" then "gems" else "coins"
-								if estado[wallet] >= cost then
+								if Config.Upgrades[name].currency == "bag" then
+									-- Monedas de bolsa: una por bolsa vaciada menos lo gastado en esos niveles (Stats.wallet).
+									if bolsa.stage - 1 - Upgrades.spent(name, level) >= cost then
+										estado.upgrades[name] = level + 1
+										res.compras[name][level + 1] = t
+										bought = true
+									end
+								elseif estado[wallet] >= cost then
 									estado[wallet] -= cost
 									estado.upgrades[name] = level + 1
 									res.compras[name][level + 1] = t

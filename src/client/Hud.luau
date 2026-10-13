@@ -334,10 +334,14 @@ function Hud.start()
 		for name, text in upgradeRows do
 			local upgrade = Config.Upgrades[name]
 			local level = player:GetAttribute("Upgrade_" .. name) or 0
-			local balance = if upgrade.currency == "gems" then gemAmount else amount
+			local balance = Stats.wallet(player, upgrade.currency)
 			local price = if level >= upgrade.maxLevel
 				then `<font color="#6fe07a">{Lang.t(nil, "maxed")}</font>`
 				else `<font color="{if balance >= Upgrades.cost(name, level) then "#ffd24a" else Ui.SOFT}">{Format.short(Upgrades.cost(name, level))}</font>`
+			if upgrade.currency == "bag" and level < upgrade.maxLevel then
+				-- Las monedas de bolsa no tienen contador en el HUD: se ven aquí, al lado de lo que cuesta.
+				price = `<font color="{if balance >= Upgrades.cost(name, level) then "#ffd24a" else Ui.SOFT}">{Lang.t(nil, "{price} bag coins (you have {have})", { price = Upgrades.cost(name, level), have = balance })}</font>`
+			end
 			text.Text = `{Lang.t(nil, upgrade.short)} <font color="{Ui.SOFT}">{level}/{upgrade.maxLevel}</font> · {Upgrades.display(name, level)}\n{price}`
 		end
 	end

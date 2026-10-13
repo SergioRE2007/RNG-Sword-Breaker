@@ -486,7 +486,7 @@ Config.ObjectSizes = {
 }
 
 -- Mejoras. Valor: "add" = base + perLevel * nivel; "mul" = base * perLevel ^ nivel (exponencial).
--- Precio: "costs" = el de cada nivel (o cost * growth ^ nivel si no la trae), en monedas o en gemas (currency = "gems").
+-- Precio: "costs" = el de cada nivel (o cost * growth ^ nivel si no la trae), en monedas, en gemas (currency = "gems") o en monedas de bolsa (currency = "bag").
 -- Los "costs" son NÚMEROS GENERADOS por tools/equilibrio/generar.luau a partir del calendario de progreso
 -- (tools/equilibrio/objetivo.luau: a qué hora de juego se compra cada nivel). No los retoques a mano: se pisan.
 -- Los cálculos están en shared/Upgrades.
@@ -494,7 +494,7 @@ Config.ObjectSizes = {
 -- del nodo, "icon" su dibujo (box, orb, sword, gem) y "color" el de la rama; "desc" (opcional) explica lo que hace.
 -- No hay mejora de suerte de armas (la hubo, "gachaLuck", pagada con gemas): esa suerte sale de los objetos.
 -- Tampoco de velocidad de golpe (la hubo, "speed": el usuario la mandó quitar): el golpe va siempre al ritmo de su arma.
-Config.UpgradeOrder = { "capacity", "luck", "rollSpeed", "fortune" }
+Config.UpgradeOrder = { "capacity", "luck", "rollSpeed", "fortune", "bagBoost" }
 Config.Upgrades = {
 	-- Pocos niveles y cada uno da mucho (pedido por el usuario: el árbol era demasiado largo).
 	capacity = { name = "More Objects", short = "Objects", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, costs = { 33, 490, 9600, 100000, 930000, 5.6e6, 1.7e7, 3.5e7 }, display = "%d" },
@@ -510,6 +510,12 @@ Config.Upgrades = {
 	-- Monedas (pedido por el usuario): multiplica las que dan los objetos (Stats.coins; la Bolsa de oro no) y se paga con
 	-- gemas, que hasta ahora no se gastaban en nada. Sus compras caen entre las de suerte, para que siempre haya algo cerca.
 	fortune = { name = "Fortune", short = "Fortune", desc = "Multiplies the coins objects give. Paid with gems.", icon = "gem", color = Color3.fromRGB(190, 110, 255), mode = "mul", base = 1, perLevel = 1.5, maxLevel = 20, currency = "gems", costs = { 13000, 270000, 880000, 5.9e6, 1.4e8, 9.4e8, 6.9e9, 1.2e11, 8.4e11, 5.5e12, 9.5e13, 1.6e15, 2e16, 2.8e17, 4.7e18, 9.6e19, 1.4e21, 2e22, 3.7e23, 4.1e24 }, display = "x%s" },
+	-- Monedas de bolsa (pedido por el usuario): cada Bolsa de oro vaciada da una, y solo se gastan aquí. Multiplica
+	-- TODAS las monedas: las de los objetos (Stats.coins) y las que sacan las armas de la bolsa (Stats.bagCoins). No se
+	-- guarda cuántas tiene: son las bolsas vaciadas menos lo gastado en estos niveles (Stats.wallet), así quien ya iba
+	-- por bolsas avanzadas las tiene desde el primer día. Precios puestos a mano (el nivel n cuesta n): no los genera
+	-- tools/equilibrio, que no tiene calendario para ella.
+	bagBoost = { name = "Golden Bag", short = "Bag", desc = "Multiplies all the coins you earn. Paid with bag coins: you get one for each Gold Bag you empty.", icon = "bag", color = Color3.fromRGB(255, 200, 60), mode = "mul", base = 1, perLevel = 2, maxLevel = 20, currency = "bag", costs = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 }, display = "x%s" },
 }
 
 -- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Lo que suma un jugador a cada hora

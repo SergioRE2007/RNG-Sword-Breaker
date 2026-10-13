@@ -192,7 +192,7 @@ end
 
 -- Un golpe de esa arma al saco: saltan monedas por donde sale, respingo del saco y, en el tuyo, el número y el sonido.
 local function onStrike(entry, weapon, owner: Player, eye: Vector3, lite: boolean)
-	local coins = BagInfo.coins(Stats.bagHit(owner, weapon.copy))
+	local coins = Stats.bagCoins(owner, weapon.copy)
 	local center = entry.body.Position
 	local out = Vector3.new(weapon.dir.X, 0, weapon.dir.Z)
 	out = if out.Magnitude > 0.1 then out.Unit else entry.body.CFrame.LookVector
@@ -327,7 +327,7 @@ local function onEvent(kind: string, info)
 		if os.clock() - lastToast >= TOAST_EVERY then
 			lastToast = os.clock()
 			Sfx.play("win")
-			Ui.toast(if pendingBags > 1 then Lang.t(nil, "{n} bags emptied!", { n = pendingBags }) else Lang.t(nil, "Bag emptied!"), GOLD)
+			Ui.toast(if pendingBags > 1 then Lang.t(nil, "{n} bags emptied! +{n} bag coins", { n = pendingBags }) else Lang.t(nil, "Bag emptied! +1 bag coin"), GOLD)
 			pendingBags = 0
 		end
 	elseif kind == "away" then

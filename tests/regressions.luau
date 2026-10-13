@@ -672,6 +672,17 @@ local coinsBefore = stats.coins(f.player)
 f.player:SetAttribute("Upgrade_fortune", 2)
 near(stats.coins(f.player) / coinsBefore, fortune.perLevel ^ 2, "Fortuna multiplica las monedas")
 f.player:SetAttribute("Upgrade_fortune", 0)
+-- Monedas de bolsa: una por bolsa vaciada menos lo gastado en la mejora, que multiplica todas las monedas.
+local bagBoost = f.config.Upgrades.bagBoost
+equal(bagBoost.currency, "bag", "Bolsa dorada se paga con monedas de bolsa")
+equal(stats.wallet(f.player, "bag"), 0, "sin bolsas vaciadas no hay monedas de bolsa")
+f.player:SetAttribute("BagStage", 7)
+equal(stats.wallet(f.player, "bag"), 6, "una moneda de bolsa por bolsa vaciada")
+f.player:SetAttribute("Upgrade_bagBoost", 2)
+equal(stats.wallet(f.player, "bag"), 6 - bagBoost.costs[1] - bagBoost.costs[2], "lo gastado sale del nivel comprado")
+near(stats.coins(f.player) / coinsBefore, bagBoost.perLevel ^ 2, "Bolsa dorada multiplica las monedas")
+f.player:SetAttribute("Upgrade_bagBoost", 0)
+f.player:SetAttribute("BagStage", nil)
 -- El tamaño y la rareza del objeto pesan de verdad en la suerte de armas.
 equal(objectSpec.luck(rarest, 1, 2) / objectSpec.luck(rarest, 1, 1) >= 8, true, "el tamaño pesa en la suerte de armas")
 equal(objectSpec.luck(rarest, #f.config.ObjectRarities, 1) / objectSpec.luck(rarest, 1, 1) >= 20, true, "la rareza pesa en la suerte de armas")
@@ -870,8 +881,8 @@ do
 	for id = 1, 9 do nine[id] = { id = id, sword = 3 + id } end
 	equal(loaded({ swords = nine, loadout = { 1, 2, 3, 4, 5, 6, 7, 8, 9 } }), "1,2,3,4,5,6,7,8", "equipadas guardadas: hasta el tope")
 	equal(loaded({ swords = six, loadout = "x", equipped = 20 }), "2", "lista rota: vale la antigua")
-	equal(loaded({ swords = six, loadout = {} }), "1", "lista vacía: la primera")
-	equal(loaded({ swords = six, loadout = { 990 }, equipped = 20 }), "1", "lista sin ninguna válida: la primera")
+	equal(loaded({ swords = six, loadout = {} }), "", "lista vacía: se queda sin armas equipadas")
+	equal(loaded({ swords = six, loadout = { 990 }, equipped = 20 }), "", "lista sin ninguna válida: sin armas equipadas")
 	equal(loaded({ swords = six, equipped = 40 }), "4", "guardado antiguo: su única equipada")
 end
 
@@ -1565,8 +1576,10 @@ do
 	local function inBag() return table.concat(bf.data.read(who).bag.slots, ",") end
 	local function worn() return table.concat(bf.data.read(who).loadout, ",") end
 	deposit(8)
-	equal(inBag(), "", "la única equipada no se deposita")
-	equal(#bf.remotes.Notice.sent, 1, "y se avisa")
+	equal(inBag() == "8" and worn() == "", true, "la única equipada también se deposita (se puede ir sin armas)")
+	deposit(8)
+	bf.remotes.EquipSword.OnServerEvent:fire(who, 8)
+	equal(inBag() == "" and worn() == "8", true, "y se saca y se vuelve a equipar")
 	for _, bad in { 999, "x", 0 / 0, {}, true, -1, 1.5 } do deposit(bad) end
 	equal(inBag(), "", "depositar algo que no existe no cambia nada")
 	deposit(2)
