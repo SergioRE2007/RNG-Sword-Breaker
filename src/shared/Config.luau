@@ -181,9 +181,10 @@ Config.Gacha = {
 	-- más fácil de lo que suena.
 	-- Las tiradas se enseñan en el mundo (client/RollReveal): la energía sale del objeto roto, se destapa el arma y
 	-- vuela al jugador. Desde estos "1 entre N" sube de nivel el espectáculo: Normal por debajo del primero, y luego
-	-- Buena, Genial, Increíble y Premio gordo. Como N cuenta la suerte del jugador, la misma arma se celebra más a
-	-- quien le era más difícil.
-	RevealOdds = { 10, 100, 2000, 25000 },
+	-- Genial (en el mundo, más cargada) y las cuatro con cinemática (client/RollCinematic): Estrella fugaz, Herrero
+	-- celestial, Supernova y Supernova absoluta. Como N cuenta la suerte del jugador, la misma arma se celebra más a
+	-- quien le era más difícil. Escalera pedida por el usuario.
+	RevealOdds = { 100, 1000, 10000, 100000, 1000000 },
 	ShowcaseOdds = 2000, -- (solo con FreeRoll) desde aquí la tirada gratis pasa a pantalla completa
 	RevealTimeout = 30, -- si el cliente no avisa de que ha destapado una tirada rara, su aura y aviso salen igual a los N segundos
 	AuraOdds = 500, -- desde aquí el aura se ve en el personaje (también para los demás)

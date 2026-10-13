@@ -212,6 +212,26 @@ function Settings.start()
 	player:GetAttributeChangedSignal("HitboxDebug"):Connect(paintHitbox)
 	paintHitbox()
 
+	-- Cinemáticas de tirada ----------------------------------------------------------------
+	-- Solo cambia el atributo local "RollCinematics" del jugador (sin poner = encendidas): lo mira client/RollCinematic.
+	local cineRow = row(list, 7, Lang.t(nil, "Roll cinematics"), Lang.t(nil, "Plays a short cinematic when you roll a very rare weapon. Turn it off to farm without cuts."), false, Ui.COLORS.purple)
+	local cineButton = Ui.button(cineRow, "", Ui.COLORS.gray)
+	cineButton.Name = "Cinematics"
+	cineButton.AnchorPoint = Vector2.new(1, 0.5)
+	cineButton.Position = UDim2.new(1, -14, 0.5, 0)
+	cineButton.Size = UDim2.fromOffset(130, 60)
+	cineButton.TextSize = 26
+	local function paintCine()
+		local on = player:GetAttribute("RollCinematics") ~= false
+		cineButton.Text = Lang.t(nil, if on then "YES" else "NO")
+		cineButton.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
+	end
+	cineButton.Activated:Connect(function()
+		player:SetAttribute("RollCinematics", player:GetAttribute("RollCinematics") == false)
+	end)
+	player:GetAttributeChangedSignal("RollCinematics"):Connect(paintCine)
+	paintCine()
+
 	-- Botón con engranaje, arriba a la derecha: el último de la fila de botones pequeños (pedido por el usuario; a la
 	-- izquierda, en el móvil lo pisaban los botones de Roblox).
 	local button = Ui.button(Ui.topButtons(), "", Ui.COLORS.gray)
