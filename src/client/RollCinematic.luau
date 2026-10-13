@@ -47,7 +47,11 @@ local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
 -- Solo en Studio: Config.Test.RevealSlow alarga todos los tiempos, para revisarla en capturas.
-local SLOW = if RunService:IsStudio() then Config.Test.RevealSlow or 1 else 1
+local BASE = if RunService:IsStudio() then Config.Test.RevealSlow or 1 else 1
+-- Ritmo de cada tema: por cuánto se alargan todos sus tiempos (pedido por el usuario, que las vio a su velocidad
+-- de partida y le parecieron rápidas: la estrella y el herrero, bastante más lentas; las supernovas, un poco).
+local PACE = { star = 2.4, smith = 2.4, nova = 1.2 }
+local SLOW = BASE -- lo que vale ahora mismo: BASE por el ritmo del tema en marcha
 local SKIP = "RollCinematic:skip" -- lo que "lanza" una escena al saltarla: corta la secuencia donde esté
 local MAX_WAITING = 2 -- cinemáticas esperando turno; las que lleguen de más se enseñan en el mundo
 local GRACE = 0.6 -- segundos hasta que sale el botón de saltar
@@ -1382,6 +1386,7 @@ function RollCinematic.play(theme: string, info): boolean
 	end
 	info.color = info.tier.color
 	info.bright = info.color:Lerp(WHITE, 0.35)
+	SLOW = BASE * (PACE[theme] or 1)
 	local s = newScene(info)
 	current = s
 	task.delay(TIMEOUT * SLOW, function()
@@ -1406,6 +1411,7 @@ function RollCinematic.play(theme: string, info): boolean
 		release(s)
 	end
 	s.gui:Destroy()
+	SLOW = BASE
 	current = nil
 	return true
 end
