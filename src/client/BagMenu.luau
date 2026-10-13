@@ -288,7 +288,7 @@ end
 local function syncProgress(deposited)
 	local stage = player:GetAttribute("BagStage") or 1
 	local full = BagInfo.size(stage)
-	local rate = player:GetAttribute("BagRate") or 0
+	local rate = player:GetAttribute("BagPower") or 0
 	local elapsed = math.max(workspace:GetServerTimeNow() - (player:GetAttribute("BagAt") or 0), 0)
 	local taken = math.clamp((player:GetAttribute("BagTaken") or 0) + rate * elapsed, 0, full)
 	stageTitle.Text = Lang.t(nil, "BAG No. {n}", { n = stage })

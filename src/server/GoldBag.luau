@@ -3,8 +3,8 @@
 -- juntas cada segundo y el cliente enseña los golpes uno a uno. Vacía una bolsa, sigue la siguiente. Al volver al
 -- juego se cobra de golpe el tiempo que las armas han estado pegando sin su dueño.
 -- El estado (data.bag) solo vive aquí y en PlayerData; el cliente lo lee de los atributos del jugador:
--- "Bag" (ids depositados, lo publica PlayerData), "BagStage" (bolsa por la que va), "BagTaken" (monedas sacadas de
--- esa bolsa en el momento "BagAt", hora de GetServerTimeNow) y "BagRate" (monedas por segundo que salen).
+-- "Bag" (ids depositados, lo publica PlayerData), "BagStage" (bolsa por la que va), "BagTaken" (vida quitada a
+-- esa bolsa en el momento "BagAt", hora de GetServerTimeNow) "BagRate" (monedas por segundo que salen) y "BagPower" (vida por segundo que pierde la bolsa).
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -168,23 +168,26 @@ local function publish(player: Player, data, force: boolean?)
 	local bag = data.bag
 	local rate = Stats.bagRate(player, false, bag.stage)
 	local last = sent[player]
-	if not force and last and last.stage == bag.stage and math.abs(last.rate - rate) <= math.abs(rate) * 1e-6 then
+	local power = Stats.bagPower(player)
+	if not force and last and last.stage == bag.stage and math.abs(last.rate - rate) <= math.abs(rate) * 1e-6 and math.abs(last.power - power) <= math.abs(power) * 1e-6 then
 		return
 	end
-	sent[player] = { stage = bag.stage, rate = rate }
+	sent[player] = { stage = bag.stage, rate = rate, power = power }
 	player:SetAttribute("BagStage", bag.stage)
 	player:SetAttribute("BagTaken", bag.taken)
 	player:SetAttribute("BagAt", workspace:GetServerTimeNow())
 	player:SetAttribute("BagRate", rate)
+	player:SetAttribute("BagPower", power)
 end
 
 -- `seconds` segundos de golpes de sus armas depositadas. Devuelve las monedas que han salido y las bolsas vaciadas.
 local function hit(player: Player, data, seconds: number, noPotion: boolean?): (number, number)
 	local bag = data.bag
 	-- Se pagan monedas enteras: el pico se guarda para el siguiente cobro (con números enormes ya no hay pico).
-	-- Cada bolsa vaciada por el camino sube lo que saca cada golpe: lo cuenta BagInfo.collect.
+	-- La bolsa pierde vida con el daño de los golpes; las monedas (con sus multiplicadores y lo que sube cada bolsa
+	-- vaciada por el camino) las cuenta BagInfo.collect.
 	local emptied, coins
-	bag.stage, bag.taken, emptied, coins = BagInfo.collect(bag.stage, bag.taken, Stats.bagRate(player, noPotion, 1) * seconds)
+	bag.stage, bag.taken, emptied, coins = BagInfo.collect(bag.stage, bag.taken, Stats.bagPower(player, noPotion) * seconds, Stats.bagMult(player))
 	local total = coins + (carry[player] or 0)
 	local whole = if total < 1e15 then math.floor(total) else total
 	carry[player] = if total < 1e15 then total - whole else 0

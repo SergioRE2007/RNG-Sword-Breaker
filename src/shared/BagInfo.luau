@@ -50,26 +50,26 @@ function BagInfo.advance(stage: number, taken: number, coins: number): (number, 
 	return stage, taken, emptied
 end
 
--- Lo mismo contando con que cada bolsa vaciada sube lo que saca cada golpe (BagInfo.boost): `base` son las monedas
--- que sacarían los golpes en la primera bolsa. Devuelve la bolsa, lo sacado en ella, las bolsas vaciadas y las
--- monedas que han salido de verdad.
-function BagInfo.collect(stage: number, taken: number, base: number): (number, number, number, number)
+-- Golpes a la bolsa: su tamaño es VIDA (pedido por el usuario), no monedas. `damage` es lo que le quitan los golpes
+-- (BagInfo.coins de su daño, sin multiplicadores) y cada punto quitado paga `mult` monedas por lo que sube la bolsa
+-- por la que va (BagInfo.boost): los multiplicadores de monedas no la vacían antes. Devuelve la bolsa, la vida quitada
+-- en ella, las bolsas vaciadas y las monedas que han salido.
+function BagInfo.collect(stage: number, taken: number, damage: number, mult: number?): (number, number, number, number)
 	local emptied, coins = 0, 0
-	if not (base > 0) then
+	if not (damage > 0) then
 		return stage, taken, emptied, coins
 	end
 	for _ = 1, MAX_STEPS do
 		local size = BagInfo.size(stage)
-		local mult = BagInfo.boost(stage)
-		local gain = base * mult
+		local pay = BagInfo.boost(stage) * (mult or 1)
 		local left = math.max(size - taken, 0)
-		if gain < left or not (size < math.huge) or not (mult < math.huge) then
-			taken += gain
-			coins += gain
+		if damage < left or not (size < math.huge) then
+			taken += damage
+			coins += damage * pay
 			break
 		end
-		coins += left
-		base -= left / mult
+		coins += left * pay
+		damage -= left
 		stage += 1
 		taken = 0
 		emptied += 1

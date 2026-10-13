@@ -277,7 +277,7 @@ local function update(model: Model, entry)
 
 	local full = BagInfo.size(stage)
 	local elapsed = math.max(workspace:GetServerTimeNow() - (owner:GetAttribute("BagAt") or 0), 0)
-	local taken = math.clamp((owner:GetAttribute("BagTaken") or 0) + (owner:GetAttribute("BagRate") or 0) * elapsed, 0, full)
+	local taken = math.clamp((owner:GetAttribute("BagTaken") or 0) + (owner:GetAttribute("BagPower") or 0) * elapsed, 0, full)
 	entry.left = math.clamp(1 - taken / full, 0, 1)
 	entry.title.Text = Lang.t(nil, "BAG #{n}", { n = stage })
 	entry.fill.Size = UDim2.fromScale(entry.left, 1)
