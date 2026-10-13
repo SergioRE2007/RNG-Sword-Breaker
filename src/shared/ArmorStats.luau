@@ -113,6 +113,18 @@ function ArmorStats.cap(stat: string, quality: number, level: number): number
 	return base * cfg.Roll.max * cfg.Qualities[quality].mult * ArmorStats.scaling(stat, level)
 end
 
+-- Nota de una pieza para compararla con las de su mismo hueco ("Equipar mejores"): cada stat cuenta las veces que
+-- vale lo de una pieza corriente de la primera zona, así la vida (cientos) y los porcentajes (centésimas) pesan parecido.
+function ArmorStats.score(piece): number
+	local total = 0
+	for _, entry in piece.stats do
+		if cfg.Stats[entry.stat] then
+			total += entry.value / ArmorStats.cap(entry.stat, 1, 1)
+		end
+	end
+	return total
+end
+
 -- Cristales de grado que da al desmontarla: solo cuenta su calidad (las corrientes no dan nada).
 function ArmorStats.salvage(piece): number
 	return cfg.Qualities[piece.quality].value

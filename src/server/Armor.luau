@@ -111,8 +111,29 @@ local function find(data, id: unknown)
 	return nil
 end
 
+-- "Equipar mejores": en cada hueco, la pieza de más nota (ArmorStats.score) de las que tiene.
+local function equipBest(player: Player)
+	PlayerData.editArmor(player, function(edited)
+		local best = {} -- [hueco] = { id, nota }
+		for _, piece in edited.armor do
+			local score = ArmorStats.score(piece)
+			local current = best[piece.slot]
+			if not current or score > current.score or (score == current.score and piece.id < current.id) then
+				best[piece.slot] = { id = piece.id, score = score }
+			end
+		end
+		for slot, entry in best do
+			edited.armorWorn[slot] = entry.id
+		end
+	end)
+end
+
 -- Pone la pieza en su hueco (sustituye a la que hubiera) o la quita si ya estaba puesta.
 local function onEquip(player: Player, id: unknown)
+	if id == "best" then
+		equipBest(player)
+		return
+	end
 	local data = PlayerData.read(player)
 	local piece = data and find(data, id)
 	if not piece then
