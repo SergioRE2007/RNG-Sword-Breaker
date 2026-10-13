@@ -63,13 +63,22 @@ local function row(parent: Instance, order: number, title: string, hint: string,
 end
 
 function Settings.start()
-	local window, body = Ui.window("Settings", Lang.t(nil, "Settings"), Vector2.new(560, 772), function(parent) -- seis filas de 104 + 10
+	local window, body = Ui.window("Settings", Lang.t(nil, "Settings"), Vector2.new(560, 660), function(parent) -- las filas (104 + 10 cada una) no caben todas: la lista desliza
 		Ui.image(parent, "ajustes")
 	end)
 
-	local list = Instance.new("Frame")
+	-- Lista que desliza (pedido por el usuario: con siete filas ya no cabían en la ventana).
+	local list = Instance.new("ScrollingFrame")
+	list.Name = "List"
 	list.Size = UDim2.fromScale(1, 1)
 	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.ScrollingDirection = Enum.ScrollingDirection.Y
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.CanvasSize = UDim2.new()
+	list.ScrollBarThickness = 8
+	list.ScrollBarImageColor3 = Color3.fromRGB(190, 195, 215)
+	list.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
 	list.Parent = body
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 10)
@@ -78,6 +87,7 @@ function Settings.start()
 	layout.Parent = list
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, 10)
+	padding.PaddingBottom = UDim.new(0, 10)
 	padding.Parent = list
 
 	-- Modo rendimiento -------------------------------------------------------------------
