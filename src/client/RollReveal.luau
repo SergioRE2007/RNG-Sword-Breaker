@@ -22,8 +22,10 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 
 local Performance = require(script.Parent.Performance)
+local RollCinematic = require(script.Parent.RollCinematic)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local WeaponAuraDefs = require(script.Parent.WeaponAuraDefs)
 local WeaponFeed = require(script.Parent.WeaponFeed)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 
@@ -37,6 +39,7 @@ local GOLD = Color3.fromRGB(255, 220, 100)
 
 local MYSTERY = Color3.fromRGB(150, 105, 255) -- color de la energía mientras no se sabe qué ha tocado (oscuro: el neón claro se quema en blanco)
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+local TEX = WeaponAuraDefs.textures -- sellos, estallido y polvo de estrellas del pack de efectos
 local DISPLAY = 5 -- studs que mide el arma enseñada, sea una daga o una lanza
 local TILT = CFrame.Angles(0, 0, math.rad(-22)) -- un poco ladeada, con la punta hacia arriba
 local SPACING = 3.6 -- studs entre las tiradas de un mismo objeto
@@ -51,22 +54,30 @@ local HURRY = 0.55 -- por cuánto se multiplican entonces sus tiempos
 local SCREEN = Vector2.new(1100, 700) -- por debajo de este tamaño de pantalla los carteles se encogen (como el HUD)
 local LABEL = Vector2.new(300, 108) -- tamaño del cartel en píxeles, sin escalar
 
--- Niveles de espectáculo: 1 Normal, 2 Buena, 3 Genial, 4 Increíble y 5 Premio gordo.
+-- Niveles de espectáculo: 1 Normal, 2 Genial y, con cinemática (client/RollCinematic), 3 Estrella fugaz, 4 Herrero
+-- celestial, 5 Supernova y 6 Supernova absoluta.
 -- charge = segundos que el orbe se carga antes de destaparse, pulses = latidos en ese rato, rise = studs que sube
 -- mientras tanto, hover = segundos que el arma se queda a la vista, fly = segundos de vuelo, turns = vueltas de
 -- espiral en el vuelo, sparks = chispas al destaparse, aura = chispas por segundo alrededor del arma, shock = ondas
 -- en el suelo, light = brillo de la luz, beam = grosor del rayo hacia el cielo, absorb = el orbe traga
--- energía de alrededor, rays = rayos que giran, flash = destello de pantalla, grow = tamaño del cartel, sounds = lo
--- que suena al destaparse. Nada toca la cámara (pedido por el usuario: el temblor y el tirón del zoom molestaban).
+-- energía de alrededor, rays = rayos que giran, flash = destello de pantalla, seal = tamaño del sello mágico del
+-- suelo, nova = tamaño del estallido de puntas, grow = tamaño del cartel, sounds = lo que suena al destaparse,
+-- cinematic = tema de su cinemática. Por debajo del nivel 3 nada toca la cámara (pedido por el usuario: el temblor
+-- y el tirón del zoom molestaban al romper objetos); del 3 para arriba la coge la cinemática, también pedido por
+-- él, y lo demás de su fila es lo que se ve en el mundo cuando la cinemática no puede salir (modo Rendimiento,
+-- ajuste apagado, una ventana abierta...).
 local LEVELS = {
 	{ charge = 0.2, pulses = 1, rise = 0, hover = 0.42, fly = 0.38, turns = 0, sparks = 8, grow = 1, sounds = { "reveal_1" } },
-	{ charge = 0.36, pulses = 2, rise = 0.4, hover = 0.7, fly = 0.44, turns = 0, sparks = 16, aura = 8, grow = 1.1, sounds = { "reveal_2" } },
-	{ charge = 0.7, pulses = 3, rise = 0.9, hover = 1.1, fly = 0.52, turns = 0.5, sparks = 28, aura = 14, shock = 1, light = 0.8, grow = 1.25, sounds = { "reveal_3" } },
-	{ charge = 1.25, pulses = 5, rise = 1.8, hover = 1.6, fly = 0.7, turns = 1, sparks = 46, aura = 22, shock = 2, light = 1.2, beam = 1.4,absorb = true, grow = 1.45, sounds = { "reveal_4" } },
-	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.2, fly = 0.85, turns = 1.5, sparks = 80, aura = 34, shock = 3, light = 1.6, beam = 2.6,absorb = true, rays = true, flash = true, grow = 1.7, sounds = { "reveal_5" } },
+	{ charge = 0.95, pulses = 4, rise = 1.4, hover = 1.7, fly = 0.6, turns = 0.75, sparks = 44, aura = 20, shock = 2, light = 1.1, beam = 1.6, absorb = true, seal = 9, nova = 8, grow = 1.35, sounds = { "reveal_3" } },
+	{ charge = 1.25, pulses = 5, rise = 1.8, hover = 2.1, fly = 0.7, turns = 1, sparks = 60, aura = 26, shock = 3, light = 1.3, beam = 2, absorb = true, flash = true, seal = 11, nova = 10, grow = 1.5, sounds = { "reveal_4" }, cinematic = "star" },
+	{ charge = 1.7, pulses = 6, rise = 2.2, hover = 2.5, fly = 0.8, turns = 1.25, sparks = 80, aura = 32, shock = 3, light = 1.5, beam = 2.4, absorb = true, rays = true, flash = true, seal = 13, nova = 12, grow = 1.6, sounds = { "reveal_5" }, cinematic = "smith" },
+	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.9, fly = 0.85, turns = 1.5, sparks = 100, aura = 38, shock = 4, light = 1.6, beam = 2.8, absorb = true, rays = true, flash = true, seal = 15, nova = 14, grow = 1.7, sounds = { "reveal_5" }, cinematic = "nova" },
+	{ charge = 2.4, pulses = 9, rise = 3, hover = 3.4, fly = 0.9, turns = 2, sparks = 130, aura = 46, shock = 5, light = 1.8, beam = 3.4, absorb = true, rays = true, flash = true, seal = 17, nova = 16, grow = 1.8, sounds = { "reveal_5", "win" }, cinematic = "nova" },
 }
--- Frase encima del cartel en los niveles altos.
-local LINES = { [3] = "Nice roll!", [4] = "Fate has chosen you!", [5] = "The heavens open before you!" }
+-- Con cinemática, lo del mundo va corto: el orbe se carga un momento y, a la vuelta, el arma se queda poco y vuela.
+local AFTER = { charge = 0.4, pulses = 2, hover = 0.55 }
+-- Frase encima del cartel (y arriba en la cinemática) desde el nivel 2.
+local LINES = { [2] = "Great roll!", [3] = "A star falls for you!", [4] = "Forged by the heavens!", [5] = "A star dies for this weapon!", [6] = "The universe bows to you!" }
 
 -- Capas del cartel (la interfaz ordena el ZIndex globalmente).
 local Z = { chip = 2, text = 3 }
@@ -150,6 +161,51 @@ local function sparks(parent: Instance, color: Color3, count: number, speed: num
 	Debris:AddItem(emitter, 1.2)
 end
 
+-- Sello mágico tumbado en el suelo, girando, durante `seconds`. Flojo y medio transparente a propósito: con más
+-- brillo, a mediodía es una mancha blanca.
+local function seal(parent: Instance, position: Vector3, texture: string, color: Color3, size: number, seconds: number, turn: number)
+	local base = glow(Enum.PartType.Block, Vector3.one, CFrame.new(position), color, 1, parent)
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = texture
+	emitter.Color = ColorSequence.new(color)
+	emitter.LightEmission = 0.4
+	emitter.Brightness = 1.1
+	emitter.LightInfluence = 0
+	emitter.Rate = 0
+	emitter.Lifetime = NumberRange.new(seconds)
+	emitter.Speed = NumberRange.new(0.01)
+	emitter.SpreadAngle = Vector2.zero
+	emitter.EmissionDirection = Enum.NormalId.Top
+	emitter.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+	emitter.Rotation = NumberRange.new(0)
+	emitter.RotSpeed = NumberRange.new(turn)
+	emitter.LockedToPart = true
+	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.1, size), NumberSequenceKeypoint.new(0.9, size), NumberSequenceKeypoint.new(1, size * 0.6) })
+	emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.12, 0.45), NumberSequenceKeypoint.new(0.85, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	emitter.Parent = base
+	emitter:Emit(1)
+end
+
+-- Estallido de puntas que se abre girando, de cara a la cámara (la textura trae el fondo negro: emisión 1).
+local function nova(parent: Instance, color: Color3, size: number)
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = TEX.nova
+	emitter.Color = ColorSequence.new(color)
+	emitter.LightEmission = 1
+	emitter.LightInfluence = 0
+	emitter.Rate = 0
+	emitter.Lifetime = NumberRange.new(0.6)
+	emitter.Speed = NumberRange.new(0)
+	emitter.Rotation = NumberRange.new(0, 360)
+	emitter.RotSpeed = NumberRange.new(-240)
+	emitter.LockedToPart = true
+	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.15), NumberSequenceKeypoint.new(1, size) })
+	emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(0.5, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	emitter.Parent = parent
+	emitter:Emit(1)
+	Debris:AddItem(emitter, 1)
+end
+
 local function randomUnit(): Vector3
 	return rng:NextUnitVector()
 end
@@ -190,28 +246,9 @@ end
 
 -- El arma ---------------------------------------------------------------------------------
 
--- Modelo del arma de verdad (el mismo que lleva en la mano), anclado y con el giro en su centro. Devuelve también
--- cuánto hay que escalarlo para que mida DISPLAY.
+-- Modelo del arma de verdad, anclado y con el giro en su centro, y cuánto hay que escalarlo para que mida DISPLAY.
 local function buildSword(index: number, metal: number?, parent: Instance): (Model, number)
-	local model = Instance.new("Model")
-	model.Name = "Sword"
-	SwordModel.build(index, model, CFrame.identity, 1, true, metal)
-	for _, item in model:GetDescendants() do
-		if item:IsA("BasePart") then
-			item.CastShadow = false
-			item.CanQuery = false
-			item.CanTouch = false
-		end
-	end
-	local box, size = model:GetBoundingBox()
-	model.WorldPivot = CFrame.new(box.Position)
-	-- Todas se enseñan del mismo largo, salvo las muy finas (lanzas), que a ese largo casi no se verían: algo más.
-	local long = math.max(size.X, size.Y, size.Z, 0.1)
-	local wide = math.max(size.X + size.Y + size.Z - long - math.min(size.X, size.Y, size.Z), 0.1)
-	local fit = DISPLAY / long * math.clamp(math.sqrt(long / wide / 4), 1, 1.5)
-	model:ScaleTo(fit * 0.02)
-	model.Parent = parent
-	return model, fit
+	return RollCinematic.sword(index, metal, parent, DISPLAY)
 end
 
 -- El cartel ---------------------------------------------------------------------------------
@@ -227,8 +264,9 @@ local function textLine(parent: Instance, order: number, textSize: number, heigh
 	return line
 end
 
--- Cartel sobre el arma: primero salta la rareza y enseguida el nombre y lo difícil que era. Devuelve cómo quitarlo.
-local function buildLabel(folder: Instance, anchor: BasePart, roll, level: number, tier, odds: number): () -> ()
+-- Cartel sobre el arma: primero salta la rareza y enseguida el nombre y lo difícil que era. Con `count`, el
+-- "1 entre N" sube contando hasta su número en esos segundos (pedido por el usuario). Devuelve cómo quitarlo.
+local function buildLabel(folder: Instance, anchor: BasePart, roll, level: number, tier, odds: number, count: number?): () -> ()
 	local fx = LEVELS[level]
 	local size = fx.grow * factor
 	local gui = Instance.new("BillboardGui")
@@ -300,13 +338,35 @@ local function buildLabel(folder: Instance, anchor: BasePart, roll, level: numbe
 	table.insert(texts, textLine(root, 3, 21, 26, Permanent.name(roll.index, roll.metal, roll.size), nameColor:Lerp(WHITE, 0.4)))
 
 	-- La etiqueta usa la probabilidad base; la dificultad efectiva solo decide el espectáculo.
-	local detail = {}
-	table.insert(detail, `<font color="{Ui.SOFT}">{Permanent.describeOdds(roll.index, roll.metal, roll.size)}</font>`)
-	if not roll.kept then
-		table.insert(detail, `<font color="#{Ui.COLORS.orange:ToHex()}">{Lang.t(nil, "sold")}</font>`)
+	local function detail(chance: string, tone: string): string
+		local text = `<font color="{tone}">{chance}</font>`
+		if not roll.kept then
+			text ..= `  ·  <font color="#{Ui.COLORS.orange:ToHex()}">{Lang.t(nil, "sold")}</font>`
+		end
+		return text
 	end
-	if #detail > 0 then
-		table.insert(texts, textLine(root, 4, if level >= 4 then 19 else 15, if level >= 4 then 22 else 18, table.concat(detail, "  ·  "), WHITE))
+	local final = Permanent.describeOdds(roll.index, roll.metal, roll.size)
+	local big = level >= 2
+	local oddsLine = textLine(root, 4, if big then 20 else 15, if big then 24 else 18, detail(if count then Lang.t(nil, "1 in {n}", { n = "1" }) else final, Ui.SOFT), WHITE)
+	table.insert(texts, oddsLine)
+	if count then
+		task.delay(0.3, function()
+			local size = oddsLine.TextSize
+			RollCinematic.countUp(Permanent.rarity(roll.index, roll.metal, roll.size), count, function(text, arrived)
+				if not oddsLine.Parent then
+					return
+				end
+				if arrived then
+					-- Llegó: el número da un golpe y se queda del color de la rareza.
+					oddsLine.Text = detail(final, "#" .. color:Lerp(WHITE, 0.45):ToHex())
+					oddsLine.TextSize = math.round(size * 1.4)
+					tween(oddsLine, 0.3, { TextSize = size }, Enum.EasingStyle.Back)
+					Sfx.play("rare", 0.7)
+				else
+					oddsLine.Text = detail(Lang.t(nil, "1 in {n}", { n = text }), Ui.SOFT)
+				end
+			end)
+		end)
 	end
 
 	-- Salta la rareza y, un instante después, aparecen los textos.
@@ -352,6 +412,9 @@ local function collect(roll, level: number, color: Color3)
 	Debris:AddItem(point, 1.6)
 	if not Performance.get() then
 		sparks(point, color, 6 + level * 4, 9 + level * 2, 0.45 + level * 0.08)
+		if level >= 3 then
+			nova(point, color:Lerp(WHITE, 0.35), 5 + level)
+		end
 	end
 	if level < 2 then
 		return
@@ -412,12 +475,15 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 	local bright = color:Lerp(WHITE, 0.35)
 	-- Con muchas a la vez, las normales se dan prisa.
 	local pace = (if level == 1 and running > CROWDED then HURRY else 1) * SLOW
+	-- ¿Le toca cinemática? Se pide turno ya, para cargar el orbe solo un momento.
+	local cinematic = fx.cinematic ~= nil and not lite and RollCinematic.reserve()
+	local pulses = if cinematic then AFTER.pulses else fx.pulses
 
 	-- 1. Carga: el orbe late, sube y, si la tirada es buena, traga energía y acaba tomando el color de la rareza.
-	local charge = fx.charge * pace
+	local charge = (if cinematic then AFTER.charge else fx.charge) * pace
 	local top = slot + Vector3.new(0, fx.rise, 0)
 	tween(orb, charge, { Position = top }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-	if level >= 3 then
+	if level >= 2 then
 		task.delay(charge * 0.6, function()
 			if orb.Parent then
 				tween(orb, charge * 0.4, { Color = bright })
@@ -431,16 +497,23 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 			table.insert(spinning, { part = ray, tilt = CFrame.Angles(0, index * math.pi / 3, 0) * CFrame.Angles(math.rad(rng:NextNumber(-28, 28)), 0, 0) })
 		end
 	end
-	local beat = charge / fx.pulses
+	if fx.seal and not lite and not cinematic then
+		-- Sello mágico en el suelo, debajo, mientras se carga y se enseña.
+		local floor = Vector3.new(slot.X, ground + 0.2, slot.Z)
+		local seconds = charge + (fx.hover + 0.4) * SLOW
+		seal(folder, floor, TEX.seal, color, fx.seal, seconds, 35)
+		seal(folder, floor + Vector3.new(0, 0.05, 0), TEX.seal2, color, fx.seal * 0.6, seconds, -50)
+	end
+	local beat = charge / pulses
 	local clock = 0
-	for pulse = 1, fx.pulses do
+	for pulse = 1, pulses do
 		if not orb.Parent then
 			break
 		end
 		local big = ORB * (1.25 + pulse * 0.05)
 		TweenService:Create(orb, TweenInfo.new(beat / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0, true), { Size = Vector3.one * big }):Play()
 		if not lite then
-			ring(folder, orb.Position, ORB, ORB * (2.4 + level * 0.5), if pulse > fx.pulses - 2 and level >= 3 then bright else MYSTERY, beat * 0.9)
+			ring(folder, orb.Position, ORB, ORB * (2.4 + level * 0.5), if pulse > pulses - 2 and level >= 2 then bright else MYSTERY, beat * 0.9)
 		end
 		if level >= 2 then
 			Sfx.play("charge", 0.6, 2 ^ ((pulse - 1) / 12), orb.Position) -- cada pulso suena una nota más arriba
@@ -449,7 +522,7 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 			clock += 1 / 60
 			if fx.absorb and not lite and rng:NextNumber() < 0.45 then
 				local from = orb.Position + randomUnit() * rng:NextNumber(8, 14)
-				local streak = glow(Enum.PartType.Ball, Vector3.one * 0.55, CFrame.new(from), if pulse > fx.pulses - 2 then bright else MYSTERY, 0.25, folder)
+				local streak = glow(Enum.PartType.Ball, Vector3.one * 0.55, CFrame.new(from), if pulse > pulses - 2 then bright else MYSTERY, 0.25, folder)
 				tween(streak, 0.26, { Position = orb.Position, Size = Vector3.one * 0.12 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 				Debris:AddItem(streak, 0.3)
 			end
@@ -467,8 +540,22 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 		return
 	end
 
-	-- 2. Se destapa: el orbe estalla en el color de la rareza y sale el arma.
+	-- 2. Se destapa: el orbe estalla en el color de la rareza y sale el arma. Con cinemática, antes se ve entera
+	-- (espera a que acabe o la salten) y aquí el arma ya solo aparece un momento y vuela al jugador.
 	local position = if orb.Parent then orb.Position else top
+	if cinematic then
+		orb.Transparency = 1
+		cinematic = RollCinematic.play(fx.cinematic, { roll = roll, tier = tier, level = level, line = LINES[level], origin = position, ground = ground })
+		if not folder.Parent then
+			-- La tanda se ha borrado mientras tanto: el arma, directa a la recogida.
+			if roll.kept then
+				collect(roll, level, color)
+			end
+			done()
+			return
+		end
+	end
+	local quiet = lite or cinematic -- sin estallido: en modo Rendimiento, o porque ya lo ha puesto la cinemática
 	orb:Destroy()
 	-- Pieza invisible que acompaña al arma: lleva el cartel, la luz, las chispas y la estela.
 	local follow = Instance.new("Part")
@@ -482,14 +569,19 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 	follow.CFrame = CFrame.new(position)
 	follow.Parent = folder
 
-	for delay, name in fx.sounds do
-		task.delay((delay - 1) * 0.12, Sfx.play, name, if level == 1 then 0.6 else 1, nil, position) -- las normales suenan flojo: salen a todas horas
+	if not cinematic then
+		for delay, name in fx.sounds do
+			task.delay((delay - 1) * 0.12, Sfx.play, name, if level == 1 then 0.6 else 1, nil, position) -- las normales suenan flojo: salen a todas horas
+		end
 	end
 	local lamp: PointLight? = nil
-	if not lite then
+	if not quiet then
 		fading(Enum.PartType.Ball, CFrame.new(position), Vector3.one * ORB, Vector3.one * (ORB * 2 + level * 0.8), color, 0.45, 0.28, folder)
 		ring(folder, position, ORB, 3.5 + level * 2.5, bright, 0.4)
 		sparks(follow, color, fx.sparks, 12 + level * 4, 0.5 + level * 0.12)
+		if fx.nova then
+			nova(follow, bright, fx.nova)
+		end
 		for wave = 1, fx.shock or 0 do
 			task.delay((wave - 1) * 0.13, function()
 				if folder.Parent then
@@ -538,7 +630,7 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 		shine.Range = 8
 		shine.Parent = follow
 	end
-	local hideLabel = buildLabel(folder, follow, roll, level, tier, odds)
+	local hideLabel = buildLabel(folder, follow, roll, level, tier, odds, if cinematic then nil else RollCinematic.countTime(level))
 	-- Destapada: el servidor ya puede enseñar su aura y su aviso a los demás (misma cuenta que hace él).
 	if odds >= math.min(Config.Gacha.AuraOdds, Config.Gacha.AnnounceOdds) then
 		Remotes.GachaRevealed:FireServer()
@@ -593,7 +685,7 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 			state.spin = 9 - 6.5 * t
 		end)
 		-- 3. Se queda a la vista lo justo para leerla (más cuanto mejor es; las vendidas, menos).
-		task.wait(fx.hover * pace * (if roll.kept then 1 else 0.6))
+		task.wait((if cinematic then AFTER.hover else fx.hover) * pace * (if roll.kept then 1 else 0.6))
 		hideLabel()
 		if aura then
 			aura.Enabled = false
@@ -718,7 +810,7 @@ local function shortcut(roll)
 	if roll.kept then
 		collect(roll, level, tier.color)
 	end
-	if level >= 3 then
+	if level >= 2 then
 		Ui.toast(Lang.t(nil, "{name}!", { name = Permanent.name(roll.index, roll.metal, roll.size) }), tier.color)
 	end
 end
@@ -739,7 +831,7 @@ local function play(batch)
 	folder.Name = "Batch"
 	folder.Parent = container
 	batch.folder = folder
-	Debris:AddItem(folder, 45) -- red de seguridad: ninguna tanda dura tanto
+	Debris:AddItem(folder, 90) -- red de seguridad: ninguna tanda dura tanto, ni esperando turno de cinemática
 
 	-- Sale un orbe por tirada, en abanico de cara al jugador.
 	Sfx.play("orb", 0.6, nil, heart)
@@ -777,7 +869,7 @@ local function play(batch)
 		end
 	end
 	local waited = 0
-	while pending > 0 and waited < 12 do
+	while pending > 0 and waited < 40 do -- una cinemática en cola puede tardar
 		waited += task.wait(0.1)
 	end
 	task.wait(0.9) -- las últimas chispas

@@ -936,6 +936,13 @@ return {
 	-- Pantalla de carga (src/first/Loading)
 	["Loading"] = "Cargando",
 	["Skip"] = "Saltar",
+	["Great roll!"] = "¡Tiradón!",
+	["A star falls for you!"] = "¡Una estrella cae para ti!",
+	["Forged by the heavens!"] = "¡Forjada por los cielos!",
+	["A star dies for this weapon!"] = "¡Una estrella muere por esta arma!",
+	["The universe bows to you!"] = "¡El universo se inclina ante ti!",
+	["Roll cinematics"] = "Cinemáticas de tirada",
+	["Plays a short cinematic when you roll a very rare weapon. Turn it off to farm without cuts."] = "Enseña una cinemática corta cuando te sale un arma muy rara. Apágala para farmear sin cortes.",
 	["Break the objects in your plot to get weapons!"] = "¡Rompe los objetos de tu parcela para conseguir armas!",
 	["Rarer objects drop rarer weapons."] = "Los objetos más raros sueltan armas más raras.",
 	["Leave your spare weapons in the Gold Bag to earn coins."] = "Deja en la Bolsa de oro las armas que te sobren para ganar monedas.",

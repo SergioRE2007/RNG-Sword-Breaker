@@ -43,6 +43,11 @@ local EVENTS = {
 	reveal_4 = { 109717760520982, 0.7, 1, 1 },
 	reveal_5 = { 118337535145235, 0.8, 1, 1 },
 	collect = { 126460414904264, 0.4, 1, 1 },
+	-- Cinemáticas de las tiradas más raras (client/RollCinematic): con las grabaciones de los climas (estrella que
+	-- cae, meteorito y trueno).
+	cine_fall = { { 72651967546338, 124214242227217 }, 0.6, 1, 1 },
+	cine_impact = { { 131981585599369, 98682835409009 }, 0.6, 1, 1 },
+	cine_boom = { { 86071521322650, 84604130470234, 138904498013191 }, 0.7, 1, 1 },
 	roll = { 108088062003601, 0.5, 1, 1 },
 	rare = { 113476440126433, 0.65, 1, 1 },
 	win = { 107352736766334, 0.7, 1, 1 },
