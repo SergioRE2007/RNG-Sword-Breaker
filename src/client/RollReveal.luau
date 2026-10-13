@@ -24,6 +24,7 @@ local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local WeaponFeed = require(script.Parent.WeaponFeed)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local RollReveal = {}
@@ -338,6 +339,7 @@ end
 
 -- El arma llega al jugador: chispas, sonido y, si era buena, su nombre subiendo junto a él.
 local function collect(roll, level: number, color: Color3)
+	WeaponFeed.push(roll) -- y su tarjeta a la derecha de la pantalla, para saber qué ha tocado
 	local root = rootPart()
 	Sfx.play("collect", if level >= 2 then 0.8 else 0.45, nil, root)
 	if not root then
