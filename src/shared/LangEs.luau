@@ -176,7 +176,7 @@ return {
 	["Spawn Speed"] = "Velocidad de aparición",
 	["Spawn"] = "Aparición",
 	["Fortune"] = "Fortuna",
-	["Multiplies the coins objects give. Paid with gems."] = "Multiplica las monedas que dan los objetos. Se paga con gemas.",
+	["Multiplies the coins from objects and from your Gold Bag. Paid with gems."] = "Multiplica las monedas de los objetos y de tu Bolsa de oro. Se paga con gemas.",
 	-- Armadura
 	["Helmet"] = "Casco",
 	["Chestplate"] = "Pechera",
