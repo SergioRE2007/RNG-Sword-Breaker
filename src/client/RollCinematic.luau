@@ -30,6 +30,7 @@ local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
+local Shards = require(script.Parent.Shards)
 local Ui = require(script.Parent.Ui)
 local WeaponAuraDefs = require(script.Parent.WeaponAuraDefs)
 
@@ -61,6 +62,7 @@ local STAGE_UP = 700 -- studs por encima de la cámara a los que se monta el esc
 local STAGE_HALF = 90 -- media arista del cubo negro
 local DISPLAY = 5 -- studs que mide el arma enseñada
 local TILT = CFrame.Angles(0, 0, math.rad(-22))
+local STUCK = 170 -- grados del arma clavada de punta en el cráter de la estrella (casi boca abajo)
 local SCREEN = Vector2.new(1100, 700) -- por debajo de este tamaño de pantalla la tarjeta se encoge (como el HUD)
 local CARD = Vector2.new(460, 176)
 -- Segundos que tarda el "1 entre N" en subir hasta su número, por nivel de RollReveal.
@@ -224,18 +226,23 @@ local function pillar(s, position: Vector3, height: number, width: number, color
 	local base = point(s, position)
 	local low, high = Instance.new("Attachment"), Instance.new("Attachment")
 	high.Position = Vector3.new(0, height, 0)
+	-- La textura es un resplandor redondo estirado a lo largo: da los bordes suaves (un Beam liso, o varios encimados,
+	-- se ven como rectángulos de canto duro). Empieza bajo el suelo para que lo más vivo quede cerca de la base.
+	low.Position = Vector3.new(0, -height * 0.45, 0)
 	low.Parent, high.Parent = base, base
-	-- Tres capas, de la ancha y tenue al núcleo: una sola se ve como un rectángulo de canto duro.
-	for _, layer in { { 1, 0.86 }, { 0.6, 0.72 }, { 0.28, 0.35 } } do
+	for _, layer in { { 1.2, 0.5, 0.3 }, { 0.45, 0.05, 0.75 } } do
 		local wide = width * layer[1]
 		local beam = Instance.new("Beam")
 		beam.Attachment0, beam.Attachment1 = low, high
 		beam.FaceCamera = true
 		beam.Segments = 1
+		beam.Texture = TEX.halo
+		beam.TextureMode = Enum.TextureMode.Stretch
+		beam.TextureLength = 1
 		beam.LightEmission = 1
 		beam.LightInfluence = 0
-		beam.Color = ColorSequence.new(color:Lerp(WHITE, 0.5), color)
-		beam.Transparency = seq({ { 0, layer[2] }, { 0.6, lerp(layer[2], 1, 0.4) }, { 1, 1 } })
+		beam.Color = ColorSequence.new(color:Lerp(WHITE, layer[3]))
+		beam.Transparency = NumberSequence.new(layer[2])
 		beam.Width0, beam.Width1 = wide * 0.2, wide * 0.2
 		beam.Parent = base
 		tween(beam, 0.1, { Width0 = wide, Width1 = wide * 0.7 })
@@ -269,6 +276,133 @@ local function bolt(s, from: Vector3, to: Vector3, color: Color3, width: number,
 	end
 end
 
+-- Vida de una partícula en segundos de escena: Roblox no deja pasar de 20 (a cámara lenta se quedan en eso).
+local function life(from: number, to: number?): NumberRange
+	return NumberRange.new(math.min(from * SLOW, 20), math.min((to or from) * SLOW, 20))
+end
+
+-- Brasas que se quedan subiendo de `parent` durante `seconds`.
+local function embers(parent: Instance, color: Color3, rate: number, seconds: number)
+	local created = emitter(parent, {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(WHITE, color),
+		LightEmission = 1,
+		Rate = rate / SLOW,
+		Lifetime = life(1.2, 2.2),
+		Speed = NumberRange.new(1 / SLOW, 4 / SLOW),
+		SpreadAngle = Vector2.new(50, 50),
+		EmissionDirection = Enum.NormalId.Top,
+		Acceleration = Vector3.new(0, 3 / (SLOW * SLOW), 0),
+		Size = seq({ { 0, 0.5 }, { 1, 0 } }),
+		Transparency = seq({ { 0, 0 }, { 0.7, 0.2 }, { 1, 1 } }),
+	})
+	task.delay(seconds * SLOW, function()
+		created.Enabled = false
+	end)
+end
+
+-- Llamaradas (textura animada de fuego) que saltan hacia fuera.
+local function flames(parent: Instance, color: Color3, count: number, speed: number, size: number)
+	emitter(parent, {
+		Texture = TEX.fire,
+		FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4,
+		FlipbookMode = Enum.ParticleFlipbookMode.OneShot,
+		Color = ColorSequence.new(color:Lerp(WHITE, 0.5), color),
+		LightEmission = 0.8,
+		Brightness = 1.6,
+		Lifetime = life(0.5, 0.9),
+		Speed = NumberRange.new(speed * 0.4 / SLOW, speed / SLOW),
+		SpreadAngle = Vector2.new(180, 180),
+		Drag = 2 / SLOW,
+		Rotation = NumberRange.new(0, 360),
+		Size = seq({ { 0, size * 0.4 }, { 0.4, size }, { 1, size * 0.6 } }),
+		Transparency = seq({ { 0, 0.2 }, { 0.7, 0.4 }, { 1, 1 } }),
+	}, count)
+end
+
+-- Destello alargado de lente: una línea de luz centrada en `centre`, a lo largo de `axis`, que se apaga hacia las
+-- puntas. Devuelve el Beam (cuelga de su propia pieza: borrar `.Parent`).
+local function streak(s, centre: Vector3, axis: Vector3, length: number, width: number, color: Color3): Beam
+	local base = point(s, centre)
+	local a, b = Instance.new("Attachment"), Instance.new("Attachment")
+	a.Position, b.Position = -axis * length / 2, axis * length / 2
+	a.Parent, b.Parent = base, base
+	local beam = Instance.new("Beam")
+	beam.Attachment0, beam.Attachment1 = a, b
+	beam.FaceCamera = true
+	beam.Segments = 1
+	beam.LightEmission = 1
+	beam.LightInfluence = 0
+	beam.Color = ColorSequence.new(color:Lerp(WHITE, 0.4))
+	beam.Transparency = seq({ { 0, 1 }, { 0.5, 0.15 }, { 1, 1 } })
+	beam.Width0, beam.Width1 = width, width
+	beam.Parent = base
+	return beam
+end
+
+-- Anillo de polvo que se abre a ras de suelo.
+local function dustRing(s, position: Vector3, color: Color3, count: number, speed: number)
+	local base = point(s, position)
+	for index = 1, count do
+		local out = Instance.new("Attachment")
+		out.CFrame = CFrame.Angles(0, index / count * math.pi * 2, 0) * CFrame.Angles(0, 0, -math.pi / 2)
+		out.Parent = base
+		emitter(out, {
+			Texture = SMOKE,
+			Color = ColorSequence.new(color),
+			LightEmission = 0.15,
+			Lifetime = life(0.8, 1.4),
+			Speed = NumberRange.new(speed * 0.6 / SLOW, speed / SLOW),
+			SpreadAngle = Vector2.new(9, 9),
+			EmissionDirection = Enum.NormalId.Top,
+			Drag = 1.6 / SLOW,
+			Rotation = NumberRange.new(0, 360),
+			RotSpeed = NumberRange.new(-30 / SLOW, 30 / SLOW),
+			Size = seq({ { 0, 1.4 }, { 1, 5.5 } }),
+			Transparency = seq({ { 0, 0.45 }, { 0.6, 0.7 }, { 1, 1 } }),
+		}, 2)
+	end
+end
+
+-- Grietas de luz que salen del centro por el suelo, en zigzag, y se apagan.
+local function cracks(s, centre: Vector3, color: Color3, count: number, length: number, seconds: number)
+	for index = 1, count do
+		local angle = (index + rng:NextNumber(-0.3, 0.3)) / count * math.pi * 2
+		local from = centre + Vector3.new(math.cos(angle), 0, math.sin(angle)) * 1.2
+		local reach = length * rng:NextNumber(0.55, 1)
+		for step = 1, 3 do
+			angle += rng:NextNumber(-0.55, 0.55)
+			local to = from + Vector3.new(math.cos(angle), 0, math.sin(angle)) * reach / 3
+			local part = piece(s, Enum.PartType.Block, Vector3.new(0.42 - step * 0.1, 0.08, reach / 3), CFrame.lookAt((from + to) / 2, to), color, 0.1)
+			tween(part, seconds, { Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			Debris:AddItem(part, seconds * SLOW + 0.1)
+			from = to
+		end
+	end
+end
+
+-- Estrella fugaz pequeña que cruza de `from` a `to`.
+local function meteor(s, from: Vector3, to: Vector3, color: Color3, size: number, seconds: number)
+	local head = piece(s, Enum.PartType.Ball, Vector3.one * size, CFrame.new(from), WHITE, 0)
+	local a, b = Instance.new("Attachment"), Instance.new("Attachment")
+	a.Position, b.Position = Vector3.new(0, size / 2, 0), Vector3.new(0, -size / 2, 0)
+	a.Parent, b.Parent = head, head
+	local tail = Instance.new("Trail")
+	tail.Attachment0, tail.Attachment1 = a, b
+	tail.Color = ColorSequence.new(WHITE, color)
+	tail.Transparency = seq({ { 0, 0 }, { 1, 1 } })
+	tail.WidthScale = seq({ { 0, 1 }, { 1, 0 } })
+	tail.Lifetime = 0.3 * SLOW
+	tail.LightEmission = 1
+	tail.FaceCamera = true
+	tail.Parent = head
+	tween(head, seconds, { Position = to }, Enum.EasingStyle.Linear)
+	task.delay(seconds * SLOW, function()
+		head.Transparency = 1
+	end)
+	Debris:AddItem(head, (seconds + 0.35) * SLOW)
+end
+
 -- Polvo de estrellas que sale hacia fuera.
 local function stardust(parent: Instance, color: Color3, count: number, speed: number, size: number)
 	emitter(parent, {
@@ -288,20 +422,28 @@ end
 
 -- Textura de cara a la cámara que aparece, se queda y se va (estallidos, destellos, remolinos). Las de fondo
 -- negro (nova, vortex, portal) van con `emission` 1 o se ven como cuadrados negros.
-local function sprite(parent: Instance, texture: string, color: Color3, size: number, seconds: number, turn: number, emission: number, grow: boolean?)
+local function sprite(parent: Instance, texture: string, color: Color3, size: number, seconds: number, turn: number, emission: number, grow: boolean?, angle: number?)
 	emitter(parent, {
 		Texture = texture,
 		Color = ColorSequence.new(color),
 		LightEmission = emission,
 		Brightness = 1.4,
-		Lifetime = NumberRange.new(seconds * SLOW),
+		Lifetime = life(seconds),
 		Speed = NumberRange.new(0),
-		Rotation = NumberRange.new(0, 360),
+		Rotation = if angle then NumberRange.new(angle) else NumberRange.new(0, 360),
 		RotSpeed = NumberRange.new(turn / SLOW),
 		LockedToPart = true,
 		Size = if grow then seq({ { 0, size * 0.15 }, { 1, size } }) else seq({ { 0, 0 }, { 0.15, size }, { 0.8, size }, { 1, size * 0.7 } }),
 		Transparency = seq({ { 0, 1 }, { 0.12, 0.3 }, { 0.6, 0.45 }, { 1, 1 } }),
 	}, 1)
+end
+
+-- Rayos de luz girando detrás del arma enseñada. La textura es un haz hacia un solo lado: con una sola copia se
+-- veía, según el giro, como una franja suelta a un lado del arma; con tres repartidas hace la estrella entera.
+local function shine(parent: Instance, color: Color3, size: number, seconds: number)
+	for index = 0, 2 do
+		sprite(parent, TEX.shine, color, size, seconds, 14, 1, false, index * 120)
+	end
 end
 
 -- Sello tumbado en el suelo, girando. Flojo y medio transparente a propósito: a mediodía se quema a blanco.
@@ -866,7 +1008,23 @@ function THEMES.star(s, info)
 		s.fov = lerp(s.saved.fov, 64, t)
 	end)
 
-	-- 2. Un destello en lo alto, y cae.
+	-- 2. Se encienden estrellas en el cielo y cruzan dos fugaces pequeñas: avisan de la buena.
+	local high = floor:Lerp(sky, 0.6)
+	for index = 1, 10 do
+		task.delay(index * 0.06 * SLOW, function()
+			if not s.released then
+				local spot = point(s, high + side * rng:NextNumber(-46, 46) + toward * rng:NextNumber(-12, 12) + Vector3.new(0, rng:NextNumber(-18, 24), 0))
+				sprite(spot, TEX.star, WHITE:Lerp(bright, rng:NextNumber(0, 0.6)), rng:NextNumber(3, 7), 2.4, 30, 0.9)
+			end
+		end)
+	end
+	wait(s, 0.3)
+	meteor(s, high + side * 44 + Vector3.new(0, 22, 0), high - side * 8 + Vector3.new(0, 2, 0), bright, 0.9, 0.3)
+	wait(s, 0.28)
+	meteor(s, high - side * 40 + toward * 10 + Vector3.new(0, 26, 0), high + side * 14 + Vector3.new(0, -4, 0), color, 1.1, 0.32)
+	wait(s, 0.3)
+
+	-- 3. Un destello en lo alto, y cae: cabeza de fuego y cola larga.
 	local star = piece(s, Enum.PartType.Ball, Vector3.one * 3.2, CFrame.new(sky), bright, 0)
 	local lamp = Instance.new("PointLight")
 	lamp.Color = bright
@@ -875,17 +1033,46 @@ function THEMES.star(s, info)
 	lamp.Parent = star
 	sprite(star, TEX.star, WHITE, 26, 0.9, 25, 0.8)
 	local a, b = Instance.new("Attachment"), Instance.new("Attachment")
-	a.Position, b.Position = Vector3.new(0, 1.5, 0), Vector3.new(0, -1.5, 0)
+	a.Position, b.Position = Vector3.new(0, 1.2, 0), Vector3.new(0, -1.2, 0)
 	a.Parent, b.Parent = star, star
 	local trail = Instance.new("Trail")
 	trail.Attachment0, trail.Attachment1 = a, b
 	trail.Color = ColorSequence.new(WHITE, color)
-	trail.Transparency = seq({ { 0, 0 }, { 1, 1 } })
+	trail.Transparency = seq({ { 0, 0.15 }, { 1, 1 } })
 	trail.WidthScale = seq({ { 0, 1 }, { 1, 0 } })
 	trail.Lifetime = 0.5 * SLOW
 	trail.LightEmission = 1
 	trail.FaceCamera = true
 	trail.Parent = star
+	-- Cola larga y ancha del color de la rareza, detrás de la blanca.
+	local c, d = Instance.new("Attachment"), Instance.new("Attachment")
+	c.Position, d.Position = Vector3.new(0, 2.3, 0), Vector3.new(0, -2.3, 0)
+	c.Parent, d.Parent = star, star
+	local tail = Instance.new("Trail")
+	tail.Attachment0, tail.Attachment1 = c, d
+	tail.Color = ColorSequence.new(bright, color)
+	-- Tenue: es una banda lisa, y más opaca se le ven los cantos.
+	tail.Transparency = seq({ { 0, 0.6 }, { 1, 1 } })
+	tail.WidthScale = seq({ { 0, 1 }, { 1, 0.1 } })
+	tail.Lifetime = 1.3 * SLOW
+	tail.LightEmission = 1
+	tail.FaceCamera = true
+	tail.Parent = star
+	local fire = emitter(star, {
+		Texture = TEX.fire,
+		FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4,
+		FlipbookMode = Enum.ParticleFlipbookMode.OneShot,
+		Color = ColorSequence.new(WHITE, color),
+		LightEmission = 0.8,
+		Brightness = 1.8,
+		Rate = 34 / SLOW,
+		Lifetime = life(0.3, 0.5),
+		Speed = NumberRange.new(0, 3 / SLOW),
+		SpreadAngle = Vector2.new(180, 180),
+		Rotation = NumberRange.new(0, 360),
+		Size = seq({ { 0, 7 }, { 1, 2.5 } }),
+		Transparency = seq({ { 0, 0.15 }, { 0.6, 0.45 }, { 1, 1 } }),
+	})
 	local dust = emitter(star, {
 		Texture = TEX.stardust,
 		Color = ColorSequence.new(WHITE, color),
@@ -905,16 +1092,50 @@ function THEMES.star(s, info)
 		s.cam = CFrame.lookAt(eye, at:Lerp(hit + Vector3.new(0, 3, 0), t ^ 3))
 	end)
 
-	-- 3. Impacto: destello, ondas, sello en el suelo, columna de luz y polvo de estrellas.
+	-- 4. Impacto. Parada de imagen: un instante con la estrella clavada y en blanco, antes de que todo salte.
 	dust.Enabled = false
+	fire.Enabled = false
 	trail.Enabled = false
+	tail.Enabled = false
+	star.Color = WHITE
+	star.Size = Vector3.one * 6
+	s.punch = -12
+	Sfx.play("cine_impact")
+	wait(s, 0.05)
+	-- Destello, ondas, sello y cráter de luz con grietas, trozos de suelo, anillo de polvo, columna de luz y brasas.
 	star.Transparency = 1
 	lamp.Range = 22
 	tween(lamp, 1.2, { Brightness = 0.9 })
 	cover(s, bright:Lerp(WHITE, 0.6), 0.25, 1, 0.5)
-	s.shake = 0.9
-	Sfx.play("cine_impact")
+	s.shake = 1
+	s.blur.Size = 14
+	tween(s.blur, 0.5, { Size = 0 })
 	Sfx.play("reveal_4")
+	local crater = piece(s, Enum.PartType.Cylinder, Vector3.new(0.12, 8, 8), CFrame.new(floor) * FLAT, color, 0.45) -- del color a secas: aclarado, a mediodía se queda en blanco
+	tween(crater, 3.4, { Transparency = 1, Size = Vector3.new(0.12, 4.5, 4.5) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	cracks(s, floor + Vector3.new(0, 0.04, 0), bright, 9, 10, 3.2)
+	dustRing(s, floor + Vector3.new(0, 0.5, 0), Color3.fromRGB(205, 195, 185):Lerp(color, 0.25), 14, 34)
+	for index = 1, 16 do
+		local out = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0).LookVector
+		local glowing = index % 4 == 0 -- alguno, al rojo del color de la rareza
+		local chunk = piece(
+			s,
+			Enum.PartType.Block,
+			Vector3.new(rng:NextNumber(0.5, 1.3), rng:NextNumber(0.4, 0.9), rng:NextNumber(0.5, 1.3)),
+			CFrame.new(floor + out * rng:NextNumber(1, 3) + Vector3.new(0, 0.6, 0)) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0),
+			if glowing then bright else Color3.fromRGB(72, 64, 62),
+			0,
+			if glowing then Enum.Material.Neon else Enum.Material.Slate
+		)
+		Shards.launch(chunk, out * rng:NextNumber(9, 24) + Vector3.new(0, rng:NextNumber(26, 46), 0), rng:NextUnitVector() * 9, info.ground)
+		task.delay(rng:NextNumber(1.6, 2.4) * SLOW, function()
+			if chunk.Parent then
+				tween(chunk, 0.4, { Size = Vector3.zero })
+			end
+		end)
+	end
+	pillar(s, floor, 70, 8, bright, 1.3)
+	embers(point(s, floor, 6), color, 16, 3.2)
 	for wave = 1, 3 do
 		task.delay((wave - 1) * 0.12 * SLOW, function()
 			if not s.released then
@@ -924,33 +1145,45 @@ function THEMES.star(s, info)
 	end
 	sealOn(s, floor, TEX.seal, color, 15, 6, 35)
 	sealOn(s, floor + Vector3.new(0, 0.05, 0), TEX.seal2, bright, 11, 6, -50)
-	fading(s, Enum.PartType.Cylinder, CFrame.new(hit + Vector3.new(0, 60, 0)) * FLAT, Vector3.new(120, 5, 5), Vector3.new(120, 0.3, 0.3), bright, 0.4, 1.3)
 	fading(s, Enum.PartType.Ball, CFrame.new(hit), Vector3.one * 2, Vector3.one * 16, bright, 0.35, 0.45)
 	local burst = point(s, hit)
 	stardust(burst, color, 70, 34, 2.2)
 	sparks(burst, color, 60, 30, 1.1)
+	forgeSparks(burst, color, 50, 40)
+	flames(burst, color, 10, 16, 6)
 	sprite(burst, TEX.nova, bright, 20, 0.7, -220, 1, true)
 
-	-- 4. El arma sale del cráter y la cámara se acerca.
-	local held = weapon(s, info, hit, DISPLAY)
-	held.spin = 12
+	-- 5. El arma aparece clavada en el cráter, de punta, mientras la cámara se acerca; tiembla...
+	local stuck = hit + Vector3.new(0, 1.3, 0)
+	local held = weapon(s, info, stuck, DISPLAY)
+	held.tilt = CFrame.Angles(0, 0, math.rad(STUCK))
 	local impact = s.cam
 	local close = CFrame.lookAt(clearView(s, floor + Vector3.new(0, 4.4, 0), floor + toward * 4 - side * 10 + Vector3.new(0, 4.4, 0)), floor + Vector3.new(0, 4.3, 0))
 	local top = floor + Vector3.new(0, 5.4, 0)
-	animate(s, 0.75, function(t)
-		held.position = hit:Lerp(top, outCubic(t))
+	animate(s, 0.45, function(t)
 		held.scale = outBack(math.min(t * 1.6, 1))
-		held.spin = lerp(12, 2.5, t)
 		s.cam = impact:Lerp(close, smooth(t))
 		s.fov = lerp(64, 54, t)
 	end)
+	animate(s, 0.25, function(t)
+		held.position = stuck + side * math.sin(t * math.pi * 6) * 0.07 * (1 - t)
+	end)
+	-- ...y sale de un tirón, dando la vuelta, hasta quedarse girando sobre el cráter.
+	Sfx.play("equip", 0.8, 1.2)
+	sparks(burst, color, 24, 18, 0.8)
+	animate(s, 0.7, function(t)
+		local e = outCubic(t)
+		held.position = stuck:Lerp(top, e)
+		held.tilt = CFrame.Angles(0, 0, math.rad(lerp(STUCK, -22, smooth(t))))
+		held.spin = lerp(13, 2.5, e)
+	end)
 	local halo = point(s, top)
-	sprite(halo, TEX.shine, bright, 11, 5, 14, 1)
+	shine(halo, bright, 11, 5)
 	card(s, info)
 	animate(s, 1, function(t)
 		s.cam = close * CFrame.new(0, 0, -1.2 * t)
 	end)
-	-- 5. Vuelta a la cámara del jugador.
+	-- 6. Vuelta a la cámara del jugador.
 	tween(s.correction, 0.3, { Brightness = 0, Contrast = 0, TintColor = WHITE })
 	local back = s.cam
 	animate(s, 0.3, function(t)
@@ -1626,7 +1859,7 @@ function THEMES.smith(s, info)
 		s.cam = struck:Lerp(camShow, e)
 		s.fov = lerp(58, 50, e)
 	end)
-	sprite(point(s, lifted), TEX.shine, bright, 13, 6, 14, 1)
+	shine(point(s, lifted), bright, 13, 6)
 	-- El gigante se queda detrás en silueta oscura, con sus runas encendidas, para que mande el arma.
 	local shadow = color:Lerp(BLACK, 0.88)
 	for _, part in dim do
@@ -1700,6 +1933,64 @@ function THEMES.nova(s, info)
 		Size = seq({ { 0, 16 }, { 0.5, 26 }, { 1, 16 } }),
 		Transparency = seq({ { 0, 1 }, { 0.5, 0.35 }, { 1, 1 } }),
 	})
+	-- Disco de acreción, tumbado y algo inclinado hacia la cámara, y dos aros que dan vueltas a su alrededor.
+	local plane = CFrame.Angles(math.rad(18), 0, math.rad(8))
+	local function flat(texture: string, size: number, turn: number, tilt: CFrame, faint: number)
+		local base = point(s, centre)
+		base.CFrame = CFrame.new(centre) * tilt
+		local created = emitter(base, {
+			Texture = texture,
+			Color = ColorSequence.new(tone),
+			LightEmission = 1,
+			Rate = 2 / SLOW,
+			Lifetime = life(1.2),
+			Speed = NumberRange.new(0.01),
+			SpreadAngle = Vector2.zero,
+			EmissionDirection = Enum.NormalId.Top,
+			Orientation = Enum.ParticleOrientation.VelocityPerpendicular,
+			Rotation = NumberRange.new(0, 360),
+			RotSpeed = NumberRange.new(turn / SLOW),
+			LockedToPart = true,
+			Size = NumberSequence.new(size),
+			Transparency = seq({ { 0, 1 }, { 0.5, faint }, { 1, 1 } }),
+		}, 1)
+		return { emitter = created, part = base, size = size }
+	end
+	local disc = flat(TEX.disc, 46, 70, plane, 0.45)
+	local hoops = {
+		flat(TEX.portal, 24, 40, CFrame.identity, 0.55),
+		flat(TEX.portal, 32, -30, CFrame.identity, 0.66),
+	}
+	hoops[1].tilt, hoops[1].speed = CFrame.Angles(math.rad(64), 0, 0), 0.5
+	hoops[2].tilt, hoops[2].speed = CFrame.Angles(math.rad(-50), 0, math.rad(20)), -0.35
+	local swirl = { disc, hoops[1], hoops[2] }
+	-- Planetas en órbita: la estrella se los traga al encogerse (`pull` = cuánto queda de su órbita).
+	local planets = {}
+	for index, spec in { { 15, 1.7, Color3.fromRGB(110, 170, 255) }, { 21, 2.6, Color3.fromRGB(255, 150, 90) }, { 27, 1.4, Color3.fromRGB(150, 255, 190) }, { 33, 2.1, Color3.fromRGB(225, 140, 255) } } do
+		planets[index] = {
+			part = piece(s, Enum.PartType.Ball, Vector3.one * spec[2], CFrame.new(centre), spec[3], 0, Enum.Material.SmoothPlastic),
+			radius = spec[1],
+			size = spec[2],
+			color = spec[3],
+			angle = index * 1.9,
+			pull = 1,
+		}
+	end
+	-- Destello de lente: una línea de luz que cruza la estrella y late con ella.
+	local lens = streak(s, centre, Vector3.xAxis, 96, 1.3, tone)
+	s.tick = function(dt)
+		local step = dt / SLOW
+		for _, hoop in hoops do
+			hoop.part.CFrame = CFrame.new(centre) * CFrame.Angles(0, s.clock * hoop.speed / SLOW, 0) * hoop.tilt
+		end
+		for _, planet in planets do
+			if planet.part.Parent then
+				local radius = planet.radius * planet.pull
+				planet.angle += step * 14 / math.max(radius, 3) -- más deprisa cuanto más cerca
+				planet.part.CFrame = CFrame.new(centre) * plane * CFrame.new(math.cos(planet.angle) * radius, 0, math.sin(planet.angle) * radius)
+			end
+		end
+	end
 	cover(s, BLACK, 0, 1, 0.4)
 	Sfx.play("cine_star")
 
@@ -1728,6 +2019,13 @@ function THEMES.nova(s, info)
 		star.Color = light
 		lamp.Color = tone
 		corona.Color = ColorSequence.new(tone)
+		for _, item in swirl do
+			item.emitter.Color = ColorSequence.new(tone)
+		end
+		lens.Color = ColorSequence.new(light)
+		lens.Width0, lens.Width1 = 5 + index, 5 + index
+		tween(lens, 0.4, { Width0 = 1.3, Width1 = 1.3 })
+		flames(core, tone, 4 + index, 22, 6 + index * 0.5)
 		setLine(s, Lang.t(nil, tier.name), light)
 		cover(s, light, 0.72, 1, 0.3)
 		s.shake = 0.25 + index * 0.1
@@ -1769,8 +2067,27 @@ function THEMES.nova(s, info)
 	local note = -1
 	local full, wide = size, distance
 	Sfx.play("cine_collapse")
+	tween(lens, collapse, { Width0 = 0.3, Width1 = 0.3 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	animate(s, collapse, function(t)
 		local e = t * t
+		-- El disco y los aros se cierran, y los planetas caen en espiral, de dentro afuera, uno detrás de otro.
+		for _, item in swirl do
+			item.emitter.Size = NumberSequence.new(lerp(item.size, 3, e))
+		end
+		for index, planet in planets do
+			local fall = math.clamp(e * 1.25 - (index - 1) * 0.08, 0, 1)
+			planet.pull = 1 - fall
+			if planet.part.Parent then
+				if fall >= 1 then
+					planet.part:Destroy()
+					sparks(core, planet.color, 16, 30, 1.3)
+					Sfx.play("tick", 0.8, 0.6 + index * 0.15)
+					s.shake = math.max(s.shake, 0.3)
+				else
+					planet.part.Size = Vector3.one * planet.size * math.min(1, planet.pull * 4 + 0.15)
+				end
+			end
+		end
 		star.Size = Vector3.one * lerp(full, 0.6, e)
 		star.Color = hot
 		lamp.Range = lerp(60, 14, e)
@@ -1796,14 +2113,26 @@ function THEMES.nova(s, info)
 	-- 3. Silencio: un punto en la oscuridad.
 	whirl.Enabled = false
 	corona.Enabled = false
+	for _, item in swirl do
+		item.emitter.Enabled = false
+		item.emitter:Clear()
+	end
 	star.Size = Vector3.one * 0.3
 	lamp.Brightness = 0.4
 	wait(s, 0.8)
 
-	-- 4. Estalla.
+	-- 4. Estalla: onda que desenfoca la pantalla, destellos de lente en cruz y llamaradas.
 	local function explode(shade: Color3, power: number, sound: string?)
 		cover(s, shade:Lerp(WHITE, 0.75), 0, 1, 0.6)
 		s.shake = 1.6 * power
+		s.punch = -16 * power
+		s.blur.Size = 30 * power
+		tween(s.blur, 0.8, { Size = 0 })
+		for _, axis in { Vector3.xAxis, Vector3.yAxis } do
+			local line = streak(s, centre, axis, 170 * power, (if axis == Vector3.xAxis then 10 else 5) * power, shade)
+			tween(line, 1, { Width0 = 0, Width1 = 0 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			Debris:AddItem(line.Parent, 1 * SLOW + 0.1)
+		end
 		Sfx.play(sound or "cine_boom", math.min(power, 1))
 		fading(s, Enum.PartType.Ball, CFrame.new(centre), Vector3.one, Vector3.one * 90 * power, shade, 0.3, 0.9)
 		fading(s, Enum.PartType.Ball, CFrame.new(centre), Vector3.one, Vector3.one * 40 * power, WHITE, 0.2, 0.45)
@@ -1814,11 +2143,31 @@ function THEMES.nova(s, info)
 		sprite(burst, TEX.nova, shade, 46 * power, 0.9, -200, 1, true)
 		stardust(burst, shade, 140, 70, 3)
 		sparks(burst, shade, 110, 60, 1.8)
+		flames(burst, shade, math.round(22 * power), 56, 15)
 	end
 	star:Destroy()
+	lens.Parent:Destroy()
 	explode(bright, 1)
 	Sfx.play("reveal_5")
 	tween(s.correction, 0.4, { Brightness = 0.05 })
+	-- Lo que queda: una nebulosa de colores detrás, que se va abriendo despacio.
+	local hue, sat, value = color:ToHSV()
+	local cloud = piece(s, Enum.PartType.Block, Vector3.new(84, 46, 10), CFrame.new(centre - Vector3.new(0, 0, 18)), WHITE, 1)
+	for _, shade in { color, bright, Color3.fromHSV((hue + 0.13) % 1, sat * 0.8, value), Color3.fromHSV((hue + 0.87) % 1, sat, value * 0.8) } do
+		emitter(cloud, {
+			Texture = SMOKE,
+			Color = ColorSequence.new(shade),
+			LightEmission = 0.7,
+			Rate = 4 / SLOW,
+			Lifetime = life(3, 4.5),
+			Speed = NumberRange.new(0.3 / SLOW, 1.2 / SLOW),
+			SpreadAngle = Vector2.new(180, 180),
+			Rotation = NumberRange.new(0, 360),
+			RotSpeed = NumberRange.new(-8 / SLOW, 8 / SLOW),
+			Size = seq({ { 0, 10 }, { 1, 24 } }),
+			Transparency = seq({ { 0, 1 }, { 0.25, 0.8 }, { 0.75, 0.84 }, { 1, 1 } }),
+		}, 7)
+	end
 	local glow = Instance.new("PointLight")
 	glow.Color = bright
 	glow.Brightness = 2.2
@@ -1850,7 +2199,35 @@ function THEMES.nova(s, info)
 	stardust(core, color, 80, 40, 2.4)
 	ring(s, centre, 2, 60, bright, 0.7, CFrame.Angles(math.rad(12), 0, 0))
 	rays(s, centre - Vector3.new(0, 0, 4), if jackpot then 9 else 6, 60, bright)
-	sprite(core, TEX.shine, bright, 16, 12, 16, 1)
+	shine(core, bright, 16, 12)
+	if jackpot then
+		-- La absoluta: una galaxia espiral dorada girando detrás del arma.
+		-- Por delante de los rayos (que la taparían) y justo detrás del arma. Hecha con puntos de luz en tres
+		-- brazos: la textura de remolino del pack, a ese tamaño, no se veía.
+		local base = point(s, centre - Vector3.new(0, 0, 2.5))
+		for arm = 0, 2 do
+			for index = 1, 22 do
+				local t = index / 22
+				local angle = arm * math.pi * 2 / 3 + t * 3.6
+				local reach = 21 * (0.08 + 0.92 * t)
+				local spot = Instance.new("Attachment")
+				spot.Position = Vector3.new(math.cos(angle) * reach, math.sin(angle) * reach, 0)
+				spot.Parent = base
+				emitter(spot, {
+					Texture = TEX.halo,
+					Color = ColorSequence.new(GOLD:Lerp(WHITE, 0.5 * (1 - t))),
+					LightEmission = 1,
+					Rate = 1.6 / SLOW,
+					Lifetime = life(1.2, 1.6),
+					Speed = NumberRange.new(0),
+					LockedToPart = true,
+					Size = seq({ { 0, 0 }, { 0.5, lerp(7, 2.5, t) }, { 1, 0 } }),
+					Transparency = seq({ { 0, 1 }, { 0.5, lerp(0.5, 0.72, t) }, { 1, 1 } }),
+				}, 1)
+			end
+		end
+		table.insert(s.spinning, { part = base, centre = base.Position, speed = 0.3, tilt = CFrame.identity })
+	end
 	animate(s, 0.5, function(t)
 		held.spin = lerp(7, 2.5, t)
 	end)
@@ -1859,12 +2236,25 @@ function THEMES.nova(s, info)
 	card(s, info)
 	explode(if jackpot then GOLD else bright, if jackpot then 0.8 else 0.55, if jackpot then "cine_gold" else nil)
 	if jackpot then
-		-- Premio gordo: lluvia de estrellas y una explosión más.
-		emitter(point(s, centre + Vector3.new(0, 26, 0), 50), {
+		-- Premio gordo: lluvia de estrellas (con su polvo) y una explosión más.
+		local above = point(s, centre + Vector3.new(0, 26, 0), 50)
+		emitter(above, {
+			Texture = TEX.stardust,
+			Color = ColorSequence.new(GOLD, WHITE),
+			LightEmission = 0.8,
+			Rate = 40 / SLOW,
+			Lifetime = life(2, 3),
+			Speed = NumberRange.new(8 / SLOW, 14 / SLOW),
+			EmissionDirection = Enum.NormalId.Bottom,
+			RotSpeed = NumberRange.new(-60, 60),
+			Size = seq({ { 0, 1.1 }, { 1, 0.3 } }),
+			Transparency = seq({ { 0, 0.2 }, { 0.8, 0.4 }, { 1, 1 } }),
+		})
+		emitter(above, {
 			Texture = TEX.star,
 			Color = ColorSequence.new(WHITE, GOLD),
 			LightEmission = 0.8,
-			Rate = 26 / SLOW,
+			Rate = 60 / SLOW,
 			Lifetime = NumberRange.new(1.6 * SLOW, 2.4 * SLOW),
 			Speed = NumberRange.new(16 / SLOW, 26 / SLOW),
 			EmissionDirection = Enum.NormalId.Bottom,
