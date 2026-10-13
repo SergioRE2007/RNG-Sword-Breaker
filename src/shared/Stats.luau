@@ -19,13 +19,13 @@ function Stats.list(player: Player, attribute: string): { number }
 end
 
 -- Copias de espada del inventario: { id, sword = índice de Config.Swords, metal y size = índices de Config.Metals y Sizes (0 = ninguno), trait = índice de
--- Config.Traits o 0, grade = índice de Config.Grades o 0 }.
+-- Config.Traits o 0, grade = índice de Config.Grades o 0, locked = con el candado de la mochila }.
 function Stats.swords(player: Player)
 	local result = {}
 	for entry in string.gmatch(player:GetAttribute("Swords") or "", "[^,]+") do
-		local id, sword, trait, grade, metal, size = string.match(entry, "^(%d+):(%d+):(%d+):?(%d*):?(%d*):?(%d*)$")
+		local id, sword, trait, grade, metal, size, locked = string.match(entry, "^(%d+):(%d+):(%d+):?(%d*):?(%d*):?(%d*):?(%d*)$")
 		if id then
-			table.insert(result, { id = tonumber(id), sword = tonumber(sword), trait = tonumber(trait), grade = tonumber(grade) or 0, metal = tonumber(metal) or 0, size = tonumber(size) or 0 })
+			table.insert(result, { id = tonumber(id), sword = tonumber(sword), trait = tonumber(trait), grade = tonumber(grade) or 0, metal = tonumber(metal) or 0, size = tonumber(size) or 0, locked = locked == "1" })
 		end
 	end
 	return result

@@ -222,6 +222,9 @@ local function swordTip(copy): (string, Color3, boolean)
 			border = if grade.tones then Modifiers.toneAt(grade, os.clock() * 3) else Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
 		end
 	end
+	if copy.locked then
+		table.insert(lines, `<font color="{hex(Ui.COLORS.coins)}">{Lang.t(nil, "Locked")}</font>`)
+	end
 	-- El daño destaca (pedido por el usuario: no tan plano): la palabra en rojo cálido y el número más grande en dorado.
 	table.insert(lines, TIP_SEPARATOR)
 	table.insert(lines, `<font color="{TIP_DAMAGE}">{Lang.t(nil, "Damage")}</font> <font size="{TIP_VALUE}" color="{TIP_GOLD}">{Format.multiplier(Stats.swordDamage(copy))}</font>`)
@@ -393,14 +396,50 @@ function Backpack.start()
 	local sellButton = action("Sell", Lang.t(nil, "Sell weapons"), Ui.COLORS.red, 198, 100)
 	bestButton.TextSize = 23
 	sellButton.TextSize = 17
+	-- Candado (pedido por el usuario): con el modo encendido, pulsar un arma la bloquea o desbloquea en vez de
+	-- equiparla. Las bloqueadas no se venden (ni a mano ni solas) ni salen en el comercio; lo valida el servidor.
+	local lockButton = action("Lock", "", Ui.COLORS.gray, 308, 62)
+	local lockIcon: Frame? = nil
+	local lockMode = false
 
 	local selected = nil -- id de la última copia pulsada (la que enseña la barra de abajo)
 	local swordCells = {} -- [id] = casilla
 	local swordsKey = nil
+	local refreshSelection
 
 	sellButton.Activated:Connect(function()
 		SellMenu.open(selected)
 	end)
+	local function paintLock()
+		if lockIcon then
+			lockIcon:Destroy()
+		end
+		lockButton.BackgroundColor3 = if lockMode then Ui.COLORS.coins else Ui.COLORS.gray
+		local icon = Ui.lockIcon(lockButton, if lockMode then Ui.COLORS.red else Ui.COLORS.coins, not lockMode)
+		icon.Size = UDim2.fromScale(0.62, 0.62)
+		Ui.layer(icon, lockButton.ZIndex)
+		lockIcon = icon
+		Ui.setSelected(lockButton, lockMode)
+	end
+	paintLock()
+	lockButton.Activated:Connect(function()
+		Sfx.play("click")
+		lockMode = not lockMode
+		paintLock()
+		refreshSelection(Stats.swords(player), Stats.list(player, "Loadout"))
+	end)
+	Ui.tip(lockButton, function()
+		return Lang.t(nil, "Lock weapons: locked ones can't be sold or traded"), Ui.COLORS.coins
+	end)
+	-- Pulsar un arma: la equipa o la quita o, con el modo candado, la bloquea o desbloquea.
+	local function pressSword(copy)
+		Sfx.play("equip")
+		if lockMode then
+			Remotes.LockSword:FireServer(copy.id)
+		else
+			Remotes.EquipSword:FireServer(copy.id)
+		end
+	end
 	bestButton.Activated:Connect(function()
 		-- Las de más daño a los huecos (Config.Loadout.Slots): lo decide el servidor.
 		Sfx.play("equip")
@@ -408,7 +447,7 @@ function Backpack.start()
 	end)
 
 	-- `worn` = ids de las copias equipadas, por orden de hueco.
-	local function refreshSelection(copies, worn: { number })
+	function refreshSelection(copies, worn: { number })
 		local chosen = nil
 		for _, copy in copies do
 			if copy.id == selected then
@@ -426,7 +465,9 @@ function Backpack.start()
 		for id, cell in swordCells do
 			cell.Select.Visible = id == selected
 		end
-		if chosen then
+		if lockMode then
+			detail.Text = `<font color="{hex(Ui.COLORS.coins)}">{Lang.t(nil, "Lock mode")}</font>\n<font color="{Ui.SOFT}">{Lang.t(nil, "Tap a weapon to lock it")}</font>`
+		elseif chosen then
 			local sword = Config.Swords[chosen.sword]
 			local trait = Config.Traits[chosen.trait]
 			local grade = Config.Grades[chosen.grade]
@@ -452,6 +493,20 @@ function Backpack.start()
 			Ui.cellTag(cell, "E", Ui.COLORS.green)
 		elseif inBag then
 			Ui.cellTag(cell, "B", Ui.COLORS.coins) -- depositada en la Bolsa de oro
+		end
+		if copy.locked then
+			-- Candado arriba, junto a la "E" o la "B" si la lleva.
+			local badge = Instance.new("Frame")
+			badge.Name = "Locked"
+			badge.Position = UDim2.fromOffset(if isEquipped or inBag then 28 else 4, 4)
+			badge.Size = UDim2.fromOffset(22, 22)
+			badge.BackgroundColor3 = Ui.COLORS.dark
+			badge.BorderSizePixel = 0
+			badge.Parent = cell
+			Ui.round(badge, 6)
+			Ui.stroke(badge, Color3.new(0, 0, 0), 2)
+			Ui.lockIcon(badge, Ui.COLORS.coins)
+			Ui.layer(badge, 4)
 		end
 		-- Metal (círculo de su color) y tamaño (cartelito con su inicial) en el lado izquierdo, bajo la "E".
 		local metalDef, sizeDef = Permanent.metal(copy), Permanent.size(copy)
@@ -534,7 +589,7 @@ function Backpack.start()
 					copy = candidate
 				end
 			end
-			local key = if copy then `{copy.id}:{copy.sword}:{copy.metal}:{copy.size}:{copy.trait}:{copy.grade}` else ""
+			local key = if copy then `{copy.id}:{copy.sword}:{copy.metal}:{copy.size}:{copy.trait}:{copy.grade}:{copy.locked}` else ""
 			if key == slotKeys[index] then
 				continue
 			end
@@ -548,8 +603,7 @@ function Backpack.start()
 				cell.Name = "Sword"
 				cell.Activated:Connect(function()
 					-- Quitar la del hueco (la última equipada no se puede: el servidor no la quita).
-					Sfx.play("equip")
-					Remotes.EquipSword:FireServer(copy.id)
+					pressSword(copy)
 				end)
 			else
 				cell = Ui.cell(holder, Ui.COLORS.gray)
@@ -576,7 +630,7 @@ function Backpack.start()
 			seen[copy.id] = true
 			local isEquipped = table.find(worn, copy.id) ~= nil
 			local inBag = Stats.isDeposited(player, copy.id)
-			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{isEquipped}:{inBag}`
+			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{isEquipped}:{inBag}:{copy.locked}`
 			if cellKeys[copy.id] == key then
 				continue
 			end
@@ -592,8 +646,7 @@ function Backpack.start()
 			cell.Activated:Connect(function()
 				-- Pulsar un arma la equipa, o la quita si ya lo estaba (como en el menú de la bolsa).
 				selected = copy.id
-				Sfx.play("equip")
-				Remotes.EquipSword:FireServer(copy.id)
+				pressSword(copy)
 				refreshSelection(Stats.swords(player), Stats.list(player, "Loadout"))
 			end)
 			swordCells[copy.id] = cell

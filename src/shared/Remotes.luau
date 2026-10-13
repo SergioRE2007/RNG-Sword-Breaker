@@ -8,6 +8,7 @@ local NAMES = {
 	"EquipSword", -- cliente -> servidor: (id) equipar una copia de espada del inventario, o quitarla si ya lo estaba (hasta Config.Loadout.Slots a la vez; sin huecos sustituye a la de menos daño); ("best") equipar las de más daño
 	"SellSword", -- cliente -> servidor: (id) vender una copia que no esté equipada
 	"SellSwords", -- cliente -> servidor: ({ ids }) venta múltiple validada por el servidor
+	"LockSword", -- cliente -> servidor: (id) poner o quitar el candado a una copia: bloqueada no se vende (ni a mano ni sola) ni se comercia
 	"SetAutoSell", -- cliente -> servidor: (rarity) vender solas las espadas de rareza menor; 0 = no
 	"Teleport", -- cliente -> servidor: (destino) "hub", "home" (su parcela), "shops" (tiendas del hub) o "dungeon" (portal)
 	"Teleported", -- servidor -> cliente: viaje completado, cerrar menús y escenas

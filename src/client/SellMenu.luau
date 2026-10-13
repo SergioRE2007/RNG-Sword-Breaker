@@ -138,7 +138,8 @@ function SellMenu.start()
 			return a.id < b.id
 		end)
 		for position, copy in copies do
-			if Stats.isEquipped(player, copy.id) or Stats.isDeposited(player, copy.id) then continue end
+			-- Las bloqueadas con el candado de la mochila no salen (el servidor tampoco las vende).
+			if copy.locked or Stats.isEquipped(player, copy.id) or Stats.isDeposited(player, copy.id) then continue end
 			eligible[copy.id] = true
 			local tier = Rarity.tier(Stats.rarity(copy))
 			local cell = swordCell(stock, copy, false, false)

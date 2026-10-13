@@ -150,7 +150,8 @@ local function publish(player: Player)
 	player:SetAttribute("Gems", data.gems)
 	player:SetAttribute("Rebirths", data.rebirths)
 
-	-- "Swords" = copias del inventario como "id:espada:rasgo:grado:metal:tamaño" (0 = ninguno) separadas por comas.
+	-- "Swords" = copias del inventario como "id:espada:rasgo:grado:metal:tamaño" (0 = ninguno) separadas por comas; las
+	-- bloqueadas por el jugador llevan ":1" al final.
 	-- "Loadout" = ids de las copias equipadas, por orden de hueco ("3,7,1"); "Equipped" = el de la primera y
 	-- "SwordLevel" = su tipo (índice de Config.Swords).
 	local swords = {}
@@ -158,7 +159,7 @@ local function publish(player: Player)
 	local equippedType = 1
 	local equippedMetal, equippedSize = 0, 0
 	for _, copy in data.swords do
-		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}`)
+		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}{if copy.locked then ":1" else ""}`)
 		if copy.id == first then
 			equippedType = copy.sword
 			equippedMetal, equippedSize = copy.metal or 0, copy.size or 0
@@ -226,9 +227,9 @@ end
 -- Reconstruye el inventario de espadas a partir de lo guardado, en cualquiera de sus formatos.
 local function loadSwords(data, saved)
 	local swords = {}
-	local function add(sword: number, trait: number?, grade: number?, metal: number?, size: number?): number
+	local function add(sword: number, trait: number?, grade: number?, metal: number?, size: number?, locked: boolean?): number
 		local id = #swords + 1
-		table.insert(swords, { id = id, sword = sword, trait = trait, grade = grade, metal = metal, size = size })
+		table.insert(swords, { id = id, sword = sword, trait = trait, grade = grade, metal = metal, size = size, locked = locked or nil })
 		return id
 	end
 
@@ -262,7 +263,7 @@ local function loadSwords(data, saved)
 				break
 			end
 			if type(copy) == "table" and type(copy.sword) == "number" and Config.Swords[copy.sword] then
-				local id = add(copy.sword, validTrait(copy.trait), validGrade(copy.grade), validMetal(copy.metal), validSize(copy.size))
+				local id = add(copy.sword, validTrait(copy.trait), validGrade(copy.grade), validMetal(copy.metal), validSize(copy.size), copy.locked == true)
 				if type(copy.id) == "number" and copy.id == copy.id then
 					renumbered[copy.id] = id
 				end
@@ -853,10 +854,14 @@ function PlayerData.inBag(data, id: unknown): boolean
 	return table.find(data.bag.slots, id) ~= nil
 end
 
--- Si esa copia está en uso (equipada o en la Bolsa de oro): no se vende, no se va sola con la mochila llena y no
--- se comercia.
+-- Si esa copia está en uso (equipada o en la Bolsa de oro) o bloqueada por el jugador (candado de la mochila): no se
+-- vende, no se va sola con la mochila llena y no se comercia.
 function PlayerData.isLocked(data, id: unknown): boolean
-	return PlayerData.isEquipped(data, id) or PlayerData.inBag(data, id)
+	if PlayerData.isEquipped(data, id) or PlayerData.inBag(data, id) then
+		return true
+	end
+	local copy = PlayerData.findSword(data, id)
+	return copy ~= nil and copy.locked == true
 end
 
 function PlayerData.getCoins(player: Player): number

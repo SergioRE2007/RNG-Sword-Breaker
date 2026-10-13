@@ -314,6 +314,21 @@ local function onSell(player: Player, id: unknown)
 	onSellMany(player, { id })
 end
 
+-- Candado de la mochila: la copia bloqueada cuenta como "en uso" (PlayerData.isLocked) y no se vende ni se comercia.
+-- Si ya estaba en un trato abierto, server/Trade la vuelve a mirar al cerrarlo y no la deja pasar.
+local function onLock(player: Player, id: unknown)
+	local data = PlayerData.read(player)
+	if not data or not PlayerData.findSword(data, id) then
+		return
+	end
+	PlayerData.edit(player, function(edited)
+		local copy = PlayerData.findSword(edited, id)
+		if copy then
+			copy.locked = if copy.locked then nil else true
+		end
+	end)
+end
+
 local function onSetAutoSell(player: Player, rarity: unknown)
 	-- rarity ~= rarity descarta NaN. Infinito tampoco: acabaría en los datos guardados, y un guardado que falla
 	-- deja al jugador con lo que tenía antes (cosas ya cambiadas en un trato incluidas).
@@ -331,6 +346,7 @@ function Gacha.start()
 	Remotes.EquipSword.OnServerEvent:Connect(onEquip)
 	Remotes.SellSword.OnServerEvent:Connect(onSell)
 	Remotes.SellSwords.OnServerEvent:Connect(onSellMany)
+	Remotes.LockSword.OnServerEvent:Connect(onLock)
 	Remotes.SetAutoSell.OnServerEvent:Connect(onSetAutoSell)
 	game:GetService("Players").PlayerRemoving:Connect(function(player)
 		lastRoll[player] = nil

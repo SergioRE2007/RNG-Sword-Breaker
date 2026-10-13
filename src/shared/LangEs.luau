@@ -382,6 +382,10 @@ return {
 	["Get 100 weapons of 1 in 1M or rarer"] = "Saca 100 armas de 1 entre 1M o más",
 	-- Ventana SellMenu
 	["Sell weapons"] = "Vender armas",
+	["Lock weapons: locked ones can't be sold or traded"] = "Bloquear armas: las bloqueadas no se venden ni se comercian",
+	["Lock mode"] = "Modo candado",
+	["Tap a weapon to lock it"] = "Pulsa un arma para bloquearla",
+	["Locked"] = "Bloqueada",
 	["Select all"] = "Seleccionar todo",
 	["Sell selected"] = "Vender selección",
 	["Confirm sale? {count} · +{gems} gems"] = "¿Confirmar venta? {count} · +{gems} gemas",
