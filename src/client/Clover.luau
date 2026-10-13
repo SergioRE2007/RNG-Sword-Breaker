@@ -38,11 +38,11 @@ function Clover.isActive(): boolean
 	return active or os.clock() - closedAt < 0.2
 end
 
--- Objetos de tu parcela que aún no llevan trébol.
+-- Objetos de cualquier parcela con dueño (la tuya o la de otro) que aún no llevan trébol.
 local function candidates(): { BasePart }
 	local list = {}
 	for _, part in CollectionService:GetTagged("Destructible") do
-		if part:IsA("BasePart") and part:GetAttribute("Owner") == player.UserId and not part:GetAttribute("Clover") and part:IsDescendantOf(workspace) then
+		if part:IsA("BasePart") and part:GetAttribute("Owner") ~= nil and not part:GetAttribute("Clover") and part:IsDescendantOf(workspace) then
 			table.insert(list, part)
 		end
 	end
@@ -126,7 +126,7 @@ local function build()
 	text.Size = UDim2.new(1, -62 - 136, 1, 0)
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	text.TextScaled = true
-	text.Text = Lang.t(nil, "Pick an object on your plot")
+	text.Text = Lang.t(nil, "Pick an object on any plot")
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = 24
 	limit.MinTextSize = 14

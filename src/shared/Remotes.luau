@@ -29,7 +29,7 @@ local NAMES = {
 	"Rebirth", -- cliente -> servidor: pagar el siguiente renacimiento (solo monedas, no quita nada)
 	"BuyPassTickets", -- cliente -> servidor: (clave de Config.Gamepasses) comprar ese pase con tickets de misión
 	"BuyTicketItem", -- cliente -> servidor: (posición en Config.Tickets.Shop) comprar ese objeto con tickets de misión
-	"UseClover", -- cliente -> servidor: (objeto de tu parcela) gastar un Trébol de la suerte en él
+	"UseClover", -- cliente -> servidor: (objeto de una parcela, tuya o de otro) gastar un Trébol de la suerte en él
 	"RedeemCode", -- cliente -> servidor: (texto) canjear un código de regalo de Config.Codes
 	"TutorialCheck", -- cliente -> servidor: (id del paso, opcional) "creo que ya he cumplido el paso del tutorial": el servidor lo comprueba
 	"TutorialSkip", -- cliente -> servidor: dar el tutorial por terminado, sin premio

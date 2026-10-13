@@ -213,6 +213,12 @@ function Destructibles.boost(part: Instance, luck: number): boolean
 	return true
 end
 
+-- De quién es ese objeto vivo de una parcela (nil si no lo es): el Trébol de la suerte se puede poner en los de otros.
+function Destructibles.ownerOf(part: Instance): Player?
+	local object = objects[part]
+	return if object then object.plot.owner else nil
+end
+
 -- Si esa pieza es un objeto vivo de la parcela del jugador (lo único de aquí que puede atacar).
 function Destructibles.owns(player: Player, part: Instance): boolean
 	local object = objects[part]

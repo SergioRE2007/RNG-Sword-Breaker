@@ -1,5 +1,6 @@
--- Trébol de la suerte (Config.Clover; pedido por el usuario): el jugador lo pulsa en la mochila, elige un objeto de su
--- parcela (client/Clover) y la suerte de armas de ese objeto se multiplica por Config.Clover.Luck, encima de todo lo
+-- Trébol de la suerte (Config.Clover; pedido por el usuario): el jugador lo pulsa en la mochila, elige un objeto de
+-- cualquier parcela, suya o de otro (pedido por el usuario: se puede regalar la suerte; las armas se las lleva el
+-- dueño, que es el único que puede romperlo) (client/Clover) y la suerte de armas de ese objeto se multiplica por Config.Clover.Luck, encima de todo lo
 -- que ya tuviera. Entra una sola vez, en la suerte del objeto (Destructibles.boost), y cada objeto admite un solo trébol.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -22,7 +23,8 @@ local cfg = Config.Clover
 local BAD = Color3.fromRGB(255, 110, 110)
 
 local function onUse(player: Player, part: unknown)
-	if typeof(part) ~= "Instance" or not Destructibles.owns(player, part) then
+	local owner = if typeof(part) == "Instance" then Destructibles.ownerOf(part) else nil
+	if not owner then
 		return
 	end
 	local data = PlayerData.read(player)
@@ -44,7 +46,13 @@ local function onUse(player: Player, part: unknown)
 			edited.items[cfg.Item] -= 1
 		end)
 	end
-	Tell.notice(player, Config.Items[cfg.Item].color, "Clover placed: x{n} weapon luck!", { n = Format.short(luck, player) })
+	local color = Config.Items[cfg.Item].color
+	if owner == player then
+		Tell.notice(player, color, "Clover placed: x{n} weapon luck!", { n = Format.short(luck, player) })
+	else
+		Tell.notice(player, color, "Clover placed on {player}'s object: x{n} weapon luck!", { player = owner.DisplayName, n = Format.short(luck, player) })
+		Tell.notice(owner, color, "{player} put a clover on one of your objects: x{n} weapon luck!", { player = player.DisplayName, n = Format.short(luck, owner) })
+	end
 end
 
 -- Pone (o quita, con 0) el trébol de prueba de ese jugador. Quien llama ya ha comprobado que es administrador.

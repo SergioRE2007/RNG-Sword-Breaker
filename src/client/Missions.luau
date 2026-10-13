@@ -250,7 +250,7 @@ function Missions.start()
 		desc.TextYAlignment = Enum.TextYAlignment.Top
 		desc.TextWrapped = true
 		desc.TextColor3 = Color3.fromRGB(215, 225, 240)
-		desc.Text = Lang.t(nil, "Pick an object on your plot: {luck} weapon luck, on top of all the luck you already have.", { luck = `<font color="#{Color3.fromRGB(255, 225, 90):ToHex()}">x{Config.Clover.Luck}</font>` })
+		desc.Text = Lang.t(nil, "Pick an object on any plot: {luck} weapon luck, on top of all the luck it already has.", { luck = `<font color="#{Color3.fromRGB(255, 225, 90):ToHex()}">x{Config.Clover.Luck}</font>` })
 		local owned = ownedChip(card)
 
 		local buy = Ui.button(card, `        {offer.price}`, Ui.COLORS.green)
