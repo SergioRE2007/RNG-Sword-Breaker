@@ -294,7 +294,22 @@ end
 -- bolsa por la que va el jugador).
 function Stats.bagCoins(player: Player, copy, noPotion: boolean?, stage: number?): number
 	local boost = BagInfo.boost(stage or player:GetAttribute("BagStage") or 1)
-	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * upgrade(player, "bagBoost") * upgrade(player, "fortune") * boost
+	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * Stats.bagMult(player) * boost
+end
+
+-- Por cuánto multiplican las mejoras las monedas de la bolsa. No le quitan más vida: solo pagan más por golpe.
+function Stats.bagMult(player: Player): number
+	return upgrade(player, "bagBoost") * upgrade(player, "fortune")
+end
+
+-- Vida por segundo que le quitan a la bolsa las armas depositadas (su tamaño es vida, BagInfo.size): lo de sus golpes
+-- sin ningún multiplicador de monedas.
+function Stats.bagPower(player: Player, noPotion: boolean?): number
+	local total = 0
+	for _, copy in Stats.deposited(player) do
+		total += BagInfo.coins(Stats.bagHit(player, copy, noPotion))
+	end
+	return total / Config.GoldBag.HitTime
 end
 
 -- Lo que tiene el jugador de la moneda con la que se paga una mejora (`currency` de Config.Upgrades): monedas, gemas

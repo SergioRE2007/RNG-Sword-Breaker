@@ -518,7 +518,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			end
 			local antes = bolsa.stage
 			local coins
-			bolsa.stage, bolsa.taken, _, coins = BagInfo.collect(bolsa.stage, bolsa.taken, base)
+			bolsa.stage, bolsa.taken, _, coins = BagInfo.collect(bolsa.stage, bolsa.taken, base, Stats.bagMult(player))
 			bolsaNueva = bolsaNueva or bolsa.stage > antes
 			estado.coins += coins
 			res.ganado += coins
@@ -584,7 +584,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			coinMult = Stats.coins(player)
 			gacha = Stats.gachaLuck(player)
 			spawnTime = Stats.spawnTime(player)
-			bolsaRate = Stats.bagRate(player, true, 1) -- en la primera bolsa: lo que sube cada una lo pone BagInfo.collect
+			bolsaRate = Stats.bagPower(player, true) -- vida por segundo: las monedas las pone BagInfo.collect
 			local otros = math.max(Upgrades.value("capacity", estado.upgrades.capacity or 0) - 1, 0)
 			armas, andanada, ritmo = {}, 0, 0
 			for slot, copy in Stats.loadout(player) do

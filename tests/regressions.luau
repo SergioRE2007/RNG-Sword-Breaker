@@ -1551,8 +1551,10 @@ do
 	stage, taken, emptied = info.advance(1, 0, 100 + 400 + 1600 + 50)
 	equal(stage == 4 and taken == 50 and emptied == 3, true, "bolsa: varias vaciadas de una vez")
 	local got
-	stage, taken, emptied, got = info.collect(1, 0, 100 + 200 + 50)
-	equal(stage == 3 and taken == 200 and emptied == 2 and got == 700, true, "bolsa: cada vaciada dobla lo que sacan los golpes")
+	stage, taken, emptied, got = info.collect(1, 0, 100 + 250)
+	equal(stage == 2 and taken == 250 and emptied == 1 and got == 100 + 500, true, "bolsa: su tamaño es vida, y cada vaciada dobla lo que pagan los golpes")
+	stage, taken, emptied, got = info.collect(1, 0, 50, 10)
+	equal(stage == 1 and taken == 50 and got == 500, true, "bolsa: los multiplicadores de monedas no le quitan más vida")
 	equal(info.boost(1) == 1 and info.boost(4) == 8, true, "bolsa: x2 por bolsa vaciada")
 	stage, taken, emptied = info.advance(1, 30, 0)
 	equal(stage == 1 and taken == 30 and emptied == 0, true, "bolsa: sin monedas no pasa nada")
@@ -1661,7 +1663,7 @@ do
 	equal(returned.coins > leftCoins, true, "fuera: se cobra al volver")
 	local awayEvent = back.remotes.BagEvent.sent[1]
 	equal(awayEvent[2] == "away" and awayEvent[3].coins > 0 and awayEvent[3].seconds >= 3500, true, "fuera: se le avisa con lo ganado")
-	local awayBase = back.load("src/shared/Stats").bagRate(back.player, true, 1) * awayEvent[3].seconds
+	local awayBase = back.load("src/shared/Stats").bagPower(back.player, true) * awayEvent[3].seconds
 	local expectedStage, _, _, expectedCoins = back.load("src/shared/BagInfo").collect(leftStage, saved.bag.taken, awayBase)
 	expectedCoins = math.floor(expectedCoins)
 	equal(awayEvent[3].coins, expectedCoins, "fuera: lo de un golpe por segundo de cada arma")
