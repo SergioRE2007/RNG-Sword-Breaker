@@ -29,7 +29,7 @@ local NAMES = {
 	"Rebirth", -- cliente -> servidor: pagar el siguiente renacimiento (solo monedas, no quita nada)
 	"BuyPassTickets", -- cliente -> servidor: (clave de Config.Gamepasses) comprar ese pase con tickets de misión
 	"BuyTicketItem", -- cliente -> servidor: (posición en Config.Tickets.Shop) comprar ese objeto con tickets de misión
-	"UseClover", -- cliente -> servidor: (objeto de tu parcela) gastar un Trébol de la suerte en él
+	"UseClover", -- cliente -> servidor: (objeto de una parcela, tuya o de otro) gastar un Trébol de la suerte en él
 	"RedeemCode", -- cliente -> servidor: (texto) canjear un código de regalo de Config.Codes
 	"TutorialCheck", -- cliente -> servidor: (id del paso, opcional) "creo que ya he cumplido el paso del tutorial": el servidor lo comprueba
 	"TutorialSkip", -- cliente -> servidor: dar el tutorial por terminado, sin premio
@@ -62,7 +62,7 @@ local NAMES = {
 	"SetLang", -- cliente -> servidor: ("es" o "en") el idioma que tengo elegido para esta experiencia (client/Language): en ese me escribe el servidor
 	"Rejoin", -- cliente -> servidor: ({ fight, dungeon }) llevo mucho rato sin tocar nada: reconéctame antes de que Roblox me expulse (fight = peleaba en Auto, dungeon = zona en la que estaba)
 	"AdminWeather",-- cliente -> servidor: (acción) menú de admin, solo administradores (server/Admin): un id de Config.Weather.Events = poner ese clima ya, "none" = despejar, "auto" = volver al calendario, "next" = el siguiente de la lista
-	"AdminCommand", -- cliente -> servidor: (acción, ...) órdenes del menú de admin, solo administradores (server/AdminCommands): "give" (userId o 0 = todos, objeto, cantidad), "sword", "kick" (userId), "goto" / "bring" (userId), "announce" (texto), "banner" (texto), "boost" (stat, multiplicador, minutos), "stopBoost" (stat); con "all" delante, en todos los servidores
+	"AdminCommand", -- cliente -> servidor: (acción, ...) órdenes del menú de admin, solo administradores (server/AdminCommands): "give" (userId o 0 = todos, objeto, cantidad), "sword", "kick" (userId), "goto" / "bring" (userId), "announce" (texto), "banner" (texto), "boost" (stat, multiplicador, minutos), "stopBoost" (stat), "clover" (suerte del trébol de prueba, 0 = quitarlo); con "all" delante, en todos los servidores
 	"AdminBanner", -- servidor -> clientes: (texto) mensaje grande de un administrador (client/BoostHud)
 	"WeatherSchedule", -- servidor -> cliente: (hora de GetServerTimeNow) cuándo empieza el siguiente clima; solo se manda a los administradores, los demás no ven la cuenta atrás
 }

@@ -30,14 +30,6 @@ function ObjectSpec.typeLuck(def): number
 	return (def.luck or 1) * def.rarity ^ Config.ObjectRolls.TypeLuckPower
 end
 
--- Suerte de los objetos "de siempre" de un jugador con esa suerte de destructibles (Stats.luck): la que da un tipo
--- tan raro como los que le salen, común y de tamaño normal. Solo sirve para medir lo difícil que era un arma para
--- él (server/Gacha): lo que pasa de ahí es mérito del objeto que le ha tocado. No da suerte a ninguna tirada.
-function ObjectSpec.usualLuck(luck: number): number
-	local rarest = Config.Destructibles[#Config.Destructibles].rarity
-	return math.clamp(luck, 1, rarest) ^ Config.ObjectRolls.TypeLuckPower
-end
-
 -- Entre qué escalas puede salir ese tipo: los límites de Config.ObjectSizes, recortados para que no pase de
 -- MaxWidth x MaxHeight (ni de lo que ponga el propio objeto).
 function ObjectSpec.scaleLimits(def): (number, number)
@@ -72,6 +64,79 @@ local function pick(list, luck: (any) -> number): number
 		end
 	end
 	return 1
+end
+
+-- Probabilidad de cada posición de `list` con esa suerte, con la misma cuenta que `pick`.
+local function chances(list, luck: (any) -> number): { number }
+	local result = table.create(#list, 0)
+	local left = 1
+	for index = #list, 2, -1 do
+		local chance = math.min(luck(list[index]) / list[index].odds, 1)
+		result[index] = left * chance
+		left *= 1 - chance
+	end
+	result[1] = left
+	return result
+end
+
+-- Suerte media, por tirada de arma, de los objetos que le aparecen a un jugador: `typeLuck` = la suerte con la que
+-- se elige el tipo (Stats.luck por Stats.spawnLuck) y `luck` = Stats.objectLuck. Cuenta todo lo que puede salirle
+-- (tipo, rareza y tamaño, cada uno con su probabilidad de ahora) y pesa cada objeto por las tiradas que da. Solo
+-- sirve para medir lo difícil que era un arma (server/Gacha): con ella, "1 entre N" es 1 de cada N tiradas, con
+-- cualquier suerte, clima o poción. No da suerte a ninguna tirada.
+function ObjectSpec.meanLuck(typeLuck: number, luck: number): number
+	local cfg = Config.ObjectRolls
+	local total, rolls = 0, 0
+	local left = 1
+	for index = #Config.Destructibles, 1, -1 do
+		local def = Config.Destructibles[index]
+		local chance = if index == 1 then 1 else math.min(typeLuck / def.rarity, 1)
+		local share = left * chance
+		left *= 1 - chance
+		if share <= 0 then
+			continue
+		end
+		local lowest, highest = ObjectSpec.scaleLimits(def)
+		local qualities = chances(Config.ObjectRarities, function()
+			return luck * (def.rarityLuck or 1)
+		end)
+		-- Lo que no llega a minRarity sale de esa rareza.
+		for quality = 1, (def.minRarity or 1) - 1 do
+			qualities[def.minRarity] += qualities[quality]
+			qualities[quality] = 0
+		end
+		for quality, qualityChance in qualities do
+			if qualityChance <= 0 then
+				continue
+			end
+			local rarity = Config.ObjectRarities[quality]
+			local sizeLuck = luck * rarity.sizeLuck * (def.sizeLuck or 1)
+			local sizes = chances(Config.ObjectSizes, function(entry)
+				return if entry.min >= 1 then sizeLuck else 1
+			end)
+			for size, sizeChance in sizes do
+				local class = Config.ObjectSizes[size]
+				-- Entre qué escalas cae de verdad (la misma cuenta que ObjectSpec.roll) y la media de escala ^ SizeLuckPower.
+				local function fit(scale: number): number
+					if scale > 1 then
+						return 1 + (scale - 1) * (highest - 1) / (HIGHEST - 1)
+					elseif LOWEST < 1 then
+						return 1 - (1 - scale) * (1 - lowest) / (1 - LOWEST)
+					end
+					return scale
+				end
+				local from, to = fit(class.min), fit(class.max)
+				local power = cfg.SizeLuckPower + 1
+				local sizeMean = if to - from > 1e-6 then (to ^ power - from ^ power) / (power * (to - from)) else from ^ cfg.SizeLuckPower
+				local objectLuck = math.min(ObjectSpec.typeLuck(def) * rarity.luck * sizeMean, cfg.MaxLuck)
+				local amount = math.clamp(rarity.rolls + class.rolls + (def.rolls or 0), 0, cfg.MaxRolls)
+				local weight = share * qualityChance * sizeChance * amount
+				total += weight * objectLuck
+				rolls += weight
+			end
+		end
+	end
+	return if rolls > 0 then total / rolls else 1
 end
 
 -- Lo que le toca a un objeto de ese tipo al aparecer. `luck` = Stats.objectLuck del dueño. Devuelve

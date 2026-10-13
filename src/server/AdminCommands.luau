@@ -327,6 +327,14 @@ local function onCommand(admin: Player, action: unknown, ...: unknown)
 		if action == "weather" then
 			weather(admin, a)
 		end
+	elseif action == "clover" then
+		-- Trébol de prueba (suerte a medida, 0 = quitarlo): solo para el propio administrador, para probar las tiradas.
+		local luck = require(script.Parent.Clover).setCustom(admin, a)
+		if luck == nil then
+			Tell.notice(admin, BAD, "That clover luck isn't valid")
+		elseif luck > 0 then
+			print(`[Admin] {admin.Name} sets a test clover of x{luck}`)
+		end
 	elseif action == "kick" then
 		kick(admin, a)
 	elseif action == "goto" or action == "bring" then

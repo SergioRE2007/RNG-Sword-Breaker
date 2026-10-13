@@ -175,10 +175,9 @@ Config.Gacha = {
 	FreeRoll = false, -- true: vuelven los botones "Tirar" y "Auto" y la tirada gratis cada RollTime segundos de antes de que las armas salieran de los objetos
 	RollTime = 2, -- (sin uso: con FreeRoll el tiempo por tirada es el de la mejora "Velocidad de aparición", Stats.rollTime)
 	MinRollTime = 0.5, -- (solo con FreeRoll) nunca se tira más rápido que esto
-	-- Lo difícil que era un arma para el jugador ("1 entre N", Permanent.odds: arma, metal y tamaño, contra la suerte
-	-- de sus objetos de siempre, ObjectSpec.usualLuck, y sin pasar de lo raro que era el objeto que se la ha dado:
-	-- la cuenta está en server/Gacha) decide cuánto se celebra. Como son tres tiradas a la vez, llegar a un N es
-	-- más fácil de lo que suena.
+	-- Lo difícil que era un arma para el jugador ("1 entre N": la probabilidad de que una tirada suya cualquiera
+	-- saque algo así de raro o más, Permanent.rollOdds con la suerte media de sus objetos, ObjectSpec.meanLuck; la
+	-- cuenta está en server/Gacha) decide cuánto se celebra: "1 entre 1.000" es una de cada 1.000 tiradas.
 	-- Las tiradas se enseñan en el mundo (client/RollReveal): la energía sale del objeto roto, se destapa el arma y
 	-- vuela al jugador. Desde estos "1 entre N" sube de nivel el espectáculo: Normal por debajo del primero, y luego
 	-- Genial (en el mundo, más cargada) y las cuatro con cinemática (client/RollCinematic): Estrella fugaz, Herrero
@@ -205,7 +204,7 @@ Config.Items = {
 	-- Trébol de la suerte (pedido por el usuario): se pulsa en la mochila, se elige un objeto de tu parcela y su suerte
 	-- de armas se multiplica por Config.Clover.Luck, encima de todo lo que ya tuviera (server/Clover). Se compra con
 	-- Robux (Config.Products) o con tickets (Config.Tickets.Shop); no cae de nada y no se comercia.
-	luckClover = { name = "Lucky Clover", description = "Tap it and pick an object on your plot: its weapon luck is multiplied by 999.", color = Color3.fromRGB(90, 220, 130), image = "trebol", noTrade = true },
+	luckClover = { name = "Lucky Clover", description = "Tap it and pick an object on any plot: its weapon luck is multiplied by 999.", color = Color3.fromRGB(90, 220, 130), image = "trebol", noTrade = true },
 	-- Lo sueltan los enemigos de las mazmorras y se saca al desmontar armadura. No cae de los objetos (sin dropChance).
 	gradeCrystal = { name = "Grade Crystal", description = "Spent at the Grades shop in the hub: gives a random grade to the sword you choose. Dropped by dungeon enemies.", color = Color3.fromRGB(200, 120, 255), image = "cristal_grado" },
 }
@@ -980,7 +979,7 @@ Config.Clover = { Item = "luckClover", Luck = 999 }
 -- precio real; item y amount = lo que da (clave de Config.Items). icon, tag, ribbon y color, como en los pases.
 Config.ProductOrder = { "clover1", "clover5", "clover10" }
 Config.Products = {
-	clover1 = { id = 3718055245, name = "Lucky Clover", price = 50, item = "luckClover", amount = 1, icon = "trebol", tag = "x1", color = Color3.fromRGB(90, 220, 130), perksText = { "Pick an object on your plot: x999 weapon luck", "Stacks with all the luck you already have" } },
+	clover1 = { id = 3718055245, name = "Lucky Clover", price = 50, item = "luckClover", amount = 1, icon = "trebol", tag = "x1", color = Color3.fromRGB(90, 220, 130), perksText = { "Pick an object on any plot: x999 weapon luck", "Stacks with all the luck it already has" } },
 	clover5 = { id = 3718055248, name = "Pack of 5 Clovers", price = 225, item = "luckClover", amount = 5, icon = "trebol_5", tag = "x5", ribbon = "-10%", color = Color3.fromRGB(60, 205, 190), perksText = { "5 clovers: x999 weapon luck on 5 objects", "Cheaper than buying one at a time" } },
 	clover10 = { id = 3718055274, name = "Pack of 10 Clovers", price = 400, item = "luckClover", amount = 10, icon = "trebol_10", tag = "x10", ribbon = "-20%", color = Color3.fromRGB(255, 190, 60), perksText = { "10 clovers: x999 weapon luck on 10 objects", "The cheapest pack per clover" } },
 }
