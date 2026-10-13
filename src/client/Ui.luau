@@ -1506,25 +1506,53 @@ function Ui.amuletIcon(parent: Instance, color: Color3)
 	shine(stone, UDim2.fromScale(0.3, 0.3), UDim2.fromScale(0.3, 0.3))
 end
 
--- Candado (armas bloqueadas de la mochila): arco gris y cuerpo de `color` con su ojo de cerradura; con `open`, el
--- arco subido y ladeado.
-function Ui.lockIcon(parent: Instance, color: Color3, open: boolean?)
+-- Candado (armas bloqueadas de la mochila): arco de metal con su contorno negro y cuerpo de `color` con brillo y ojo de
+-- cerradura; con `open`, el arco levantado, recto (ladeado se veía doblado). `side` es el lado del icono en píxeles: los trazos van a su medida.
+function Ui.lockIcon(parent: Instance, color: Color3, open: boolean?, side: number?)
+	local px = side or 20
 	local holder = iconHolder(parent, 0)
 	holder.Position = UDim2.fromScale(0.5, 0.5)
 	holder.Size = UDim2.fromScale(0.92, 0.92)
-	local shackle = piece(holder, UDim2.fromScale(0.5, 0.62), UDim2.fromScale(if open then 0.6 else 0.5, if open then 0.3 else 0.38), WHITE, 100)
-	shackle.Name = "Shackle"
-	shackle.BackgroundTransparency = 1
-	local line = shackle:FindFirstChildOfClass("UIStroke")
-	if line then
-		line.Color = Color3.fromRGB(205, 210, 225)
-		line.Thickness = 4
+	local metal = math.max(2, px * 0.1) -- grosor del arco
+	local edge = math.max(1, px * 0.045) -- contorno negro
+	local arcSize = UDim2.fromScale(0.4, 0.56)
+	local arcPosition = UDim2.fromScale(0.5, if open then 0.31 else 0.4)
+	-- El arco son dos aros huecos: uno negro más gordo debajo y el de metal encima, metido en el contorno.
+	local function ring(name: string, grow: number, thickness: number, tone: Color3)
+		local item = piece(holder, arcSize + UDim2.fromOffset(grow, grow), arcPosition, WHITE, 100)
+		item.Name = name
+		item.BackgroundTransparency = 1
+		local line = item:FindFirstChildOfClass("UIStroke")
+		if line then
+			line.Color = tone
+			line.Thickness = thickness
+		end
+		return item
 	end
-	local body = piece(holder, UDim2.fromScale(0.74, 0.5), UDim2.fromScale(0.5, 0.7), color, 5)
+	ring("ShackleEdge", 0, metal + edge * 2, BLACK)
+	ring("Shackle", edge * 2, metal, Color3.fromRGB(214, 220, 236))
+	local body = piece(holder, UDim2.fromScale(0.8, 0.5), UDim2.fromScale(0.5, 0.71), color, math.max(3, px * 0.13))
 	body.Name = "Body"
-	Ui.gradient(body, WHITE, Color3.fromRGB(170, 150, 110), 90)
-	local hole = piece(body, UDim2.fromScale(0.2, 0.36), UDim2.fromScale(0.5, 0.48), BLACK, 100)
-	hole.Name = "Keyhole"
+	local bodyLine = body:FindFirstChildOfClass("UIStroke")
+	if bodyLine then
+		bodyLine.Thickness = math.max(1.5, px * 0.06)
+	end
+	Ui.gradient(body, WHITE, Color3.fromRGB(150, 150, 150), 90)
+	local gleam = shine(body, UDim2.fromScale(0.78, 0.16), UDim2.fromScale(0.5, 0.2))
+	gleam.Name = "Gleam"
+	gleam.BackgroundTransparency = 0.55
+	-- Ojo de cerradura: círculo y rabillo, sin contorno. El cuerpo no es cuadrado: las medidas van corregidas.
+	local dark = color:Lerp(BLACK, 0.78)
+	local function hole(name: string, size: UDim2, position: UDim2, radius: number)
+		local item = piece(body, size, position, dark, radius)
+		item.Name = name
+		local line = item:FindFirstChildOfClass("UIStroke")
+		if line then
+			line:Destroy()
+		end
+	end
+	hole("Keyhole", UDim2.fromScale(0.2, 0.32), UDim2.fromScale(0.5, 0.46), 100)
+	hole("KeyholeStem", UDim2.fromScale(0.09, 0.3), UDim2.fromScale(0.5, 0.66), 1)
 	return holder
 end
 

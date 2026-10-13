@@ -421,8 +421,8 @@ function Backpack.start()
 			lockIcon:Destroy()
 		end
 		lockButton.BackgroundColor3 = if lockMode then Ui.COLORS.coins else Ui.COLORS.gray
-		local icon = Ui.lockIcon(lockButton, if lockMode then Ui.COLORS.red else Ui.COLORS.coins, not lockMode)
-		icon.Size = UDim2.fromScale(0.62, 0.62)
+		local icon = Ui.lockIcon(lockButton, if lockMode then Ui.COLORS.red else Ui.COLORS.coins, not lockMode, 40)
+		icon.Size = UDim2.fromScale(0.66, 0.66)
 		Ui.layer(icon, lockButton.ZIndex)
 		lockIcon = icon
 		Ui.setSelected(lockButton, lockMode)
