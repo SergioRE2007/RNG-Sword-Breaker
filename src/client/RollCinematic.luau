@@ -998,7 +998,7 @@ function THEMES.smith(s, info)
 	held.outline.OutlineColor = WHITE
 
 	cover(s, BLACK, 0, 1, 0.3)
-	Sfx.play("orb")
+	Sfx.play("cine_smith")
 	wait(s, 0.3)
 
 	-- 1. Tres martillazos, cada uno más fuerte; la cámara se va acercando.
@@ -1026,7 +1026,7 @@ function THEMES.smith(s, info)
 		if last then
 			break
 		end
-		Sfx.play("forge_hit", 1, 0.9 + hit * 0.1)
+		Sfx.play("cine_hammer", 1, 0.9 + hit * 0.1)
 		sparks(spot, EMBER, 30 + hit * 20, 26, 0.9)
 		ring(s, strikePoint - Vector3.new(0, 0.5, 0), 2, 12, EMBER, 0.35)
 		animate(s, 0.12, function(t)
@@ -1035,7 +1035,7 @@ function THEMES.smith(s, info)
 	end
 
 	-- 2. El último la templa: estalla en el color de la rareza y el arma se enfría a sus colores de verdad.
-	Sfx.play("forge_super")
+	Sfx.play("cine_quench")
 	Sfx.play("reveal_5")
 	cover(s, bright:Lerp(WHITE, 0.5), 0.15, 1, 0.55)
 	local spot = point(s, strikePoint)
@@ -1152,7 +1152,7 @@ function THEMES.nova(s, info)
 		Transparency = seq({ { 0, 1 }, { 0.5, 0.35 }, { 1, 1 } }),
 	})
 	cover(s, BLACK, 0, 1, 0.4)
-	Sfx.play("orb")
+	Sfx.play("cine_star")
 
 	-- 1. Late y sube de rareza, cada paso más deprisa, más grande y más agudo; la cámara se va acercando.
 	local distance = 52
@@ -1219,6 +1219,7 @@ function THEMES.nova(s, info)
 	end
 	local note = -1
 	local full, wide = size, distance
+	Sfx.play("cine_collapse")
 	animate(s, collapse, function(t)
 		local e = t * t
 		star.Size = Vector3.one * lerp(full, 0.6, e)
@@ -1238,7 +1239,7 @@ function THEMES.nova(s, info)
 		local now = math.floor(e * 16)
 		if now ~= note then
 			note = now
-			Sfx.play("charge", 0.9, 2 ^ (now / 12))
+			Sfx.play("charge", 0.5, 2 ^ (now / 12))
 			ring(s, centre, 44 - now * 2, 2, bright, 0.3, CFrame.Angles(math.rad(14), 0, math.rad(now * 31)))
 		end
 	end)
@@ -1251,10 +1252,10 @@ function THEMES.nova(s, info)
 	wait(s, 0.8)
 
 	-- 4. Estalla.
-	local function explode(shade: Color3, power: number)
+	local function explode(shade: Color3, power: number, sound: string?)
 		cover(s, shade:Lerp(WHITE, 0.75), 0, 1, 0.6)
 		s.shake = 1.6 * power
-		Sfx.play("cine_boom")
+		Sfx.play(sound or "cine_boom", math.min(power, 1))
 		fading(s, Enum.PartType.Ball, CFrame.new(centre), Vector3.one, Vector3.one * 90 * power, shade, 0.3, 0.9)
 		fading(s, Enum.PartType.Ball, CFrame.new(centre), Vector3.one, Vector3.one * 40 * power, WHITE, 0.2, 0.45)
 		ring(s, centre, 2, 110 * power, shade, 0.9, CFrame.Angles(math.rad(10), 0, math.rad(18)))
@@ -1307,7 +1308,7 @@ function THEMES.nova(s, info)
 
 	-- 6. La tarjeta, con el número subiendo; al llegar, otra explosión.
 	card(s, info)
-	explode(if jackpot then GOLD else bright, if jackpot then 0.8 else 0.55)
+	explode(if jackpot then GOLD else bright, if jackpot then 0.8 else 0.55, if jackpot then "cine_gold" else nil)
 	if jackpot then
 		-- Premio gordo: lluvia de estrellas y una explosión más.
 		emitter(point(s, centre + Vector3.new(0, 26, 0), 50), {
