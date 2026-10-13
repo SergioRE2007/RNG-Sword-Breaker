@@ -204,13 +204,28 @@ function ArmorPane.build(pane: Frame, helpers)
 	equipButton.Name = "Equip"
 	equipButton.AnchorPoint = Vector2.new(0, 1)
 	equipButton.Position = UDim2.new(0, RIGHT + 4, 1, -12)
-	equipButton.Size = UDim2.new(0.5, -(RIGHT + 16) / 2, 0, BAR)
+	equipButton.Size = UDim2.new(1 / 3, -(RIGHT + 28) / 3, 0, BAR)
 	equipButton.TextSize = 22
+	-- "Equipar mejores": la mejor pieza de cada hueco, elegida en el servidor.
+	local bestButton = Ui.button(pane, Lang.t(nil, "Equip best"), Ui.COLORS.green)
+	bestButton.Name = "Best"
+	bestButton.AnchorPoint = Vector2.new(0.5, 1)
+	bestButton.Position = UDim2.new(0.5, (RIGHT - 8) / 2, 1, -12)
+	bestButton.Size = UDim2.new(1 / 3, -(RIGHT + 28) / 3, 0, BAR)
+	bestButton.TextSize = 19
+	bestButton.Activated:Connect(function()
+		if #ArmorStats.pieces(player) > 0 then
+			Sfx.play("equip")
+			Remotes.EquipArmor:FireServer("best")
+		else
+			Sfx.play("error")
+		end
+	end)
 	local salvageButton = Ui.button(pane, Lang.t(nil, "Salvage"), Ui.COLORS.red)
 	salvageButton.Name = "Salvage"
 	salvageButton.AnchorPoint = Vector2.new(1, 1)
 	salvageButton.Position = UDim2.new(1, -12, 1, -12)
-	salvageButton.Size = UDim2.new(0.5, -(RIGHT + 16) / 2, 0, BAR)
+	salvageButton.Size = UDim2.new(1 / 3, -(RIGHT + 28) / 3, 0, BAR)
 	salvageButton.TextSize = 19
 
 	local selected: number? = nil
