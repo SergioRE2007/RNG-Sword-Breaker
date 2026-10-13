@@ -382,6 +382,7 @@ return {
 	["Get 100 weapons of 1 in 1M or rarer"] = "Saca 100 armas de 1 entre 1M o más",
 	-- Ventana SellMenu
 	["Sell weapons"] = "Vender armas",
+	["Go to your plot or a dungeon to turn Auto on"] = "Ve a tu parcela o a una mazmorra para encender el Auto",
 	["Trade failed: nothing was exchanged"] = "El trato ha fallado: no se ha cambiado nada",
 	["Lock weapons: locked ones can't be sold or traded"] = "Bloquear armas: las bloqueadas no se venden ni se comercian",
 	["Lock mode"] = "Modo candado",

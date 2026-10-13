@@ -158,11 +158,14 @@ end
 
 -- Radio de su círculo de ataque: el de Config o, con el Auto de la parcela encendido (atributo "AutoFarm", que solo
 -- pone el servidor a quien tiene el pase y está en su parcela), uno que cubre la parcela entera.
-function Stats.reach(player: Player): number
-	if player:GetAttribute("AutoFarm") == true and (player:GetAttribute("Dungeon") or 0) == 0 then
-		return Config.Loadout.FarmRadius
+-- Con el Auto (pase) en una mazmorra el alcance es infinito, pero solo contra enemigos (`enemy`): los objetos de su
+-- parcela siguen con el círculo normal, para que no se rompan desde la mazmorra.
+function Stats.reach(player: Player, enemy: boolean?): number
+	local auto = player:GetAttribute("AutoFarm") == true
+	if (player:GetAttribute("Dungeon") or 0) ~= 0 then
+		return if auto and enemy then math.huge else Config.Loadout.Radius
 	end
-	return Config.Loadout.Radius
+	return if auto then Config.Loadout.FarmRadius else Config.Loadout.Radius
 end
 
 -- Armas que puede llevar equipadas: las de Config más la ventaja "extraSlots" de los pases (Arsenal doble).
