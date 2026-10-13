@@ -922,6 +922,34 @@ local function setCore(on: boolean)
 	pcall(StarterGui.SetCoreGuiEnabled, StarterGui, Enum.CoreGuiType.All, on)
 end
 
+-- Quita de la vista, solo en este cliente y mientras dure la escena, los objetos de las parcelas, tu personaje y
+-- tus armas (pedido por el usuario: en la estrella, que se rueda en el sitio de verdad, molestaban). Las piezas se
+-- hacen transparentes con LocalTransparencyModifier cada fotograma (el bucle de la escena: la cámara de Roblox se
+-- lo cambia al personaje) y lo que brilla (partículas, luces, estelas, contornos, carteles) se apaga; lo que
+-- aparezca mientras tanto, también. `release` lo devuelve todo.
+local function vanish(s, item: Instance)
+	if item:IsA("BasePart") then
+		table.insert(s.faded, item)
+	elseif item:IsA("ParticleEmitter") or item:IsA("Beam") or item:IsA("Trail") or item:IsA("Light") or item:IsA("Highlight") or item:IsA("BillboardGui") then
+		if (item :: any).Enabled then
+			(item :: any).Enabled = false
+			table.insert(s.off, item)
+		end
+	end
+end
+
+local function clearWorld(s)
+	local weapons = workspace:FindFirstChild("OrbitWeapons")
+	for _, group in { workspace:FindFirstChild("Destructibles"), player.Character, weapons and weapons:FindFirstChild(player.Name) } do
+		for _, item in group:GetDescendants() do
+			vanish(s, item)
+		end
+		table.insert(s.watching, group.DescendantAdded:Connect(function(item)
+			vanish(s, item)
+		end))
+	end
+end
+
 -- Devuelve la cámara, el Hud y Lighting, y borra el escenario. Se puede llamar varias veces.
 local function release(s)
 	if s.released then
@@ -929,6 +957,17 @@ local function release(s)
 	end
 	s.released = true
 	s.loop:Disconnect()
+	for _, connection in s.watching do
+		connection:Disconnect()
+	end
+	for _, part in s.faded do
+		part.LocalTransparencyModifier = 0
+	end
+	for _, item in s.off do
+		if item.Parent then
+			(item :: any).Enabled = true
+		end
+	end
 	local camera = workspace.CurrentCamera
 	camera.FieldOfView = s.saved.fov
 	camera.CameraType = s.saved.type
@@ -958,6 +997,9 @@ local function newScene(info)
 		punch = 0,
 		clock = 0,
 		spinning = {},
+		faded = {}, -- piezas del mundo quitadas de la vista (clearWorld)
+		off = {}, -- lo que brillaba en ellas, apagado
+		watching = {},
 		hidden = hideUi(),
 	}
 	setCore(false)
@@ -992,6 +1034,9 @@ local function newScene(info)
 		s.punch *= math.exp(-dt * 8 / SLOW)
 		if s.tick then
 			s.tick(dt) -- lo que mueva la escena cada fotograma (el herrero)
+		end
+		for _, part in s.faded do
+			part.LocalTransparencyModifier = 1
 		end
 		if s.haze then
 			s.haze.Density = 0 -- cada fotograma: el ciclo de día y el clima la van cambiando
@@ -1079,6 +1124,7 @@ function THEMES.star(s, info)
 	local sky = floor + side * 60 - toward * 35 + Vector3.new(0, 150, 0)
 	-- La cámara, a un lado del jugador (no detrás de él, que lo taparía todo) y sin vallas en medio.
 	local eye = clearView(s, floor + Vector3.new(0, 3, 0), floor + toward * 8 - side * 19 + Vector3.new(0, 3, 0))
+	clearWorld(s)
 
 	-- 1. El cielo se oscurece y la cámara baja a mirar hacia arriba.
 	tween(s.correction, 0.5, { Brightness = -0.2, Contrast = 0.2, TintColor = Color3.fromRGB(175, 185, 255) })
