@@ -38,8 +38,10 @@ local BLACK = Color3.new(0, 0, 0)
 local GOLD = Color3.fromRGB(255, 220, 100)
 
 local MYSTERY = Color3.fromRGB(150, 105, 255) -- color de la energía mientras no se sabe qué ha tocado (oscuro: el neón claro se quema en blanco)
+local DUST = Color3.fromRGB(205, 195, 175) -- polvo que levanta del suelo una tirada buena
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local TEX = WeaponAuraDefs.textures -- sellos, estallido y polvo de estrellas del pack de efectos
+local FX = RollCinematic.fx -- columna de luz, brasas, llamaradas y anillo de polvo: los mismos de las cinemáticas
 local DISPLAY = 5 -- studs que mide el arma enseñada, sea una daga o una lanza
 local TILT = CFrame.Angles(0, 0, math.rad(-22)) -- un poco ladeada, con la punta hacia arriba
 local SPACING = 3.6 -- studs entre las tiradas de un mismo objeto
@@ -61,18 +63,21 @@ local LABEL = Vector2.new(300, 108) -- tamaño del cartel en píxeles, sin escal
 -- espiral en el vuelo, sparks = chispas al destaparse, aura = chispas por segundo alrededor del arma, shock = ondas
 -- en el suelo, light = brillo de la luz, beam = grosor del rayo hacia el cielo, absorb = el orbe traga
 -- energía de alrededor, rays = rayos que giran, flash = destello de pantalla, seal = tamaño del sello mágico del
--- suelo, nova = tamaño del estallido de puntas, grow = tamaño del cartel, sounds = lo que suena al destaparse,
--- cinematic = tema de su cinemática. Por debajo del nivel 3 nada toca la cámara (pedido por el usuario: el temblor
+-- suelo, nova = tamaño del estallido de puntas, pop = studs desde los que el arma sube de un bote al salir (popTime =
+-- lo que tarda), grow = tamaño del cartel, sounds = lo que suena al destaparse, cinematic = tema de su cinemática.
+-- Desde el nivel 2, además: columna de luz y llamaradas (beam), anillo de polvo (shock) y brasas que suben del
+-- sello, con las ayudas de RollCinematic.fx. Los rayos de detrás del arma (`shine`) no: de día y en el mundo se ven
+-- como tres franjas sueltas. Por debajo del nivel 3 nada toca la cámara (pedido por el usuario: el temblor
 -- y el tirón del zoom molestaban al romper objetos); del 3 para arriba la coge la cinemática, también pedido por
 -- él, y lo demás de su fila es lo que se ve en el mundo cuando la cinemática no puede salir (modo Rendimiento,
 -- ajuste apagado, una ventana abierta...).
 local LEVELS = {
-	{ charge = 0.2, pulses = 1, rise = 0, hover = 0.42, fly = 0.38, turns = 0, sparks = 8, grow = 1, sounds = { "reveal_1" } },
-	{ charge = 0.95, pulses = 4, rise = 1.4, hover = 1.7, fly = 0.6, turns = 0.75, sparks = 44, aura = 20, shock = 2, light = 1.1, beam = 1.6, absorb = true, seal = 9, nova = 8, grow = 1.35, sounds = { "reveal_3" } },
-	{ charge = 1.25, pulses = 5, rise = 1.8, hover = 2.1, fly = 0.7, turns = 1, sparks = 60, aura = 26, shock = 3, light = 1.3, beam = 2, absorb = true, flash = true, seal = 11, nova = 10, grow = 1.5, sounds = { "reveal_4" }, cinematic = "star" },
-	{ charge = 1.7, pulses = 6, rise = 2.2, hover = 2.5, fly = 0.8, turns = 1.25, sparks = 80, aura = 32, shock = 3, light = 1.5, beam = 2.4, absorb = true, rays = true, flash = true, seal = 13, nova = 12, grow = 1.6, sounds = { "reveal_5" }, cinematic = "smith" },
-	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.9, fly = 0.85, turns = 1.5, sparks = 100, aura = 38, shock = 4, light = 1.6, beam = 2.8, absorb = true, rays = true, flash = true, seal = 15, nova = 14, grow = 1.7, sounds = { "reveal_5" }, cinematic = "nova" },
-	{ charge = 2.4, pulses = 9, rise = 3, hover = 3.4, fly = 0.9, turns = 2, sparks = 130, aura = 46, shock = 5, light = 1.8, beam = 3.4, absorb = true, rays = true, flash = true, seal = 17, nova = 16, grow = 1.8, sounds = { "reveal_5", "win" }, cinematic = "nova" },
+	{ charge = 0.2, pulses = 1, rise = 0, hover = 0.42, fly = 0.38, turns = 0, sparks = 14, nova = 3.2, pop = 0.5, grow = 1, sounds = { "reveal_1" } },
+	{ charge = 0.95, pulses = 4, rise = 1.4, hover = 1.7, fly = 0.6, turns = 0.75, sparks = 44, aura = 20, shock = 2, light = 1.1, beam = 1.6, absorb = true, seal = 9, nova = 8, pop = 1.6, popTime = 0.4, grow = 1.35, sounds = { "reveal_3" } },
+	{ charge = 1.25, pulses = 5, rise = 1.8, hover = 2.1, fly = 0.7, turns = 1, sparks = 60, aura = 26, shock = 3, light = 1.3, beam = 2, absorb = true, flash = true, seal = 11, nova = 10, pop = 1.6, popTime = 0.4, grow = 1.5, sounds = { "reveal_4" }, cinematic = "star" },
+	{ charge = 1.7, pulses = 6, rise = 2.2, hover = 2.5, fly = 0.8, turns = 1.25, sparks = 80, aura = 32, shock = 3, light = 1.5, beam = 2.4, absorb = true, rays = true, flash = true, seal = 13, nova = 12, pop = 1.6, popTime = 0.4, grow = 1.6, sounds = { "reveal_5" }, cinematic = "smith" },
+	{ charge = 2.1, pulses = 8, rise = 2.6, hover = 2.9, fly = 0.85, turns = 1.5, sparks = 100, aura = 38, shock = 4, light = 1.6, beam = 2.8, absorb = true, rays = true, flash = true, seal = 15, nova = 14, pop = 1.6, popTime = 0.4, grow = 1.7, sounds = { "reveal_5" }, cinematic = "nova" },
+	{ charge = 2.4, pulses = 9, rise = 3, hover = 3.4, fly = 0.9, turns = 2, sparks = 130, aura = 46, shock = 5, light = 1.8, beam = 3.4, absorb = true, rays = true, flash = true, seal = 17, nova = 16, pop = 1.6, popTime = 0.4, grow = 1.8, sounds = { "reveal_5", "win" }, cinematic = "nova" },
 }
 -- Con cinemática, lo del mundo va corto: el orbe se carga un momento y, a la vuelta, el arma se queda poco y vuela.
 local AFTER = { charge = 0.4, pulses = 2, hover = 0.55 }
@@ -106,8 +111,8 @@ local function animate(seconds: number, step: (number) -> ())
 end
 
 -- Pasa del final y vuelve: lo que aparece "salta" un poco.
-local function outBack(t: number): number
-	local c = 1.70158
+local function outBack(t: number, overshoot: number?): number
+	local c = overshoot or 1.70158
 	return 1 + (c + 1) * (t - 1) ^ 3 + c * (t - 1) ^ 2
 end
 
@@ -497,12 +502,15 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 			table.insert(spinning, { part = ray, tilt = CFrame.Angles(0, index * math.pi / 3, 0) * CFrame.Angles(math.rad(rng:NextNumber(-28, 28)), 0, 0) })
 		end
 	end
-	if fx.seal and not lite and not cinematic then
-		-- Sello mágico en el suelo, debajo, mientras se carga y se enseña.
-		local floor = Vector3.new(slot.X, ground + 0.2, slot.Z)
+	local floor = Vector3.new(slot.X, ground + 0.2, slot.Z)
+	local sealed = fx.seal ~= nil and not lite and not cinematic
+	if sealed then
+		-- Sello mágico en el suelo, debajo, mientras se carga y se enseña, con brasas que suben de él.
 		local seconds = charge + (fx.hover + 0.4) * SLOW
 		seal(folder, floor, TEX.seal, color, fx.seal, seconds, 35)
 		seal(folder, floor + Vector3.new(0, 0.05, 0), TEX.seal2, color, fx.seal * 0.6, seconds, -50)
+		local hearth = glow(Enum.PartType.Block, Vector3.new(fx.seal * 0.55, 0.2, fx.seal * 0.55), CFrame.new(floor), color, 1, folder)
+		FX.embers(hearth, color, 16, seconds / SLOW)
 	end
 	local beat = charge / pulses
 	local clock = 0
@@ -514,6 +522,10 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 		TweenService:Create(orb, TweenInfo.new(beat / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0, true), { Size = Vector3.one * big }):Play()
 		if not lite then
 			ring(folder, orb.Position, ORB, ORB * (2.4 + level * 0.5), if pulse > pulses - 2 and level >= 2 then bright else MYSTERY, beat * 0.9)
+		end
+		if sealed then
+			-- Con cada latido el sello suelta una onda, cada vez más grande.
+			seal(folder, floor + Vector3.new(0, 0.1, 0), TEX.wave, bright, fx.seal * (0.9 + pulse * 0.12), beat * 1.2, 0)
 		end
 		if level >= 2 then
 			Sfx.play("charge", 0.6, 2 ^ ((pulse - 1) / 12), orb.Position) -- cada pulso suena una nota más arriba
@@ -589,8 +601,13 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 				end
 			end)
 		end
+		local scene = { folder = folder }
 		if fx.beam then
-			fading(Enum.PartType.Cylinder, CFrame.new(position + Vector3.new(0, 55, 0)) * FLAT, Vector3.new(120, fx.beam * 1.6, fx.beam * 1.6), Vector3.new(120, 0.2, 0.2), color, 0.45, 1 + level * 0.1, folder)
+			FX.pillar(scene, floor, 30 + level * 5, fx.beam * 2.6, color, 0.9 + level * 0.1)
+			FX.flames(follow, color, 4 + level, 9, 2.6)
+		end
+		if fx.shock then
+			FX.dustRing(scene, floor, DUST:Lerp(color, 0.25), 10, 15)
 		end
 		if fx.light then
 			-- Luz corta y de poco alcance: una luz fuerte teñía toda la escena del color de la rareza.
@@ -679,11 +696,17 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 	end)
 
 	task.spawn(function()
-		-- Aparece de golpe, pasándose un poco de tamaño, y el giro se calma.
-		animate(0.16 * SLOW, function(t)
-			state.scale = math.max(outBack(t), 0.02)
-			state.spin = 9 - 6.5 * t
+		-- Aparece de golpe, pasándose un poco de tamaño, y el giro se calma. Sale de un poco más abajo y sube de un
+		-- bote (más alto y con más rebote en las buenas).
+		local pop = if quiet then 0 else fx.pop or 0
+		local fast = if pop > 1 then 15 else 9
+		animate((if pop > 1 then fx.popTime else 0.16) * SLOW, function(t)
+			local bounce = outBack(t, if pop > 1 then 3.2 else nil)
+			state.scale = math.max(bounce, 0.02)
+			state.position = position - Vector3.new(0, pop * (1 - bounce), 0)
+			state.spin = fast - (fast - 2.5) * t
 		end)
+		state.position = position
 		-- 3. Se queda a la vista lo justo para leerla (más cuanto mejor es; las vendidas, menos).
 		task.wait((if cinematic then AFTER.hover else fx.hover) * pace * (if roll.kept then 1 else 0.6))
 		hideLabel()
