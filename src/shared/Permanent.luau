@@ -24,10 +24,13 @@ function Permanent.size(copy)
 	return entry(Config.Sizes, copy.size)
 end
 
--- Multiplicador de daño que dan el metal y el tamaño de esa copia.
+-- Multiplicador de daño que dan el metal y el tamaño de esa copia. El daño de un arma sale solo de su rareza total
+-- (arma x metal x tamaño, el "1 entre N" que se enseña), pedido por el usuario: dos armas igual de raras pegan igual,
+-- lleven o no metal. Antes cada modificador se contaba por separado y perdía un x1,5 frente a un arma sin él.
 function Permanent.damageMult(copy): number
 	local metal, size = Permanent.metal(copy), Permanent.size(copy)
-	return (if metal then Permanent.damage(metal.odds) else 1) * (if size then Permanent.damage(size.odds) else 1)
+	local extra = (if metal then metal.odds else 1) * (if size then size.odds else 1)
+	return Permanent.damage(2 * extra)
 end
 
 -- Cuánto se agranda el arma (1 si no es de ningún tamaño).
