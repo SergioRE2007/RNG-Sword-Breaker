@@ -289,12 +289,12 @@ function Stats.bagHit(player: Player, copy, noPotion: boolean?): number
 	return if noPotion then damage / Stats.potion(player, "damage") / Stats.boost("damage") else damage
 end
 
--- Monedas que saca de la bolsa un golpe de esa copia: las de su daño (BagInfo.coins) por la mejora "bagBoost", que es
--- lo único que las multiplica, y por lo que sube cada bolsa vaciada (BagInfo.boost de la bolsa `stage`; sin ella, la
+-- Monedas que saca de la bolsa un golpe de esa copia: las de su daño (BagInfo.coins) por las mejoras "bagBoost" y "fortune"
+-- (pedido por el usuario), que son lo único que las multiplica, y por lo que sube cada bolsa vaciada (BagInfo.boost de la bolsa `stage`; sin ella, la
 -- bolsa por la que va el jugador).
 function Stats.bagCoins(player: Player, copy, noPotion: boolean?, stage: number?): number
 	local boost = BagInfo.boost(stage or player:GetAttribute("BagStage") or 1)
-	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * upgrade(player, "bagBoost") * boost
+	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * upgrade(player, "bagBoost") * upgrade(player, "fortune") * boost
 end
 
 -- Lo que tiene el jugador de la moneda con la que se paga una mejora (`currency` de Config.Upgrades): monedas, gemas
