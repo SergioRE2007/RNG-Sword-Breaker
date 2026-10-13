@@ -507,10 +507,10 @@ Config.Upgrades = {
 	-- Segundos entre apariciones de objetos en la parcela (lo lee Stats.spawnTime): cada objeto trae tiradas de arma, así
 	-- que es la antigua "Velocidad de tirada" (misma clave, para no perder lo comprado). 1,5 s al principio, -12 % por
 	-- nivel, ~0,42 s al final. Con Config.Gacha.FreeRoll también acorta la tirada gratis (Stats.rollTime).
-	rollSpeed = { name = "Spawn Speed", short = "Spawn", icon = "orb", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, costs = { 4800, 180000, 4.4e6, 2.5e7, 2.8e9, 7.2e11, 4.9e14, 6.7e17, 2e20, 2.3e23 }, display = "%.2fs" },
+	rollSpeed = { name = "Spawn Speed", short = "Spawn", icon = "clock", color = Color3.fromRGB(255, 190, 40), mode = "mul", base = Config.Plot.SpawnInterval, perLevel = 0.88, maxLevel = 10, costs = { 4800, 180000, 4.4e6, 2.5e7, 2.8e9, 7.2e11, 4.9e14, 6.7e17, 2e20, 2.3e23 }, display = "%.2fs" },
 	-- Monedas (pedido por el usuario): multiplica las que dan los objetos (Stats.coins; la Bolsa de oro no) y se paga con
 	-- gemas, que hasta ahora no se gastaban en nada. Sus compras caen entre las de suerte, para que siempre haya algo cerca.
-	fortune = { name = "Fortune", short = "Fortune", desc = "Multiplies the coins from objects and from your Gold Bag. Paid with gems.", icon = "gem", color = Color3.fromRGB(190, 110, 255), mode = "mul", base = 1, perLevel = 1.5, maxLevel = 20, currency = "gems", costs = { 13000, 270000, 880000, 5.9e6, 1.4e8, 9.4e8, 6.9e9, 1.2e11, 8.4e11, 5.5e12, 9.5e13, 1.6e15, 2e16, 2.8e17, 4.7e18, 9.6e19, 1.4e21, 2e22, 3.7e23, 4.1e24 }, display = "x%s" },
+	fortune = { name = "Fortune", short = "Fortune", desc = "Multiplies the coins from objects and from your Gold Bag. Paid with gems.", icon = "coins", color = Color3.fromRGB(190, 110, 255), mode = "mul", base = 1, perLevel = 1.5, maxLevel = 20, currency = "gems", costs = { 13000, 270000, 880000, 5.9e6, 1.4e8, 9.4e8, 6.9e9, 1.2e11, 8.4e11, 5.5e12, 9.5e13, 1.6e15, 2e16, 2.8e17, 4.7e18, 9.6e19, 1.4e21, 2e22, 3.7e23, 4.1e24 }, display = "x%s" },
 	-- Monedas de bolsa (pedido por el usuario): cada Bolsa de oro vaciada da una, y solo se gastan aquí. Multiplica
 	-- TODAS las monedas: las de los objetos (Stats.coins) y las que sacan las armas de la bolsa (Stats.bagCoins). No se
 	-- guarda cuántas tiene: son las bolsas vaciadas menos lo gastado en estos niveles (Stats.wallet), así quien ya iba

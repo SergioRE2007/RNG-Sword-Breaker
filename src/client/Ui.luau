@@ -1453,6 +1453,44 @@ function Ui.orbIcon(parent: Instance, color: Color3)
 	Ui.gradient(orb, WHITE, Color3.fromRGB(150, 150, 170), 60)
 end
 
+-- Reloj despertador (velocidad de aparición): dos campanas, aro del color, esfera blanca y dos agujas.
+function Ui.clockIcon(parent: Instance, color: Color3)
+	local holder = iconHolder(parent, 0)
+	holder.Size = UDim2.fromScale(0.92, 0.92)
+	for _, x in { 0.24, 0.76 } do
+		local bell = piece(holder, UDim2.fromScale(0.3, 0.3), UDim2.fromScale(x, 0.2), Color3.fromRGB(235, 80, 70), 100)
+		Ui.gradient(bell, WHITE, Color3.fromRGB(190, 150, 150), 90)
+	end
+	local rim = piece(holder, UDim2.fromScale(0.82, 0.82), UDim2.fromScale(0.5, 0.56), color, 100)
+	Ui.gradient(rim, WHITE, Color3.fromRGB(190, 160, 110), 90)
+	local face = piece(rim, UDim2.fromScale(0.72, 0.72), UDim2.fromScale(0.5, 0.5), WHITE, 100)
+	Ui.gradient(face, WHITE, Color3.fromRGB(205, 215, 235), 90)
+	-- Cada aguja va de la mitad de un marco invisible hacia arriba: lo que gira es el marco, por su centro.
+	for _, hand in { { 60, 0.26, 0.13 }, { 0, 0.38, 0.1 } } do
+		local turn = Instance.new("Frame")
+		turn.Size = UDim2.fromScale(1, 1)
+		turn.BackgroundTransparency = 1
+		turn.Rotation = hand[1]
+		turn.Parent = face
+		local needle = Instance.new("Frame")
+		needle.AnchorPoint = Vector2.new(0.5, 1)
+		needle.Position = UDim2.fromScale(0.5, 0.5)
+		needle.Size = UDim2.fromScale(hand[3], hand[2])
+		needle.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+		needle.BorderSizePixel = 0
+		needle.Parent = turn
+		Ui.round(needle, 100)
+	end
+	local pin = Instance.new("Frame")
+	pin.AnchorPoint = Vector2.new(0.5, 0.5)
+	pin.Position = UDim2.fromScale(0.5, 0.5)
+	pin.Size = UDim2.fromScale(0.2, 0.2)
+	pin.BackgroundColor3 = Color3.fromRGB(235, 80, 70)
+	pin.BorderSizePixel = 0
+	pin.Parent = face
+	Ui.round(pin, 100)
+end
+
 -- Estrella dorada de ocho puntas (dos cuadrados, uno girado) con brillo: icono del renacimiento.
 function Ui.starIcon(parent: Instance, color: Color3)
 	local holder = iconHolder(parent, 0)

@@ -67,6 +67,10 @@ local ICONS = {
 	bag = function(parent)
 		Ui.image(parent, "bolsa")
 	end,
+	coins = function(parent)
+		Ui.image(parent, "monedas")
+	end,
+	clock = Ui.clockIcon,
 	orb = Ui.orbIcon,
 	gem = Ui.gemIcon,
 }
