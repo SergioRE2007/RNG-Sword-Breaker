@@ -116,6 +116,11 @@ local function draw(player: Player, boost: number, source: string, info)
 	local objectOdds = if info and type(info.objectOdds) == "number" then math.max(info.objectOdds, 1) else 1
 	local clover = if info and type(info.clover) == "number" then math.max(info.clover, 1) else 1
 	local odds = math.min(Permanent.rollOdds(index, metal, size, usual), Permanent.rollOdds(index, metal, size, luck / clover) * objectOdds)
+	-- Con trébol, como mínimo la primera cinemática (pedido por el usuario: es de pago y tiene que sentirse; por la
+	-- suerte sola salía en 2 de cada 3 tiradas, que su tirada típica cae justo en ese borde).
+	if clover > 1 then
+		odds = math.max(odds, Config.Gacha.RevealOdds[2])
+	end
 	-- Con la mochila llena, un arma más rara que la peor copia que el jugador no ha tocado se queda con su sitio.
 	local full = #data.swords >= Config.MaxSwords
 	local spare = if full and rarity >= data.autoSell then worstSpare(data, rarity) else nil
