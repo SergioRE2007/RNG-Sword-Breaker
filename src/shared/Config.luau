@@ -299,7 +299,7 @@ Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grad
 -- multiplica para siempre (por cada renacimiento, ese número elevado a los renacimientos que lleve).
 -- "costs" = precio de cada renacimiento. NÚMEROS GENERADOS por tools/equilibrio/generar.luau para que caigan hacia las
 -- 2, 6,5, 20, 55 y 120 h de juego (objetivo.luau): no los retoques a mano.
-Config.Rebirth = { max = 5, costs = { 3.5e7, 1e11, 3.5e15, 1.9e20, 2.2e25 }, coins = 5, damage = 3, luck = 1.5, gachaLuck = 1.5 }
+Config.Rebirth = { max = 5, costs = { 3.5e7, 1e11, 3.5e15, 1.9e20, 2.2e25 }, coins = 2, damage = 3, luck = 1.5, gachaLuck = 1.5 }
 
 -- Artefactos (equipo). Pueden caer al romper cualquier objeto ("rarity" = 1 entre N, la
 -- suerte de destructibles multiplica la probabilidad). "stat": damage, luck (suerte de destructibles),
