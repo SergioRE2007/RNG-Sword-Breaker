@@ -35,7 +35,7 @@ Config.BaseCooldown = 0.35 -- segundos entre golpes de una espada (cada tipo de 
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
 Config.StartCoins = 0
 Config.AutosaveInterval = 60
-Config.DataStoreName = "PlayerData_v2" -- v2 = datos limpios para el lanzamiento (v1 eran las partidas de prueba)
+Config.DataStoreName = "PlayerData_v3" -- v3 = todo el progreso borrado otra vez (v1 y v2 eran partidas anteriores)
 -- Candado de sesión del guardado (server/PlayerData): mientras un servidor tiene abierta la partida de un jugador, otro no la
 -- carga (así no se lee lo de antes del último guardado al cambiar de servidor deprisa, que duplicaría lo de un trato).
 -- Retry = segundos entre intentos de cargar una partida cogida; Wait = cuánto se espera antes de echar al jugador con un aviso;
