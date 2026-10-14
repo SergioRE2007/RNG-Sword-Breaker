@@ -17,6 +17,7 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local ArmorPane = require(script.Parent.ArmorPane)
 local Backpack = require(script.Parent.Backpack)
 local Performance = require(script.Parent.Performance)
+local Potions = require(script.Parent.Potions)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
 local WeaponPreview = require(script.Parent.WeaponPreview)
@@ -128,6 +129,10 @@ local function amountCell(parent: Instance, name: string, color: Color3, amount:
 		Ui.image(cell, "gemas")
 	elseif kind == "missionToken" then
 		Ui.starIcon(cell, color)
+	elseif Config.Items[kind] and Config.Items[kind].potion then
+		local potion = Config.Items[kind].potion
+		Potions.icon(cell, potion.family, potion.tier)
+		Potions.addTag(cell, potion.tier)
 	else
 		Ui.crystalIcon(cell, color, kind == "gradeCrystal")
 	end
@@ -138,8 +143,14 @@ local function amountCell(parent: Instance, name: string, color: Color3, amount:
 	return cell
 end
 
--- Sugerencias: cómo se llama lo sugerido y su casilla.
-local INTENTS = { want = { Lang.t(nil, "I WANT"), Ui.COLORS.orange }, give = { Lang.t(nil, "I GIVE"), Ui.COLORS.green } }
+-- Objetos que se cambian por cantidad, en orden: los de la mochila y luego las pociones.
+local ITEM_KEYS = table.clone(Config.ItemOrder)
+for _, key in Config.Potions.ItemKeys do
+	table.insert(ITEM_KEYS, key)
+end
+
+-- Peticiones ("Pedir"): cómo se llama lo pedido y su casilla.
+local REQUEST = Lang.t(nil, "REQUEST")
 
 local function suggestName(suggest): string
 	local category = suggest.category
@@ -454,6 +465,15 @@ local function buildTrade()
 	local stock = scrollGrid(stockArea, STOCK_CELL)
 	stock.Name = "Grid"
 	stock.Size = UDim2.fromScale(1, 1)
+	local stockEmpty = Ui.label(stockArea, 20)
+	stockEmpty.Name = "Empty"
+	stockEmpty.AnchorPoint = Vector2.new(0.5, 0.5)
+	stockEmpty.Position = UDim2.fromScale(0.5, 0.5)
+	stockEmpty.Size = UDim2.new(1, -40, 0, 60)
+	stockEmpty.TextWrapped = true
+	stockEmpty.TextColor3 = SOFT
+	stockEmpty.Text = Lang.t(nil, "Nothing here")
+	stockEmpty.Visible = false
 
 	-- Cantidades (monedas, gemas y objetos): una fila por cosa con su casilla para escribir.
 	local amounts = Instance.new("ScrollingFrame")
@@ -476,14 +496,21 @@ local function buildTrade()
 	amountsPadding.PaddingLeft = UDim.new(0, 10)
 	amountsPadding.Parent = amounts
 
-	-- Modo sugerir (botón "Sugerir"): lo que se pulse o se escriba no cambia tu oferta, se le sugiere al otro.
-	local suggesting = false
-	local setSuggesting: (boolean) -> ()
+	-- Modo pedir (botón "Pedir"): en vez de tu inventario se ve el del otro, y lo que se pulse se le pide.
+	local asking = false
+	local setAsking: (boolean) -> ()
 
-	-- Cada fila: nombre, [−] cantidad [+] y, en modo sugerir, "Quiero" y "Te doy". `value` es la cantidad que se
-	-- está tocando (con − y + o en modo sugerir); fuera de eso la casilla enseña lo que hay en tu oferta.
-	local amountRows = {} -- { box, label, minus, plus, want, give, owned(), offered(), name, value, touching }
-	local function amountRow(order: number, name: string, color: Color3, category: string, key: string?)
+	-- El jugador del otro lado (nil con el bot de pruebas, que solo tiene cantidades). Sus atributos se replican a todos
+	-- los clientes, así que su inventario se lee de su Player como el tuyo.
+	local function otherPlayer(): Player?
+		return if current then Players:GetPlayerByUserId(current.them.userId) else nil
+	end
+
+	-- Cada fila: nombre, [−] cantidad [+] y, en modo pedir, "Pedir". `value` es la cantidad que se está tocando (con − y
+	-- + o en modo pedir); fuera de eso la casilla enseña lo que hay en tu oferta. Las pociones (`hide`) solo salen si
+	-- quien enseña su inventario tiene alguna, o ya está en tu oferta.
+	local amountRows = {} -- { frame, box, label, minus, plus, ask, owned(), offered(), name, value, touching, hide }
+	local function amountRow(order: number, name: string, color: Color3, category: string, key: string?, hide: boolean?)
 		local frame = Instance.new("Frame")
 		frame.Name = "Row_" .. (key or category)
 		frame.LayoutOrder = order
@@ -525,18 +552,24 @@ local function buildTrade()
 			return button
 		end
 		local row = {
+			frame = frame,
 			box = box,
 			label = label,
 			minus = small("Minus", "-", Ui.COLORS.gray, 30),
 			plus = small("Plus", "+", Ui.COLORS.gray, 30),
-			want = small("Want", Lang.t(nil, "I want"), Ui.COLORS.orange, 64),
-			give = small("Give", Lang.t(nil, "I give"), Ui.COLORS.green, 64),
+			ask = small("Ask", Lang.t(nil, "Ask"), Ui.COLORS.orange, 64),
 			name = name,
 			value = 1,
 			touching = false,
+			hide = hide,
 		}
+		-- Lo que tiene quien enseña su inventario: tú, o el otro en modo pedir (el bot, de todo).
 		function row.owned(): number
-			return player:GetAttribute(if category == "items" then "Item_" .. key else if category == "coins" then "Coins" else "Gems") or 0
+			local who = if asking then otherPlayer() else player
+			if not who then
+				return Config.Trade.SuggestMaxAmount
+			end
+			return who:GetAttribute(if category == "items" then "Item_" .. key else if category == "coins" then "Coins" else "Gems") or 0
 		end
 		function row.offered(): number
 			if not current then
@@ -544,17 +577,17 @@ local function buildTrade()
 			end
 			return if category == "items" then current.you.items[key] or 0 else current.you[category]
 		end
-		-- En tu oferta no cabe más de lo que tienes; en una sugerencia ("Quiero") sí.
+		-- No se ofrece ni se pide más de lo que hay.
 		local function clamp(value: number): number
-			local top = if suggesting then Config.Trade.SuggestMaxAmount else row.owned()
-			return math.clamp(math.floor(value), if suggesting then 1 else 0, math.max(top, 0))
+			local top = math.max(row.owned(), 0)
+			return math.clamp(math.floor(value), if asking then math.min(1, top) else 0, top)
 		end
 		local function show()
 			box.Text = if row.value > 0 then Format.short(row.value) else ""
 		end
 		local function send()
 			row.touching = false
-			if not suggesting then
+			if not asking then
 				Remotes.TradeOffer:FireServer(category, key, row.value)
 			end
 		end
@@ -569,7 +602,7 @@ local function buildTrade()
 				if current == nil or current.state ~= "editing" then
 					return
 				end
-				if not suggesting and not row.touching then
+				if not asking and not row.touching then
 					row.value = row.offered()
 				end
 				row.touching = true
@@ -577,30 +610,32 @@ local function buildTrade()
 				show()
 			end, send)
 		end
-		row.want.Activated:Connect(function()
-			Remotes.TradeSuggest:FireServer("want", category, key, row.value)
-			setSuggesting(false)
-		end)
-		row.give.Activated:Connect(function()
-			Remotes.TradeSuggest:FireServer("give", category, key, math.min(row.value, row.owned()))
-			setSuggesting(false)
+		row.ask.Activated:Connect(function()
+			local value = clamp(row.value)
+			if value < 1 then
+				Sfx.play("error")
+				return
+			end
+			Remotes.TradeSuggest:FireServer("want", category, key, value)
+			setAsking(false)
 		end)
 		table.insert(amountRows, row)
 	end
 	-- Solo las filas de lo que se puede comerciar (Config.Trade.Allow: monedas y gemas, no); la rejilla las recoloca sola.
 	local allow = Config.Trade.Allow
 	local rowCount = 0
-	local function allowedRow(name: string, color: Color3, category: string, key: string?)
+	local function allowedRow(name: string, color: Color3, category: string, key: string?, hide: boolean?)
 		if allow[category] then
 			rowCount += 1
-			amountRow(rowCount, name, color, category, key)
+			amountRow(rowCount, name, color, category, key, hide)
 		end
 	end
 	allowedRow(Lang.t(nil, "Coins"), Ui.COLORS.coins, "coins")
 	allowedRow(Lang.t(nil, "Gems"), Ui.COLORS.purple, "gems")
-	for _, key in Config.ItemOrder do
-		if not Config.Items[key].noTrade then
-			allowedRow(Lang.t(nil, Config.Items[key].name), Config.Items[key].color, "items", key)
+	for _, key in ITEM_KEYS do
+		local item = Config.Items[key]
+		if not item.noTrade then
+			allowedRow(Lang.t(nil, item.name), item.color, "items", key, item.potion ~= nil)
 		end
 	end
 
@@ -615,38 +650,46 @@ local function buildTrade()
 		return current == nil or current.state ~= "editing"
 	end
 
-	-- Marca en tu inventario lo que ya está en tu oferta.
+	-- Marca en el inventario que se ve lo que ya está en la oferta de su dueño.
 	local function paintStock()
 		if not current then
 			return
 		end
 		local offered = {}
-		for _, entry in (current.you :: any)[tab] or {} do
+		for _, entry in ((if asking then current.them else current.you) :: any)[tab] or {} do
 			offered[if type(entry) == "table" then entry.id else entry] = true
 		end
 		for key, cell in stockCells do
 			(cell :: any).Select.Visible = offered[key] == true
 		end
+		local bot = asking and otherPlayer() == nil
 		for _, row in amountRows do
-			-- De derecha a izquierda: [Te doy] [Quiero] (solo en modo sugerir) [+] cantidad [−] y el nombre.
-			local right = if suggesting then 146 else 8
-			row.want.Visible, row.give.Visible = suggesting, suggesting
-			row.give.Position = UDim2.new(1, -8, 0.5, 0)
-			row.want.Position = UDim2.new(1, -76, 0.5, 0)
+			-- De derecha a izquierda: [Pedir] (solo en modo pedir) [+] cantidad [−] y el nombre.
+			local right = if asking then 78 else 8
+			local owned = row.owned()
+			row.frame.Visible = not row.hide or owned > 0 or (not asking and row.offered() > 0)
+			row.ask.Visible = asking
+			row.ask.Position = UDim2.new(1, -8, 0.5, 0)
 			row.plus.Position = UDim2.new(1, -right, 0.5, 0)
 			row.box.Position = UDim2.new(1, -right - 34, 0.5, 0)
 			row.minus.Position = UDim2.new(1, -right - 38 - AMOUNT_BOX, 0.5, 0)
 			row.label.Size = UDim2.new(1, -right - 94 - AMOUNT_BOX, 1, 0)
-			row.label.Text = if suggesting then row.name else `{row.name} <font color="{Ui.SOFT}">{Lang.t(nil, "(you have {n})", { n = Format.short(row.owned()) })}</font>`
+			local have = Lang.t(nil, if asking then "(they have {n})" else "(you have {n})", { n = Format.short(owned) })
+			row.label.Text = if bot then row.name else `{row.name} <font color="{Ui.SOFT}">{have}</font>`
 			if not row.box:IsFocused() and not row.touching then
-				local value = if suggesting then row.value else row.offered()
+				local value = if asking then row.value else row.offered()
 				row.box.Text = if value > 0 then Format.short(value) else ""
 			end
 		end
 	end
 
 	local function buildStock(force: boolean?)
-		local key = `{tab}|{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Bag")}|{player:GetAttribute("Armor")}|{player:GetAttribute("Artifacts")}`
+		-- De quién es el inventario que se ve: el tuyo o, en modo pedir, el del otro (nil con el bot).
+		local owner = if asking then otherPlayer() else player
+		local key = `{tab}|{asking}|{owner and owner.UserId}`
+		if owner then
+			key ..= `|{owner:GetAttribute("Swords")}|{owner:GetAttribute("Loadout")}|{owner:GetAttribute("Bag")}|{owner:GetAttribute("Armor")}|{owner:GetAttribute("Artifacts")}`
+		end
 		if key == stockKey and not force then
 			paintStock()
 			return
@@ -664,36 +707,44 @@ local function buildTrade()
 					Sfx.play("error")
 					return
 				end
-				if suggesting then
-					Remotes.TradeSuggest:FireServer("give", tab, id, 1)
-					setSuggesting(false)
+				if asking then
+					-- Lo que ya está en su oferta no se pide.
+					if (cell :: any).Select.Visible then
+						Sfx.play("error")
+						return
+					end
+					Remotes.TradeSuggest:FireServer("want", tab, id, 1)
+					setAsking(false)
 					return
 				end
 				Remotes.TradeOffer:FireServer(tab, id, if (cell :: any).Select.Visible then 0 else 1)
 			end)
 		end
-		if tab == "swords" then
-			local worn = Stats.list(player, "Loadout")
-			for _, copy in Stats.swords(player) do
+		if not owner then
+			-- El bot de pruebas no tiene armas, armadura ni accesorios que pedir.
+		elseif tab == "swords" then
+			local worn = Stats.list(owner, "Loadout")
+			for _, copy in Stats.swords(owner) do
 				-- Las equipadas, las de la Bolsa de oro y las bloqueadas con el candado de la mochila no se pueden dar.
-				if not copy.locked and not table.find(worn, copy.id) and not Stats.isDeposited(player, copy.id) then
+				if not copy.locked and not table.find(worn, copy.id) and not Stats.isDeposited(owner, copy.id) then
 					add(swordCell(stock, copy), copy.id, -math.floor(math.log10(Stats.rarity(copy)) * 1000))
 				end
 			end
 		elseif tab == "armor" then
-			for _, piece in ArmorStats.pieces(player) do
+			for _, piece in ArmorStats.pieces(owner) do
 				add(armorCell(stock, piece), piece.id, -(piece.level * 100 + piece.quality))
 			end
 		elseif tab == "artifacts" then
 			-- Una casilla por accesorio aunque tenga copias repetidas: un trato mueve una copia de cada uno.
 			local seen = {}
-			for _, index in Stats.list(player, "Artifacts") do
+			for _, index in Stats.list(owner, "Artifacts") do
 				if not seen[index] then
 					seen[index] = true
 					add(artifactCell(stock, index), index, -index)
 				end
 			end
 		end
+		stockEmpty.Visible = tab ~= "amounts" and next(stockCells) == nil
 		paintStock()
 	end
 
@@ -741,9 +792,9 @@ local function buildTrade()
 	cancelButton.Position = UDim2.new(1, -372, 1, -12)
 	cancelButton.Size = UDim2.fromOffset(110, 60)
 	cancelButton.TextSize = 20
-	-- "Sugerir": bocadillo con puntos y el texto a su derecha.
-	local suggestButton = Ui.button(body, Lang.t(nil, "Suggest") .. " ", Ui.COLORS.blue)
-	suggestButton.Name = "Suggest"
+	-- "Pedir": bocadillo con puntos y el texto a su derecha.
+	local suggestButton = Ui.button(body, Lang.t(nil, "Ask") .. " ", Ui.COLORS.blue)
+	suggestButton.Name = "Ask"
 	suggestButton.AnchorPoint = Vector2.new(1, 1)
 	suggestButton.Position = UDim2.new(1, -372, 1, -12)
 	suggestButton.Size = UDim2.fromOffset(150, 60)
@@ -771,11 +822,11 @@ local function buildTrade()
 		Ui.round(point, 3)
 	end
 	suggestButton.Activated:Connect(function()
-		setSuggesting(not suggesting)
+		setAsking(not asking)
 	end)
 
-	-- Sugerencia recibida: tarjeta sobre tu inventario (las dos ofertas siguen a la vista) con qué se sugiere,
-	-- quién, y Aceptar o Ignorar. Aceptarla solo cambia una oferta: el trato sigue pidiendo Aceptar y Confirmar.
+	-- Petición recibida: tarjeta sobre tu inventario (las dos ofertas siguen a la vista) con "Te está pidiendo X" y
+	-- Aceptar o Ignorar. Aceptarla solo lo añade a tu oferta: el trato sigue pidiendo Aceptar y Confirmar.
 	local card = Instance.new("Frame")
 	card.Name = "SuggestIn"
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -847,7 +898,7 @@ local function buildTrade()
 		Remotes.TradeSuggestRespond:FireServer(false)
 	end)
 
-	-- Tu sugerencia: una tira bajo el inventario (donde va la ayuda) con lo que has sugerido y "Quitar".
+	-- Tu petición: una tira bajo el inventario (donde va la ayuda) con lo que has pedido y "Quitar".
 	local chip = Instance.new("Frame")
 	chip.Name = "SuggestOut"
 	chip.AnchorPoint = Vector2.new(0, 1)
@@ -890,9 +941,8 @@ local function buildTrade()
 		chip.Visible = mineSuggest ~= nil
 		hint.Visible = mineSuggest == nil
 		if mineSuggest then
-			local intent = INTENTS[mineSuggest.intent]
-			chipRibbon.Text = intent[1]
-			chipRibbon.BackgroundColor3 = intent[2]
+			chipRibbon.Text = REQUEST
+			chipRibbon.BackgroundColor3 = Ui.COLORS.orange
 			chipText.Text = if mineSuggest.ignored then Lang.t(nil, "Ignored") else suggestName(mineSuggest)
 			chipText.TextColor3 = if mineSuggest.ignored then Ui.COLORS.red:Lerp(WHITE, 0.3) else WHITE
 		end
@@ -910,10 +960,9 @@ local function buildTrade()
 		if not theirSuggest then
 			return
 		end
-		local intent = INTENTS[theirSuggest.intent]
-		ribbon.Text = intent[1]
-		ribbon.BackgroundColor3 = intent[2]
-		from.Text = Lang.t(nil, if theirSuggest.intent == "want" then "{name} asks you for it" else "{name} offers it to you", { name = current.them.name })
+		ribbon.Text = REQUEST
+		ribbon.BackgroundColor3 = Ui.COLORS.orange
+		from.Text = Lang.t(nil, "{name} is asking you for:", { name = current.them.name })
 		what.Text = suggestName(theirSuggest)
 		local cell = suggestCell(slot, theirSuggest)
 		if cell then
@@ -937,19 +986,30 @@ local function buildTrade()
 		end
 	end
 
-	function setSuggesting(on: boolean)
-		local was = suggesting
-		suggesting = on and current ~= nil and current.state == "editing"
-		Ui.setSelected(suggestButton, suggesting)
-		suggestButton.BackgroundColor3 = if suggesting then GOLD else Ui.COLORS.blue
+	function setAsking(on: boolean)
+		local was = asking
+		asking = on and current ~= nil and current.state == "editing"
+		Ui.setSelected(suggestButton, asking)
+		suggestButton.BackgroundColor3 = if asking then GOLD else Ui.COLORS.blue
+		if current then
+			if current.state ~= "editing" then
+				hint.Text = Lang.t(nil, "Offers locked.")
+			elseif asking then
+				hint.Text = Lang.t(nil, "{name}'s inventory: click what you want to ask for.", { name = current.them.name })
+			else
+				hint.Text = Lang.t(nil, "Click something of yours to offer it; in your offer, click it to remove it.")
+			end
+		end
 		-- Solo al entrar o salir del modo: cada estado que llega pasa por aquí y no debe borrar lo que se está escribiendo.
-		if was ~= suggesting then
+		if was ~= asking then
 			for _, row in amountRows do
 				row.value, row.touching = 1, false
 			end
-		end
-		if current then
-			hint.Text = Lang.t(nil, if current.state ~= "editing" then "Offers locked." elseif suggesting then "Suggest: click something of yours, or ask for an amount." else "Click something of yours to offer it; in your offer, click it to remove it.")
+			-- Cambia de quién es el inventario que se ve.
+			if current then
+				buildStock()
+			end
+		elseif current then
 			paintStock()
 		end
 	end
@@ -1033,7 +1093,7 @@ local function buildTrade()
 		if side.gems > 0 then
 			place(amountCell(panel.grid, Lang.t(nil, "gems"), Ui.COLORS.purple, side.gems, "gems"), "gems", nil)
 		end
-		for _, name in Config.ItemOrder do
+		for _, name in ITEM_KEYS do
 			local amount = side.items[name]
 			if amount and amount > 0 then
 				place(amountCell(panel.grid, Lang.t(nil, Config.Items[name].name), Config.Items[name].color, amount, name), "items", name)
@@ -1062,8 +1122,8 @@ local function buildTrade()
 		local state = current.state
 		status.Text = STEPS[state] or ""
 		status.TextColor3 = if state == "editing" then WHITE else GOLD
-		-- Fuera del paso de elegir no hay sugerencias; también pone el texto de ayuda.
-		setSuggesting(suggesting and state == "editing")
+		-- Fuera del paso de elegir no hay peticiones; también pone el texto de ayuda.
+		setAsking(asking and state == "editing")
 		suggestButton.Visible = state == "editing"
 		paintSuggests()
 		backButton.Visible = state == "confirming"
@@ -1095,7 +1155,7 @@ local function buildTrade()
 		if state == nil then
 			current = nil
 			lastState = nil
-			setSuggesting(false)
+			setAsking(false)
 			card.Visible, chip.Visible, shownSuggest = false, false, nil
 			countdown.Visible = false
 			Ui.close(window)
@@ -1117,9 +1177,30 @@ local function buildTrade()
 			Remotes.TradeCancel:FireServer()
 		end
 	end)
-	player.AttributeChanged:Connect(function(attribute)
-		if current and window.Visible and (attribute == "Swords" or attribute == "Armor" or attribute == "Artifacts" or attribute == "Loadout" or attribute == "Coins" or attribute == "Gems" or string.sub(attribute, 1, 5) == "Item_") then
-			buildStock()
+	-- El inventario que se ve sigue a su dueño: el tuyo siempre y el del otro jugador mientras estás pidiendo.
+	local function watch(who: Player, theirs: boolean)
+		return who.AttributeChanged:Connect(function(attribute)
+			if current and window.Visible and asking == theirs and (attribute == "Swords" or attribute == "Armor" or attribute == "Artifacts" or attribute == "Loadout" or attribute == "Bag" or attribute == "Coins" or attribute == "Gems" or string.sub(attribute, 1, 5) == "Item_") then
+				buildStock()
+			end
+		end)
+	end
+	watch(player, false)
+	local watched: RBXScriptConnection? = nil
+	local watchedId = 0
+	Remotes.TradeState.OnClientEvent:Connect(function(state)
+		local id = if state then state.them.userId else 0
+		if id == watchedId then
+			return
+		end
+		watchedId = id
+		if watched then
+			watched:Disconnect()
+			watched = nil
+		end
+		local other = Players:GetPlayerByUserId(id)
+		if other then
+			watched = watch(other, true)
 		end
 	end)
 	-- La cuenta atrás late cada segundo.
