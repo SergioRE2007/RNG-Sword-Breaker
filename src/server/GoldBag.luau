@@ -187,7 +187,7 @@ local function hit(player: Player, data, seconds: number, noPotion: boolean?): (
 	-- La bolsa pierde vida con el daño de los golpes; las monedas (con sus multiplicadores y lo que sube cada bolsa
 	-- vaciada por el camino) las cuenta BagInfo.collect.
 	local emptied, coins
-	bag.stage, bag.taken, emptied, coins = BagInfo.collect(bag.stage, bag.taken, Stats.bagPower(player, noPotion) * seconds, Stats.bagMult(player))
+	bag.stage, bag.taken, emptied, coins = BagInfo.collect(bag.stage, bag.taken, Stats.bagPower(player, noPotion) * seconds, Stats.bagMult(player, noPotion))
 	local total = coins + (carry[player] or 0)
 	local whole = if total < 1e15 then math.floor(total) else total
 	carry[player] = if total < 1e15 then total - whole else 0

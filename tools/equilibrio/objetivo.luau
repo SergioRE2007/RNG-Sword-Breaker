@@ -1,4 +1,4 @@
--- CALENDARIO DE PROGRESO: lo que se quiere que tarde cada cosa en una partida de ~70 h (sin pases). Es lo único que se toca para
+-- CALENDARIO DE PROGRESO: lo que se quiere que tarde cada cosa en una partida de ~100 h hasta la suerte al máximo (sin pases). Es lo único que se toca para
 -- cambiar el ritmo del juego: `lune run tools/equilibrio/generar.luau` saca de aquí los precios, las vidas y demás
 -- números de Config, y `lune run tools/equilibrio/informe.luau` dice cuánto se tarda de verdad con el Config que hay.
 local H = 3600
@@ -14,8 +14,9 @@ local Objetivo = {}
 Objetivo.consumible = { suerte = 1000, usos = 1000 }
 
 -- Nivel n de la mejora de suerte (de `niveles`): segundos de juego en los que lo compra el jugador tipo. Muy rápido
--- al principio y cada vez más cuesta: el nivel 10 a los ~14 min, el 24 a las 5 h, el 40 a las 27 h y el último a las 60.
-Objetivo.horasSuerte = 60
+-- al principio y cada vez más cuesta: el nivel 10 a los ~29 min, el 24 a las 10 h, el 40 a las 62 h y el último a las 135
+-- (135 en el calendario son unas 100 de verdad: el jugador que juega sus mazmorras va algo por delante).
+Objetivo.horasSuerte = 135
 function Objetivo.suerte(n: number, niveles: number): number
 	return Objetivo.horasSuerte * H * (n / niveles) ^ 3.5 + 8 * n
 end
@@ -24,17 +25,17 @@ end
 -- `fortune` (monedas, se paga con gemas): sus compras caen entre las de suerte, la mitad en las 5 primeras horas.
 Objetivo.mejoras = {
 	capacity = { 10, 30, 75, 3 * MIN, 6 * MIN, 11 * MIN, 19 * MIN, 30 * MIN },
-	rollSpeed = { 1 * MIN, 4 * MIN, 10 * MIN, 25 * MIN, 1 * H, 2.5 * H, 5 * H, 10 * H, 18 * H, 30 * H },
-	fortune = { 4 * MIN, 9 * MIN, 17 * MIN, 28 * MIN, 45 * MIN, 1.2 * H, 1.8 * H, 2.6 * H, 3.6 * H, 4.8 * H, 6.5 * H, 9 * H, 12 * H, 16 * H, 21 * H, 27 * H, 34 * H, 42 * H, 51 * H, 62 * H },
+	rollSpeed = { 1 * MIN, 4 * MIN, 10 * MIN, 25 * MIN, 2.2 * H, 5.5 * H, 11 * H, 22 * H, 40 * H, 68 * H },
+	fortune = { 4 * MIN, 9 * MIN, 17 * MIN, 28 * MIN, 45 * MIN, 2.7 * H, 4 * H, 6 * H, 8 * H, 11 * H, 15 * H, 20 * H, 27 * H, 35 * H, 47 * H, 61 * H, 76 * H, 95 * H, 115 * H, 138 * H },
 }
-Objetivo.renacer = { 0.5 * H, 2 * H, 6 * H, 18 * H, 42 * H }
+Objetivo.renacer = { 0.5 * H, 4.6 * H, 13.5 * H, 40 * H, 95 * H }
 -- Parte de lo que gana que el jugador tipo dedica a cada cosa mientras le quedan niveles (de ahí salen los precios).
 -- El reparto es entre las que se pagan con la misma moneda: `fortune` es la única de gemas y se las lleva todas.
 Objetivo.reparto = { luck = 0.5, rebirth = 0.25, rollSpeed = 0.15, capacity = 0.1, fortune = 1 }
 
 -- Accesorios (por su posición en Config.Artifacts) y mazmorras (Config.Dungeons): cuándo los consigue o le llega el daño.
-Objetivo.accesorios = { 2 * MIN, 6 * MIN, 15 * MIN, 40 * MIN, 1.5 * H, 4 * H, 10 * H, 22 * H, 38 * H, 55 * H }
-Objetivo.mazmorras = { 3 * MIN, 20 * MIN, 1 * H, 2 * H, 4 * H, 8 * H, 14 * H, 22 * H, 32 * H, 43 * H, 54 * H, 64 * H }
+Objetivo.accesorios = { 2 * MIN, 6 * MIN, 15 * MIN, 40 * MIN, 3.4 * H, 9 * H, 22 * H, 49 * H, 86 * H, 123 * H }
+Objetivo.mazmorras = { 3 * MIN, 20 * MIN, 2.2 * H, 4.6 * H, 9 * H, 19 * H, 32 * H, 49 * H, 73 * H, 96 * H, 122 * H, 143 * H }
 
 -- Monedas de cada tipo de objeto = base * rareza ^ potencia. Con menos de 1 un objeto raro sigue siendo un premio
 -- gordo, pero no paga de golpe varios niveles (con 1 o más, sí: era la bola de nieve de antes).
@@ -132,6 +133,6 @@ Objetivo.bucle = { horas = 24, rasgo = 30000, grado = 30000 }
 Objetivo.bolsa = { reales = 8 }
 
 -- Horas de las que se guarda el estado del jugador tipo (Config.Test.Progress, para probar cada etapa en Studio).
-Objetivo.fotos = { 0.5, 1, 2, 5, 10, 20, 35, 50, 70 }
+Objetivo.fotos = { 0.5, 1, 2, 5, 10, 20, 35, 50, 70, 90, 110, 130, 150 }
 
 return Objetivo

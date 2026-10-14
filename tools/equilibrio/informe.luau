@@ -18,6 +18,15 @@ local partidas = tonumber(process.args[1]) or 9
 local horas = tonumber(process.args[2]) or 100
 local ritmo = tonumber(process.args[3]) or 1
 local equipo = if table.find(process.args, "calendario") then "calendario" else "mazmorras"
+-- Con `pases` en la orden, el jugador tiene todos los pases de juego de Config.Gamepasses.
+local pases = {}
+if table.find(process.args, "pases") then
+	for key in Config.Gamepasses do
+		table.insert(pases, key)
+	end
+	table.sort(pases)
+	print(`Con todos los pases: {table.concat(pases, ", ")}`)
+end
 local tiempo, mediana = Util.tiempo, Util.mediana
 
 print(`== INFORME: {partidas} partidas de hasta {horas} h, ritmo x{ritmo}, con el equipo {if equipo == "calendario" then "que le supone el calendario" else "que saca de las mazmorras"} ==`)
@@ -26,9 +35,15 @@ print(`Paridad del muestreo con ObjectSpec.roll: diferencia máxima {string.form
 -- El jugador lleva lo que saca de verdad de sus mazmorras (rasgo, grado y armadura), no lo que le supone el calendario
 -- (con `calendario` al final de la orden, lo del calendario: es con lo que generar.luau saca los precios).
 local runs = {}
-for index = 1, partidas do
+-- Con `desde=N` en la orden, las partidas empiezan en la N (para repartir las partidas entre varios procesos a la vez).
+local desde = 1
+for _, arg in process.args do
+	desde = tonumber(arg:match("^desde=(%d+)$")) or desde
+end
+for n = 1, partidas do
+	local index = desde + n - 1
 	math.randomseed(1000 + index)
-	runs[index] = M.partida({ modo = "comprar", horas = horas, ritmo = ritmo, equipo = equipo, semilla = index })
+	runs[n] = M.partida({ modo = "comprar", horas = horas, ritmo = ritmo, equipo = equipo, semilla = index, pases = pases, avisar = `{if #pases > 0 then "CON pases" else "SIN pases"} partida {index}` })
 end
 
 -- Mediana de un hito entre partidas (las que no llegan cuentan como infinito).
@@ -136,12 +151,42 @@ end
 print(`\nTodo completado (mejoras, renacimientos y accesorios): {tiempo(med(function(run)
 	return run.completo
 end))}`)
+print(`Juego completado (Suerte de destructibles al máximo por primera vez): {tiempo(med(function(run)
+	return run.compras.luck[Config.Upgrades.luck.maxLevel]
+end))}`)
 print(`Tramo más largo sin ningún hito: {tiempo(mediana(huecos))} (empieza hacia {tiempo(mediana(donde))})`)
 print(`Bolsa de oro: {string.format("%.0f", med(function(run)
 	return run.bolsa.ganado / math.max(run.ganado, 1)
 end) * 100)} % de las monedas ganadas (sin equilibrar), acaba en la bolsa nº {med(function(run)
 	return run.bolsa.stage
 end)}`)
+-- Bolsa frente a destructibles por tramos (x1 = lo mismo; pedido por el usuario que vayan más o menos igual).
+do
+	local parts, desde = {}, 0
+	for _, hasta in { 1, 2, 5, 10, 20, 40, 60, 80, 100 } do
+		if hasta <= horas then
+			local d = desde
+			table.insert(parts, `{d}-{hasta} h x{string.format("%.2g", med(function(run)
+				local a, b
+				for _, foto in run.ritmo do
+					if foto.hora == d then
+						a = foto
+					elseif foto.hora == hasta then
+						b = foto
+					end
+				end
+				a = a or { monedas = 0, bolsa = 0 }
+				if not b then
+					return nil
+				end
+				local bolsa = b.bolsa - a.bolsa
+				return bolsa / math.max(b.monedas - a.monedas - bolsa, 1)
+			end))}`)
+			desde = hasta
+		end
+	end
+	print(`Bolsa / destructibles: {table.concat(parts, " · ")}`)
+end
 
 print("\n-- Ritmo --")
 parts = {}
