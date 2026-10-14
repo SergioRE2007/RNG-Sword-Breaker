@@ -832,7 +832,6 @@ return {
 	["Grade"] = "Grado",
 	["Give"] = "Dar",
 	["Max everything"] = "Todo al máximo",
-	["Language changed. Rejoin to see everything in the new language."] = "Idioma cambiado. Vuelve a entrar para verlo todo en el idioma nuevo.",
 	["Given on all servers: +{n} {item}"] = "Regalado en todos los servidores: +{n} {item}",
 	["Given on all servers: {n} x {weapon}"] = "Regalado en todos los servidores: {n} x {weapon}",
 	["Announcement to all servers"] = "Aviso a todos los servidores",

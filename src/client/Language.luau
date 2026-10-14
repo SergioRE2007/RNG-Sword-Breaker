@@ -2,12 +2,14 @@
 -- cuenta. Antes se miraba el de la cuenta y cambiar el idioma en ese menú no hacía nada (lo notó el usuario). Roblox lo
 -- da en el Translator del jugador (su LocaleId), que además avisa cuando cambia.
 -- Va lo primero en el arranque del cliente: espera un momento a saberlo, para que ningún módulo escriba un texto en
--- el idioma que no es, y se lo dice al servidor (remote SetLang) para sus avisos. Los textos ya escritos no cambian
--- solos: si el jugador cambia de idioma a media partida, se le avisa de que vuelva a entrar.
+-- el idioma que no es, y se lo dice al servidor (remote SetLang) para sus avisos. Si el jugador cambia de idioma a
+-- media partida, lo que ya está escrito se traduce en el momento (client/LangSwap; antes había que volver a entrar).
+-- En Studio, el atributo "LangTest" del jugador local ("es" o "en") hace lo mismo que cambiarlo en el menú de Roblox.
 -- En español el juego pone sus propios textos (shared/LangEs): ahí se apaga la traducción automática de Roblox
 -- (AutoLocalize) en la interfaz, para que no los capture ni intente traducirlos como si fueran inglés.
 local LocalizationService = game:GetService("LocalizationService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Lang = require(ReplicatedStorage.Shared.Lang)
@@ -31,6 +33,20 @@ local function autoLocalize()
 	end
 end
 
+-- El jugador ha elegido otro idioma con el juego abierto: lo nuevo sale ya en ese y lo escrito se traduce.
+local function change(code: string)
+	local before = Lang.code()
+	if code == before then
+		return
+	end
+	Lang.set(code)
+	Remotes.SetLang:FireServer(code)
+	autoLocalize()
+	-- Se piden aquí: este módulo arranca antes que la interfaz.
+	require(script.Parent.LangSwap).change(before, code)
+	require(script.Parent.WorldText).refresh()
+end
+
 function Language.start()
 	local done = false
 	task.spawn(function()
@@ -42,16 +58,7 @@ function Language.start()
 			Lang.set(code)
 			Remotes.SetLang:FireServer(code)
 			translator:GetPropertyChangedSignal("LocaleId"):Connect(function()
-				local changed = Lang.fromLocale(translator.LocaleId)
-				if changed == Lang.code() then
-					return
-				end
-				Lang.set(changed)
-				Remotes.SetLang:FireServer(changed)
-				autoLocalize()
-				-- Ui se pide aquí: este módulo arranca antes que la interfaz.
-				local Ui = require(script.Parent.Ui) :: any
-				Ui.toast(Lang.t(nil, "Language changed. Rejoin to see everything in the new language."), Ui.COLORS.blue)
+				change(Lang.fromLocale(translator.LocaleId))
 			end)
 		end
 		done = true
@@ -68,6 +75,14 @@ function Language.start()
 		end
 	end)
 	autoLocalize()
+	if RunService:IsStudio() then
+		player:GetAttributeChangedSignal("LangTest"):Connect(function()
+			local code = player:GetAttribute("LangTest")
+			if code == "es" or code == "en" then
+				change(code)
+			end
+		end)
+	end
 end
 
 return Language
