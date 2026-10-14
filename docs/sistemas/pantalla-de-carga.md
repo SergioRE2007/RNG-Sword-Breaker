@@ -1,0 +1,6 @@
+# Pantalla de carga
+
+- Pedida por el usuario. `src/first/Loading.client.luau` → `ReplicatedFirst.Loading` (lo primero que llega al cliente: no puede usar `client/Ui` ni `shared` al arrancar, así que se hace sus piezas y repite tres ids de `Ui.IMAGES`). `ScreenGui` `PlayerGui.Loading` (`Root.Box`: `Logo`, `Rays`, `Title`, `Bar.Fill`, `Bar.Percent`, `Status`, `Tip`, `Skip`).
+- Dos fases: lo imprescindible (juego replicado, atributo `Coins` publicado y `Hud.HudRoot` montado; media barra) y, con el botón "Saltar" ya a la vista, la precarga por tandas de las imágenes del `Hud` y los sonidos de `SfxBank`. Se cierra sola al acabar o a los `MAX_WAIT` s (quien vuelve de una reconexión por inactividad no está delante para pulsar), y dura `MIN_TIME` s como mínimo.
+- `Root` es un `Frame`, no un `CanvasGroup`: en un `CanvasGroup` el degradado del fondo tiñe todo lo de dentro (salía todo morado). Por lo mismo el texto de "Saltar" va en una etiqueta dentro del botón. Los consejos (`TIPS`) pasan por `Lang.t` cuando llega `shared/Lang`; antes solo se escribe "Loading" / "Cargando" por el idioma de la cuenta.
+- Probar: dar a Jugar y capturar enseguida (en Studio dura unos segundos). Un cambio en `default.project.json` pide reiniciar `rojo serve` y volver a pulsar Rojo → Connect.
