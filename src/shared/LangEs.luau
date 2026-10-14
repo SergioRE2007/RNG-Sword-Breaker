@@ -835,6 +835,7 @@ return {
 	["Given on all servers: +{n} {item}"] = "Regalado en todos los servidores: +{n} {item}",
 	["Given on all servers: {n} x {weapon}"] = "Regalado en todos los servidores: {n} x {weapon}",
 	["Announcement to all servers"] = "Aviso a todos los servidores",
+	["[Admin] {text}"] = "[Admin] {text}",
 	["Give to everyone on all servers"] = "Regalar a todos, en todos los servidores",
 	["This server"] = "Este servidor",
 	["All servers"] = "Todos los servidores",

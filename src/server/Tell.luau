@@ -36,9 +36,10 @@ function Tell.notice(player: Player?, color: Color3?, text: any, args: { [string
 	end
 end
 
-function Tell.all(color: Color3?, build: (reader: Player) -> string)
+-- `admin` = aviso de un administrador: además del chat sale en pantalla (el chat suele estar cerrado).
+function Tell.all(color: Color3?, build: (reader: Player) -> string, admin: boolean?)
 	for _, reader in Players:GetPlayers() do
-		Remotes.Announce:FireClient(reader, build(reader), color)
+		Remotes.Announce:FireClient(reader, build(reader), color, admin == true)
 	end
 end
 
