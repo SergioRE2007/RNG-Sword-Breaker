@@ -5,7 +5,7 @@
 -- (contador global) y expires = "AAAA-MM-DD" (último día que vale, hora UTC). Cada jugador canjea cada uno una sola vez.
 -- Un código nuevo es una línea aquí y publicar el juego.
 return {
-	RELEASE = { rewards = { { item = "luckClover", amount = 1 }, { item = "potion_coins_5", amount = 1 } } },
+	RNG2026 = { rewards = { { item = "luckClover", amount = 1 }, { item = "potion_coins_5", amount = 1 } } },
 	-- 5467 tickets = lo que cuestan en tickets los ocho pases juntos (Stats.ticketPrice). Para 10 jugadores.
 	["FUNDADOR-K7Q4X9"] = { maxUses = 10, rewards = { { item = "missionToken", amount = 5467 } } },
 }
