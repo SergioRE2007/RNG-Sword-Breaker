@@ -204,8 +204,8 @@ Config.Items = {
 	missionToken = { name = "Ticket", description = "Earned from daily and weekly missions. Use them to buy the passes in the Shop.", color = Color3.fromRGB(255, 190, 60), image = "ticket", noTrade = true },
 	-- Trébol de la suerte (pedido por el usuario): se pulsa en la mochila, se elige un objeto de tu parcela y su suerte
 	-- de armas se multiplica por Config.Clover.Luck, encima de todo lo que ya tuviera (server/Clover). Se compra con
-	-- Robux (Config.Products) o con tickets (Config.Tickets.Shop); no cae de nada y no se comercia.
-	luckClover = { name = "Lucky Clover", description = "Tap it and pick an object on any plot: its weapon luck is multiplied by 999.", color = Color3.fromRGB(90, 220, 130), image = "trebol", noTrade = true },
+	-- Robux (Config.Products) o con tickets (Config.Tickets.Shop); no cae de nada. Se comercia (pedido por el usuario).
+	luckClover = { name = "Lucky Clover", description = "Tap it and pick an object on any plot: its weapon luck is multiplied by 999.", color = Color3.fromRGB(90, 220, 130), image = "trebol" },
 	-- Lo sueltan los enemigos de las mazmorras y se saca al desmontar armadura. No cae de los objetos (sin dropChance).
 	gradeCrystal = { name = "Grade Crystal", description = "Spent at the Grades shop in the hub: gives a random grade to the sword you choose. Dropped by dungeon enemies.", color = Color3.fromRGB(200, 120, 255), image = "cristal_grado" },
 }
