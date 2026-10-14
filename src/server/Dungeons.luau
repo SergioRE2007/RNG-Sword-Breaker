@@ -172,7 +172,8 @@ local function spawnEnemy(run, key: string)
 	local skin = DungeonThemes.skin(run.theme, key)
 	local size: Vector3 = def.size * ((skin and skin.scale) or 1)
 	local turn = random:NextNumber(0, math.pi * 2)
-	local distance = cfg.ArenaRadius * random:NextNumber(0.55, 0.85)
+	-- Sin pasar de 0,85 del radio con todo su cuerpo: los grandes podían nacer metidos en la barrera invisible.
+	local distance = math.min(cfg.ArenaRadius * random:NextNumber(0.55, 0.85), cfg.ArenaRadius * 0.85 - size.X / 2)
 	local position = run.origin + Vector3.new(math.cos(turn) * distance, size.Y / 2 + 1, math.sin(turn) * distance)
 
 	local body = Instance.new("Part")
@@ -517,6 +518,40 @@ function Dungeons.nearest(player: Player, from: Vector3, center: Vector3, radius
 	return best
 end
 
+-- Hacia dónde anda un enemigo que va a por `direction`: se aparta de los enemigos que tiene pegados y rodea al que le
+-- tapa el paso. Antes iban en línea recta y chocan entre ellos: el de detrás se quedaba quieto para siempre empujando
+-- al de delante, sin llegar a atacar.
+local function steer(run, body: BasePart, enemy, direction: Vector3): Vector3
+	local push = Vector3.zero
+	local side = 0
+	for other, mate in run.enemies do
+		if other == body then
+			continue
+		end
+		local away = body.Position - other.Position
+		away = Vector3.new(away.X, 0, away.Z)
+		local distance = away.Magnitude
+		local reach = (enemy.size.X + mate.size.X) / 2 + 0.5
+		if distance < reach and distance > 0.01 then
+			local unit = away / distance
+			push += unit * (reach - distance) / reach
+			-- Lo tiene delante: lo rodea por el lado por el que ya está desviado (siempre el mismo para ese par).
+			if unit:Dot(direction) < -0.5 then
+				local cross = direction:Cross(unit).Y
+				side += if cross >= 0 then 1 else -1
+			end
+		end
+	end
+	if push.Magnitude < 0.01 and side == 0 then
+		return direction
+	end
+	-- Apartarse no lo hace retroceder: lo que empuja hacia atrás se quita, y al que tiene delante lo rodea.
+	push -= direction * math.min(push:Dot(direction), 0)
+	local around = Vector3.new(-direction.Z, 0, direction.X) * math.sign(side)
+	local heading = direction + push * 1.5 + around * 1.2
+	return if heading.Magnitude > 0.01 then heading.Unit else direction
+end
+
 local function step()
 	local now = os.clock()
 	for run in runs do
@@ -594,7 +629,8 @@ local function step()
 			local direction = if flat.Magnitude > 0.1 then flat.Unit else Vector3.zAxis
 			enemy.align.CFrame = CFrame.lookAt(Vector3.zero, direction)
 			local speed = if gap > def.attackRange * 0.6 and now >= enemy.halt then def.speed else 0
-			enemy.velocity.PlaneVelocity = Vector2.new(direction.X, direction.Z) * speed
+			local heading = if speed > 0 then steer(run, body, enemy, direction) else direction
+			enemy.velocity.PlaneVelocity = Vector2.new(heading.X, heading.Z) * speed
 			if gap <= def.attackRange and math.abs(offset.Y) < enemy.size.Y + 6 and now >= enemy.nextAttack then
 				enemy.nextAttack = now + def.attackTime
 				local amount = def.damage * power
