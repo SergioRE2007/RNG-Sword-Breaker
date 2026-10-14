@@ -195,6 +195,38 @@ local function applyHealth(player: Player, full: boolean)
 	humanoid.Health = math.max(1, maxHealth * ratio)
 end
 
+-- Con casco se esconden los sombreros, el pelo y lo de la cara del avatar, que lo atravesaban.
+local HEADWEAR_TYPES = { [Enum.AccessoryType.Hat] = true, [Enum.AccessoryType.Hair] = true, [Enum.AccessoryType.Face] = true }
+local HEADWEAR_ATTACHMENTS = { HatAttachment = true, HairAttachment = true, FaceFrontAttachment = true, FaceCenterAttachment = true }
+
+local function hideHeadwear(character: Model, hidden: boolean)
+	for _, item in character:GetChildren() do
+		local handle = item:IsA("Accessory") and item:FindFirstChild("Handle")
+		if handle and handle:IsA("BasePart") then
+			local attachment = handle:FindFirstChildWhichIsA("Attachment")
+			if HEADWEAR_TYPES[item.AccessoryType] or (attachment and HEADWEAR_ATTACHMENTS[attachment.Name]) then
+				local original = handle:GetAttribute("ArmorTransparency")
+				if hidden and original == nil then
+					handle:SetAttribute("ArmorTransparency", handle.Transparency)
+					handle.Transparency = 1
+				elseif not hidden and original ~= nil then
+					handle.Transparency = original
+					handle:SetAttribute("ArmorTransparency", nil)
+				end
+			end
+		end
+	end
+end
+
+-- El pelo y los sombreros pueden llegar después que el casco.
+local function watchHeadwear(character: Model)
+	character.ChildAdded:Connect(function(item)
+		if item:IsA("Accessory") and character:FindFirstChild("Armor_helmet") then
+			task.defer(hideHeadwear, character, true)
+		end
+	end)
+end
+
 -- Modelos de las piezas equipadas sobre el personaje.
 local function dress(player: Player)
 	local character = player.Character
@@ -212,6 +244,7 @@ local function dress(player: Player)
 			ArmorModel.attach(character, slot, piece.quality, piece.level)
 		end
 	end
+	hideHeadwear(character, character:FindFirstChild("Armor_helmet") ~= nil)
 end
 
 -- Modo de pruebas (Config.Test.AllGear, solo en Studio; esa partida no se guarda, ver PlayerData): una pieza de
@@ -259,6 +292,7 @@ local function onPlayer(player: Player)
 			applyHealth(player, true)
 			dress(player)
 		end
+		watchHeadwear(character)
 	end)
 	player:GetAttributeChangedSignal("Armor_health"):Connect(function()
 		applyHealth(player, false)
@@ -273,6 +307,7 @@ local function onPlayer(player: Player)
 	if player.Character then
 		applyHealth(player, true)
 		dress(player)
+		watchHeadwear(player.Character)
 	end
 end
 
