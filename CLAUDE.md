@@ -171,3 +171,4 @@ Lo de cada sistema concreto (cómo funciona, qué pidió el usuario, cómo proba
 - `docs/sistemas/cinematicas.md` — tiradas, niveles de espectáculo y cinemáticas (`RollReveal`, `RollCinematic`)
 - `docs/sistemas/venta-accesorios-desmontar.md` — vender armas, accesorios repetidos, desmontar armadura
 - `docs/sistemas/renacer.md` — renacer y su cinemática
+- `docs/sistemas/slimes.md` — enemigos de mazmorra hechos slimes y su animación (`client/Slimes`, `SlimeLooks`)

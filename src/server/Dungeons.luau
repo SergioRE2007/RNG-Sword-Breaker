@@ -51,119 +51,8 @@ end
 
 -- Enemigos -------------------------------------------------------------------------------
 
--- Adornos de cada "look" (Config.Enemies y los skins de Config.DungeonThemes; un enemigo puede llevar varios):
--- piezas pequeñas soldadas al cuerpo. Un look nuevo es una función más aquí. `add` pone una pieza (devuelve la
--- pieza); `size` es el tamaño del cuerpo; `color` su color. La cara es -Z.
-local GOLD = Color3.fromRGB(255, 205, 60)
-local BONE = Color3.fromRGB(240, 235, 215)
-local LOOKS: { [string]: (add: (string, Vector3, CFrame, Color3, Enum.Material?) -> Part, size: Vector3, color: Color3) -> () } = {}
-
-LOOKS.horns = function(add, size)
-	for _, side in { -1, 1 } do
-		add("Horn", Vector3.new(size.X * 0.14, size.Y * 0.35, size.X * 0.14), CFrame.new(side * size.X * 0.36, size.Y * 0.62, 0) * CFrame.Angles(0, 0, math.rad(-side * 18)), BONE)
-	end
-end
-
-LOOKS.crown = function(add, size)
-	add("Crown", Vector3.new(size.X * 0.5, size.Y * 0.1, size.Z * 0.5), CFrame.new(0, size.Y * 0.55, 0), GOLD, Enum.Material.Foil)
-	for index = 1, 4 do
-		local turn = index * math.pi / 2
-		add("Spike", Vector3.new(size.X * 0.08, size.Y * 0.16, size.X * 0.08), CFrame.new(math.cos(turn) * size.X * 0.2, size.Y * 0.68, math.sin(turn) * size.Z * 0.2), GOLD, Enum.Material.Foil)
-	end
-end
-
--- Hojas en la cabeza (bosque, nebulosa): láminas verdes inclinadas.
-LOOKS.leaf = function(add, size, color)
-	local green = color:Lerp(Color3.fromRGB(70, 190, 80), 0.6)
-	for index, lean in { -26, 0, 26 } do
-		add("Leaf", Vector3.new(size.X * 0.2, size.Y * 0.34, size.X * 0.05), CFrame.new((index - 2) * size.X * 0.2, size.Y * 0.64, 0) * CFrame.Angles(0, 0, math.rad(lean)), green)
-	end
-end
-
-LOOKS.antlers = function(add, size)
-	local wood = Color3.fromRGB(128, 96, 64)
-	for _, side in { -1, 1 } do
-		add("Antler", Vector3.new(size.X * 0.08, size.Y * 0.5, size.X * 0.08), CFrame.new(side * size.X * 0.3, size.Y * 0.68, 0) * CFrame.Angles(0, 0, math.rad(-side * 20)), wood, Enum.Material.Wood)
-		add("Prong", Vector3.new(size.X * 0.06, size.Y * 0.24, size.X * 0.06), CFrame.new(side * size.X * 0.46, size.Y * 0.8, 0) * CFrame.Angles(0, 0, math.rad(-side * 55)), wood, Enum.Material.Wood)
-	end
-end
-
--- Capucha: un bloque oscuro sobre la cabeza.
-LOOKS.hood = function(add, size, color)
-	add("Hood", Vector3.new(size.X * 1.05, size.Y * 0.24, size.Z * 1.05), CFrame.new(0, size.Y * 0.4, size.Z * 0.01), color:Lerp(Color3.new(0, 0, 0), 0.55))
-end
-
-LOOKS.spikes = function(add, size, color)
-	for index = 1, 5 do
-		local turn = index / 5 * math.pi * 2
-		add("Spike", Vector3.new(size.X * 0.1, size.Y * 0.24, size.X * 0.1), CFrame.new(math.cos(turn) * size.X * 0.28, size.Y * 0.58, math.sin(turn) * size.Z * 0.28), color:Lerp(Color3.new(1, 1, 1), 0.45))
-	end
-end
-
--- Llamitas en la cabeza (brillan, pero son pequeñas).
-LOOKS.flame = function(add, size)
-	for index, lean in { -14, 0, 14 } do
-		add("Flame", Vector3.new(size.X * 0.12, size.Y * 0.3, size.X * 0.12), CFrame.new((index - 2) * size.X * 0.16, size.Y * 0.62, 0) * CFrame.Angles(0, 0, math.rad(lean)), Color3.fromRGB(255, 150, 50), Enum.Material.Neon)
-	end
-end
-
-LOOKS.halo = function(add, size)
-	local ring = add("Halo", Vector3.new(size.Y * 0.06, size.X * 0.8, size.X * 0.8), CFrame.new(0, size.Y * 0.78, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 245, 190), Enum.Material.Neon)
-	ring.Shape = Enum.PartType.Cylinder
-	ring.Transparency = 0.15
-end
-
-LOOKS.helmet = function(add, size)
-	add("Helmet", Vector3.new(size.X * 1.04, size.Y * 0.2, size.Z * 1.04), CFrame.new(0, size.Y * 0.42, 0), Color3.fromRGB(235, 190, 60), Enum.Material.Metal)
-	add("Lamp", Vector3.new(size.X * 0.18, size.X * 0.18, size.X * 0.14), CFrame.new(0, size.Y * 0.46, -size.Z / 2 - 0.3), Color3.fromRGB(255, 244, 190), Enum.Material.Neon)
-end
-
--- Calavera: cuencas negras tras los ojos y dientes.
-LOOKS.skull = function(add, size)
-	local eye = size.X * 0.2
-	for _, side in { -1, 1 } do
-		add("Socket", Vector3.new(eye * 1.55, eye * 1.8, 0.2), CFrame.new(side * size.X * 0.22, size.Y * 0.15, -size.Z / 2 - 0.05), Color3.new(0, 0, 0))
-	end
-	for index = -1.5, 1.5 do
-		add("Tooth", Vector3.new(size.X * 0.07, size.Y * 0.1, 0.3), CFrame.new(index * size.X * 0.1, -size.Y * 0.2, -size.Z / 2 - 0.3), Color3.new(1, 1, 1))
-	end
-end
-
--- Cuerpo ya creado: ojos, boca y los adornos del look (nombre o lista de nombres).
-local function decorate(body: Part, look: (string | { string })?)
-	local size = body.Size
-	local function add(name: string, partSize: Vector3, offset: CFrame, color: Color3, material: Enum.Material?): Part
-		local part = Instance.new("Part")
-		part.Name = name
-		part.Size = partSize
-		part.Color = color
-		part.Material = material or Enum.Material.SmoothPlastic
-		part.CanCollide = false
-		part.CanQuery = false
-		part.Massless = true
-		part.CFrame = body.CFrame * offset
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = body
-		weld.Part1 = part
-		weld.Parent = part
-		part.Parent = body
-		return part
-	end
-	-- Ojos (la cara es -Z).
-	local eye = size.X * 0.2
-	for _, side in { -1, 1 } do
-		add("Eye", Vector3.new(eye, eye * 1.2, 0.3), CFrame.new(side * size.X * 0.22, size.Y * 0.15, -size.Z / 2 - 0.1), Color3.new(1, 1, 1))
-		add("Pupil", Vector3.new(eye * 0.45, eye * 0.6, 0.3), CFrame.new(side * size.X * 0.22, size.Y * 0.12, -size.Z / 2 - 0.2), Color3.new(0, 0, 0))
-	end
-	add("Mouth", Vector3.new(size.X * 0.4, size.Y * 0.07, 0.3), CFrame.new(0, -size.Y * 0.2, -size.Z / 2 - 0.1), Color3.new(0, 0, 0))
-	local names = if type(look) == "table" then look elseif look then { look } else {}
-	for _, name in names do
-		local make = LOOKS[name]
-		if make then
-			make(add, size, body.Color)
-		end
-	end
-end
+-- Cómo se ve cada enemigo (cuerpo de slime, cara, adornos de su "look" y animación) lo pone el cliente (client/Slimes) con
+-- los atributos que deja spawnEnemy: aquí solo está la caja física, invisible.
 
 local function spawnEnemy(run, key: string)
 	local def = Config.Enemies[key]
@@ -183,14 +72,20 @@ local function spawnEnemy(run, key: string)
 	body.Material = Enum.Material.SmoothPlastic
 	body.TopSurface = Enum.SurfaceType.Smooth
 	body.BottomSurface = Enum.SurfaceType.Smooth
+	body.Transparency = 1 -- se ve el slime que le pone cada cliente (client/Slimes)
 	body.CustomPhysicalProperties = PhysicalProperties.new(1, 0, 0) -- sin rozamiento: lo mueve LinearVelocity
 	body.CollisionGroup = "Enemies" -- no choca con el decorado de la arena (server/CollisionGroups)
 	body.CFrame = CFrame.lookAt(position, Vector3.new(run.origin.X, position.Y, run.origin.Z))
 	local hp = def.hp * level.hp * run.hpMult
 	body:SetAttribute("HP", hp)
 	body:SetAttribute("MaxHP", hp)
+	-- Para el slime del cliente: tipo (grunt, brute, boss), adornos del look separados por comas y hora del servidor a
+	-- la que puede volver a atacar (NextAttack; con cada ataque, también AttackAt y Victim, el UserId de quien recibe).
+	local look = (skin and skin.look) or def.look
+	body:SetAttribute("Kind", key)
+	body:SetAttribute("Look", if type(look) == "table" then table.concat(look, ",") else look or "")
+	body:SetAttribute("NextAttack", workspace:GetServerTimeNow() + def.attackTime * 0.5)
 	CollectionService:AddTag(body, "Enemy")
-	decorate(body, (skin and skin.look) or def.look)
 
 	local attachment = Instance.new("Attachment")
 	attachment.Parent = body
@@ -635,6 +530,11 @@ local function step()
 				enemy.nextAttack = now + def.attackTime
 				local amount = def.damage * power
 				target.humanoid:TakeDamage(amount)
+				-- Solo para la animación del ataque en los clientes: no cambia cuándo pega ni cuánto.
+				local serverNow = workspace:GetServerTimeNow()
+				body:SetAttribute("Victim", target.player.UserId)
+				body:SetAttribute("AttackAt", serverNow)
+				body:SetAttribute("NextAttack", serverNow + def.attackTime)
 				Remotes.DungeonEvent:FireClient(target.player, "hurt", { amount = amount, from = body })
 			end
 		end
