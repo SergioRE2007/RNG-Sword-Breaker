@@ -107,14 +107,15 @@ local function pieceView(piece)
 	return { id = piece.id, slot = piece.slot, quality = piece.quality, level = piece.level, stats = piece.stats }
 end
 
--- La sugerencia en curso de un lado tal y como la ve el cliente (con la espada o la pieza ya resueltas), o nil.
-local function suggestView(side)
+-- La petición en curso de un lado tal y como la ve el cliente, o nil. Lo pedido es del otro lado (`other`): la espada o
+-- la pieza salen ya resueltas de sus datos.
+local function suggestView(side, other)
 	local suggest = side.suggest
 	if not suggest then
 		return nil
 	end
 	local out = { intent = suggest.intent, category = suggest.category, key = suggest.key, amount = suggest.amount, ends = suggest.ends, ignored = suggest.ignored }
-	local data = if side.player then PlayerData.read(side.player) else nil
+	local data = if other.player then PlayerData.read(other.player) else nil
 	if data and suggest.category == "swords" then
 		local copy = PlayerData.findSword(data, suggest.key)
 		out.sword = if copy then swordView(copy) else nil
@@ -126,14 +127,14 @@ local function suggestView(side)
 end
 
 -- Lo que ofrece un lado, con todos los datos de cada cosa, tal y como lo ve el cliente.
-local function view(side)
+local function view(side, other)
 	local offer = side.offer
 	local out = {
 		name = side.name,
 		userId = side.userId,
 		accepted = side.accepted,
 		confirmed = side.confirmed,
-		suggest = suggestView(side),
+		suggest = suggestView(side, other),
 		coins = offer.coins,
 		gems = offer.gems,
 		items = offer.items,
@@ -171,7 +172,8 @@ end
 local function push(session)
 	for index, side in session.sides do
 		if side.player then
-			Remotes.TradeState:FireClient(side.player, { state = session.state, ends = session.ends, you = view(side), them = view(session.sides[3 - index]) })
+			local other = session.sides[3 - index]
+			Remotes.TradeState:FireClient(side.player, { state = session.state, ends = session.ends, you = view(side, other), them = view(other, side) })
 		end
 	end
 end
@@ -424,7 +426,7 @@ local function complete(session)
 	close(session, "Trade complete!", GOOD)
 end
 
--- Sugerencias (definidas más abajo, con las peticiones del cliente): las usa también el bot de pruebas.
+-- Peticiones (definidas más abajo, con las del cliente): las usa también el bot de pruebas.
 local setSuggest, respondSuggest
 
 -- Bot de pruebas: acepta y confirma un segundo después que el jugador.
@@ -491,7 +493,7 @@ local function start(playerA: Player, playerB: Player?)
 		end
 	end
 	push(session)
-	-- Bot de pruebas: a los 3 s pide cristales, para ver una sugerencia recibida.
+	-- Bot de pruebas: a los 3 s pide cristales, para ver una petición recibida.
 	for index, side in session.sides do
 		if side.bot then
 			task.delay(3, function()
@@ -538,9 +540,8 @@ local function applyOffer(session, side, other, category: unknown, key: unknown,
 		end
 		offer[category] = value
 	elseif category == "items" then
-		-- Las pociones no se comercian de momento: la ventana no las enseña (no están en Config.ItemOrder). Los tickets
-		-- de misión tampoco (noTrade): compran pases.
-		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].potion or Config.Items[key].noTrade then
+		-- Los tickets de misión y el trébol no se comercian (noTrade).
+		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].noTrade then
 			return false
 		end
 		local value = validAmount(amount, if side.bot then math.huge else data.items[key] or 0)
@@ -569,7 +570,7 @@ local function applyOffer(session, side, other, category: unknown, key: unknown,
 	end
 	-- Cualquier cambio quita el "aceptar" de los dos: nadie acepta una oferta que luego cambia.
 	side.accepted, other.accepted = false, false
-	-- Y la sugerencia de quien cambia su oferta: se hizo viendo la de antes.
+	-- Y la petición de quien cambia su oferta (se hizo viendo la de antes).
 	side.suggest = nil
 	push(session)
 	return true
@@ -582,13 +583,15 @@ local function onOffer(player: Player, category: unknown, key: unknown, amount: 
 	end
 end
 
--- Sugerencias: "want" (quiero eso tuyo) o "give" (te doy eso mío). Se guardan fuera de la oferta, así que por sí
--- solas no mueven nada: aceptar una solo cambia una oferta, y el trato sigue pidiendo Aceptar, Confirmar y la cuenta atrás.
+-- Peticiones (botón "Pedir"): un lado le pide al otro algo de su inventario (una espada, una pieza de armadura, un
+-- accesorio o una cantidad de un objeto). Se guardan fuera de la oferta, así que por sí solas no mueven nada: aceptar
+-- una solo la añade a la oferta de quien acepta, y el trato sigue pidiendo Aceptar, Confirmar y la cuenta atrás. Van
+-- con intent = "want": el "Te doy" de antes se quitó (pedido por el usuario).
 local function notice(side, text: string, color: Color3, args: { [string]: any }?)
 	Tell.notice(side.player, color, text, args)
 end
 
--- Quita la sugerencia `suggest` de `side` si sigue siendo la suya (puede haberla sustituido otra).
+-- Quita la petición `suggest` de `side` si sigue siendo la suya (puede haberla sustituido otra).
 local function dropSuggest(session, side, suggest)
 	if side.suggest == suggest and session.state ~= "closed" then
 		side.suggest = nil
@@ -596,7 +599,7 @@ local function dropSuggest(session, side, suggest)
 	end
 end
 
--- `side` responde a la sugerencia de `other`.
+-- `side` responde a la petición de `other`: si acepta, va a su oferta.
 function respondSuggest(session, side, other, accept: boolean)
 	local suggest = other.suggest
 	if session.state ~= "editing" or not suggest or suggest.ignored then
@@ -610,43 +613,46 @@ function respondSuggest(session, side, other, accept: boolean)
 		return
 	end
 	other.suggest = nil
-	if suggest.intent == "want" then
-		-- Va a la oferta de quien acepta, con lo que tenga.
-		local owned = math.huge
-		if side.player then
-			local data = PlayerData.read(side.player)
-			owned = if not data then 0 elseif suggest.category == "items" then data.items[suggest.key] or 0 else data[suggest.category]
-		end
-		local value = math.min(suggest.amount, owned)
-		if value < 1 then
-			notice(side, "You don't have any of that", BAD)
-			push(session)
-			return
-		end
-		if value < suggest.amount then
-			notice(side, "You don't have that many: what you have was added", BAD)
-		end
-		if not applyOffer(session, side, other, suggest.category, suggest.key, value) then
+	if suggest.category ~= "items" then
+		-- Espada, pieza o accesorio: applyOffer vuelve a comprobar que lo tiene y que se puede dar.
+		if not applyOffer(session, side, other, suggest.category, suggest.key, 1) then
+			notice(side, "You can't give that anymore", BAD)
 			push(session)
 		end
-	elseif not applyOffer(session, other, side, suggest.category, suggest.key, suggest.amount) then
-		-- "Te doy": a la oferta de quien la mandó, si sigue teniéndolo.
-		notice(side, "{name} no longer has that", BAD, { name = other.name })
+		return
+	end
+	-- Cantidad: se suma a lo que ya ofrecía de eso, hasta lo que tenga.
+	local owned = math.huge
+	if side.player then
+		local data = PlayerData.read(side.player)
+		owned = if data then data.items[suggest.key] or 0 else 0
+	end
+	local already = side.offer.items[suggest.key] or 0
+	local value = math.min(already + suggest.amount, owned)
+	if value <= already then
+		notice(side, "You don't have any of that", BAD)
+		push(session)
+		return
+	end
+	if value < already + suggest.amount then
+		notice(side, "You don't have that many: what you have was added", BAD)
+	end
+	if not applyOffer(session, side, other, "items", suggest.key, value) then
 		push(session)
 	end
 end
 
--- Pone la sugerencia de `side` (sustituye a la que tuviera) y la hace caducar.
+-- Pone la petición de `side` (sustituye a la que tuviera) y la hace caducar.
 function setSuggest(session, side, other, suggest)
 	suggest.ends = workspace:GetServerTimeNow() + cfg.SuggestTime
 	side.suggest = suggest
 	push(session)
 	task.delay(cfg.SuggestTime, dropSuggest, session, side, suggest)
 	if other.bot then
-		-- Bot de pruebas: responde al segundo; ignora los "Quiero" de más de 1000 y acepta lo demás.
+		-- Bot de pruebas: responde al segundo; ignora las de más de 1000 y acepta lo demás.
 		task.delay(1, function()
 			if side.suggest == suggest then
-				respondSuggest(session, other, side, not (suggest.intent == "want" and suggest.amount > 1000))
+				respondSuggest(session, other, side, suggest.amount <= 1000)
 			end
 		end)
 	end
@@ -654,8 +660,7 @@ end
 
 local function onSuggest(player: Player, intent: unknown, category: unknown, key: unknown, amount: unknown)
 	local session, side, other = sideOf(player)
-	local data = PlayerData.read(player)
-	if not session or session.state ~= "editing" or not data then
+	if not session or session.state ~= "editing" then
 		return
 	end
 	if intent == nil then
@@ -670,35 +675,29 @@ local function onSuggest(player: Player, intent: unknown, category: unknown, key
 		return
 	end
 	lastSuggest[player] = now
-	if type(category) ~= "string" or not cfg.Allow[category] then
-		return
-	end
-	local byAmount = category == "coins" or category == "gems" or category == "items"
-	if category == "items" then
-		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].potion then
-			return
-		end
-	elseif byAmount then
-		key = nil
-	elseif type(key) ~= "number" or key ~= key then
+	if intent ~= "want" or type(category) ~= "string" or not cfg.Allow[category] or not cfg.SuggestWant[category] then
 		return
 	end
 	local value = 1
-	if byAmount then
-		-- "Quiero" no se recorta con lo que tenga el otro, para no chivar cuánto tiene.
-		local owned = if intent == "want" then cfg.SuggestMaxAmount elseif category == "items" then data.items[key] or 0 else data[category]
-		local valid = validAmount(amount, owned)
+	if category == "items" then
+		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].noTrade then
+			return
+		end
+		-- No se recorta con lo que tenga el otro: al aceptar se pone lo que tenga.
+		local valid = validAmount(amount, cfg.SuggestMaxAmount)
 		if not valid or valid < 1 then
 			return
 		end
 		value = valid
-	end
-	if intent == "want" then
-		if not cfg.SuggestWant[category] then
+	else
+		-- Espada, pieza o accesorio del inventario del otro, por su id (el accesorio, por su índice). Al bot de pruebas
+		-- solo se le piden cantidades.
+		local data = if other.player then PlayerData.read(other.player) else nil
+		if not data or type(key) ~= "number" or key ~= key then
 			return
 		end
-	elseif intent == "give" then
 		if category == "swords" then
+			-- Ni las equipadas, ni las de la Bolsa de oro, ni las del candado.
 			if not PlayerData.findSword(data, key) or PlayerData.isLocked(data, key) then
 				return
 			end
@@ -710,13 +709,11 @@ local function onSuggest(player: Player, intent: unknown, category: unknown, key
 			if not table.find(data.artifacts, key) then
 				return
 			end
-		elseif not byAmount then
+		else
 			return
 		end
-	else
-		return
 	end
-	setSuggest(session, side, other, { intent = intent, category = category, key = key, amount = value })
+	setSuggest(session, side, other, { intent = "want", category = category, key = key, amount = value })
 end
 
 local function onSuggestRespond(player: Player, accept: unknown)

@@ -904,9 +904,9 @@ Config.Enemies = {
 
 -- COMERCIO entre jugadores (server/Trade). Countdown = segundos de la cuenta atrás final, en los que aún se puede
 -- cancelar; InviteTime = lo que dura una invitación; RequestCooldown = espera entre invitaciones.
--- Sugerencias dentro del trato ("Quiero" / "Te doy"): SuggestCooldown = espera entre sugerencias, SuggestTime = lo
--- que dura una sin respuesta, SuggestMaxAmount = tope de la cantidad de un "Quiero", SuggestWant = qué se puede pedir.
--- Allow = lo que se puede ofrecer y sugerir: objetos (cristales), espadas, armadura y accesorios. Monedas ("coins") y
+-- Peticiones dentro del trato (botón "Pedir": pides algo del inventario del otro): SuggestCooldown = espera entre
+-- peticiones, SuggestTime = lo que dura una sin respuesta, SuggestMaxAmount = tope de la cantidad pedida, SuggestWant = qué se puede pedir.
+-- Allow = lo que se puede ofrecer y pedir: objetos (cristales y pociones), espadas, armadura y accesorios. Monedas ("coins") y
 -- gemas ("gems") no están, decidido por el usuario: con ellas un jugador avanzado le regalaba el progreso a otro.
 Config.Trade = {
 	Countdown = 3,
@@ -915,7 +915,7 @@ Config.Trade = {
 	SuggestCooldown = 0.4,
 	SuggestTime = 20,
 	SuggestMaxAmount = 1e36,
-	SuggestWant = { items = true },
+	SuggestWant = { items = true, swords = true, armor = true, artifacts = true },
 	Allow = { items = true, swords = true, armor = true, artifacts = true },
 }
 
