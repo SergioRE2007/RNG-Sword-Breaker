@@ -220,7 +220,18 @@ local function buildStall(parent: Instance, kind: string, position: Vector3, str
 		for _, item in skin:GetChildren() do
 			item.Parent = model
 		end
-		signHeight = boxSize.Y - 1
+		-- El cartel, justo por encima de lo más alto que se ve del puesto ya colocado. Con el alto de la caja del modelo
+		-- salía unos 17 studs por encima: contaba la bufanda del vendedor, que aquí aún está suelta muy arriba (se le
+		-- pone al cuello después), y las piezas invisibles.
+		local top = floor
+		for _, item in model:GetDescendants() do
+			if item:IsA("BasePart") and item.Transparency < 1 and not item:FindFirstAncestorOfClass("Accessory") then
+				local _, _, _, _, _, _, r10, r11, r12 = item.CFrame:GetComponents()
+				local half = (math.abs(r10) * item.Size.X + math.abs(r11) * item.Size.Y + math.abs(r12) * item.Size.Z) / 2
+				top = math.max(top, item.Position.Y + half)
+			end
+		end
+		signHeight = top - (floor + 3) + 2.5
 		-- Pieza invisible por delante del mostrador que lleva el cartel y el aviso.
 		counter = block("Counter", Vector3.new(6, 1, 2), base * CFrame.new(0, floor + 3, -boxSize.Z / 2 + 3), Color3.new(1, 1, 1))
 		counter.Transparency = 1
