@@ -351,13 +351,19 @@ function Hud.start()
 
 	Remotes.Notice.OnClientEvent:Connect(Ui.toast)
 
-	-- Avisos de cosas muy raras: al chat, o al aviso de pantalla si no hay chat.
-	Remotes.Announce.OnClientEvent:Connect(function(text: string, color: Color3)
+	-- Avisos de cosas muy raras: al chat, o al aviso de pantalla si no hay chat. Los de un administrador (`admin`)
+	-- salen además en pantalla: el chat suele estar cerrado y no los veía nadie.
+	Remotes.Announce.OnClientEvent:Connect(function(text: string, color: Color3, admin: boolean?)
+		if admin then
+			text = Lang.t(nil, "[Admin] {text}", { text = text })
+		end
 		local channels = TextChatService:FindFirstChild("TextChannels")
 		local channel = channels and channels:FindFirstChild("RBXGeneral")
 		if channel then
-			channel:DisplaySystemMessage(`<font color="#{color:ToHex()}"><b>{text}</b></font>`)
-		else
+			local safe = if admin then string.gsub(text, "&", "&amp;") else text
+			channel:DisplaySystemMessage(`<font color="#{color:ToHex()}"><b>{safe}</b></font>`)
+		end
+		if admin or not channel then
 			Ui.toast(text, color)
 		end
 	end)

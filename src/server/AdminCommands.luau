@@ -258,7 +258,7 @@ end
 local function tellAll(text: string)
 	Tell.all(GOLD, function()
 		return text
-	end)
+	end, true)
 end
 
 local function announce(admin: Player, text: unknown, global: boolean)
