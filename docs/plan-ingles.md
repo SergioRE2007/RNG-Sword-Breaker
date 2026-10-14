@@ -58,7 +58,7 @@ Estilo "gettext": en el código queda el texto en inglés y una tabla lo pasa a 
 - El "set" de armadura de `Config.Dungeons` es ahora la frase entera con hueco (`"Leather {slot}"` → `"{slot} de cuero"`), porque en inglés el orden cambia; se monta con `ArmorStats.name`.
 - El rasgo "Eterno" es "Timeless" en inglés: "Eternal" ya es la rareza "Eterna" y una clave no puede tener dos traducciones. Si dos textos españoles distintos piden el mismo inglés, hay que cambiar uno de los dos ingleses.
 - Los textos iguales en los dos idiomas ("VIP", "Aurora", "x2", los grados) también tienen su entrada en `LangEs`, para que no salte el aviso de texto sin traducir.
-- El código de regalo `LANZAMIENTO` se queda como está: es un código que ya vale.
+- El código de regalo `LANZAMIENTO` se cambió por `RELEASE` antes de abrir el juego al público.
 - `tests/regressions.luau`: la prueba de "ningún texto en español entre comillas" mira solo las carpetas de su lista `DONE` (de momento `src/shared`); al acabar las partes 2 y 3, poner `src` entero. También comprueba que todo texto de `Config` tiene su entrada en `LangEs`: una lista nueva de `Config` con textos se añade ahí.
 
 ## Notas de la parte 2 (para las siguientes)
