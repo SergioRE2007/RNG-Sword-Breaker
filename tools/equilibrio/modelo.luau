@@ -18,6 +18,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	local Modifiers = shared("Modifiers")
 	local ArmorStats = shared("ArmorStats")
 	local BagInfo = shared("BagInfo")
+	local Format = shared("Format")
 
 	local M = {}
 
@@ -413,19 +414,27 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		local eficiencia = jugador.eficiencia * (opts.ritmo or 1)
 		local salto, paciencia = jugador.salto, jugador.paciencia
 		local calibrar = opts.calibrar
-		local huecos = Config.Loadout.Slots
-		-- Bolsa de oro: detrás de las equipadas guarda las que deja en la bolsa, que le pegan todo el tiempo de reloj
-		-- (`reales` segundos por cada segundo de sesión). opts.bolsa = false: sin cobrarla.
-		local guardadas = huecos + Config.GoldBag.Slots
-		local conBolsa = opts.bolsa ~= false
-		local reales = objetivo.bolsa.reales
-
 		local attrs = {}
 		local player = {
 			GetAttribute = function(_, name)
 				return attrs[name]
 			end,
 		}
+		-- Pases de juego (opts.pases = claves de Config.Gamepasses): sus multiplicadores entran solos por Stats; aquí van
+		-- los huecos de más, el Auto de la parcela (no se despista: atención 1 en vez de 0,8) y el botín de mazmorras.
+		for _, key in opts.pases or {} do
+			attrs["Pass_" .. key] = true
+		end
+		if Stats.perk(player, "autoFarm") then
+			eficiencia /= 0.8
+		end
+		local botin = Stats.passMult(player, "dungeonLoot")
+		local huecos = Stats.loadoutSlots(player)
+		-- Bolsa de oro: detrás de las equipadas guarda las que deja en la bolsa, que le pegan todo el tiempo de reloj
+		-- (`reales` segundos por cada segundo de sesión). opts.bolsa = false: sin cobrarla.
+		local guardadas = huecos + Stats.bagSlots(player)
+		local conBolsa = opts.bolsa ~= false
+		local reales = objetivo.bolsa.reales
 		local estado = {
 			coins = 0,
 			gems = 0,
@@ -744,7 +753,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				if chance >= 1 or azar() < chance then
 					if drop.kind == "item" then
 						local low, high = drop.min or 1, drop.max or 1
-						local amount = (low + math.floor(azar() * (high - low + 1))) * zona.loot
+						local amount = (low + math.floor(azar() * (high - low + 1))) * zona.loot * botin
 						local whole = math.floor(amount)
 						if azar() < amount - whole then
 							whole += 1
@@ -756,7 +765,9 @@ function Modelo.nuevo(shared, mundo, objetivo)
 							tirar("grades", whole)
 						end
 					elseif drop.kind == "armor" then
-						pieza(index, zona.qualityLuck * (drop.luck or 1))
+						for _ = 1, botin do
+							pieza(index, zona.qualityLuck * (drop.luck or 1))
+						end
 					end
 				end
 			end
@@ -840,6 +851,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		for hour = 1, opts.horas do
 			a(hour * H, function()
 				table.insert(res.ritmo, { hora = hour, objetos = res.objetos, monedas = res.ganado, bolsa = res.bolsa.ganado })
+				if opts.avisar then
+					-- Una línea por hora para seguir la partida mientras corre (opts.avisar = etiqueta).
+					print(`[{opts.avisar}] {hour} h · suerte {estado.upgrades.luck}/{Config.Upgrades.luck.maxLevel} · renacer {estado.rebirths} · accesorios {#estado.artifacts}/{#Config.Artifacts} · zona {mazZona or 0} · daño {Format.short(damage)}`)
+				end
 			end)
 		end
 		if forzado then
@@ -1093,13 +1108,13 @@ function Modelo.nuevo(shared, mundo, objetivo)
 									-- Monedas de bolsa: una por bolsa vaciada menos lo gastado en esos niveles (Stats.wallet).
 									if bolsa.stage - 1 - Upgrades.spent(name, level) >= cost then
 										estado.upgrades[name] = level + 1
-										res.compras[name][level + 1] = t
+										res.compras[name][level + 1] = res.compras[name][level + 1] or t -- la primera vez: renacer las quita y las vuelve a comprar
 										bought = true
 									end
 								elseif estado[wallet] >= cost then
 									estado[wallet] -= cost
 									estado.upgrades[name] = level + 1
-									res.compras[name][level + 1] = t
+									res.compras[name][level + 1] = res.compras[name][level + 1] or t -- la primera vez: renacer las quita y las vuelve a comprar
 									bought = true
 								end
 							end

@@ -306,17 +306,21 @@ function Stats.bagHit(player: Player, copy, noPotion: boolean?): number
 	return if noPotion then damage / Stats.potion(player, "damage") / Stats.boost("damage") else damage
 end
 
--- Monedas que saca de la bolsa un golpe de esa copia: las de su daño (BagInfo.coins) por las mejoras "bagBoost" y "fortune"
--- (pedido por el usuario), que son lo único que las multiplica, y por lo que sube cada bolsa vaciada (BagInfo.boost de la bolsa `stage`; sin ella, la
--- bolsa por la que va el jugador).
+-- Monedas que saca de la bolsa un golpe de esa copia: las de su daño (BagInfo.coins) por sus multiplicadores de monedas
+-- (Stats.bagMult) y por lo que sube cada bolsa vaciada (BagInfo.boost de la bolsa `stage`; sin ella, la bolsa por la que
+-- va el jugador).
 function Stats.bagCoins(player: Player, copy, noPotion: boolean?, stage: number?): number
 	local boost = BagInfo.boost(stage or player:GetAttribute("BagStage") or 1)
-	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * Stats.bagMult(player) * boost
+	return BagInfo.coins(Stats.bagHit(player, copy, noPotion)) * Stats.bagMult(player, noPotion) * boost
 end
 
--- Por cuánto multiplican las mejoras las monedas de la bolsa. No le quitan más vida: solo pagan más por golpe.
-function Stats.bagMult(player: Player): number
-	return upgrade(player, "bagBoost") * upgrade(player, "fortune")
+-- Por cuánto se multiplican las monedas de la bolsa: los mismos multiplicadores que las de los objetos (Stats.coins:
+-- mejoras, accesorios, rasgos, renacer, pases...; pedido por el usuario, para que la bolsa vaya a la par con los
+-- destructibles toda la partida: con solo "bagBoost" y "fortune" se quedaba en nada a mitad de juego). No le quitan
+-- más vida: solo pagan más por golpe. `noPotion` = sin la poción ni el evento de monedas (desconectado).
+function Stats.bagMult(player: Player, noPotion: boolean?): number
+	local mult = Stats.coins(player)
+	return if noPotion then mult / Stats.potion(player, "coins") / Stats.boost("coins") else mult
 end
 
 -- Vida por segundo que le quitan a la bolsa las armas depositadas (su tamaño es vida, BagInfo.size): lo de sus golpes
