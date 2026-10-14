@@ -19,6 +19,7 @@ require(script.Trade).start()
 require(script.ModifierShops).start()
 require(script.DropMenu).start() -- menú de botín de mazmorra: después de Potions (usa sus iconos), antes de Dungeons
 require(script.Dungeons).start()
+require(script.Slimes).start() -- el cuerpo animado de los enemigos de mazmorra (el servidor solo deja la caja)
 require(script.Party).start()
 require(script.DungeonMenu).start() -- menú de mazmorras (botón "Mazmorras" de arriba): elegir zona sin buscar su sala
 require(script.DayCycle).start() -- antes de DungeonFx, que lo enciende y apaga según la zona
