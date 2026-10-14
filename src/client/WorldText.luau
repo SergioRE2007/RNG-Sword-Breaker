@@ -73,6 +73,13 @@ local function watch(item: Instance)
 	end
 end
 
+-- Vuelve a escribirlos todos (al cambiar de idioma: client/Language).
+function WorldText.refresh()
+	for _, item in CollectionService:GetTagged(TAG) do
+		apply(item)
+	end
+end
+
 function WorldText.start()
 	CollectionService:GetInstanceAddedSignal(TAG):Connect(watch)
 	for _, item in CollectionService:GetTagged(TAG) do
