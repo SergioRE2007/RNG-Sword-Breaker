@@ -540,7 +540,7 @@ local function applyOffer(session, side, other, category: unknown, key: unknown,
 		end
 		offer[category] = value
 	elseif category == "items" then
-		-- Los tickets de misión y el trébol no se comercian (noTrade).
+		-- Los tickets de misión no se comercian (noTrade).
 		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].noTrade then
 			return false
 		end
