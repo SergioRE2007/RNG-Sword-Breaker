@@ -200,6 +200,55 @@ function ArmorPane.build(pane: Frame, helpers)
 	totalsText.TextYAlignment = Enum.TextYAlignment.Top
 	totalsText.LineHeight = 1.12
 
+	-- Ocultar armadura (pedido por el usuario: que no se vea lo que llevas): el servidor no la pone en el personaje y
+	-- sigue contando. Aquí el muñeco la enseña igual, para ver cómo queda.
+	local hideButton = Ui.button(pane, Lang.t(nil, "Hide armor"), Ui.COLORS.gray)
+	hideButton.Name = "Hide"
+	hideButton.AnchorPoint = Vector2.new(0.5, 0)
+	hideButton.Position = UDim2.fromOffset(LEFT + CENTER / 2, 8)
+	hideButton.Size = UDim2.fromOffset(CENTER - 12, 36)
+	hideButton.TextSize = 17
+	Ui.tip(hideButton, function()
+		return Lang.t(nil, "Nobody sees your armor; its stats still count."), Ui.COLORS.gray
+	end)
+	local function paintHide()
+		local hidden = player:GetAttribute("ArmorHidden") == true
+		hideButton.Text = Lang.t(nil, if hidden then "Show armor" else "Hide armor")
+		hideButton.BackgroundColor3 = if hidden then Ui.COLORS.purple else Ui.COLORS.gray
+	end
+	paintHide()
+	hideButton.Activated:Connect(function()
+		Sfx.play("equip")
+		Remotes.SetArmorHidden:FireServer(player:GetAttribute("ArmorHidden") ~= true)
+	end)
+
+	-- El muñeco es una copia del personaje: con la armadura escondida no la lleva, así que se le pone aquí.
+	local function paintCharacter()
+		helpers.character(viewport)
+		if player:GetAttribute("ArmorHidden") ~= true then
+			return
+		end
+		local world = viewport:FindFirstChildOfClass("WorldModel")
+		local clone = world and world:FindFirstChildOfClass("Model")
+		if not clone then
+			return
+		end
+		for _, piece in ArmorStats.pieces(player) do
+			if piece.worn then
+				ArmorModel.attach(clone, piece.slot, piece.quality, piece.level)
+			end
+		end
+	end
+	player:GetAttributeChangedSignal("ArmorHidden"):Connect(function()
+		paintHide()
+		-- Espera a que el servidor quite o ponga las piezas del personaje.
+		task.delay(0.35, function()
+			if pane.Visible then
+				paintCharacter()
+			end
+		end)
+	end)
+
 	-- Piezas ----------------------------------------------------------------------------
 	local hint = Ui.label(pane, 18)
 	hint.Name = "Hint"
@@ -427,7 +476,7 @@ function ArmorPane.build(pane: Frame, helpers)
 			-- El servidor suelda las piezas al personaje justo después: se vuelve a pintar con ellas puestas.
 			task.delay(0.35, function()
 				if pane.Visible then
-					helpers.character(viewport)
+					paintCharacter()
 				end
 			end)
 		end
@@ -489,7 +538,7 @@ function ArmorPane.build(pane: Frame, helpers)
 			-- Al volver a la pestaña, el modo de desmontar varias empieza apagado.
 			salvaging, confirming = false, false
 			table.clear(marked)
-			helpers.character(viewport)
+			paintCharacter()
 			refresh()
 		end,
 	}

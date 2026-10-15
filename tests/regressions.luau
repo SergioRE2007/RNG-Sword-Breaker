@@ -1026,7 +1026,7 @@ do
 			{ id = 12, slot = "boots", quality = 1, level = 1, stats = bootStats },
 			{ id = 13, slot = "helmet", quality = 1, level = 1, stats = {} },
 		},
-		armorWorn = { helmet = 11, boots = 12 },
+		armorWorn = { helmet = 11, boots = 12 }, armorHidden = true,
 		potions = { damage = { tier = 3, seconds = 120 }, coins = { tier = topTier, seconds = 1.5 } },
 		upgrades = levels,
 	}
@@ -1051,7 +1051,7 @@ do
 			{ id = 2, slot = "boots", quality = 1, level = 1, stats = bootStats },
 			{ id = 3, slot = "helmet", quality = 1, level = 1, stats = {} },
 		},
-		nextArmorId = 4, armorWorn = { helmet = 1, boots = 2 },
+		nextArmorId = 4, armorWorn = { helmet = 1, boots = 2 }, armorHidden = true,
 		potions = full.potions, upgrades = levels,
 	}
 	local loaded, lf = stable(stored(full), "partida completa")
