@@ -211,6 +211,7 @@ local function ponerVidas(runs, mezcla: boolean?)
 		return run.suerte
 	end)
 	local danos = { 1 } -- daño cuando cada tipo empieza a salir a menudo (el primero, con la espada inicial)
+	local crudo = { tipos[1].hp } -- vida de cada tipo antes de suavizar
 	for index = 2, #tipos do
 		local dano = med(runs, function(run)
 			return run.danoTipo[index]
@@ -231,6 +232,21 @@ local function ponerVidas(runs, mezcla: boolean?)
 		local hp = M.golpes(index) * dano
 		if mezcla then
 			hp = math.sqrt(hp * tipos[index].hp) -- a medio camino de la vida anterior, para que no oscile
+		end
+		crudo[index] = hp
+	end
+	-- Suavizada con las vecinas (en escala logarítmica y según lo lejos que quede cada una en rareza). El jugador tipo
+	-- sube de daño a escalones y, sin suavizar, un tipo salía con mucha más vida que el anterior y el siguiente casi
+	-- igual (el Monolito, x3,7 de vida sobre la Roca de armas por x2,5 de rareza, y el Obelisco x2 por x10), y en el
+	-- cambio de un tipo al siguiente tocaban objetos con mucha más vida que los de al lado y menos suerte. El Barril
+	-- no se toca: es el de la espada inicial.
+	for index = 2, #tipos do
+		local hp = crudo[index]
+		if index > 2 and index < #tipos then
+			local antes, despues = math.log(tipos[index - 1].rarity), math.log(tipos[index + 1].rarity)
+			local f = (math.log(tipos[index].rarity) - antes) / (despues - antes)
+			local recta = (1 - f) * math.log(crudo[index - 1]) + f * math.log(crudo[index + 1])
+			hp = math.exp(0.5 * math.log(hp) + 0.5 * recta)
 		end
 		tipos[index].hp = math.max(redondo(hp, 2), redondo(tipos[index - 1].hp * 1.2, 2))
 	end
