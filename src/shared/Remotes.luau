@@ -52,6 +52,7 @@ local NAMES = {
 	"DropDecision", -- cliente -> servidor: ({ ids }) los drops del menú de botín que tira (descarta); el resto entra al inventario
 	"EquipArmor", -- cliente -> servidor: (id) poner o quitar una pieza de armadura; ("best") la mejor de cada hueco
 	"SalvageArmor", -- cliente -> servidor: (id, o { ids } para varias sin equipar) desmontar armadura a cambio de Cristales de grado
+	"SetArmorHidden", -- cliente -> servidor: (true o false) esconder la armadura del personaje (sigue contando); se guarda y se publica en "ArmorHidden"
 	"PartyRequest", -- cliente -> servidor: (acción, a, b) sala de grupo de las mazmorras: "open" (zona) y "close" miran o dejan de mirar una sala; "create" (zona), "join" (id del grupo), "leave", "ready" (true o false), "start", "solo" (zona), "dungeon" (zona nueva), "option" (nombre, true o false), "kick" (userId), "invite" (userId), "respond" (userId del líder, true o false)
 	"PartyState", -- servidor -> cliente: ({ room, mine, parties }) la sala que miras, tu grupo (zona, líder, miembros, listos, opciones, estado) y los grupos abiertos de esa sala; nil = nada que enseñar
 	"PartyInvite", -- servidor -> cliente: (userId del líder, nombre del líder, zona) te invitan a un grupo de mazmorra

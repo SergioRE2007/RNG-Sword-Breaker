@@ -227,7 +227,8 @@ local function watchHeadwear(character: Model)
 	end)
 end
 
--- Modelos de las piezas equipadas sobre el personaje.
+-- Modelos de las piezas equipadas sobre el personaje. Con la armadura escondida (pedido por el usuario: que no se vea
+-- lo que llevas) no se pone ninguno; sus estadísticas siguen contando.
 local function dress(player: Player)
 	local character = player.Character
 	local data = PlayerData.read(player)
@@ -239,7 +240,7 @@ local function dress(player: Player)
 		if old then
 			old:Destroy()
 		end
-		local piece = find(data, data.armorWorn[slot])
+		local piece = not data.armorHidden and find(data, data.armorWorn[slot])
 		if piece then
 			ArmorModel.attach(character, slot, piece.quality, piece.level)
 		end
@@ -304,6 +305,9 @@ local function onPlayer(player: Player)
 	player:GetAttributeChangedSignal("Armor"):Connect(function()
 		dress(player)
 	end)
+	player:GetAttributeChangedSignal("ArmorHidden"):Connect(function()
+		dress(player)
+	end)
 	if player.Character then
 		applyHealth(player, true)
 		dress(player)
@@ -314,6 +318,13 @@ end
 function Armor.start()
 	Remotes.EquipArmor.OnServerEvent:Connect(onEquip)
 	Remotes.SalvageArmor.OnServerEvent:Connect(onSalvage)
+	Remotes.SetArmorHidden.OnServerEvent:Connect(function(player: Player, hidden: unknown)
+		if type(hidden) == "boolean" then
+			PlayerData.edit(player, function(edited)
+				edited.armorHidden = hidden
+			end)
+		end
+	end)
 	Players.PlayerAdded:Connect(onPlayer)
 	for _, player in Players:GetPlayers() do
 		onPlayer(player)

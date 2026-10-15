@@ -174,6 +174,7 @@ local function publish(player: Player)
 	player:SetAttribute("SwordMetal", equippedMetal)
 	player:SetAttribute("SwordSize", equippedSize)
 	player:SetAttribute("AutoSell", data.autoSell)
+	player:SetAttribute("ArmorHidden", data.armorHidden)
 	player:SetAttribute("TraitPriority", data.traitPriority)
 	for _, kind in { "traits", "grades" } do
 		player:SetAttribute("Pity_" .. kind, HttpService:JSONEncode(data.pity[kind]))
@@ -488,6 +489,7 @@ local function load(player: Player)
 		armor = {},
 		nextArmorId = 1,
 		armorWorn = {},
+		armorHidden = false, -- armadura escondida: no se ve en el personaje pero sigue contando (server/Armor)
 		potions = {},
 	}
 	for name in Config.Upgrades do
@@ -571,6 +573,7 @@ local function load(player: Player)
 					data.missions = loadMissions(saved.missions)
 				end
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
+				data.armorHidden = saved.armorHidden == true
 				data.pity = Modifiers.newPity(saved.pity)
 				if type(saved.traitPriority) == "string" then
 					data.traitPriority = saved.traitPriority
