@@ -26,8 +26,9 @@ Config.Test = {
 	Weather = "", -- id de un clima de Config.Weather.Events para tenerlo puesto al entrar ("" = el que toque por la hora)
 }
 -- Administradores en el juego publicado: solo estas cuentas (ni el dueño del grupo); UserId de Roblox de cada uno (server/Admin). Ven el menú
--- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
-Config.Admins = { 4490621018, 7154119348 }
+-- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno. Solo Sergio decide quién entra aquí
+-- (ver "Administradores" en CLAUDE.md).
+Config.Admins = { 4490621018 }
 -- Jugadores que van aparte (pedido por el usuario, para su propia cuenta): juegan y guardan como todos, pero no salen en
 -- las clasificaciones globales ni pueden tener la "Mejor tirada" del hub (server/Leaderboards y server/BestRoll).
 Config.Unranked = { 4490621018 }
@@ -975,6 +976,12 @@ Config.Tutorial = {
 -- cualquier cliente con trampas.
 -- TRÉBOL DE LA SUERTE: Luck = por cuánto multiplica la suerte de armas del objeto elegido (una sola vez por objeto).
 Config.Clover = { Item = "luckClover", Luck = 999 }
+
+-- Bono de amigos (pedido por el usuario): por cada amigo de Roblox en el mismo servidor, +Bonus de suerte
+-- (Stats.luck) y de monedas (Stats.coins), sumado y hasta Max amigos (los servidores son de 8: 7 amigos como mucho).
+-- Lo cuenta server/Friends y lo publica en el atributo "Friends". No entra en tools/equilibrio, como los pases.
+Config.Friends = { Bonus = 0.1, Max = 7 }
+
 -- PRODUCTOS DE ROBUX que se compran las veces que se quiera (server/Products; salen los primeros en la Tienda). "id" =
 -- id del producto en Roblox (0 = aún no se vende, "Pronto"); "price" = Robux que se enseñan hasta que Roblox dice el
 -- precio real; item y amount = lo que da (clave de Config.Items). icon, tag, ribbon y color, como en los pases.

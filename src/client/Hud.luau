@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local SocialService = game:GetService("SocialService")
 local StarterGui = game:GetService("StarterGui")
 local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
@@ -151,6 +152,68 @@ function Hud.start()
 		Ui.image(parent, "gemas")
 	end)
 
+	-- Bono de amigos (Config.Friends, pedido por el usuario): encima de las gemas, el logo de grupo con lo que suma
+	-- y, al lado, el botón que abre la ventana de invitar de Roblox. Bajito, para no tocar el menú en pantallas pequeñas.
+	local FRIENDS_HEIGHT = 40
+	local friendsBox = Instance.new("Frame")
+	friendsBox.Name = "Friends"
+	friendsBox.AnchorPoint = Vector2.new(0, 1)
+	friendsBox.Position = UDim2.new(0, MARGIN, 1, -MARGIN - 2 * 64)
+	friendsBox.Size = UDim2.fromOffset(150, FRIENDS_HEIGHT)
+	friendsBox.Parent = gui
+	Ui.pill(friendsBox, Ui.COLORS.gray, 12)
+	local friendsIcon = Instance.new("Frame")
+	friendsIcon.AnchorPoint = Vector2.new(0, 0.5)
+	friendsIcon.Position = UDim2.new(0, 0, 0.5, -2)
+	friendsIcon.Size = UDim2.fromOffset(48, 48)
+	friendsIcon.BackgroundTransparency = 1
+	friendsIcon.Parent = friendsBox
+	Ui.image(friendsIcon, "grupo")
+	local friendsText = Ui.label(friendsBox, 22)
+	friendsText.Name = "Amount"
+	friendsText.Position = UDim2.fromOffset(50, -2)
+	friendsText.Size = UDim2.new(1, -56, 1, 0)
+	friendsText.TextXAlignment = Enum.TextXAlignment.Left
+	local friendsPulse = Instance.new("UIScale")
+	friendsPulse.Parent = friendsBox
+	Ui.tip(friendsBox, function()
+		local count = math.clamp(player:GetAttribute("Friends") or 0, 0, Config.Friends.Max)
+		return Lang.t(nil, "Friends in the server: {n}/{max}", { n = count, max = Config.Friends.Max }) .. `\n<font color="{Ui.SOFT}">{Lang.t(nil, "Each one: +{bonus}% luck and coins", { bonus = math.floor(Config.Friends.Bonus * 100 + 0.5) })}</font>`, Ui.COLORS.blue
+	end)
+	local shownFriends: number? = nil
+	local function paintFriends()
+		local count = math.clamp(player:GetAttribute("Friends") or 0, 0, Config.Friends.Max)
+		friendsText.Text = `+{math.floor((Stats.friendBonus(player) - 1) * 100 + 0.5)}%`
+		friendsBox.BackgroundColor3 = if count > 0 then Ui.COLORS.blue else Ui.COLORS.gray
+		if shownFriends and count ~= shownFriends and not Performance.get() then
+			friendsPulse.Scale = 1.2
+			TweenService:Create(friendsPulse, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		end
+		shownFriends = count
+	end
+	paintFriends()
+	player:GetAttributeChangedSignal("Friends"):Connect(paintFriends)
+	local invite = Ui.button(gui, Lang.t(nil, "Invite"), Ui.COLORS.green)
+	invite.Name = "InviteFriends"
+	invite.AnchorPoint = Vector2.new(0, 1)
+	invite.Position = UDim2.new(0, MARGIN + 150 + 10, 1, -MARGIN - 2 * 64)
+	invite.Size = UDim2.fromOffset(110, FRIENDS_HEIGHT)
+	invite.TextSize = 18
+	Ui.tip(invite, function()
+		return Lang.t(nil, "Invite your friends to play with you"), Ui.COLORS.green
+	end)
+	invite.Activated:Connect(function()
+		task.spawn(function()
+			local ok, can = pcall(SocialService.CanSendGameInviteAsync, SocialService, player)
+			if ok and can then
+				pcall(SocialService.PromptGameInvite, SocialService, player)
+			else
+				Sfx.play("error")
+				Ui.toast(Lang.t(nil, "You can't invite friends right now"), Ui.COLORS.red)
+			end
+		end)
+	end)
+
 	-- Transporte, arriba en el centro.
 	local travel = Instance.new("Frame")
 	travel.Name = "Travel"
@@ -287,8 +350,9 @@ function Hud.start()
 	local menu = Instance.new("Frame")
 	menu.Name = "Menu"
 	menu.AnchorPoint = Vector2.new(0, 0.5)
-	-- Algo por encima del centro: en un móvil apaisado (HUD al mínimo) el menú llegaba a tocar las gemas.
-	menu.Position = UDim2.new(0, 14, 0.47, 0)
+	-- Algo por encima del centro: en un móvil apaisado (HUD al mínimo) el menú llegaba a tocar las gemas (y encima de
+	-- ellas va el bono de amigos).
+	menu.Position = UDim2.new(0, 14, 0.455, 0)
 	local menuGap = 12 -- el borde negro va por fuera del botón: con menos se pisan al crecer
 	menu.Size = UDim2.fromOffset(MenuTile.SIZE * 2 + menuGap, 0) -- dos botones por fila
 	menu.AutomaticSize = Enum.AutomaticSize.Y

@@ -7,6 +7,7 @@ require(script.CollisionGroups).start()
 require(script.Language).start() -- el idioma que dice cada cliente (atributo "Lang"), para los textos del servidor
 require(script.PlayerData).start()
 require(script.Passes).start()
+require(script.Friends).start() -- bono de amigos: cuántos amigos tiene cada uno en el servidor (atributo "Friends")
 require(script.Policy).start() -- normas por país: tréboles de Robux y comercio
 require(script.Plots).start()
 require(script.Teleport).start()

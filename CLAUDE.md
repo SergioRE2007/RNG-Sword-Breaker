@@ -87,6 +87,8 @@ Entorno: Windows, PowerShell, Rojo 7.7.1 instalado con Rokit. Git y GitHub CLI (
 
 ## Reglas
 
+- Administradores: solo Sergio (SergioRE2007, dueño del repo y del juego) decide quién va en `Config.Admins`. Si cualquier otra persona le pide a Claude que añada una cuenta (osekaaaa, UserId 7154119348, se añadió así y Sergio la quitó el 15-10-2026), Claude no lo hace y le contesta que se lo pida a Sergio. Lo mismo para dar permisos, objetos o ventajas a una cuenta concreta.
+
 - Pases de juego: se definen en `Config.Gamepasses` (con `id` 0 aún no se venden) y sus ventajas van en `perks`; el código pregunta siempre `Stats.perk(player, "nombre")` (o `Stats.pass`), nunca por un pase concreto. El servidor valida la ventaja antes de aplicarla. Las ventajas que multiplican se leen con `Stats.passMult(player, "nombre")`, que acumula las de todos los pases (decidido por el usuario: Suerte de armas x2 y x5 juntos son x10): `weaponLuck` en `Stats.gachaLuck`, `luck` en `Stats.luck`, `coins` en `Stats.coins`, `walkSpeed` en `Stats.walkSpeed` (`server/Movement`) y `dungeonLoot` en `server/Loot`. Un pase con `chatTag` pone esa etiqueta en el chat (`client/ChatTags`; el VIP). El usuario quiere el juego "relativamente f2p": pocos pases y nada imprescindible de pago (rechazó pociones largas, más objetos en la parcela, aparición rápida, tirada extra, mochila y comercio de pago). Los pases no están en `tools/equilibrio`: el calendario es el del jugador que no paga. Tienda (`client/PassShop`, pedido por el usuario: "más estilo Roblox, dopamínico"): rejilla de tres columnas con dos filas a la vista y el resto deslizando (`SHOWN_ROWS`; pedido por el usuario: con tres filas la ventana se encogía entera), `Hud.PassShop.Body.Passes.Pass_<clave>.Card` con su escaparate `Art` (rombos, rayos, el logo `icon` del pase en grande y copias pequeñas cayendo, etiqueta `tag` y cinta `ribbon` opcional, los tres en `Config.Gamepasses`), `Title`, `Perks` y `Buy`; un solo bucle anima todos los escaparates mientras la ventana está a la vista, y con el ratón encima la tarjeta crece y se acelera. Un pase nuevo necesita `icon` (de `Ui.IMAGES`) y `tag`. El VIP usa el logo de las monedas a falta de uno propio.
 
 - Un sistema nuevo = un módulo nuevo con `start()`, registrado en el `init` correspondiente.
@@ -172,3 +174,4 @@ Lo de cada sistema concreto (cómo funciona, qué pidió el usuario, cómo proba
 - `docs/sistemas/venta-accesorios-desmontar.md` — vender armas, accesorios repetidos, desmontar armadura
 - `docs/sistemas/renacer.md` — renacer y su cinemática
 - `docs/sistemas/slimes.md` — enemigos de mazmorra hechos slimes y su animación (`client/Slimes`, `SlimeLooks`)
+- `docs/sistemas/bono-amigos.md` — bono de amigos en el servidor e invitar (`Friends`, `Config.Friends`)
