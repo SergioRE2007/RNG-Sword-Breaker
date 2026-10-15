@@ -34,11 +34,13 @@ local SOFT = Color3.fromRGB(190, 195, 215)
 -- Capas (la interfaz ordena el ZIndex globalmente; valores absolutos de este módulo).
 local Z_COUNT = 30 -- cuenta atrás, por encima de la ventana del trato
 local Z_SUGGEST = 50 -- tarjeta de la sugerencia recibida, por encima del inventario
+local Z_MENU = 60 -- desplegable de cantidades de la pestaña de objetos
 local Z_INVITE = 70 -- aviso de invitación, por encima de todo lo demás
 
 local OFFER_CELL = 104
 local STOCK_CELL = 104
-local AMOUNT_BOX = 124 -- ancho de la casilla de cantidad de la pestaña de objetos
+local MENU_WIDTH = 150 -- desplegable de cantidades
+local MENU_BUTTON = 40
 
 -- Reparto de la ventana del trato: tu inventario a la izquierda (se queda con el ancho que sobra) y, a su
 -- derecha, tu oferta y la del otro, de ancho fijo para dos casillas por fila.
@@ -120,22 +122,27 @@ local function artifactCell(parent: Instance, index: number): TextButton
 	return cell
 end
 
--- Monedas, gemas u objetos: icono y cantidad. `kind` = "coins", "gems" o el nombre del objeto: cada uno su icono.
-local function amountCell(parent: Instance, name: string, color: Color3, amount: number, kind: string): TextButton
-	local cell = Ui.cell(parent, color)
+-- Icono de monedas, gemas o un objeto (`kind` = "coins", "gems" o el nombre del objeto), el mismo que en la mochila.
+local function itemIcon(cell: Instance, kind: string, color: Color3)
+	local item = Config.Items[kind]
 	if kind == "coins" then
 		Ui.image(cell, "monedas")
 	elseif kind == "gems" then
 		Ui.image(cell, "gemas")
-	elseif kind == "missionToken" then
-		Ui.starIcon(cell, color)
-	elseif Config.Items[kind] and Config.Items[kind].potion then
-		local potion = Config.Items[kind].potion
-		Potions.icon(cell, potion.family, potion.tier)
-		Potions.addTag(cell, potion.tier)
+	elseif item and item.potion then
+		Potions.icon(cell, item.potion.family, item.potion.tier)
+		Potions.addTag(cell, item.potion.tier)
+	elseif item and item.image then
+		Ui.image(cell, item.image)
 	else
 		Ui.crystalIcon(cell, color, kind == "gradeCrystal")
 	end
+end
+
+-- Monedas, gemas u objetos: icono y cantidad.
+local function amountCell(parent: Instance, name: string, color: Color3, amount: number, kind: string): TextButton
+	local cell = Ui.cell(parent, color)
+	itemIcon(cell, kind, color)
 	Ui.cellLabel(cell, Format.short(amount))
 	Ui.tip(cell, function()
 		return `{Format.short(amount)} {name}`, color
@@ -184,33 +191,6 @@ local function suggestCell(parent: Instance, suggest): TextButton?
 		return artifactCell(parent, suggest.key)
 	end
 	return nil
-end
-
--- Mantener pulsado repite `step(tamaño)` cada vez más deprisa (pasos de 1, 10 y 100); al soltar, `release()`.
-local function hold(button: GuiButton, step: (number) -> (), release: () -> ())
-	local token = 0
-	button.MouseButton1Down:Connect(function()
-		token += 1
-		local mine = token
-		step(1)
-		task.spawn(function()
-			local started = os.clock()
-			task.wait(0.4)
-			while token == mine do
-				local held = os.clock() - started
-				step(if held > 3 then 100 elseif held > 1.5 then 10 else 1)
-				task.wait(0.08)
-			end
-		end)
-	end)
-	local function stop()
-		if token % 2 == 1 then
-			token += 1
-			release()
-		end
-	end
-	button.MouseButton1Up:Connect(stop)
-	button.MouseLeave:Connect(stop)
 end
 
 -- Lista de jugadores ----------------------------------------------------------------------
@@ -475,27 +455,6 @@ local function buildTrade()
 	stockEmpty.Text = Lang.t(nil, "Nothing here")
 	stockEmpty.Visible = false
 
-	-- Cantidades (monedas, gemas y objetos): una fila por cosa con su casilla para escribir.
-	local amounts = Instance.new("ScrollingFrame")
-	amounts.Name = "Amounts"
-	amounts.Size = UDim2.fromScale(1, 1)
-	amounts.BackgroundTransparency = 1
-	amounts.BorderSizePixel = 0
-	amounts.ScrollBarThickness = 8
-	amounts.CanvasSize = UDim2.new()
-	amounts.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	amounts.Visible = false
-	amounts.Parent = stockArea
-	local amountsLayout = Instance.new("UIGridLayout")
-	amountsLayout.CellSize = UDim2.new(1, -28, 0, 50)
-	amountsLayout.CellPadding = UDim2.fromOffset(10, 8)
-	amountsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	amountsLayout.Parent = amounts
-	local amountsPadding = Instance.new("UIPadding")
-	amountsPadding.PaddingTop = UDim.new(0, 10)
-	amountsPadding.PaddingLeft = UDim.new(0, 10)
-	amountsPadding.Parent = amounts
-
 	-- Modo pedir (botón "Pedir"): en vez de tu inventario se ve el del otro, y lo que se pulse se le pide.
 	local asking = false
 	local setAsking: (boolean) -> ()
@@ -506,148 +465,215 @@ local function buildTrade()
 		return if current then Players:GetPlayerByUserId(current.them.userId) else nil
 	end
 
-	-- Cada fila: nombre, [−] cantidad [+] y, en modo pedir, "Pedir". `value` es la cantidad que se está tocando (con − y
-	-- + o en modo pedir); fuera de eso la casilla enseña lo que hay en tu oferta. Las pociones (`hide`) solo salen si
-	-- quien enseña su inventario tiene alguna, o ya está en tu oferta.
-	local amountRows = {} -- { frame, box, label, minus, plus, ask, owned(), offered(), name, value, touching, hide }
-	local function amountRow(order: number, name: string, color: Color3, category: string, key: string?, hide: boolean?)
-		local frame = Instance.new("Frame")
-		frame.Name = "Row_" .. (key or category)
-		frame.LayoutOrder = order
-		frame.BackgroundColor3 = WHITE
-		frame.BorderSizePixel = 0
-		frame.Parent = amounts
-		Ui.round(frame, 8)
-		Ui.stroke(frame, BLACK, 2)
-		Ui.panel(frame, Color3.fromRGB(52, 56, 100), color)
-		local label = Ui.label(frame, 17)
-		label.Position = UDim2.fromOffset(18, 0)
-		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.TextTruncate = Enum.TextTruncate.AtEnd
-		local box = Instance.new("TextBox")
-		box.Name = "Box"
-		box.AnchorPoint = Vector2.new(1, 0.5)
-		box.Size = UDim2.fromOffset(AMOUNT_BOX, 32)
-		-- Un número largo no se sale por los lados: se recorta dentro de la casilla. Mientras se escribe va alineado a la
-		-- derecha, para que se vean los últimos números (pedido por el usuario; los "…" tapaban lo que se tecleaba).
-		box.ClipsDescendants = true
-		box.Focused:Connect(function()
-			box.TextXAlignment = Enum.TextXAlignment.Right
-		end)
-		box.FocusLost:Connect(function()
-			box.TextXAlignment = Enum.TextXAlignment.Center
-		end)
-		box.PlaceholderText = "0"
-		box.TextSize = 19
-		box.ClearTextOnFocus = false
-		box.Text = ""
-		box.Parent = frame
-		Ui.field(box)
-		local function small(buttonName: string, text: string, buttonColor: Color3, width: number): TextButton
-			local button = Ui.button(frame, text, buttonColor)
-			button.Name = buttonName
-			button.AnchorPoint = Vector2.new(1, 0.5)
-			button.Size = UDim2.fromOffset(width, 32)
-			button.TextSize = if width > 40 then 16 else 22
-			return button
-		end
-		local row = {
-			frame = frame,
-			box = box,
-			label = label,
-			minus = small("Minus", "-", Ui.COLORS.gray, 30),
-			plus = small("Plus", "+", Ui.COLORS.gray, 30),
-			ask = small("Ask", Lang.t(nil, "Ask"), Ui.COLORS.orange, 64),
-			name = name,
-			value = 1,
-			touching = false,
-			hide = hide,
-		}
-		-- Lo que tiene quien enseña su inventario: tú, o el otro en modo pedir (el bot, de todo).
-		function row.owned(): number
-			local who = if asking then otherPlayer() else player
-			if not who then
-				return Config.Trade.SuggestMaxAmount
-			end
-			return who:GetAttribute(if category == "items" then "Item_" .. key else if category == "coins" then "Coins" else "Gems") or 0
-		end
-		function row.offered(): number
-			if not current then
-				return 0
-			end
-			return if category == "items" then current.you.items[key] or 0 else current.you[category]
-		end
-		-- No se ofrece ni se pide más de lo que hay.
-		local function clamp(value: number): number
-			local top = math.max(row.owned(), 0)
-			return math.clamp(math.floor(value), if asking then math.min(1, top) else 0, top)
-		end
-		local function show()
-			box.Text = if row.value > 0 then Format.short(row.value) else ""
-		end
-		local function send()
-			row.touching = false
-			if not asking then
-				Remotes.TradeOffer:FireServer(category, key, row.value)
-			end
-		end
-		box.FocusLost:Connect(function()
-			-- Admite 1000, 1.5K, 2M...
-			row.value = clamp(Format.parse(box.Text) or 0)
-			show()
-			send()
-		end)
-		for button, sign in { [row.minus] = -1, [row.plus] = 1 } do
-			hold(button, function(size: number)
-				if current == nil or current.state ~= "editing" then
-					return
-				end
-				if not asking and not row.touching then
-					row.value = row.offered()
-				end
-				row.touching = true
-				row.value = clamp(row.value + sign * size)
-				show()
-			end, send)
-		end
-		row.ask.Activated:Connect(function()
-			local value = clamp(row.value)
-			if value < 1 then
-				Sfx.play("error")
-				return
-			end
-			Remotes.TradeSuggest:FireServer("want", category, key, value)
-			setAsking(false)
-		end)
-		table.insert(amountRows, row)
-	end
-	-- Solo las filas de lo que se puede comerciar (Config.Trade.Allow: monedas y gemas, no); la rejilla las recoloca sola.
-	local allow = Config.Trade.Allow
-	local rowCount = 0
-	local function allowedRow(name: string, color: Color3, category: string, key: string?, hide: boolean?)
-		if allow[category] then
-			rowCount += 1
-			amountRow(rowCount, name, color, category, key, hide)
-		end
-	end
-	allowedRow(Lang.t(nil, "Coins"), Ui.COLORS.coins, "coins")
-	allowedRow(Lang.t(nil, "Gems"), Ui.COLORS.purple, "gems")
-	for _, key in ITEM_KEYS do
-		local item = Config.Items[key]
-		if not item.noTrade then
-			allowedRow(Lang.t(nil, item.name), item.color, "items", key, item.potion ~= nil)
-		end
-	end
-
 	-- Pestañas.
 	local tab = "swords"
 	local tabButtons = {}
 	local stockCells = {} -- [id o índice] = casilla de la pestaña que se ve
 	local stockKey: string? = nil
+	local allow = Config.Trade.Allow
 	local TABS = { { "swords", Lang.t(nil, "Swords"), Ui.COLORS.red }, { "armor", Lang.t(nil, "Armor"), Ui.COLORS.orange }, { "artifacts", Lang.t(nil, "Accessories"), Ui.COLORS.purple }, { "amounts", Lang.t(nil, if allow.coins or allow.gems then "Coins and items" else "Items"), Ui.COLORS.blue } }
 
 	local function locked(): boolean
 		return current == nil or current.state ~= "editing"
+	end
+
+	-- Pestaña de objetos (pedido por el usuario): casillas como las de la mochila en la misma rejilla, solo de lo que
+	-- tiene quien enseña su inventario. Con una sola unidad, pulsarla la añade o la quita; con más, abre al lado un
+	-- desplegable con +1, +10, +100, Máx y Quitar. En modo pedir, el desplegable pide esa cantidad.
+	-- Solo lo que se puede comerciar (Config.Trade.Allow: monedas y gemas, no).
+	local AMOUNTS = {} -- { category, key, name, color }
+	if allow.coins then
+		table.insert(AMOUNTS, { category = "coins", name = Lang.t(nil, "Coins"), color = Ui.COLORS.coins })
+	end
+	if allow.gems then
+		table.insert(AMOUNTS, { category = "gems", name = Lang.t(nil, "Gems"), color = Ui.COLORS.purple })
+	end
+	if allow.items then
+		for _, key in ITEM_KEYS do
+			local item = Config.Items[key]
+			if not item.noTrade then
+				table.insert(AMOUNTS, { category = "items", key = key, name = Lang.t(nil, item.name), color = item.color })
+			end
+		end
+	end
+	local amountCells = {} -- [entrada de AMOUNTS] = casilla de la pestaña que se ve
+
+	-- Lo que tiene quien enseña su inventario: tú, o el otro en modo pedir (el bot, de todo).
+	local function ownedOf(entry): number
+		local who = if asking then otherPlayer() else player
+		if not who then
+			return Config.Trade.SuggestMaxAmount
+		end
+		return who:GetAttribute(if entry.category == "items" then "Item_" .. entry.key elseif entry.category == "coins" then "Coins" else "Gems") or 0
+	end
+	-- Lo que ya hay en la oferta de quien enseña su inventario.
+	local function offeredOf(entry): number
+		if not current then
+			return 0
+		end
+		local side = if asking then current.them else current.you
+		return if entry.category == "items" then side.items[entry.key] or 0 else side[entry.category]
+	end
+
+	-- Da o pide `amount` (math.huge = todo lo que hay; 0 = quitarlo de tu oferta). En tu oferta se suma a lo que ya hay.
+	local function apply(entry, amount: number)
+		local owned = ownedOf(entry)
+		if asking then
+			local value = math.min(amount, owned)
+			if value < 1 then
+				Sfx.play("error")
+				return
+			end
+			Remotes.TradeSuggest:FireServer("want", entry.category, entry.key, value)
+			setAsking(false)
+			return
+		end
+		local value = if amount == 0 then 0 else math.min(offeredOf(entry) + amount, owned)
+		Remotes.TradeOffer:FireServer(entry.category, entry.key, value)
+	end
+
+	-- Desplegable: se cierra al elegir, al pulsar fuera (`catcher`) y al rehacer el inventario. El `catcher` oscurece un
+	-- poco el inventario; al no ser transparente del todo, Ui.tip ve las casillas tapadas y quita su cartel, que si no
+	-- caería encima del desplegable.
+	local catcher = Instance.new("TextButton")
+	catcher.Name = "MenuCatcher"
+	catcher.Text = ""
+	catcher.AutoButtonColor = false
+	catcher.BackgroundColor3 = BLACK
+	catcher.BackgroundTransparency = 0.6
+	catcher.Size = UDim2.fromScale(1, 1)
+	catcher.Visible = false
+	catcher.ZIndex = Z_MENU - 1
+	catcher.Parent = stockArea
+	Ui.round(catcher, 12)
+	local menu = Instance.new("Frame")
+	menu.Name = "AmountMenu"
+	menu.BackgroundColor3 = WHITE
+	menu.BorderSizePixel = 0
+	menu.Visible = false
+	menu.Parent = stockArea
+	Ui.round(menu, 12)
+	Ui.stroke(menu, BLACK, 3)
+	Ui.panel(menu, Color3.fromRGB(64, 70, 128))
+	local menuScale = Instance.new("UIScale")
+	menuScale.Parent = menu
+	local menuContent = Instance.new("Frame")
+	menuContent.Name = "Content"
+	menuContent.BackgroundTransparency = 1
+	menuContent.Size = UDim2.fromScale(1, 1)
+	menuContent.Parent = menu
+	local menuLayout = Instance.new("UIListLayout")
+	menuLayout.Padding = UDim.new(0, 6)
+	menuLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	menuLayout.Parent = menuContent
+	local menuPadding = Instance.new("UIPadding")
+	for _, side in { "PaddingTop", "PaddingBottom", "PaddingLeft", "PaddingRight" } do
+		(menuPadding :: any)[side] = UDim.new(0, 8)
+	end
+	menuPadding.Parent = menuContent
+	local menuTitle = Ui.label(menuContent, 17)
+	menuTitle.Name = "Title"
+	menuTitle.Size = UDim2.new(1, 0, 0, 24)
+	menuTitle.TextTruncate = Enum.TextTruncate.AtEnd
+	local menuButtons = {} -- { button, amount }
+	for order, option in { { "Add_1", 1 }, { "Add_10", 10 }, { "Add_100", 100 }, { "Add_max", math.huge }, { "Remove", 0 } } do
+		local button = Ui.button(menuContent, "", Ui.COLORS.green)
+		button.Name = option[1]
+		button.LayoutOrder = order
+		button.Size = UDim2.new(1, 0, 0, MENU_BUTTON)
+		button.TextSize = 20
+		table.insert(menuButtons, { button = button, amount = option[2] })
+	end
+	Ui.layer(menu, Z_MENU)
+
+	local menuEntry = nil
+	local function closeMenu()
+		menu.Visible, catcher.Visible, menuEntry = false, false, nil
+	end
+	catcher.Activated:Connect(closeMenu)
+	for _, option in menuButtons do
+		option.button.Activated:Connect(function()
+			local entry = menuEntry
+			closeMenu()
+			if entry and not locked() then
+				apply(entry, option.amount)
+			end
+		end)
+	end
+
+	local function openMenu(entry, cell: GuiObject)
+		local owned, offered = ownedOf(entry), offeredOf(entry)
+		local left = if asking then owned else owned - offered
+		local shown = 0
+		for _, option in menuButtons do
+			local amount = option.amount
+			-- +10 y +100 solo si no llegan a todo lo que queda: para eso está Máx.
+			local visible = if amount == 0 then not asking and offered > 0 elseif amount == math.huge then left > 0 else amount < left
+			option.button.Visible = visible
+			if visible then
+				shown += 1
+				option.button.Text = if amount == 0 then Lang.t(nil, "Remove") elseif amount == math.huge then Lang.t(nil, "Max") else (if asking then "" else "+") .. Format.short(amount)
+				option.button.BackgroundColor3 = if amount == 0 then Ui.COLORS.red elseif asking then Ui.COLORS.orange else Ui.COLORS.green
+			end
+		end
+		if shown == 0 then
+			Sfx.play("error")
+			return
+		end
+		menuEntry = entry
+		menuTitle.Text = entry.name
+		local height = 16 + 24 + shown * (MENU_BUTTON + 6)
+		menu.Size = UDim2.fromOffset(MENU_WIDTH, height)
+		menuScale.Scale = 1
+		menu.Visible, catcher.Visible = true, true
+		-- La ventana va escalada: la escala sale del ancho del menú en pantalla. Al lado de la casilla, a la derecha si cabe.
+		local scale = menu.AbsoluteSize.X / MENU_WIDTH
+		scale = if scale > 0 then scale else 1
+		local area = stockArea.AbsoluteSize / scale
+		local at = (cell.AbsolutePosition - stockArea.AbsolutePosition) / scale
+		local x = at.X + cell.AbsoluteSize.X / scale + 8
+		if x + MENU_WIDTH > area.X - 4 then
+			x = at.X - MENU_WIDTH - 8
+		end
+		menu.Position = UDim2.fromOffset(math.max(4, x), math.clamp(at.Y, 4, math.max(4, area.Y - height - 4)))
+		if not Performance.get() then
+			menuScale.Scale = 0.85
+			TweenService:Create(menuScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		end
+	end
+
+	-- Casilla de un objeto: icono, lo que tiene su dueño abajo y, arriba, cuánto hay ya en su oferta.
+	local function amountStockCell(entry, owned: number, bot: boolean): TextButton
+		local kind = entry.key or entry.category
+		local item = Config.Items[kind]
+		local cell = Ui.cell(stock, entry.color, if item and item.potion then item.potion.tier else nil)
+		cell.Name = "Item_" .. kind
+		itemIcon(cell, kind, entry.color)
+		Ui.cellLabel(cell, if bot then "" else "x" .. Format.short(owned))
+		local tag = Ui.cellTag(cell, "", Ui.COLORS.green)
+		tag.Name = "Offered"
+		tag.Visible = false
+		Ui.tip(cell, function()
+			if item and item.potion then
+				return Potions.tip(item.potion.family, item.potion.tier, ownedOf(entry)), entry.color
+			elseif item then
+				return `{entry.name}\n<font color="{Ui.SOFT}">{Lang.t(nil, item.description)}</font>`, entry.color
+			end
+			return entry.name, entry.color
+		end, true)
+		cell.Activated:Connect(function()
+			if locked() then
+				Sfx.play("error")
+				return
+			end
+			if ownedOf(entry) > 1 then
+				openMenu(entry, cell)
+			else
+				apply(entry, if not asking and offeredOf(entry) > 0 then 0 else 1)
+			end
+		end)
+		return cell
 	end
 
 	-- Marca en el inventario que se ve lo que ya está en la oferta de su dueño.
@@ -662,24 +688,14 @@ local function buildTrade()
 		for key, cell in stockCells do
 			(cell :: any).Select.Visible = offered[key] == true
 		end
-		local bot = asking and otherPlayer() == nil
-		for _, row in amountRows do
-			-- De derecha a izquierda: [Pedir] (solo en modo pedir) [+] cantidad [−] y el nombre.
-			local right = if asking then 78 else 8
-			local owned = row.owned()
-			row.frame.Visible = not row.hide or owned > 0 or (not asking and row.offered() > 0)
-			row.ask.Visible = asking
-			row.ask.Position = UDim2.new(1, -8, 0.5, 0)
-			row.plus.Position = UDim2.new(1, -right, 0.5, 0)
-			row.box.Position = UDim2.new(1, -right - 34, 0.5, 0)
-			row.minus.Position = UDim2.new(1, -right - 38 - AMOUNT_BOX, 0.5, 0)
-			row.label.Size = UDim2.new(1, -right - 94 - AMOUNT_BOX, 1, 0)
-			local have = Lang.t(nil, if asking then "(they have {n})" else "(you have {n})", { n = Format.short(owned) })
-			row.label.Text = if bot then row.name else `{row.name} <font color="{Ui.SOFT}">{have}</font>`
-			if not row.box:IsFocused() and not row.touching then
-				local value = if asking then row.value else row.offered()
-				row.box.Text = if value > 0 then Format.short(value) else ""
-			end
+		for entry, cell in amountCells do
+			local amount = offeredOf(entry)
+			local tag = cell:FindFirstChild("Offered") :: TextLabel
+			local select = cell:FindFirstChild("Select") :: Frame
+			tag.Visible = amount > 0
+			tag.Text = Format.short(amount)
+			tag.Size = UDim2.fromOffset(math.max(22, 10 + 9 * (utf8.len(tag.Text) or 1)), 22)
+			select.Visible = amount > 0
 		end
 	end
 
@@ -690,15 +706,20 @@ local function buildTrade()
 		if owner then
 			key ..= `|{owner:GetAttribute("Swords")}|{owner:GetAttribute("Loadout")}|{owner:GetAttribute("Bag")}|{owner:GetAttribute("Armor")}|{owner:GetAttribute("Artifacts")}`
 		end
+		if tab == "amounts" then
+			for _, entry in AMOUNTS do
+				key ..= `|{ownedOf(entry)}`
+			end
+		end
 		if key == stockKey and not force then
 			paintStock()
 			return
 		end
 		stockKey = key
+		closeMenu()
 		clear(stock)
 		table.clear(stockCells)
-		stock.Visible = tab ~= "amounts"
-		amounts.Visible = tab == "amounts"
+		table.clear(amountCells)
 		local function add(cell: TextButton, id: number, order: number)
 			cell.LayoutOrder = order
 			stockCells[id] = cell
@@ -720,7 +741,16 @@ local function buildTrade()
 				Remotes.TradeOffer:FireServer(tab, id, if (cell :: any).Select.Visible then 0 else 1)
 			end)
 		end
-		if not owner then
+		if tab == "amounts" then
+			for order, entry in AMOUNTS do
+				local owned = ownedOf(entry)
+				if owned > 0 then
+					local cell = amountStockCell(entry, owned, owner == nil)
+					cell.LayoutOrder = order
+					amountCells[entry] = cell
+				end
+			end
+		elseif not owner then
 			-- El bot de pruebas no tiene armas, armadura ni accesorios que pedir.
 		elseif tab == "swords" then
 			local worn = Stats.list(owner, "Loadout")
@@ -744,7 +774,7 @@ local function buildTrade()
 				end
 			end
 		end
-		stockEmpty.Visible = tab ~= "amounts" and next(stockCells) == nil
+		stockEmpty.Visible = next(stockCells) == nil and next(amountCells) == nil
 		paintStock()
 	end
 
@@ -1002,9 +1032,6 @@ local function buildTrade()
 		end
 		-- Solo al entrar o salir del modo: cada estado que llega pasa por aquí y no debe borrar lo que se está escribiendo.
 		if was ~= asking then
-			for _, row in amountRows do
-				row.value, row.touching = 1, false
-			end
 			-- Cambia de quién es el inventario que se ve.
 			if current then
 				buildStock()
@@ -1120,6 +1147,9 @@ local function buildTrade()
 		paintOffer(theirs, current.them, Lang.t(nil, "{name}'s offer", { name = current.them.name }))
 		buildStock()
 		local state = current.state
+		if state ~= "editing" then
+			closeMenu()
+		end
 		status.Text = STEPS[state] or ""
 		status.TextColor3 = if state == "editing" then WHITE else GOLD
 		-- Fuera del paso de elegir no hay peticiones; también pone el texto de ayuda.
@@ -1156,6 +1186,7 @@ local function buildTrade()
 			current = nil
 			lastState = nil
 			setAsking(false)
+			closeMenu()
 			card.Visible, chip.Visible, shownSuggest = false, false, nil
 			countdown.Visible = false
 			Ui.close(window)
