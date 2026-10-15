@@ -37,6 +37,7 @@ local METRICS = {
 		title = "Time played",
 		color = Color3.fromRGB(80, 190, 255),
 		glyph = "T",
+		image = "rbxassetid://77737964732885",
 		store = "LB_PlayTime",
 		score = function(data)
 			return math.floor(data.playTime)
@@ -70,6 +71,7 @@ local METRICS = {
 		title = "Objects destroyed",
 		color = Color3.fromRGB(120, 230, 120),
 		glyph = "X",
+		image = "rbxassetid://121666223298286",
 		store = "LB_Broken",
 		score = function(data)
 			return math.floor(data.broken)
