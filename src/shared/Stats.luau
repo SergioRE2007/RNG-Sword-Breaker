@@ -381,8 +381,14 @@ end
 
 -- Suerte de destructibles: multiplica la probabilidad de los tipos raros de objeto en su parcela (y la de los
 -- artefactos). Es la que sube la mejora "Suerte de destructibles", y con ella el rasgo, los artefactos y la armadura.
+-- Bono de amigos: +Config.Friends.Bonus por cada amigo en el servidor (atributo "Friends", que solo pone server/Friends).
+function Stats.friendBonus(player: Player): number
+	local friends = math.clamp(tonumber(player:GetAttribute("Friends")) or 0, 0, Config.Friends.Max)
+	return 1 + Config.Friends.Bonus * math.floor(friends)
+end
+
 function Stats.luck(player: Player): number
-	return upgrade(player, "luck") * luckBonus(player) * Stats.rebirthBonus(player, "luck") * Stats.passMult(player, "luck")
+	return upgrade(player, "luck") * luckBonus(player) * Stats.rebirthBonus(player, "luck") * Stats.passMult(player, "luck") * Stats.friendBonus(player)
 end
 
 -- Suerte de armas propia del jugador: multiplica la del objeto que da la tirada (ObjectSpec.luck), que es de donde
@@ -424,7 +430,7 @@ end
 -- Monedas: la mejora "Fortuna", artefactos, los rasgos de las armas equipadas, renacimientos y los pases (ventaja
 -- "coins"). Los grados ya no dan monedas: multiplican el daño de su arma (Stats.swordDamage).
 function Stats.coins(player: Player): number
-	return upgrade(player, "fortune") * upgrade(player, "bagBoost") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins") * Stats.boost("coins")
+	return upgrade(player, "fortune") * upgrade(player, "bagBoost") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins") * Stats.boost("coins") * Stats.friendBonus(player)
 end
 
 function Stats.gems(player: Player): number
