@@ -524,6 +524,7 @@ return {
 	["Enter solo"] = "Entrar solo",
 	["Create party"] = "Crear grupo",
 	["Invite"] = "Invitar",
+	["Total damage of your equipped weapons"] = "Daño total de tus armas equipadas",
 	["Friends in the server: {n}/{max}"] = "Amigos en el servidor: {n}/{max}",
 	["Each one: +{bonus}% luck and coins"] = "Cada uno: +{bonus}% de suerte y monedas",
 	["Invite your friends to play with you"] = "Invita a tus amigos a jugar contigo",
