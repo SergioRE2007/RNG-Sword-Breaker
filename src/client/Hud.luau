@@ -3,6 +3,7 @@
 -- como el resumen de la pantalla de Mejoras), menú a la izquierda (Mochila, Renacer, Mejoras, Tienda y Trades) y avisos.
 -- La mochila está en Backpack, las mejoras en SkillTree, el gacha en GachaRoll y el estilo en Ui.
 -- El transporte lo hace el servidor (Teleport); aquí solo se pide y se pone un destello.
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -384,6 +385,23 @@ function Hud.start()
 		item.Activated:Connect(function()
 			Ui.toggle(entry[1])
 		end)
+	end
+
+	-- Solo en móvil (pedido por el usuario: los botones tapaban el joystick y molestaban al moverse): el menú, al 65 % y
+	-- pegado arriba, justo debajo de los botones de Roblox. Monedas, gemas y bono de amigos se quedan abajo (también
+	-- pedido). En PC no cambia nada.
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		local menuScale = Instance.new("UIScale")
+		menuScale.Scale = 0.65
+		menuScale.Parent = menu
+		menu.AnchorPoint = Vector2.new(0, 0)
+		-- La capa del HUD ignora la franja de Roblox y cuenta en sus unidades (pantalla / escala).
+		local hudScale = gui:FindFirstChildOfClass("UIScale") :: UIScale
+		local function placeMenu()
+			menu.Position = UDim2.fromOffset(MARGIN, GuiService:GetGuiInset().Y / hudScale.Scale + 10)
+		end
+		hudScale:GetPropertyChangedSignal("Scale"):Connect(placeMenu)
+		placeMenu()
 	end
 
 	local function refresh()
