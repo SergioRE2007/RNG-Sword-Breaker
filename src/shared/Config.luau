@@ -27,7 +27,7 @@ Config.Test = {
 }
 -- Administradores en el juego publicado: solo estas cuentas (ni el dueño del grupo); UserId de Roblox de cada uno (server/Admin). Ven el menú
 -- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno.
-Config.Admins = { 4490621018 }
+Config.Admins = { 4490621018, 7154119348 }
 -- Jugadores que van aparte (pedido por el usuario, para su propia cuenta): juegan y guardan como todos, pero no salen en
 -- las clasificaciones globales ni pueden tener la "Mejor tirada" del hub (server/Leaderboards y server/BestRoll).
 Config.Unranked = { 4490621018 }
