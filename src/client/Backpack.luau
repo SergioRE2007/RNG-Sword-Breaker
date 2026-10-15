@@ -335,11 +335,23 @@ function Backpack.start()
 	swordsTitle.RichText = true
 	swordsTitle.Text = Lang.t(nil, "Your swords")
 
+	-- Daño total de las armas equipadas (Stats.damage), solo el número, encima del contador de armas (pedido por el
+	-- usuario). Los dos ocupan el alto de la fila de huecos: el daño arriba y el contador pegado abajo.
+	local damage = Ui.label(swordsPane, 24)
+	damage.Name = "Damage"
+	damage.AnchorPoint = Vector2.new(1, 0)
+	damage.Position = UDim2.new(1, -12, 0, 6)
+	damage.Size = UDim2.fromOffset(130, 30)
+	damage.TextColor3 = Color3.fromRGB(255, 130, 100)
+	Ui.tip(damage, function()
+		return Lang.t(nil, "Total damage of your equipped weapons"), Ui.COLORS.red
+	end)
+
 	local count = Ui.label(swordsPane, 24)
 	count.Name = "Count"
 	count.AnchorPoint = Vector2.new(1, 0)
-	count.Position = UDim2.new(1, -12, 0, 8 + (SLOT - 40) / 2)
-	count.Size = UDim2.fromOffset(130, 40)
+	count.Position = UDim2.new(1, -12, 0, 8 + SLOT - 36)
+	count.Size = UDim2.fromOffset(130, 36)
 	count.BackgroundTransparency = 0
 	count.BackgroundColor3 = Ui.COLORS.blue
 	Ui.round(count, 8)
@@ -970,6 +982,7 @@ function Backpack.start()
 		local copies = Stats.swords(player)
 
 		count.Text = `{#copies}/{Config.MaxSwords}`
+		damage.Text = Format.short(Stats.damage(player))
 		swordsTitle.Text = Lang.t(nil, "Equipped {n}/{max}", { n = #worn, max = Stats.loadoutSlots(player) })
 		syncSlots(copies, worn)
 		local key = `{player:GetAttribute("Swords")}|{player:GetAttribute("Loadout")}|{player:GetAttribute("Bag")}`
