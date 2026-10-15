@@ -151,6 +151,11 @@ function Hud.start()
 		Ui.image(parent, "gemas")
 	end)
 
+	-- Marcador de daño, justo encima de las gemas: lo que pega el equipo ahora mismo (Stats.damage).
+	local damageCounter = counter(gui, "Damage", 3, Ui.COLORS.red, function(parent)
+		Ui.image(parent, "espada")
+	end)
+
 	-- Transporte, arriba en el centro.
 	local travel = Instance.new("Frame")
 	travel.Name = "Travel"
@@ -328,6 +333,7 @@ function Hud.start()
 
 		setCoins(amount)
 		setGems(gemAmount)
+		damageCounter.Text = Format.multiplier(Stats.damage(player))
 		damageText.Text = `{Lang.t(nil, "Damage")} <font color="#ff9a6a">{Format.multiplier(Stats.damage(player))}</font>  ·  {Lang.t(nil, "Health")} <font color="#ff6e6e">{Format.short(Stats.maxHealth(player))}</font>`
 		luckText.Text = `{Lang.t(nil, "Luck (objects)")} <font color="#7ee07a">x{Format.multiplier(Stats.luck(player) * Stats.spawnLuck(player))}</font>`
 		gachaText.Text = `{Lang.t(nil, "Luck (weapons)")} <font color="#c9a0ff">x{Format.multiplier(Stats.gachaLuck(player))}</font>`
