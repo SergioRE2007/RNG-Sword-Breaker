@@ -279,7 +279,7 @@ function WorldBossArena.buildBoard(map: Instance)
 	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
 	-- La derecha de quien mira el portal es la izquierda del portal; el cartel se gira un poco hacia delante del portal.
 	local spot = base * CFrame.new(-19, 0, -2) * CFrame.Angles(0, math.rad(-20), 0)
-	local width, height = 15, 15
+	local width, height = 15, 19 -- alto para los 13 tramos
 	local model = Instance.new("Model")
 	model.Name = "WorldBossRewards"
 
@@ -312,8 +312,8 @@ function WorldBossArena.buildBoard(map: Instance)
 	border.Thickness = 8
 	border.Parent = back
 
-	text(back, "Title", UDim2.fromScale(0.04, 0.025), UDim2.fromScale(0.92, 0.1), GOLD, "BOSS REWARDS")
-	text(back, "Subtitle", UDim2.fromScale(0.06, 0.125), UDim2.fromScale(0.88, 0.055), Color3.fromRGB(215, 200, 255), "By the damage you deal")
+	text(back, "Title", UDim2.fromScale(0.04, 0.02), UDim2.fromScale(0.92, 0.075), GOLD, "BOSS REWARDS")
+	text(back, "Subtitle", UDim2.fromScale(0.06, 0.095), UDim2.fromScale(0.88, 0.04), Color3.fromRGB(215, 200, 255), "By the damage you deal")
 
 	-- Tabla: cabecera y una fila por tramo (te llevas la del tramo más alto al que llegas).
 	local columns = {
@@ -322,7 +322,7 @@ function WorldBossArena.buildBoard(map: Instance)
 		{ x = 0.48, w = 0.24, color = Color3.fromRGB(90, 230, 255), title = "Crystals" },
 		{ x = 0.73, w = 0.24, color = Color3.fromRGB(255, 140, 190), title = "Potions" },
 	}
-	local top, rowHeight = 0.19, 0.063
+	local top, rowHeight = 0.145, 0.0485
 	for _, column in columns do
 		text(back, "Head_" .. column.title, UDim2.fromScale(column.x, top), UDim2.fromScale(column.w, rowHeight * 0.85), column.color, column.title)
 	end
@@ -346,10 +346,10 @@ function WorldBossArena.buildBoard(map: Instance)
 
 	-- Aclaración y podio: tirada de más y tickets.
 	local footer = top + rowHeight * (#tiers + 1) + 0.005
-	text(back, "Each", UDim2.fromScale(0.05, footer), UDim2.fromScale(0.9, 0.045), Color3.fromRGB(215, 200, 255), "Crystals and potions: that many of each")
+	text(back, "Each", UDim2.fromScale(0.05, footer), UDim2.fromScale(0.9, 0.036), Color3.fromRGB(215, 200, 255), "Crystals and potions: that many of each")
 	local bonus = rewards.TopBonusRolls
-	text(back, "Top", UDim2.fromScale(0.05, footer + 0.05), UDim2.fromScale(0.9, 0.05), GOLD, if bonus == 1 then "Top 3: +{n} roll" else "Top 3: +{n} rolls", { n = bonus })
-	text(back, "Tickets", UDim2.fromScale(0.05, footer + 0.1), UDim2.fromScale(0.9, 0.05), Color3.fromRGB(255, 190, 60), "Tickets: 1st {a} · 2nd {b} · 3rd {c}", { a = rewards.Tickets[1] or 0, b = rewards.Tickets[2] or 0, c = rewards.Tickets[3] or 0 })
+	text(back, "Top", UDim2.fromScale(0.05, footer + 0.04), UDim2.fromScale(0.9, 0.04), GOLD, if bonus == 1 then "Top 3: +{n} roll" else "Top 3: +{n} rolls", { n = bonus })
+	text(back, "Tickets", UDim2.fromScale(0.05, footer + 0.08), UDim2.fromScale(0.9, 0.04), Color3.fromRGB(255, 190, 60), "Tickets: 1st {a} · 2nd {b} · 3rd {c}", { a = rewards.Tickets[1] or 0, b = rewards.Tickets[2] or 0, c = rewards.Tickets[3] or 0 })
 
 	model.Parent = map
 	return model
