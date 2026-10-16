@@ -64,9 +64,11 @@ local NAMES = {
 	"SetLang", -- cliente -> servidor: ("es" o "en") el idioma que tengo elegido para esta experiencia (client/Language): en ese me escribe el servidor
 	"Rejoin", -- cliente -> servidor: ({ fight, dungeon }) llevo mucho rato sin tocar nada: reconéctame antes de que Roblox me expulse (fight = peleaba en Auto, dungeon = zona en la que estaba)
 	"AdminWeather",-- cliente -> servidor: (acción) menú de admin, solo administradores (server/Admin): un id de Config.Weather.Events = poner ese clima ya, "none" = despejar, "auto" = volver al calendario, "next" = el siguiente de la lista
-	"AdminCommand", -- cliente -> servidor: (acción, ...) órdenes del menú de admin, solo administradores (server/AdminCommands): "give" (userId o 0 = todos, objeto, cantidad), "sword", "kick" (userId), "goto" / "bring" (userId), "announce" (texto), "banner" (texto), "boost" (stat, multiplicador, minutos), "stopBoost" (stat), "clover" (suerte del trébol de prueba, 0 = quitarlo); con "all" delante, en todos los servidores
+	"AdminCommand", -- cliente -> servidor: (acción, ...) órdenes del menú de admin, solo administradores (server/AdminCommands): "give" (userId o 0 = todos, objeto, cantidad), "sword", "kick" (userId), "goto" / "bring" (userId), "announce" (texto), "banner" (texto), "boost" (stat, multiplicador, minutos), "stopBoost" (stat), "clover" (suerte del trébol de prueba, 0 = quitarlo), "worldBoss" (sacar ya el Jefe del mundo en este servidor); con "all" delante, en todos los servidores
 	"AdminBanner", -- servidor -> clientes: (texto) mensaje grande de un administrador (client/BoostHud)
 	"WeatherSchedule", -- servidor -> cliente: (hora de GetServerTimeNow) cuándo empieza el siguiente clima; solo se manda a los administradores, los demás no ven la cuenta atrás
+	"WorldBoss", -- servidor -> cliente: (tipo, datos) Jefe del mundo: "barrage" ({ spots, radius, at }), "charge" ({ safe, radius, at }), "mega", "launch" ({ from, to, flight }), "boom" (posición), "fall" ({ at }), "rank" ({ list, total, mine, rank, count }), "result" ({ list, rank, rewards? }) (server/WorldBoss)
+	"WorldBossRequest", -- cliente -> servidor: ("leave") salir de la arena del Jefe del mundo y volver al portal del hub
 }
 
 local Remotes = {}

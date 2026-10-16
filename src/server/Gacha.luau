@@ -112,7 +112,9 @@ local function draw(player: Player, boost: number, source: string, info)
 	-- se rompía después llenaba la pantalla de cinemáticas (simulado: con x4 de suerte de cajas ya acabada, 1 de cada
 	-- 75 tiradas; con un evento de x100, 1 de cada 3).
 	local mean = if info and type(info.usual) == "number" and info.usual > 0 then info.usual else ObjectSpec.meanLuck(Stats.luck(player) * Stats.spawnLuck(player), Stats.objectLuck(player))
-	local usual = if source == "object" then base * mean else base
+	-- El Jefe del mundo tira con su propia suerte y la manda en `info.usual`: se mide contra ella, o con una suerte de
+	-- xN todas sus tiradas parecerían de "1 entre N" y saldría el premio gordo en cada una.
+	local usual = if source == "object" or source == "worldBoss" then base * mean else base
 	local clover = if info and type(info.clover) == "number" then math.max(info.clover, 1) else 1
 	local odds = Permanent.rollOdds(index, metal, size, usual)
 	-- El Trébol de la suerte no cuenta (pedido por el usuario: lo que saca de más se celebra): su tirada se mide

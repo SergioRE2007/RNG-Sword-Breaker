@@ -179,6 +179,10 @@ end
 -- Con el Auto (pase) en una mazmorra el alcance es infinito, pero solo contra enemigos (`enemy`): los objetos de su
 -- parcela siguen con el círculo normal, para que no se rompan desde la mazmorra.
 function Stats.reach(player: Player, enemy: boolean?): number
+	-- En la arena del Jefe del mundo, el círculo de siempre: el Auto de la parcela no pega desde lejos.
+	if player:GetAttribute("WorldBoss") == true then
+		return Config.Loadout.Radius
+	end
 	local auto = player:GetAttribute("AutoFarm") == true
 	if (player:GetAttribute("Dungeon") or 0) ~= 0 then
 		return if auto and enemy then math.huge else Config.Loadout.Radius

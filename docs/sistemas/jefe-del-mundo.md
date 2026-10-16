@@ -1,0 +1,47 @@
+# Jefe del mundo (Rey Slime)
+
+- Pedido por el usuario para la actualización del 18-10-2026. Cada `Config.WorldBoss.Interval` s (1800, a la misma hora en todos los servidores: `WorldBossInfo.nextFall`) se abre un portal en el hub `Warning` s (60) antes de que caiga el Rey Slime en su arena. Todo el servidor le pega a la vez, como a cualquier enemigo.
+- **No tiene vida** (cambio del usuario a mitad de la primera versión, que sí la tenía): no se le mata. A los `Lifetime` s (180) se va de un salto y reparte los premios según el daño de cada uno. Arriba, en el panel, sale "Tu daño" y, al acabar, la tabla con el daño de cada jugador.
+- **Sitio**:
+  - Portal: en el anillo de las estaciones del hub, a 67,5° y a 72 del centro (`Portal`). Es el único hueco libre entre dos caminos: Mejor tirada en 22,5°, Rasgos en 112,5°, Grados en 157,5°, Misiones en 202,5°, clasificaciones en 247,5°, 292,5° y 337,5°.
+  - Arena: flotando lejos de la isla, en `Origin` (0, 200, -3000), radio 80, con su propia luz (de noche no se veía).
+  - Geometría en `server/WorldBossArena`: arena, portal, `portalFront` y `spawnCFrame`.
+- **Entrar**: tocando el portal abierto (`Trigger`, solo con `CanTouch` abierto), salvo desde una mazmorra. Quien está dentro lleva el atributo `WorldBoss = true`. Con él:
+  - `Stats.reach` es siempre `Config.Loadout.Radius`, así el Auto de la parcela no pega desde lejos;
+  - `MapBounds` no lo devuelve a su parcela;
+  - `Targeting` le da como objetivos lo que lleva la etiqueta `WorldBossTarget`, salvo el rey con escudo.
+- **Salir de la arena**:
+  - al morir (reaparece en su parcela y puede volver a entrar mientras dure);
+  - con "Salir" del panel (`WorldBossRequest("leave")`);
+  - yéndose lejos.
+  - Durante `GRACE` s tras entrar no se le saca por estar lejos: el cliente aún puede mandar su sitio de antes y el servidor lo veía en el hub.
+  - Al acabar, a los `ReturnDelay` s, todos vuelven delante del portal.
+- **Fases** (`server/WorldBoss`, cosas de la arena en `server/WorldBossMobs`):
+  - **Bombardeo**: globos a círculos rojos, la mitad sobre jugadores. Quita `Damage` × vida máxima a quien siga dentro.
+  - **Invocación**: esbirros slime (cuerpo de `client/Slimes`, tipo `grunt`) que persiguen y muerden.
+  - **Escudo**: a los `Shield.First` s y luego cada `Every`. Cristales alrededor; el rey no recibe daño hasta romperlos todos.
+  - **Carga**: zonas verdes seguras y barriles. Los barriles rotos salen disparados con física contra el rey; con `Needed` queda aturdido `StunTime` s (×`StunMult` de daño y sin atacar). Si no le llegan, súper golpe a todos los que estén fuera de lo verde.
+- **Vida de lo demás**: esbirros, cristales y barriles aguantan lo que quita un jugador medio de los que hay en unos segundos (`WorldBossInfo.minorHp`, con el daño por segundo medido al caer el rey). La cantidad de cada cosa es `Base + PerPlayer × jugadores`, hasta `Max`.
+- **Premios** (`WorldBossInfo.rewards`), según la parte de cada uno de todo el daño hecho en la arena. El daño a esbirros, cristales y barriles cuenta, pero sin lo que sobra al romperlos.
+  - Tiradas por `Gacha.give(..., "worldBoss", ...)` con suerte = la media de sus objetos (`ObjectSpec.meanLuck`) × `Rewards.Luck`.
+  - `info.usual` es esa misma suerte. `Gacha` (línea de `usual`) la usa también para `"worldBoss"`: si no, con suerte ×N todas las tiradas parecerían de "1 entre N" y saldría el premio gordo en cada una.
+  - Cristales de rasgo y de grado directos a `data.items`, sin `Loot.roll`, que mete el pase `dungeonLoot`.
+  - Tickets para los tres primeros.
+- **Cliente**:
+  - `client/WorldBoss`, panel `Hud.HudRoot.WorldBoss` con estas piezas:
+    - `Content.Head` (`Title`, `Detail`, `Action`: "Ir" fuera, que usa `Teleport("portal")`, y "Salir" dentro);
+    - `Content.Damage` (tu daño, azul con escudo, amarillo aturdido);
+    - `Content.Charge`;
+    - `Content.Ranking.Row<n>`, `You` y `Prize`.
+  - `client/WorldBossFx`: sombra, caída, globos, círculos, zonas, escudo, estrellas, estela, explosiones, remolino del portal y temblor.
+  - `client/Slimes` tiene el tipo `king`, con los atributos `Fall`, `Slam`, `ChargeFrom`/`ChargeTo`, `Stunned` y `Hits` (parpadeo en blanco al recibir golpes, porque no tiene `HP`).
+- **Estado** en atributos de workspace: `WorldBossState` (`idle`, `open`, `fight` u `over`), `WorldBossFall` y `WorldBossEnds`. Avisos por el remote `WorldBoss`: `barrage`, `charge`, `mega`, `stun`, `shield`, `fall`, `launch`, `boom`, `rank` y `result`.
+- **Admin**: botón "Sacar jefe del mundo" en la pestaña de eventos (`AdminCommand("worldBoss")`), con `AdminWarning` s de aviso, solo en ese servidor.
+- **Probar**:
+  - `Config.Test.WorldBoss = N` (segundos hasta el primero) y `Config.Test.WorldBossPhase` (`barrage`, `summon`, `shield` o `charge`: solo esa fase), los dos subidos en 0 y "".
+  - Para entrar desde `Server`: `PivotTo` del personaje a `WorldBossInfo.portalPosition() + (0, 9.5, 0)`. Desde el cliente, el `Trigger` puede no estar cargado por el streaming.
+  - Las salpicaduras matan: para probar, un bucle en `Server` que mantenga llena la vida del personaje.
+  - Para ver el final antes, bajar `Lifetime` un momento.
+  - Romper barriles: `Attack:FireServer(barril)` estando a menos de 26, esperando un momento tras el `PivotTo`.
+  - Con `InfiniteMoney` los objetos son infinitos: los premios se comprueban con el aviso `result` (`rewards`).
+- **Pendiente**: sonidos propios (usa los de golpe que ya hay); repasar con `tools/equilibrio` cuántos cristales da frente a una mazmorra.

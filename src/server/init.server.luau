@@ -30,6 +30,7 @@ require(script.Potions).start()
 require(script.DropMenu).start() -- antes de Dungeons: le ofrece el botín retenido al acabar la partida
 require(script.Dungeons).start()
 require(script.Party).start()
+require(script.WorldBoss).start() -- Jefe del mundo: portal del hub y su arena; después de Plots y Scenery (usa workspace.Map)
 require(script.Combat).start()
 require(script.Trade).start()
 require(script.Shop).start()

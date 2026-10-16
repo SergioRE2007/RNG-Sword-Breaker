@@ -1,6 +1,7 @@
 -- Combate: las armas equipadas del jugador (hasta Config.Loadout.Slots) vuelan al objetivo que elige con un clic y le
 -- pegan, cada una a su ritmo, hasta romperlo. El cliente solo pide el objetivo (Attack); aquí se valida (un objeto de su
--- parcela o un enemigo de su partida, vivo y dentro de su círculo), se lleva el reloj de cada arma y se reparte el daño.
+-- parcela, un enemigo de su partida o algo de la arena del Jefe del mundo, vivo y dentro de su círculo), se lleva el
+-- reloj de cada arma y se reparte el daño.
 --   · Objeto roto: fin del ataque (con el autoclicker o el Auto encendidos, saltan al siguiente objeto del círculo).
 --     Enemigo muerto: las armas saltan al más cercano del círculo.
 --   · Hachas y martillos salpican alrededor del objetivo y las lanzas atraviesan lo que hay detrás (Hitbox.spread).
@@ -22,6 +23,7 @@ local Potions = require(script.Parent.Potions)
 local Traits = require(script.Parent.Traits)
 local PlayerData = require(script.Parent.PlayerData)
 local Missions = require(script.Parent.Missions)
+local WorldBoss = require(script.Parent.WorldBoss)
 
 local Combat = {}
 
@@ -30,9 +32,10 @@ local LAG = 3 -- studs de más al elegir objetivo: el servidor ve moverse al jug
 local MIN_GAP = 0.05 -- segundos mínimos entre dos peticiones de un mismo jugador
 local PROFILE_LIFE = 0.5 -- segundos que vale la ficha de armas de un jugador antes de volver a calcularla
 
--- Ataques en marcha: `enemy` = el objetivo es un enemigo de mazmorra (si no, un objeto de su parcela), `arrive` = cuándo
--- llegan las armas (antes no pega ninguna) y `at` = dónde estaba el objetivo la última vez que se miró.
-local attacks = {} -- [Player] = { target: BasePart, enemy: boolean, arrive: number, at: Vector3 }
+-- Ataques en marcha: `kind` = qué es el objetivo ("object" de su parcela, "enemy" de mazmorra o "boss", algo de la
+-- arena del Jefe del mundo), `arrive` = cuándo llegan las armas (antes no pega ninguna) y `at` = dónde estaba el
+-- objetivo la última vez que se miró.
+local attacks = {} -- [Player] = { target: BasePart, kind: string, arrive: number, at: Vector3 }
 -- Cuándo puede volver a pegar cada arma. No se reinicia al cambiar de objetivo: hacer clic deprisa no da más daño.
 local clocks = {} -- [Player] = { [hueco] = os.clock() }
 local profiles = {} -- [Player] = { at = os.clock(), weapons = { { damage, cooldown, kind, length } } }
@@ -74,9 +77,9 @@ local function weapons(player: Player)
 end
 
 -- Pone (o quita, sin pieza) el objetivo del jugador. `travel` = segundos que tardan las armas en llegar.
-local function setTarget(player: Player, target: BasePart?, enemy: boolean?, travel: number?)
+local function setTarget(player: Player, target: BasePart?, kind: string?, travel: number?)
 	if target then
-		attacks[player] = { target = target, enemy = enemy == true, arrive = os.clock() + (travel or Config.Loadout.Travel), at = target.Position }
+		attacks[player] = { target = target, kind = kind or "object", arrive = os.clock() + (travel or Config.Loadout.Travel), at = target.Position }
 	else
 		attacks[player] = nil
 	end
@@ -113,10 +116,15 @@ end
 local function blow(player: Player, attack, weapon, slot: number, root: BasePart)
 	local target: BasePart = attack.target
 	local origin, range, arc = Hitbox.spread(weapon.kind, weapon.length, root.Position, target.Position)
-	if attack.enemy then
+	if attack.kind == "enemy" then
 		Dungeons.hit(player, target, weapon.damage, slot)
 		if origin then
 			Dungeons.strike(player, origin, range, arc, weapon.damage, { [target] = true }, slot)
+		end
+	elseif attack.kind == "boss" then
+		WorldBoss.hit(player, target, weapon.damage, slot)
+		if origin then
+			WorldBoss.strike(player, origin, range, arc, weapon.damage, { [target] = true }, slot)
 		end
 	else
 		-- Los de alrededor se miran antes de pegar al objetivo, que puede desaparecer con el golpe.
@@ -131,8 +139,10 @@ local function blow(player: Player, attack, weapon, slot: number, root: BasePart
 end
 
 local function alive(player: Player, attack): boolean
-	if attack.enemy then
+	if attack.kind == "enemy" then
 		return Dungeons.isEnemy(player, attack.target)
+	elseif attack.kind == "boss" then
+		return WorldBoss.isTarget(player, attack.target)
 	end
 	return Destructibles.owns(player, attack.target)
 end
@@ -142,14 +152,16 @@ end
 -- las armas siguen solas con el objeto más cercano del círculo, sin esperar a que el cliente lo pida (pedido por el
 -- usuario: se quedaban un momento paradas entre objeto y objeto).
 local function release(player: Player, attack, root: BasePart)
-	local radius = Stats.reach(player, attack.enemy)
+	local radius = Stats.reach(player, attack.kind == "enemy")
 	local nextTarget: BasePart? = nil
-	if attack.enemy then
+	if attack.kind == "enemy" then
 		nextTarget = Dungeons.nearest(player, attack.at, root.Position, radius)
+	elseif attack.kind == "boss" then
+		nextTarget = WorldBoss.nearest(player, attack.at, root.Position, radius)
 	elseif player:GetAttribute("AutoClick") == true or player:GetAttribute("AutoFarm") == true then
 		nextTarget = Destructibles.nearest(player, attack.at, root.Position, radius)
 	end
-	setTarget(player, nextTarget, attack.enemy, Config.Loadout.Chain)
+	setTarget(player, nextTarget, attack.kind, Config.Loadout.Chain)
 end
 
 local function onAttack(player: Player, part: unknown)
@@ -174,14 +186,14 @@ local function onAttack(player: Player, part: unknown)
 	if not root then
 		return
 	end
-	local enemy = Dungeons.isEnemy(player, part)
-	if not enemy and not Destructibles.owns(player, part) then
+	local kind = if Dungeons.isEnemy(player, part) then "enemy" elseif WorldBoss.isTarget(player, part) then "boss" elseif Destructibles.owns(player, part) then "object" else nil
+	if not kind then
 		return
 	end
-	if not Hitbox.within(part, root.Position, Stats.reach(player, enemy) + LAG) then
+	if not Hitbox.within(part, root.Position, Stats.reach(player, kind == "enemy") + LAG) then
 		return
 	end
-	setTarget(player, part, enemy)
+	setTarget(player, part, kind)
 end
 
 local function step(dt: number)
@@ -195,7 +207,7 @@ local function step(dt: number)
 	elapsed = 0
 	local now = os.clock()
 	for player, attack in attacks do
-		local reach = Stats.reach(player, attack.enemy) + Config.Loadout.Leash
+		local reach = Stats.reach(player, attack.kind == "enemy") + Config.Loadout.Leash
 		local root = rootOf(player)
 		if not root then
 			setTarget(player, nil)
