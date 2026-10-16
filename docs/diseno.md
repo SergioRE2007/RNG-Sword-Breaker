@@ -214,6 +214,37 @@ Orden propuesto: primero el 1 (se nota enseguida y no toca el mapa) y luego el 2
 
    Usar los helpers de `client/Ui` y cargar antes las skills de interfaz.
 
+### Plan: colecciones del Índice, objeto de servidor y logros (elegidas por el usuario, 16-10-2026)
+
+1. **Premios del Índice por colecciones.** El Índice de armas (`IndexInfo`, `server/Index`, `client/Index`, ver `docs/sistemas/indice.md`) agrupa las armas en colecciones:
+   - Por tipo: todas las espadas, hachas, lanzas…
+   - Por metal: todas las armas de Oro…
+   - Por zona de rareza.
+
+   Al completar una, un premio que se recoge con un botón (cristales, pociones, Trébol pequeño, gemas) y, en las difíciles, un título (punto 3).
+   - Las colecciones van en `Config.IndexCollections` como lista de filtros, no de armas a mano, para que un arma nueva entre sola.
+   - Se guarda cuáles se han cobrado (`data.collections`). Ojo: al añadir un arma a una colección ya cobrada, no se vuelve a pedir.
+   - En la ventana del Índice, una barra de progreso por colección ("12/15").
+2. **Objeto de servidor (meteorito).**
+   - Cada X minutos (por ejemplo 20–30, al azar) cae en el hub un objeto gigante con aviso a todos (`Tell.all`) y una cuenta atrás para que dé tiempo a llegar.
+   - Le pegan todos los del servidor con sus armas: `Combat` lo acepta como objetivo, igual que un enemigo, validado por el servidor.
+   - Vida escalada con los jugadores que hay y su daño.
+   - Al romperse, cada uno que le haya pegado recibe tiradas de arma (`Gacha.give` con `source = "object"`) según su parte del daño (con un mínimo, para que los flojos también saquen algo) y monedas.
+   - Dura poco: si no lo rompen en N minutos, se va.
+   - Se parece al Jefe del mundo (`docs/sistemas/jefe-del-mundo.md`): reutilizar su reparto por daño. La diferencia es que es corto, sorpresa y en el hub.
+   - Números en `Config.ServerObject` y paso por `tools/equilibrio`, porque da tiradas.
+3. **Títulos y logros.** Lista en `Config.Achievements`:
+   - Contadores: romper objetos, mazmorras superadas, renacimientos…
+   - Hitos: sacar un arma de cierta rareza, completar una colección del punto 1.
+
+   Al cumplir uno, aviso y, si da título, se elige en una ventana de logros cuál llevar (uno a la vez, `data.title`, atributo `Title`). El título sale:
+   - En el chat, junto a la etiqueta VIP (`client/ChatTags`).
+   - Sobre la cabeza, con un `BillboardGui` pequeño.
+
+   Contadores en `data.stats`, con un `Achievements.add(jugador, tipo, n)` en el servidor, como `Missions.add`. Algunos títulos raros, con color propio o animado, para presumir.
+
+Orden propuesto: 3 (logros y títulos, la base) → 1 (colecciones, que dan títulos) → 2 (objeto de servidor).
+
 ## Tareas pendientes implementadas — octubre de 2026
 
 Rama `mejoras-pendientes`, a partir de la lista del usuario. Código implementado y comprobado con Lune y Rojo; las pruebas visuales y de físicas en Studio siguen pendientes. Detalle reproducible y lista de comprobación en [pruebas-mejoras.md](pruebas-mejoras.md).
