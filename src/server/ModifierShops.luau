@@ -305,6 +305,18 @@ function ModifierShops.start()
 		end)
 	end)
 	Remotes.AdminSetModifier.OnServerEvent:Connect(onAdminSet)
+	-- Ajustes de la tienda ("Parar con" y el desempate de rasgos): se guardan al tocarlos, no solo al tirar.
+	Remotes.SetModifierPrefs.OnServerEvent:Connect(function(player, kind, stops, priority)
+		if (kind ~= "traits" and kind ~= "grades") or (type(stops) == "string" and #stops > 200) then
+			return
+		end
+		local list = Modifiers.stops(kind, stops)
+		local order = if kind == "traits" and type(priority) == "string" and #priority <= 200 then table.concat(Modifiers.priority(priority), ",") else nil
+		PlayerData.edit(player, function(edited)
+			edited.stopAt[kind] = list
+			edited.traitPriority = order or edited.traitPriority
+		end)
+	end)
 	-- El cliente enseña el botón "Admin" de las tiendas si lleva este atributo. No es el atributo "Admin" de
 	-- server/Admin (el del menú de admin): los dos módulos lo escribían al entrar el jugador y, en el juego publicado,
 	-- este lo dejaba en false y el administrador se quedaba sin menú.

@@ -1010,6 +1010,7 @@ do
 	local full = {
 		coins = 1e30, gems = 2.5e33, rebirths = 3, playTime = 12345.5, totalCoins = 1e40, robuxSpent = 499, broken = 1234, passes = { vip = true }, receipts = { "compra-1" }, codes = { HOLA = true }, tutorial = 3,
 		missions = missions, autoSell = 1e24, traitPriority = "damage,coins,luck", pity = pity,
+		stopAt = { traits = { 10, 8, 99, 1, 8, 2.5 }, grades = {} },
 		swords = {
 			{ id = 10, sword = 1 },
 			{ id = 20, sword = lastSword, trait = lastTrait, grade = lastGrade, metal = lastMetal, size = lastSize },
@@ -1036,6 +1037,7 @@ do
 	local expected = {
 		coins = 1e30, gems = 2.5e33, rebirths = 3, playTime = 12345.5, totalCoins = 1e40, robuxSpent = 499, broken = 1234, passes = { vip = true }, receipts = { "compra-1" }, codes = { HOLA = true }, tutorial = 3,
 		missions = missions, autoSell = 1e24, traitPriority = "damage,coins,luck", pity = pity,
+		stopAt = { traits = { 8, 10 }, grades = {} },
 		swords = {
 			{ id = 1, sword = 1 },
 			{ id = 2, sword = lastSword, trait = lastTrait, grade = lastGrade, metal = lastMetal, size = lastSize },
@@ -1204,6 +1206,7 @@ do
 			weekly = { id = 2800, progress = { a = nan, b = "x", c = 3, d = -1, [1] = 5 }, claimed = { a = "sí", c = true } },
 		},
 		traitPriority = "luck,luck,luck",
+		stopAt = { traits = "x", grades = { "a", {}, 1 } },
 		passes = { vip = "sí", coins2 = true, inventado = true },
 		receipts = { "a", 5, {}, "b" },
 		codes = { HOLA = true, OTRO = "sí", [3] = true },
@@ -1227,6 +1230,10 @@ do
 	same(bits.potions, { weaponLuck = { tier = 1, seconds = potionInfo.cap(1) }, coins = { tier = 2, seconds = 30 } }, "pociones: solo las válidas")
 	same(bits.missions, { weekly = { id = 2800, progress = { c = 3 }, claimed = { c = true } } }, "misiones: solo progreso y premios válidos")
 	equal(table.concat(modifiers.priority(bits.traitPriority), ","), table.concat(modifiers.PRIORITY, ","), "prioridad de rasgos sin sentido: la de siempre")
+	same(bits.stopAt, { traits = {}, grades = { 1 } }, "\"Parar con\" roto: solo índices que existen")
+	same(modifiers.stops("traits", "10,8,1,6,8,x,99"), { 8, 10 }, "\"Parar con\" en texto: sin Rasgos I y II, repetidos ni inventados")
+	equal(modifiers.stops("traits", nil), nil, "sin \"Parar con\" guardado: nada (lo de por defecto)")
+	same(modifiers.stops("grades", ""), {}, "\"Parar con\" guardado vacío: ninguno marcado")
 	local owned, wearing = {}, {}
 	for index = 1, 10000 do owned[index] = 1 + index % math.min(5, lastArtifact) end
 	for index = 1, 100 do wearing[index] = 1 + index % math.min(5, lastArtifact) end

@@ -275,13 +275,14 @@ Config.GoldBag = {
 -- suma, pero la suerte y las monedas de sus rasgos se multiplican (cuatro Paradojas = x16).
 -- "icon" = coins, damage, luck o all (los que lo suben todo salen con arcoíris).
 -- No cambies el orden: el guardado usa la posición en la lista; lo nuevo, al final.
+-- "noStop = true": no sale en "Parar con" de la tienda (pedido por el usuario: solo se para en los III o mejores).
 Config.Traits = {
-	{ name = "Coins I", coins = 1.05, chance = 24.76, icon = "coins", color = Color3.fromRGB(110, 220, 120) },
-	{ name = "Damage I", damage = 1.2, chance = 24.76, icon = "damage", color = Color3.fromRGB(90, 210, 230) },
-	{ name = "Luck I", luck = 1.05, chance = 24.76, icon = "luck", color = Color3.fromRGB(150, 230, 90) },
-	{ name = "Coins II", coins = 1.1, chance = 6.7, icon = "coins", color = Color3.fromRGB(60, 200, 90) },
-	{ name = "Damage II", damage = 1.5, chance = 6.7, icon = "damage", color = Color3.fromRGB(50, 170, 240) },
-	{ name = "Luck II", luck = 1.1, chance = 6.7, icon = "luck", color = Color3.fromRGB(120, 210, 50) },
+	{ name = "Coins I", coins = 1.05, chance = 24.76, noStop = true, icon = "coins", color = Color3.fromRGB(110, 220, 120) },
+	{ name = "Damage I", damage = 1.2, chance = 24.76, noStop = true, icon = "damage", color = Color3.fromRGB(90, 210, 230) },
+	{ name = "Luck I", luck = 1.05, chance = 24.76, noStop = true, icon = "luck", color = Color3.fromRGB(150, 230, 90) },
+	{ name = "Coins II", coins = 1.1, chance = 6.7, noStop = true, icon = "coins", color = Color3.fromRGB(60, 200, 90) },
+	{ name = "Damage II", damage = 1.5, chance = 6.7, noStop = true, icon = "damage", color = Color3.fromRGB(50, 170, 240) },
+	{ name = "Luck II", luck = 1.1, chance = 6.7, noStop = true, icon = "luck", color = Color3.fromRGB(120, 210, 50) },
 	{ name = "Coins III", coins = 1.2, chance = 1.5, icon = "coins", color = Color3.fromRGB(30, 180, 70) },
 	{ name = "Damage III", damage = 2, chance = 1.5, icon = "damage", color = Color3.fromRGB(40, 120, 255) },
 	{ name = "Luck III", luck = 1.2, chance = 1.5, icon = "luck", color = Color3.fromRGB(90, 190, 30) },

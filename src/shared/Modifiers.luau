@@ -114,6 +114,29 @@ function Modifiers.priority(text: unknown): { string }
 	return order
 end
 
+-- Resultados con los que para la tirada automática ("Parar con"), tal como se guardan y se mandan: lista de índices
+-- de la lista de `kind`. Acepta la lista guardada o el texto "3,5,9" que va por el remote y el atributo; deja solo
+-- índices que existen, sin repetir, ordenados y sin los que no salen en "Parar con" (`noStop`). nil si no es nada
+-- de eso (= no hay nada guardado y la tienda usa lo de por defecto).
+function Modifiers.stops(kind: string, value: unknown): { number }?
+	local items = if type(value) == "string" then string.split(value, ",") elseif type(value) == "table" then value else nil
+	local info = Modifiers.KINDS[kind]
+	if not items or not info or #items > #info.list * 2 then
+		return nil
+	end
+	local seen, result = {}, {}
+	for _, item in items do
+		local index = tonumber(item)
+		local entry = if index then info.list[index] else nil
+		if index and entry and index % 1 == 0 and not seen[index] and not entry.noStop then
+			seen[index] = true
+			table.insert(result, index)
+		end
+	end
+	table.sort(result)
+	return result
+end
+
 -- ¿Es la tirada `a` mejor que `b`? Primero la más rara; si son igual de raras, la de un tipo que
 -- vaya antes en `priority` (los especiales no empatan nunca: cada uno tiene su probabilidad).
 function Modifiers.better(kind: string, a: number, b: number, priority: { string }): boolean

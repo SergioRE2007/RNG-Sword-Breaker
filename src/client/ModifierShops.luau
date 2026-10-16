@@ -251,8 +251,38 @@ local function buildShop(kind: string)
 
 	local state = { selected = nil, auto = false, waiting = false, last = nil, stop = {}, count = 1 }
 	state.priority = Modifiers.priority(player:GetAttribute("TraitPriority"))
-	for index in info.list do
-		state.stop[index] = Modifiers.percent(kind, index) < 1
+	for index, entry in info.list do
+		state.stop[index] = Modifiers.percent(kind, index) < 1 and not entry.noStop
+	end
+	-- "Parar con" guardado (llega al entrar, y puede tardar más que la ventana): se aplica una sola vez; después manda lo
+	-- que el jugador va marcando.
+	local stopAttribute = "StopAt_" .. kind
+	local stopsLoaded = false
+	local stopPaints = {} -- [índice] = repinta ese botón de "Parar con"
+	local function loadStops()
+		local saved = Modifiers.stops(kind, player:GetAttribute(stopAttribute))
+		if stopsLoaded or not saved then
+			return
+		end
+		stopsLoaded = true
+		for index in info.list do
+			state.stop[index] = table.find(saved, index) ~= nil
+		end
+		for _, repaint in stopPaints do
+			repaint()
+		end
+	end
+	loadStops()
+	-- Guarda "Parar con" y el desempate al tocarlos (pedido por el usuario: se perdían al salir del juego).
+	local function savePrefs()
+		stopsLoaded = true
+		local marked = {}
+		for index = 1, #info.list do
+			if state.stop[index] then
+				table.insert(marked, index)
+			end
+		end
+		Remotes.SetModifierPrefs:FireServer(kind, table.concat(marked, ","), if kind == "traits" then table.concat(state.priority, ",") else nil)
 	end
 
 	-- Izquierda: arriba "Main" (la espada elegida y su rasgo; la ruleta lo tapa al tirar) y abajo
@@ -519,6 +549,7 @@ local function buildShop(kind: string)
 				if rank and rank > 1 then
 					state.priority[rank], state.priority[rank - 1] = state.priority[rank - 1], stat
 					paintPriority()
+					savePrefs()
 				end
 			end)
 		end
@@ -538,6 +569,9 @@ local function buildShop(kind: string)
 			continue
 		end
 		local entry = info.list[index]
+		if entry.noStop then
+			continue -- Rasgos I y II no salen en "Parar con" (pedido por el usuario: solo los III o mejores)
+		end
 		-- Pedido por el usuario (verde entero con el nombre en su color no se leía y quedaba feo): apagado, botón
 		-- oscuro con el nombre en el color del rasgo o grado; elegido, el botón entero de ese color con el nombre en
 		-- blanco, borde claro y una marca verde en la esquina. El nombre se encoge para caber en una línea.
@@ -624,7 +658,9 @@ local function buildShop(kind: string)
 		toggle.Activated:Connect(function()
 			state.stop[index] = not state.stop[index]
 			paint()
+			savePrefs()
 		end)
+		stopPaints[index] = paint
 		paint()
 	end
 
@@ -1483,6 +1519,7 @@ local function buildShop(kind: string)
 		end
 		refresh()
 	end)
+	player:GetAttributeChangedSignal(stopAttribute):Connect(loadStops)
 	-- El orden guardado llega al entrar (o al cambiarlo desde otra partida).
 	player:GetAttributeChangedSignal("TraitPriority"):Connect(function()
 		state.priority = Modifiers.priority(player:GetAttribute("TraitPriority"))

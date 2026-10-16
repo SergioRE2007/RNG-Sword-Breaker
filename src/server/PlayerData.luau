@@ -177,6 +177,10 @@ local function publish(player: Player)
 	player:SetAttribute("ArmorHidden", data.armorHidden)
 	player:SetAttribute("TraitPriority", data.traitPriority)
 	for _, kind in { "traits", "grades" } do
+		local stops = data.stopAt[kind]
+		player:SetAttribute("StopAt_" .. kind, if stops then table.concat(stops, ",") else nil)
+	end
+	for _, kind in { "traits", "grades" } do
 		player:SetAttribute("Pity_" .. kind, HttpService:JSONEncode(data.pity[kind]))
 	end
 
@@ -481,6 +485,7 @@ local function load(player: Player)
 		bag = BagInfo.sanitize(nil),
 		autoSell = 0,
 		traitPriority = "luck,coins,damage", -- desempate de rasgos igual de raros (ver Modifiers.priority)
+		stopAt = {}, -- "Parar con" de las tiendas: [traits o grades] = índices marcados; sin clave = lo de por defecto (ver Modifiers.stops)
 		pity = Modifiers.newPity(nil),
 		upgrades = {},
 		items = {},
@@ -575,6 +580,11 @@ local function load(player: Player)
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
 				data.armorHidden = saved.armorHidden == true
 				data.pity = Modifiers.newPity(saved.pity)
+				if type(saved.stopAt) == "table" then
+					for _, kind in { "traits", "grades" } do
+						data.stopAt[kind] = Modifiers.stops(kind, saved.stopAt[kind])
+					end
+				end
 				if type(saved.traitPriority) == "string" then
 					data.traitPriority = saved.traitPriority
 				end
