@@ -193,6 +193,27 @@ Problema: con todo mejorado caben muy pocos objetos en la parcela porque salen e
 
 Orden propuesto: primero el 1 (se nota enseguida y no toca el mapa) y luego el 2. Cada uno en su conversación.
 
+### Plan: recompensas por tiempo jugado y por días seguidos (pedido por el usuario, 16-10-2026)
+
+1. **Diaria por tiempo jugado.** Cinco premios al llegar a 10 min, 30 min, 1 h, 2 h y 4 h de juego en el día.
+   - El día cambia a la misma hora que las misiones diarias (`MissionList`, días de 86400 s), así todo se reinicia a la vez.
+   - El tiempo es tiempo de juego, contado en el servidor con un bucle de 1 s, como las pociones. No es la hora de entrada: si sales y vuelves, sigue sumando.
+   - Cada premio se recoge a mano con un botón (es lo que engancha); si no lo recoges, se pierde al cambiar el día.
+   - Datos: `data.playtime = { day, seconds, claimed = { true, ... } }`, publicados en atributos `Playtime` y `PlaytimeClaimed`.
+2. **Semanal por días seguidos.** 7 casillas, una por día que entras: el día 1 da la primera, el 2 la segunda… y tras el 7.º vuelve a la 1.
+   - Decisión pendiente: si un día no entras, ¿se reinicia la racha a la casilla 1 o sigue por donde iba? Seguir es más amable para niños; reiniciar engancha más.
+   - Datos: `data.streak = { day, index }`.
+3. **Premios** (números a cerrar al hacerlo; nada de pago):
+   - Tiempo: cristales de rasgo y de grado, pociones de tier bajo y, en la de 4 h, un Trébol pequeño (x100).
+   - Semana: de menos a más; el día 7, el gordo (Trébol pequeño y pociones de tier alto o tickets).
+   - El x1000 sigue siendo solo de compra.
+   - Todo en `Config` (`Config.DailyRewards.Playtime` y `.Streak`), entregado con `server/Loot` o `edit.items`, y pasado por `tools/equilibrio` si mueve cristales o tickets.
+4. **Interfaz.** Un botón en el menú de la izquierda con un aviso rojo cuando hay algo por recoger. Ventana con dos pestañas:
+   - Tiempo: barra con los 5 hitos y la cuenta atrás al siguiente.
+   - Semana: 7 casillas con el día de hoy resaltado.
+
+   Usar los helpers de `client/Ui` y cargar antes las skills de interfaz.
+
 ## Tareas pendientes implementadas — octubre de 2026
 
 Rama `mejoras-pendientes`, a partir de la lista del usuario. Código implementado y comprobado con Lune y Rojo; las pruebas visuales y de físicas en Studio siguen pendientes. Detalle reproducible y lista de comprobación en [pruebas-mejoras.md](pruebas-mejoras.md).
