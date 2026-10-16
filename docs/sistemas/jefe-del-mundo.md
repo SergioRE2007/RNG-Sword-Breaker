@@ -1,6 +1,6 @@
 # Jefe del mundo (Rey Slime)
 
-- Pedido por el usuario para la actualización del 18-10-2026. Cada `Config.WorldBoss.Interval` s (1800, a la misma hora en todos los servidores: `WorldBossInfo.nextFall`) se abre un portal en el hub `Warning` s (60) antes de que caiga el Rey Slime en su arena. Todo el servidor le pega a la vez, como a cualquier enemigo.
+- Pedido por el usuario para la actualización del 18-10-2026. Cae a los `First` s de abrir cada servidor (1200, minuto 20) y luego cada `Interval` (1800): minuto 20, 50, 80... (`WorldBossInfo.nextFall`). Pedido por el usuario para que salga 10 min después de que acabe cada clima, que empieza en el minuto 30 de cada tramo y dura 10. Se abre un portal en el hub `Warning` s (60) antes de que caiga el Rey Slime en su arena. Todo el servidor le pega a la vez, como a cualquier enemigo.
 - **No tiene vida** (cambio del usuario a mitad de la primera versión, que sí la tenía): no se le mata. A los `Lifetime` s (180) se va de un salto y reparte los premios según el daño de cada uno. Arriba, en el panel, sale "Tu daño" y, al acabar, la tabla con el daño de cada jugador.
 - **Sitio**:
   - Portal: en el anillo de las estaciones del hub, a 67,5° y a 72 del centro (`Portal`). Es el único hueco libre entre dos caminos: Mejor tirada en 22,5°, Rasgos en 112,5°, Grados en 157,5°, Misiones en 202,5°, clasificaciones en 247,5°, 292,5° y 337,5°.

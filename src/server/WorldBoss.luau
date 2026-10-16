@@ -1,4 +1,4 @@
--- Jefe del mundo: cada Config.WorldBoss.Interval segundos (a la misma hora en todos los servidores) se abre un portal
+-- Jefe del mundo: a los Config.WorldBoss.First segundos de abrir el servidor, y luego cada Interval, se abre un portal
 -- en el hub que lleva a una arena lejos de la isla, donde cae el Rey Slime. Todo el servidor le pega a la vez como a
 -- cualquier enemigo (clic dentro del círculo: server/Combat le pasa los golpes con WorldBoss.hit). Mientras dura:
 --   · Bombardeo: lanza globos a círculos rojos (los marca antes; quien siga dentro pierde vida).
@@ -40,6 +40,7 @@ local PURPLE = Color3.fromRGB(190, 140, 255)
 local random = Random.new()
 
 local state = "idle"
+local born = workspace:GetServerTimeNow() -- cuándo arrancó este servidor: desde aquí se cuenta el calendario
 local fallAt = 0 -- hora del servidor (GetServerTimeNow) a la que cae el rey
 local landAt = 0 -- cuándo ya se le puede pegar (os.clock)
 local endsAt = 0 -- cuándo se va y reparte los premios (os.clock)
@@ -407,7 +408,7 @@ local function finish()
 		end
 		table.clear(contrib)
 		state = "idle"
-		fallAt = WorldBossInfo.nextFall(workspace:GetServerTimeNow() + cfg.Warning)
+		fallAt = WorldBossInfo.nextFall(workspace:GetServerTimeNow() + cfg.Warning, born)
 		publish()
 	end)
 end
@@ -457,7 +458,7 @@ local function startFight()
 		for player in table.clone(inside) do
 			leave(player, true)
 		end
-		fallAt = WorldBossInfo.nextFall(workspace:GetServerTimeNow() + cfg.Warning)
+		fallAt = WorldBossInfo.nextFall(workspace:GetServerTimeNow() + cfg.Warning, born)
 		publish()
 		return
 	end
@@ -738,7 +739,7 @@ function WorldBoss.start()
 	if STUDIO and type(test) == "number" and test > 0 then
 		fallAt = serverNow + test
 	else
-		fallAt = WorldBossInfo.nextFall(serverNow)
+		fallAt = WorldBossInfo.nextFall(serverNow, born)
 	end
 	publish()
 
