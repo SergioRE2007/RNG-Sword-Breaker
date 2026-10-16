@@ -239,7 +239,7 @@ local function problem(side, other): any
 		return why("{name} no longer has those coins or gems", side)
 	end
 	for name, amount in offer.items do
-		if (data.items[name] or 0) < amount then
+		if PlayerData.tradable(data, name) < amount then
 			return why("{name} no longer has those items", side)
 		end
 	end
@@ -544,7 +544,8 @@ local function applyOffer(session, side, other, category: unknown, key: unknown,
 		if type(key) ~= "string" or not Config.Items[key] or Config.Items[key].noTrade then
 			return false
 		end
-		local value = validAmount(amount, if side.bot then math.huge else data.items[key] or 0)
+		-- Los atados a la cuenta (de códigos y del tutorial) no cuentan.
+		local value = validAmount(amount, if side.bot then math.huge else PlayerData.tradable(data, key))
 		if not value then
 			return false
 		end
@@ -625,7 +626,7 @@ function respondSuggest(session, side, other, accept: boolean)
 	local owned = math.huge
 	if side.player then
 		local data = PlayerData.read(side.player)
-		owned = if data then data.items[suggest.key] or 0 else 0
+		owned = if data then PlayerData.tradable(data, suggest.key) else 0
 	end
 	local already = side.offer.items[suggest.key] or 0
 	local value = math.min(already + suggest.amount, owned)
@@ -760,6 +761,13 @@ local function onCancel(player: Player)
 	end
 end
 
+-- El comercio se abre con el primer renacimiento (Config.Trade.MinRebirths), contra las cuentas nuevas que solo
+-- sirven para pasarle a otra lo que dan gratis.
+local function unlocked(player: Player): boolean
+	local data = PlayerData.read(player)
+	return data ~= nil and data.rebirths >= cfg.MinRebirths
+end
+
 local function onRequest(player: Player, userId: unknown)
 	local now = os.clock()
 	if sessions[player] or now - (lastRequest[player] or 0) < cfg.RequestCooldown or not PlayerData.read(player) then
@@ -769,6 +777,10 @@ local function onRequest(player: Player, userId: unknown)
 	-- Países donde Roblox no deja intercambiar objetos de pago (server/Policy).
 	if not Policy.canTrade(player) then
 		Tell.notice(player, BAD, "Trading isn't available in your region")
+		return
+	end
+	if not unlocked(player) then
+		Tell.notice(player, BAD, "Trading unlocks after your first rebirth")
 		return
 	end
 	if userId == 0 then
@@ -789,6 +801,10 @@ local function onRequest(player: Player, userId: unknown)
 		Tell.notice(player, BAD, "{name} can't trade in their region", { name = target.DisplayName })
 		return
 	end
+	if not unlocked(target) then
+		Tell.notice(player, BAD, "{name} can't trade until their first rebirth", { name = target.DisplayName })
+		return
+	end
 	invites[target] = invites[target] or {}
 	invites[target][player] = now + cfg.InviteTime
 	Remotes.TradeInvite:FireClient(target, player.UserId, player.DisplayName)
@@ -807,7 +823,7 @@ local function onRespond(player: Player, userId: unknown, accept: unknown)
 		Tell.notice(from, BAD, "{name} declined the trade", { name = player.DisplayName })
 		return
 	end
-	if os.clock() > expires or not Policy.canTrade(player) or not Policy.canTrade(from) or sessions[player] or sessions[from] or not PlayerData.read(player) or not PlayerData.read(from) then
+	if os.clock() > expires or not Policy.canTrade(player) or not Policy.canTrade(from) or not unlocked(player) or not unlocked(from) or sessions[player] or sessions[from] or not PlayerData.read(player) or not PlayerData.read(from) then
 		Tell.notice(player, BAD, "The invite is no longer valid")
 		return
 	end

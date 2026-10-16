@@ -31,7 +31,7 @@ local function pay(player: Player, kind: string, data, tries: number): boolean
 		return false
 	end
 	PlayerData.edit(player, function(edited)
-		edited.items[info.item] -= cost
+		PlayerData.spendItem(edited, info.item, cost)
 	end)
 	return true
 end

@@ -913,6 +913,9 @@ Config.Enemies = {
 -- Allow = lo que se puede ofrecer y pedir: objetos (cristales y pociones), espadas, armadura y accesorios. Monedas ("coins") y
 -- gemas ("gems") no están, decidido por el usuario: con ellas un jugador avanzado le regalaba el progreso a otro.
 Config.Trade = {
+	-- Renacimientos que hacen falta para comerciar (pedido por el usuario: con cuentas nuevas se juntaban tréboles y
+	-- pociones gratis en una sola). Para probar el comercio en Studio con el bot, bajarlo a 0 un momento.
+	MinRebirths = 1,
 	Countdown = 3,
 	InviteTime = 20,
 	RequestCooldown = 3,

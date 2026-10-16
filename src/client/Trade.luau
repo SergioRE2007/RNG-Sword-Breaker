@@ -504,7 +504,12 @@ local function buildTrade()
 		if not who then
 			return Config.Trade.SuggestMaxAmount
 		end
-		return who:GetAttribute(if entry.category == "items" then "Item_" .. entry.key elseif entry.category == "coins" then "Coins" else "Gems") or 0
+		if entry.category == "items" then
+			-- Sin los atados a la cuenta (de códigos y del tutorial), que no se comercian.
+			local owned = who:GetAttribute("Item_" .. entry.key) or 0
+			return math.max(0, owned - math.min(who:GetAttribute("Bound_" .. entry.key) or 0, owned))
+		end
+		return who:GetAttribute(if entry.category == "coins" then "Coins" else "Gems") or 0
 	end
 	-- Lo que ya hay en la oferta de quien enseña su inventario.
 	local function offeredOf(entry): number
@@ -1211,7 +1216,7 @@ local function buildTrade()
 	-- El inventario que se ve sigue a su dueño: el tuyo siempre y el del otro jugador mientras estás pidiendo.
 	local function watch(who: Player, theirs: boolean)
 		return who.AttributeChanged:Connect(function(attribute)
-			if current and window.Visible and asking == theirs and (attribute == "Swords" or attribute == "Armor" or attribute == "Artifacts" or attribute == "Loadout" or attribute == "Bag" or attribute == "Coins" or attribute == "Gems" or string.sub(attribute, 1, 5) == "Item_") then
+			if current and window.Visible and asking == theirs and (attribute == "Swords" or attribute == "Armor" or attribute == "Artifacts" or attribute == "Loadout" or attribute == "Bag" or attribute == "Coins" or attribute == "Gems" or string.sub(attribute, 1, 5) == "Item_" or string.sub(attribute, 1, 6) == "Bound_") then
 				buildStock()
 			end
 		end)

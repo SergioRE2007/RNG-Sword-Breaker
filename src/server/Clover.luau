@@ -42,7 +42,7 @@ local function onUse(player: Player, part: unknown)
 	end
 	if not test then
 		PlayerData.edit(player, function(edited)
-			edited.items[cfg.Item] -= 1
+			PlayerData.spendItem(edited, cfg.Item, 1)
 		end)
 	end
 	local color = Config.Items[cfg.Item].color
