@@ -197,16 +197,19 @@ Config.Gacha = {
 
 -- Máquina de fusión (pedida por el usuario; server/Fusion, client/Fusion, cuentas en shared/FusionInfo): se meten Count
 -- armas y sale una tirada de arma (Permanent.rollWeapon) con la suerte de la SUMA de sus rarezas totales (arma x metal
--- x tamaño). Así sale siempre algo de "1 entre esa suma" o más raro: cinco iguales dan una 5 veces más rara, y con
--- suerte mucho más. Ninguna otra suerte se suma (la de las armas ya va dentro de su rareza). Se pierden sus rasgos y grados.
+-- x tamaño) entre Divisor (pedido por el usuario: con la suma entera estaba muy rota). Así sale siempre algo de "1 entre
+-- esa suerte" o más raro: cinco iguales dan una 2 veces más rara, y con suerte mucho más. Ninguna otra suerte se suma (la
+-- de las armas ya va dentro de su rareza). Se pierden sus rasgos y grados.
 -- Precio en gemas según esa suerte: CostScale x suerte ^ CostPower (nunca menos de MinCost). Medido con tools/equilibrio
--- (jugador tipo de 1 a 130 h): sus gemas por hora salen ~1e-6 x S ^ 1,73, siendo S la suerte de fusionar cinco armas
--- como las de su bolsa; con estos números esa fusión cuesta unos 10 min de gemas a cualquier hora del juego.
+-- (jugador tipo de 1 a 130 h): sus gemas por hora salen ~1e-6 x S ^ 1,73, siendo S la suma de las rarezas de cinco armas
+-- como las de su bolsa. Pedido por el usuario que cueste de verdad: esa fusión cuesta alrededor de 1 h de gemas a
+-- cualquier hora del juego (con la suma entera y 1.6e-7 eran unos 10 min).
 Config.Fusion = {
 	Count = 5, -- armas por fusión
-	CostScale = 1.6e-7,
+	Divisor = 2.5, -- la suerte es la suma de las rarezas entre esto
+	CostScale = 4.6e-6,
 	CostPower = 1.73,
-	MinCost = 10,
+	MinCost = 100,
 	Cooldown = 1, -- segundos entre fusiones de un mismo jugador
 	Reach = 40, -- studs desde la máquina en los que el servidor acepta la fusión (la ventana se abre a OpenDistance)
 	OpenDistance = 12,
