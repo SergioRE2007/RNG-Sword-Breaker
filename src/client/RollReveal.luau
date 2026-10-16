@@ -481,7 +481,10 @@ local function present(folder: Instance, roll, orb: Part, slot: Vector3, ground:
 	-- Con muchas a la vez, las normales se dan prisa.
 	local pace = (if level == 1 and running > CROWDED then HURRY else 1) * SLOW
 	-- ¿Le toca cinemática? Se pide turno ya, para cargar el orbe solo un momento.
-	local cinematic = fx.cinematic ~= nil and not lite and RollCinematic.reserve()
+	-- Ajustes puede dejar solo las de "1 entre N" para arriba (atributo local CinematicFrom; las demás, en el mundo).
+	local from = player:GetAttribute("CinematicFrom")
+	local wanted = typeof(from) ~= "number" or (odds or 0) >= from
+	local cinematic = fx.cinematic ~= nil and not lite and wanted and RollCinematic.reserve()
 	local pulses = if cinematic then AFTER.pulses else fx.pulses
 
 	-- 1. Carga: el orbe late, sube y, si la tirada es buena, traga energía y acaba tomando el color de la rareza.
