@@ -271,8 +271,9 @@ local function buildStation(parent: Instance, kind: string, position: Vector3, s
 	model.Parent = parent
 end
 
--- Para que otras tiendas del hub (Misiones) usen el mismo puesto.
+-- Para que otras tiendas del hub (Misiones) usen el mismo puesto, y otras estaciones (Fusión) el mismo cartel.
 ModifierShops.buildStall = buildStall
+ModifierShops.addSign = addSignAndPrompt
 
 function ModifierShops.start()
 	local map = workspace:WaitForChild("Map")

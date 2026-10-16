@@ -91,7 +91,10 @@ local function draw(player: Player, boost: number, source: string, info)
 	if not data then
 		return
 	end
-	local base = Stats.gachaLuck(player)
+	-- La fusión (server/Fusion) tira con la suma de las rarezas de sus armas, que ya llevan dentro la suerte con la que
+	-- salieron: no se le vuelve a sumar la suerte de armas del jugador.
+	local fusion = source == "fusion"
+	local base = if fusion then 1 else Stats.gachaLuck(player)
 	-- El arma sale ya con su metal y su tamaño (Config.Metals y Sizes), como un solo resultado con su rareza total, y
 	-- la suerte se aplica UNA vez a esa rareza (Permanent.rollWeapon, decidido por el usuario): un objeto de xN da
 	-- armas de alrededor de "1 entre N" en total. Tirados aparte, con la suerte en las tres tiradas, un objeto de x4
@@ -114,7 +117,8 @@ local function draw(player: Player, boost: number, source: string, info)
 	local mean = if info and type(info.usual) == "number" and info.usual > 0 then info.usual else ObjectSpec.meanLuck(Stats.luck(player) * Stats.spawnLuck(player), Stats.objectLuck(player))
 	-- El Jefe del mundo tira con su propia suerte y la manda en `info.usual`: se mide contra ella, o con una suerte de
 	-- xN todas sus tiradas parecerían de "1 entre N" y saldría el premio gordo en cada una.
-	local usual = if source == "object" or source == "worldBoss" then base * mean else base
+	-- La fusión, contra su propia suerte: lo que sale "de serie" (1 entre la suma) no se celebra; lo que la supera, sí.
+	local usual = if source == "object" or source == "worldBoss" then base * mean elseif fusion then luck else base
 	local clover = if info and type(info.clover) == "number" then math.max(info.clover, 1) else 1
 	local odds = Permanent.rollOdds(index, metal, size, usual)
 	-- El Trébol de la suerte no cuenta (pedido por el usuario: lo que saca de más se celebra): su tirada se mide
@@ -124,14 +128,16 @@ local function draw(player: Player, boost: number, source: string, info)
 		odds = math.max(odds, Permanent.rollOdds(index, metal, size, luck / clover), Config.Gacha.RevealOdds[2])
 	end
 	-- Con la mochila llena, un arma más rara que la peor copia que el jugador no ha tocado se queda con su sitio.
+	-- Lo que sale de una fusión no se vende solo aunque quede por debajo de la venta automática: se han pagado cinco armas.
+	local wanted = fusion or rarity >= data.autoSell
 	local full = #data.swords >= Config.MaxSwords
-	local spare = if full and rarity >= data.autoSell then worstSpare(data, rarity) else nil
-	if full and rarity >= data.autoSell then
+	local spare = if full and wanted then worstSpare(data, rarity) else nil
+	if full and wanted then
 		warnFull(player)
 	end
 	local stored: number? = nil -- id de la copia guardada: solo lo pone quien de verdad la mete en sus datos
 	local soldCoins = 0 -- monedas de lo que se vende solo en esta tirada (la copia que deja su sitio o el arma nueva)
-	if rarity >= data.autoSell and (not full or spare ~= nil) then
+	if wanted and (not full or spare ~= nil) then
 		PlayerData.edit(player, function(edited)
 			if spare then
 				soldCoins = Stats.sellCoins(edited.swords[spare])
@@ -213,6 +219,18 @@ function Gacha.give(player: Player, boost: number, source: string, rolls: number
 		extra.batch = batches -- las tiradas de una misma tanda: el cliente solo enseña en grande la mejor
 		draw(player, boost, source, extra)
 	end
+end
+
+-- Tirada de la máquina de fusión (server/Fusion, que ya ha quitado las armas y cobrado): una sola, con la suerte `luck`
+-- (la suma de las rarezas de lo que se ha metido) tal cual. `info` = { origin, box } de la máquina, para enseñarla.
+function Gacha.fuse(player: Player, luck: number, info)
+	if luck ~= luck or luck <= 0 then
+		return
+	end
+	batches += 1
+	local extra = if info then table.clone(info) else {}
+	extra.roll, extra.rolls, extra.batch = 1, 1, batches
+	draw(player, luck, "fusion", extra)
 end
 
 local lastRoll = {} -- [player] = os.clock() de su última tirada

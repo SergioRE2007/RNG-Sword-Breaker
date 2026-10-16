@@ -24,6 +24,7 @@ require(script.Gacha).start()
 require(script.GoldBag).start() -- Bolsa de oro: después de Plots (pone un saco detrás de cada parcela)
 require(script.Traits).start()
 require(script.ModifierShops).start()
+require(script.Fusion).start() -- máquina de fusión del hub: después de ModifierShops (usa su cartel) y de Gacha
 require(script.Gear).start()
 require(script.Armor).start()
 require(script.Potions).start()

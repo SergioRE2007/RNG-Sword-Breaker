@@ -195,6 +195,25 @@ Config.Gacha = {
 	SellCoins = 30, -- monedas por vender una espada, por cada punto de su daño (Stats.sellCoins; a mano y con la venta automática). Tal cual, sin multiplicadores de monedas
 }
 
+-- Máquina de fusión (pedida por el usuario; server/Fusion, client/Fusion, cuentas en shared/FusionInfo): se meten Count
+-- armas y sale una tirada de arma (Permanent.rollWeapon) con la suerte de la SUMA de sus rarezas totales (arma x metal
+-- x tamaño). Así sale siempre algo de "1 entre esa suma" o más raro: cinco iguales dan una 5 veces más rara, y con
+-- suerte mucho más. Ninguna otra suerte se suma (la de las armas ya va dentro de su rareza). Se pierden sus rasgos y grados.
+-- Precio en gemas según esa suerte: CostScale x suerte ^ CostPower (nunca menos de MinCost). Medido con tools/equilibrio
+-- (jugador tipo de 1 a 130 h): sus gemas por hora salen ~1e-6 x S ^ 1,73, siendo S la suerte de fusionar cinco armas
+-- como las de su bolsa; con estos números esa fusión cuesta unos 10 min de gemas a cualquier hora del juego.
+Config.Fusion = {
+	Count = 5, -- armas por fusión
+	CostScale = 1.6e-7,
+	CostPower = 1.73,
+	MinCost = 10,
+	Cooldown = 1, -- segundos entre fusiones de un mismo jugador
+	Reach = 40, -- studs desde la máquina en los que el servidor acepta la fusión (la ventana se abre a OpenDistance)
+	OpenDistance = 12,
+	Angle = 135, -- dónde está en el hub: grados alrededor del centro (entre Rasgos, 112,5°, y Grados, 157,5°) y distancia
+	Distance = 70,
+}
+
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
 -- (los que dan gemas) al romperse. La del Cristal de rasgo va con el calendario de tools/equilibrio (objetivo.rasgo):
 -- al 5 % de antes la parcela daba ella sola varias veces las tiradas de rasgo que pide el calendario.
