@@ -595,7 +595,7 @@ local function buildShop(kind: string)
 		name.Text = Lang.t(nil, entry.name)
 		name.TextScaled = true
 		local nameLimit = Instance.new("UITextSizeConstraint")
-		nameLimit.MaxTextSize = math.clamp(math.floor(156 / (utf8.len(name.Text) :: number * 0.74)), 9, 44) -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo se encoge según sus letras para no partirse en dos líneas ("TRASCENDENTE")
+		nameLimit.MaxTextSize = math.clamp(math.floor(146 / (utf8.len(name.Text) :: number * 0.74)), 9, 38) -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo se encoge según sus letras para no partirse en dos líneas ("TRASCENDENTE")
 		nameLimit.MinTextSize = 9
 		nameLimit.Parent = name
 		Ui.layer(toggle, Z.overlay + 2)
@@ -1641,7 +1641,7 @@ function ModifierShops.start()
 				breathing[scale] = nil
 				continue
 			end
-			scale.Scale = 1 + math.sin(now * 3 + phase) * 0.06
+			scale.Scale = 1 + math.sin(now * 1.8 + phase) * 0.025 -- ola suave (pedido por el usuario: era muy grande y rápida)
 		end
 		for layer, data in sparkly do
 			if not layer.Parent then
