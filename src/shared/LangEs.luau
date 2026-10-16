@@ -977,4 +977,8 @@ return {
 	["Leave your spare weapons in the Gold Bag to earn coins."] = "Deja en la Bolsa de oro las armas que te sobren para ganar monedas.",
 	["Dungeons drop armor and crystals."] = "Las mazmorras sueltan armadura y cristales.",
 	["Daily missions give tickets for the Shop."] = "Las misiones diarias dan tickets para la Tienda.",
+	["You're playing in portrait!"] = "¡Estás jugando en vertical!",
+	["The game is made for landscape. Turn your screen for the best experience."] = "El juego está hecho para jugar en horizontal. Gira la pantalla para jugar mejor.",
+	["Rotate"] = "Girar",
+	["Not now"] = "Ahora no",
 }
