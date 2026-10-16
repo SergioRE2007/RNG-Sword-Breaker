@@ -78,6 +78,7 @@ local pulsing = {}
 local shines = {} -- [degradado] = desfase: brillo blanco que cruza la fila de vez en cuando
 local bobbing = {} -- [icono] = { phase, scale }: el icono flota y late
 local sparkly = {} -- [capa] = { color, window, next }: chispas de fondo en las raras (< 1 %)
+local breathing = {} -- [UIScale] = fase: la letra de un botón marcado de "Parar con" late
 local SHINE_EVERY = 4.5 -- segundos entre dos brillos de la misma fila
 local SHINE_TIME = 0.7 -- lo que tarda el brillo en cruzar
 local SPARKLE_EVERY = 1.6 -- segundos entre chispas de una fila rara
@@ -576,6 +577,13 @@ local function buildShop(kind: string)
 		-- Borde animado como el de la lista de la derecha (pedido por el usuario), solo con el botón marcado: arcoíris
 		-- que gira en las especiales y latido en las muy raras. Apagado, el borde sigue negro y quieto.
 		local spinGradient: UIGradient? = nil
+		local letterGradient: UIGradient? = nil
+		local letterScale = Instance.new("UIScale")
+		letterScale.Parent = name
+		if entry.rainbow then
+			rainbow(name, entry)
+			letterGradient = name:FindFirstChildOfClass("UIGradient")
+		end
 		local pulses = false
 		local baseThickness, baseTransparency = 0, 0
 		if stroke then
@@ -592,6 +600,14 @@ local function buildShop(kind: string)
 			toggle.BackgroundColor3 = if on then tone:Lerp(Color3.new(0, 0, 0), 0.3) else STOP_OFF
 			name.TextColor3 = if on then WHITE else tone:Lerp(WHITE, 0.15)
 			check.Visible = on
+			-- La letra, como el icono de la lista: arcoíris que corre en las especiales y un latido suave.
+			if letterGradient then
+				letterGradient.Enabled = on
+			end
+			breathing[letterScale] = if on then position * 0.9 else nil
+			if not on then
+				letterScale.Scale = 1
+			end
 			if stroke then
 				stroke.Color = if not on then Color3.new(0, 0, 0) elseif entry.rainbow then WHITE else tone:Lerp(WHITE, 0.55)
 				if spinGradient then
@@ -1574,6 +1590,13 @@ function ModifierShops.start()
 			end
 			icon.Position = UDim2.fromOffset(ICON_X, ICON_Y + math.sin(now * 2 + data.phase) * 3)
 			data.scale.Scale = 1 + math.sin(now * 3 + data.phase) * 0.06
+		end
+		for scale, phase in breathing do
+			if not scale.Parent then
+				breathing[scale] = nil
+				continue
+			end
+			scale.Scale = 1 + math.sin(now * 3 + phase) * 0.06
 		end
 		for layer, data in sparkly do
 			if not layer.Parent then
