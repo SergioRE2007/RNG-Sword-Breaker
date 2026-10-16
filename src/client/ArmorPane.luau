@@ -201,7 +201,7 @@ function ArmorPane.build(pane: Frame, helpers)
 	totalsText.LineHeight = 1.12
 
 	-- Ocultar armadura (pedido por el usuario: que no se vea lo que llevas): el servidor no la pone en el personaje y
-	-- sigue contando. Aquí el muñeco la enseña igual, para ver cómo queda.
+	-- sigue contando. El muñeco de aquí también la esconde (pedido por el usuario: antes la enseñaba igual).
 	local hideButton = Ui.button(pane, Lang.t(nil, "Hide armor"), Ui.COLORS.gray)
 	hideButton.Name = "Hide"
 	hideButton.AnchorPoint = Vector2.new(0.5, 0)
@@ -222,22 +222,9 @@ function ArmorPane.build(pane: Frame, helpers)
 		Remotes.SetArmorHidden:FireServer(player:GetAttribute("ArmorHidden") ~= true)
 	end)
 
-	-- El muñeco es una copia del personaje: con la armadura escondida no la lleva, así que se le pone aquí.
+	-- El muñeco es una copia del personaje: con la armadura escondida no la lleva y así se queda.
 	local function paintCharacter()
 		helpers.character(viewport)
-		if player:GetAttribute("ArmorHidden") ~= true then
-			return
-		end
-		local world = viewport:FindFirstChildOfClass("WorldModel")
-		local clone = world and world:FindFirstChildOfClass("Model")
-		if not clone then
-			return
-		end
-		for _, piece in ArmorStats.pieces(player) do
-			if piece.worn then
-				ArmorModel.attach(clone, piece.slot, piece.quality, piece.level)
-			end
-		end
 	end
 	player:GetAttributeChangedSignal("ArmorHidden"):Connect(function()
 		paintHide()
