@@ -3,7 +3,8 @@
 -- (WorldBossState, WorldBossFall, WorldBossEnds) y del atributo "WorldBoss" del jugador (está en la arena).
 --   · Portal abierto o pelea en marcha, fuera de la arena: tarjeta pequeña con la cuenta atrás y el botón `Go`, que
 --     lleva delante del portal (Teleport "portal").
---   · En la arena: tu daño (el rey no tiene vida; la barra se pone azul con escudo y amarilla aturdido), barra de carga
+--   · En la arena: tu daño y el del siguiente tramo de premios (el rey no tiene vida; la barra se pone azul con escudo y
+--     amarilla aturdido), barra de carga
 --     del súper golpe, los LIVE_ROWS que más daño llevan y tu puesto, y `Leave`.
 --   · Al irse: la tabla con el daño de cada uno (hasta ROWS) y lo que te ha tocado, durante RESULT_TIME s.
 local Players = game:GetService("Players")
@@ -232,11 +233,10 @@ local function fillRanking(entries, total: number, rank: number?, mine: number?,
 		if entry then
 			local me = entry.userId == player.UserId
 			shown = shown or me
-			local share = if total > 0 then math.floor(entry.amount / total * 100 + 0.5) else 0
 			local name = row:FindFirstChild("Name") :: TextLabel
 			local value = row:FindFirstChild("Value") :: TextLabel
 			name.Text = `{index}. {entry.name}`
-			value.Text = `{Format.short(entry.amount)} · {share}%`
+			value.Text = Format.short(entry.amount)
 			local color = if me then GOLD else WHITE
 			name.TextColor3 = color
 			value.TextColor3 = color
@@ -244,7 +244,7 @@ local function fillRanking(entries, total: number, rank: number?, mine: number?,
 	end
 	youText.Visible = not shown and rank ~= nil and (mine or 0) > 0
 	if youText.Visible then
-		youText.Text = Lang.t(nil, "You: #{rank} · {share}%", { rank = rank, share = if total > 0 then math.floor((mine or 0) / total * 100 + 0.5) else 0 })
+		youText.Text = Lang.t(nil, "You: #{rank} · {n}", { rank = rank, n = Format.short(mine or 0) })
 	end
 end
 
@@ -254,6 +254,9 @@ local function prizeLine(prize): string
 		Lang.t(nil, "+{n} Trait Crystals", { n = prize.traitCrystal }),
 		Lang.t(nil, "+{n} Grade Crystals", { n = prize.gradeCrystal }),
 	}
+	if prize.potions > 0 then
+		table.insert(parts, Lang.t(nil, "+{n} of each potion ({tier})", { n = prize.potions, tier = Config.Potions.Tiers[prize.potionTier] or "" }))
+	end
 	if prize.tickets > 0 then
 		table.insert(parts, Lang.t(nil, if prize.tickets == 1 then "+{n} Ticket" else "+{n} Tickets", { n = prize.tickets }))
 	end
@@ -347,8 +350,18 @@ local function refresh()
 	if body and here then
 		local shielded = body:GetAttribute("Shield") == true
 		local stunned = (body:GetAttribute("Stunned") or 0) > serverNow
-		setFill(hpFill, 1, if shielded then HP_COLORS.shield elseif stunned then HP_COLORS.stun else HP_COLORS.normal)
-		hpText.Text = if shielded then Lang.t(nil, "Shield! Break the crystals") elseif stunned then Lang.t(nil, "Stunned! Extra damage") else Lang.t(nil, "Your damage: {n}", { n = Format.short(lastRank and lastRank.mine or 0) })
+		-- La barra se llena hacia el siguiente tramo de premios (en escala de potencias: los tramos van de 1.000 en 1.000).
+		local mine = lastRank and lastRank.mine or 0
+		local tiers = cfg.Rewards.Tiers
+		local index = WorldBossInfo.tier(mine) or 0
+		local goal = tiers[index + 1]
+		local from = if index > 0 then tiers[index].damage else 1
+		local k = if goal then math.log(math.max(mine, 1) / from) / math.log(goal.damage / from) else 1
+		setFill(hpFill, if shielded or stunned then 1 else k, if shielded then HP_COLORS.shield elseif stunned then HP_COLORS.stun else HP_COLORS.normal)
+		hpText.Text = if shielded then Lang.t(nil, "Shield! Break the crystals")
+			elseif stunned then Lang.t(nil, "Stunned! Extra damage")
+			elseif goal then Lang.t(nil, "Your damage: {n} / {goal}", { n = Format.short(mine), goal = Format.short(goal.damage) })
+			else Lang.t(nil, "Your damage: {n}", { n = Format.short(mine) })
 	end
 end
 

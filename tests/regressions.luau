@@ -1707,18 +1707,26 @@ do
 	equal(broken.data.isLocked(broken.data.read(broken.player), 99), false, "una que no existe, no")
 end
 
--- Jefe del mundo (shared/WorldBossInfo): el premio crece con la parte de daño de cada uno, con su tope.
+-- Jefe del mundo (shared/WorldBossInfo): el premio va por tramos de cantidad de daño, con su tope.
 do
 	local info = f.load("src/shared/WorldBossInfo")
 	local boss = config.WorldBoss
 	near(info.minorHp(1e6, 3), 3e6, "jefe: un esbirro aguanta unos segundos de un jugador medio")
-	equal(info.rewards(boss.Rewards.MinShare / 2, 8), nil, "jefe: sin llegar a MinShare no hay premio")
-	local low, high = info.rewards(0.05, 6), info.rewards(0.6, 1)
-	assert(low and high and high.rolls > low.rolls and high.traitCrystal > low.traitCrystal, "jefe: más parte, más premio")
+	local tiers = boss.Rewards.Tiers
+	equal(info.rewards(tiers[1].damage / 2, 8), nil, "jefe: sin llegar al primer tramo no hay premio")
+	local low, high = info.rewards(tiers[2].damage * 5, 6), info.rewards(tiers[#tiers].damage * 10, 1)
+	equal(low.tier, 2, "jefe: el tramo más alto al que llega")
+	equal(low.traitCrystal, tiers[2].crystals, "jefe: los cristales de su tramo")
+	equal(low.potions, tiers[2].potions, "jefe: las pociones de su tramo")
+	assert(high.rolls > low.rolls and high.potionTier >= low.potionTier, "jefe: más daño, más premio")
 	checks += 1
-	equal(high.rolls <= boss.Rewards.MaxRolls and high.traitCrystal <= boss.Rewards.Trait.max, true, "jefe: con su tope")
+	equal(high.rolls <= boss.Rewards.MaxRolls, true, "jefe: tiradas con su tope")
 	equal(high.tickets, boss.Rewards.Tickets[1], "jefe: tickets para el primero")
 	equal(low.tickets, 0, "jefe: sin tickets fuera del podio")
+	for index = 2, #tiers do
+		assert(tiers[index].damage > tiers[index - 1].damage, "jefe: los tramos, de menos a más daño")
+		checks += 1
+	end
 	equal(info.nextFall(1000, 1000), 1000 + boss.First, "jefe: el primero, a los First segundos de abrir")
 	equal(info.nextFall(1000 + boss.First, 1000), 1000 + boss.First + boss.Interval, "jefe: luego cada Interval")
 	equal(info.nextFall(1000 + boss.First + boss.Interval * 2.5, 1000), 1000 + boss.First + boss.Interval * 3, "jefe: el siguiente que toque")

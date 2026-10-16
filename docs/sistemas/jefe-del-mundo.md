@@ -7,7 +7,7 @@
   - Arena: flotando lejos de la isla, en `Origin` (0, 200, -3000), radio 80, con su propia luz (de noche no se veía).
   - Geometría en `server/WorldBossArena`: arena, portal, `portalFront` y `spawnCFrame`.
 - **Portal**: abierto desde el aviso hasta que se va el rey. El rey cae aunque no haya nadie dentro y se puede entrar en cualquier momento de la pelea (pedido por el usuario: con el aviso corto del botón de admin no daba tiempo a llegar y se cerraba).
-- **Cartel de premios** (pedido por el usuario): a la derecha del portal mirándolo desde el hub (`WorldBossArena.buildBoard`, `Map.WorldBossRewards`), una tabla con las tiradas y los cristales según la parte del daño. Filas en `Rewards.Board` más la de "menos del 5 %"; las cifras salen de `WorldBossInfo.rewards`, así que cambian solas con Config. Abajo, la tirada de más del podio y los tickets.
+- **Cartel de premios** (pedido por el usuario): a la derecha del portal mirándolo desde el hub (`WorldBossArena.buildBoard`, `Map.WorldBossRewards`), una fila por tramo de `Rewards.Tiers` (daño, tiradas, cristales y pociones) y, abajo, lo del podio. Sale de Config: cambia solo.
 - **Entrar**: tocando el portal abierto (`Trigger`, solo con `CanTouch` abierto), salvo desde una mazmorra. Quien está dentro lleva el atributo `WorldBoss = true`. Con él:
   - `Stats.reach` es siempre `Config.Loadout.Radius`, así el Auto de la parcela no pega desde lejos;
   - `MapBounds` no lo devuelve a su parcela;
@@ -24,15 +24,15 @@
   - **Escudo**: a los `Shield.First` s y luego cada `Every`. Cristales alrededor; el rey no recibe daño hasta romperlos todos.
   - **Carga**: zonas verdes seguras y barriles. Los barriles rotos salen disparados con física contra el rey; con `Needed` queda aturdido `StunTime` s (×`StunMult` de daño y sin atacar). Si no le llegan, súper golpe a todos los que estén fuera de lo verde.
 - **Vida de lo demás**: esbirros, cristales y barriles aguantan lo que quita un jugador medio de los que hay en unos segundos (`WorldBossInfo.minorHp`, con el daño por segundo medido al caer el rey). La cantidad de cada cosa es `Base + PerPlayer × jugadores`, hasta `Max`.
-- **Premios** (`WorldBossInfo.rewards`), según la parte de cada uno de todo el daño hecho en la arena. El daño a esbirros, cristales y barriles cuenta, pero sin lo que sobra al romperlos.
+- **Premios** (`WorldBossInfo.rewards`), **por cantidad de daño, no por porcentaje** (pedido por el usuario): `Rewards.Tiers` son tramos de daño de menos a más (100, 100K, 100M... hasta 10Sp) y a cada uno le toca el más alto al que llega: `rolls` tiradas, `crystals` Cristales de rasgo y otros tantos de grado, y `potions` pociones de cada familia del tier `potionTier`. Con menos de 100 de daño, nada. Los tres primeros suman `TopBonusRolls` y sus `Tickets`. El daño a esbirros, cristales y barriles cuenta, sin lo que sobra al romperlos.
   - Tiradas por `Gacha.give(..., "worldBoss", ...)` con suerte = la media de sus objetos (`ObjectSpec.meanLuck`) × `Rewards.Luck`.
   - `info.usual` es esa misma suerte. `Gacha` (línea de `usual`) la usa también para `"worldBoss"`: si no, con suerte ×N todas las tiradas parecerían de "1 entre N" y saldría el premio gordo en cada una.
-  - Cristales de rasgo y de grado directos a `data.items`, sin `Loot.roll`, que mete el pase `dungeonLoot`.
+  - Cristales y pociones directos a `data.items`, sin `Loot.roll`, que mete el pase `dungeonLoot`.
   - Tickets para los tres primeros.
 - **Cliente**:
   - `client/WorldBoss`, panel `Hud.HudRoot.WorldBoss` con estas piezas:
     - `Content.Head` (`Title`, `Detail`, `Action`: "Ir" fuera, que usa `Teleport("portal")`, y "Salir" dentro);
-    - `Content.Damage` (tu daño, azul con escudo, amarillo aturdido);
+    - `Content.Damage` (tu daño y el del siguiente tramo, "Tu daño: 12K / 100K", llenándose en escala de potencias; azul con escudo, amarillo aturdido);
     - `Content.Charge`;
     - `Content.Ranking.Row<n>`, `You` y `Prize`.
   - `client/WorldBossFx`: sombra, caída, globos, círculos, zonas, escudo, estrellas, estela, explosiones, remolino del portal y temblor.

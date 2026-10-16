@@ -1094,10 +1094,11 @@ Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 3
 --   cristales. Charge: carga un
 --   golpe a toda la arena (salvo SafeZones) que se corta si le llegan Needed barriles; aturdido recibe StunMult de daño.
 --   Count de cada cosa = Base + PerPlayer × jugadores en la arena, hasta Max.
---   Rewards: lo que da a cada uno según su parte de todo el daño hecho en la arena (share). Tiradas con la suerte media de
---   sus objetos (ObjectSpec.meanLuck) por Luck; cristales base + share × perShare hasta max; Tickets, a los tres primeros.
---   Board = las filas del cartel de premios junto al portal (parte del daño desde la que se cuenta cada una; la última
---   fila es lo de menos que eso, desde MinShare).
+--   Rewards (pedido por el usuario: por cantidad de daño, no por porcentaje): Tiers = tramos de daño de menos a más; a cada
+--   uno le toca el más alto al que llega. rolls = tiradas de arma (con la suerte media de sus objetos, ObjectSpec.meanLuck,
+--   por Luck), crystals = Cristales de rasgo y de grado (esa cantidad de cada), potions = pociones de cada familia de
+--   Potions.Order del tier potionTier (1 = I ... 5 = V). Con menos daño que el primero, nada. Los tres que más daño hacen
+--   suman TopBonusRolls tiradas y sus Tickets. Las filas del cartel de premios junto al portal salen de aquí.
 Config.WorldBoss = {
 	First = 1200, Interval = 1800, Warning = 60, AdminWarning = 10, Lifetime = 180, ReturnDelay = 10,
 	Portal = { Angle = 67.5, Distance = 72 },
@@ -1108,8 +1109,19 @@ Config.WorldBoss = {
 	Shield = { First = 60, Every = 70, Base = 3, PerPlayer = 0.34, Max = 8, Seconds = 6 },
 	Charge = { Every = 55, Time = 12, Barrels = 4, Needed = 2, BarrelSeconds = 2, Flight = 1.1, StunTime = 8, StunMult = 2,
 		MegaDamage = 0.8, SafeZones = 3, SafeRadius = 10 },
-	Rewards = { MinShare = 0.005, Board = { 0.4, 0.2, 0.1, 0.05 }, Luck = 10, RollsBase = 1, RollsPerShare = 10, MaxRolls = 5, TopBonusRolls = 1,
-		Trait = { base = 2, perShare = 20, max = 8 }, Grade = { base = 1, perShare = 10, max = 5 }, Tickets = { 2, 1, 1 } },
+	Rewards = { Luck = 10, MaxRolls = 5, TopBonusRolls = 1, Tickets = { 2, 1, 1 },
+		Tiers = {
+			{ damage = 100, rolls = 1, crystals = 25 },
+			{ damage = 1e5, rolls = 1, crystals = 100, potions = 1, potionTier = 2 },
+			{ damage = 1e8, rolls = 1, crystals = 150, potions = 1, potionTier = 3 },
+			{ damage = 1e11, rolls = 2, crystals = 200, potions = 2, potionTier = 3 },
+			{ damage = 1e14, rolls = 2, crystals = 250, potions = 2, potionTier = 4 },
+			{ damage = 1e17, rolls = 3, crystals = 300, potions = 3, potionTier = 4 },
+			{ damage = 1e20, rolls = 3, crystals = 350, potions = 3, potionTier = 5 },
+			{ damage = 1e23, rolls = 4, crystals = 450, potions = 4, potionTier = 5 },
+			{ damage = 1e25, rolls = 5, crystals = 500, potions = 5, potionTier = 5 },
+		},
+	},
 }
 
 -- POCIONES (server/Potions, client/Potions y client/PotionFx; los textos salen de shared/PotionInfo). Aceleradores

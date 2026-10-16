@@ -19,8 +19,9 @@ function Format.short(n: number, player: Player?): string
 	if n < 1000 then
 		return tostring(math.floor(n))
 	end
-	local index = math.min(math.floor(math.log10(n) / 3), #SUFFIXES - 1)
-	local value = math.floor(n / 10 ^ (index * 3) * 100) / 100
+	-- Con un poco de margen: con números enormes la división no es exacta (1e23 daba "99,99Sx" en vez de "100Sx").
+	local index = math.min(math.floor(math.log10(n) / 3 + 1e-9), #SUFFIXES - 1)
+	local value = math.floor(n / 10 ^ (index * 3) * 100 + 1e-6) / 100
 	local text = string.format("%.2f", value):gsub("%.?0+$", "")
 	return Lang.decimal(player, text) .. SUFFIXES[index + 1]
 end
