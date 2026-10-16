@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -223,23 +224,45 @@ function Settings.start()
 	paintHitbox()
 
 	-- Cinemáticas de tirada ----------------------------------------------------------------
-	-- Solo cambia el atributo local "RollCinematics" del jugador (sin poner = encendidas): lo mira client/RollCinematic.
-	local cineRow = row(list, 7, Lang.t(nil, "Roll cinematics"), Lang.t(nil, "Plays a short cinematic when you roll a very rare weapon. Turn it off to farm without cuts."), false, Ui.COLORS.purple)
+	-- Solo cambia atributos locales del jugador (sin guardar): "RollCinematics" (false = apagadas, lo mira
+	-- client/RollCinematic) y "CinematicFrom" (desde qué "1 entre N" salen; sin poner = todas, lo mira client/RollReveal).
+	-- El botón va pasando por: todas, desde cada escalón de Config.Gacha.RevealOdds con cinemática, y apagadas.
+	local cineSteps: { number } = { 0 }
+	for index = 3, #Config.Gacha.RevealOdds do
+		table.insert(cineSteps, Config.Gacha.RevealOdds[index])
+	end
+	table.insert(cineSteps, -1)
+	local cineRow = row(list, 7, Lang.t(nil, "Roll cinematics"), Lang.t(nil, "Plays a short cinematic when you roll a very rare weapon. Choose from which rarity, or turn them off to farm without cuts."), false, Ui.COLORS.purple)
 	local cineButton = Ui.button(cineRow, "", Ui.COLORS.gray)
 	cineButton.Name = "Cinematics"
 	cineButton.AnchorPoint = Vector2.new(1, 0.5)
 	cineButton.Position = UDim2.new(1, -14, 0.5, 0)
 	cineButton.Size = UDim2.fromOffset(130, 60)
 	cineButton.TextSize = 26
+	local function cineStep(): number
+		if player:GetAttribute("RollCinematics") == false then
+			return -1
+		end
+		local from = player:GetAttribute("CinematicFrom")
+		return if typeof(from) == "number" then from else 0
+	end
 	local function paintCine()
-		local on = player:GetAttribute("RollCinematics") ~= false
-		cineButton.Text = Lang.t(nil, if on then "YES" else "NO")
-		cineButton.BackgroundColor3 = if on then Ui.COLORS.green else Ui.COLORS.gray
+		local step = cineStep()
+		cineButton.Text = if step == -1 then Lang.t(nil, "NO")
+			elseif step == 0 then Lang.t(nil, "ALL")
+			else Lang.t(nil, "{odds}+", { odds = Format.short(step) })
+		cineButton.BackgroundColor3 = if step == -1 then Ui.COLORS.gray
+			elseif step == 0 then Ui.COLORS.green
+			else Ui.COLORS.purple
 	end
 	cineButton.Activated:Connect(function()
-		player:SetAttribute("RollCinematics", player:GetAttribute("RollCinematics") == false)
+		local current = table.find(cineSteps, cineStep()) or 1
+		local step = cineSteps[current % #cineSteps + 1]
+		player:SetAttribute("RollCinematics", step ~= -1)
+		player:SetAttribute("CinematicFrom", if step > 0 then step else nil)
 	end)
 	player:GetAttributeChangedSignal("RollCinematics"):Connect(paintCine)
+	player:GetAttributeChangedSignal("CinematicFrom"):Connect(paintCine)
 	paintCine()
 
 	-- Botón con engranaje, arriba a la derecha: el último de la fila de botones pequeños (pedido por el usuario; a la
