@@ -24,6 +24,8 @@ Config.Test = {
 	Tutorial = false, -- el tutorial de los primeros minutos (Config.Tutorial) desde el paso 1 al entrar; en Studio no sale sin esto
 	Lang = "", -- "en" o "es": idioma forzado de los textos (shared/Lang); "" = el de la cuenta de Roblox
 	Weather = "", -- id de un clima de Config.Weather.Events para tenerlo puesto al entrar ("" = el que toque por la hora)
+	WorldBoss = 0, -- segundos hasta el primer Jefe del mundo al darle a Jugar (0 = el calendario normal, cada Config.WorldBoss.Interval)
+	WorldBossPhase = "", -- "barrage", "summon", "shield" o "charge": el jefe solo hace esa fase, una y otra vez, para probarla ("" = todas)
 }
 -- Administradores en el juego publicado: solo estas cuentas (ni el dueño del grupo); UserId de Roblox de cada uno (server/Admin). Ven el menú
 -- "Admin" y pueden, de momento, cambiar el clima de su servidor. 4490621018 = Lotozno. Solo Sergio decide quién entra aquí
@@ -1080,6 +1082,32 @@ Config.AutoClicker = { group = 1002188803 }
 -- acabe la partida de mazmorra en curso para no perder sus premios (After + DungeonWait tiene que quedar por debajo de
 -- 1200); MinSession = segundos mínimos en el servidor antes de poder pedirlo.
 Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 300 }
+
+-- JEFE DEL MUNDO (server/WorldBoss, client/WorldBoss; cuentas en shared/WorldBossInfo). Cada Interval segundos (a la misma
+-- hora en todos los servidores) se abre un portal en el hub Warning segundos antes de que caiga el Rey Slime en su arena,
+-- lejos de la isla. Todo el servidor le pega a la vez. No tiene vida (pedido por el usuario): a los Lifetime segundos se
+-- va y reparte los premios según el daño de cada uno. Esbirros, cristales del escudo y barriles tienen la vida de lo que
+-- un jugador medio de los que hay quita en sus "Seconds".
+--   Barrage: globos a círculos rojos (Damage = parte de la vida máxima de quien sigue dentro). Summon: esbirros que
+--   persiguen y muerden. Shield: a los First segundos, y luego cada Every, se pone un escudo hasta romper sus
+--   cristales. Charge: carga un
+--   golpe a toda la arena (salvo SafeZones) que se corta si le llegan Needed barriles; aturdido recibe StunMult de daño.
+--   Count de cada cosa = Base + PerPlayer × jugadores en la arena, hasta Max.
+--   Rewards: lo que da a cada uno según su parte de todo el daño hecho en la arena (share). Tiradas con la suerte media de
+--   sus objetos (ObjectSpec.meanLuck) por Luck; cristales base + share × perShare hasta max; Tickets, a los tres primeros.
+Config.WorldBoss = {
+	Interval = 1800, Warning = 60, AdminWarning = 10, Lifetime = 180, ReturnDelay = 10,
+	Portal = { Angle = 67.5, Distance = 72 },
+	Origin = Vector3.new(0, 200, -3000), ArenaRadius = 80, FallTime = 1.3, FallHeight = 160,
+	Name = "Slime King", Color = Color3.fromRGB(120, 200, 90), Look = "crown", Size = Vector3.new(34, 28, 34),
+	Barrage = { Every = 7, Base = 3, PerPlayer = 1, Max = 12, Radius = 8, Warn = 1.8, Damage = 0.25 },
+	Summon = { Every = 30, Base = 2, PerPlayer = 0.5, Max = 8, Seconds = 3, Damage = 0.1, Speed = 14, BiteEvery = 1.5, Size = 5, Range = 3.5 },
+	Shield = { First = 60, Every = 70, Base = 3, PerPlayer = 0.34, Max = 8, Seconds = 6 },
+	Charge = { Every = 55, Time = 12, Barrels = 4, Needed = 2, BarrelSeconds = 2, Flight = 1.1, StunTime = 8, StunMult = 2,
+		MegaDamage = 0.8, SafeZones = 3, SafeRadius = 10 },
+	Rewards = { MinShare = 0.005, Luck = 10, RollsBase = 1, RollsPerShare = 10, MaxRolls = 5, TopBonusRolls = 1,
+		Trait = { base = 2, perShare = 20, max = 8 }, Grade = { base = 1, perShare = 10, max = 5 }, Tickets = { 2, 1, 1 } },
+}
 
 -- POCIONES (server/Potions, client/Potions y client/PotionFx; los textos salen de shared/PotionInfo). Aceleradores
 -- temporales: no sustituyen a mejores armas, rasgos, grados, armadura ni mejoras. Cinco familias, cada una con su valor

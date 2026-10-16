@@ -3,12 +3,14 @@
 -- órdenes van por AdminCommand ("banner", "boost", "stopBoost") y server/AdminCommands las comprueba. Van a este
 -- servidor o a todos según client/AdminScope.
 --   `Body.Events.Card.Content`: `MessageRow.Message` y `.Send`; `Stats.Stat_<stat>` (qué se multiplica), `Inputs.Mult`,
---     `Inputs.Minutes` e `Inputs.Start`; `Active.Row_<stat>` (los que hay en marcha, con su `Stop`).
+--     `Inputs.Minutes` e `Inputs.Start`; `Active.Row_<stat>` (los que hay en marcha, con su `Stop`); `WorldBoss` hace salir
+--     ya el Jefe del mundo en este servidor (AdminCommand "worldBoss").
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local AdminScope = require(script.Parent.AdminScope)
@@ -193,6 +195,16 @@ function AdminEvents.build(pane: Frame, window: Frame)
 	-- Eventos en marcha ---------------------------------------------------------------------------
 	local listTop = top + 28 + STAT * 2 + GAP * 2 + ROW + 14
 	heading(content, "ActiveTitle", Lang.t(nil, "Events running on this server"), listTop)
+	-- Jefe del mundo: siempre en este servidor (cada uno lleva su calendario).
+	local summon = Ui.button(content, Lang.t(nil, "Summon world boss"), Color3.fromRGB(150, 90, 220))
+	summon.Name = "WorldBoss"
+	summon.AnchorPoint = Vector2.new(1, 0)
+	summon.Position = UDim2.new(1, 0, 0, listTop - 4)
+	summon.Size = UDim2.fromOffset(200, 30)
+	summon.TextSize = 15
+	summon.Activated:Connect(function()
+		Remotes.AdminCommand:FireServer("worldBoss")
+	end)
 	local active = Instance.new("ScrollingFrame")
 	active.Name = "Active"
 	active.Position = UDim2.fromOffset(0, listTop + 28)

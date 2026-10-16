@@ -1,5 +1,5 @@
 -- Qué puede atacar el jugador y qué tiene a mano (librería sin start()): los objetos de su parcela y, en una mazmorra,
--- los enemigos, siempre dentro de su círculo (Stats.reach: Config.Loadout.Radius, o la parcela entera con el Auto). La comparten el clic (SwordController), los
+-- los enemigos (en la arena del Jefe del mundo, lo que lleva la etiqueta WorldBossTarget), siempre dentro de su círculo (Stats.reach: Config.Loadout.Radius, o la parcela entera con el Auto). La comparten el clic (SwordController), los
 -- automáticos (AutoPlay, Dungeons), las armas que giran (OrbitWeapons) y la vista de pruebas (HitboxDebug). Hace la
 -- misma cuenta que server/Combat, que es quien decide.
 local CollectionService = game:GetService("CollectionService")
@@ -32,6 +32,9 @@ function Targeting.valid(part: Instance?): boolean
 	if CollectionService:HasTag(part, "Destructible") then
 		return part:GetAttribute("Owner") == player.UserId
 	end
+	if CollectionService:HasTag(part, "WorldBossTarget") then
+		return player:GetAttribute("WorldBoss") == true and part:GetAttribute("Shield") ~= true
+	end
 	return CollectionService:HasTag(part, "Enemy")
 end
 
@@ -43,7 +46,14 @@ function Targeting.candidates(): { BasePart }
 			table.insert(list, part)
 		end
 	end
-	if (player:GetAttribute("Dungeon") or 0) > 0 then
+	-- En la arena del Jefe del mundo: el rey (sin escudo), sus esbirros, los cristales y los barriles.
+	if player:GetAttribute("WorldBoss") == true then
+		for _, part in CollectionService:GetTagged("WorldBossTarget") do
+			if part:IsA("BasePart") and part:IsDescendantOf(workspace) and part:GetAttribute("Shield") ~= true then
+				table.insert(list, part)
+			end
+		end
+	elseif (player:GetAttribute("Dungeon") or 0) > 0 then
 		for _, part in CollectionService:GetTagged("Enemy") do
 			if part:IsA("BasePart") and part:IsDescendantOf(workspace) then
 				table.insert(list, part)

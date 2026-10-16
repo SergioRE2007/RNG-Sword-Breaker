@@ -1707,6 +1707,23 @@ do
 	equal(broken.data.isLocked(broken.data.read(broken.player), 99), false, "una que no existe, no")
 end
 
+-- Jefe del mundo (shared/WorldBossInfo): el premio crece con la parte de daño de cada uno, con su tope.
+do
+	local info = f.load("src/shared/WorldBossInfo")
+	local boss = config.WorldBoss
+	near(info.minorHp(1e6, 3), 3e6, "jefe: un esbirro aguanta unos segundos de un jugador medio")
+	equal(info.rewards(boss.Rewards.MinShare / 2, 8), nil, "jefe: sin llegar a MinShare no hay premio")
+	local low, high = info.rewards(0.05, 6), info.rewards(0.6, 1)
+	assert(low and high and high.rolls > low.rolls and high.traitCrystal > low.traitCrystal, "jefe: más parte, más premio")
+	checks += 1
+	equal(high.rolls <= boss.Rewards.MaxRolls and high.traitCrystal <= boss.Rewards.Trait.max, true, "jefe: con su tope")
+	equal(high.tickets, boss.Rewards.Tickets[1], "jefe: tickets para el primero")
+	equal(low.tickets, 0, "jefe: sin tickets fuera del podio")
+	equal(info.nextFall(boss.Interval * 10 + 5), boss.Interval * 11, "jefe: la siguiente caída, al siguiente múltiplo")
+	equal(info.count(boss.Summon, 100), boss.Summon.Max, "jefe: esbirros con tope")
+	equal(info.clock(65), "1:05", "jefe: reloj")
+end
+
 -- Idioma (shared/Lang): el código lleva los textos en inglés y LangEs los pasa a español para quien tiene Roblox en
 -- español. En el servidor el idioma es el de la cuenta del jugador; sin jugador, inglés.
 do
@@ -1780,6 +1797,7 @@ do
 	each(config.Armor.Qualities, "Armor.Qualities", { "name" })
 	each(config.Dungeons, "Dungeons", { "name", "tagline", "set" })
 	each(config.Enemies, "Enemies", { "name" })
+	known(config.WorldBoss.Name, "WorldBoss.Name")
 	for id, theme in config.DungeonThemes do each(theme.enemies, "DungeonThemes." .. id, { "name" }) end
 	each(config.Tutorial.Steps, "Tutorial", { "text" })
 	each(config.Products, "Products", { "name", "tag", "ribbon" })

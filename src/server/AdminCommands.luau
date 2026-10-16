@@ -335,6 +335,13 @@ local function onCommand(admin: Player, action: unknown, ...: unknown)
 		elseif luck > 0 then
 			print(`[Admin] {admin.Name} sets a test clover of x{luck}`)
 		end
+	elseif action == "worldBoss" then
+		-- Hacer salir ya el Jefe del mundo en este servidor (con Config.WorldBoss.AdminWarning s de aviso).
+		if require(script.Parent.WorldBoss).summon() then
+			print(`[Admin] {admin.Name} summons the world boss`)
+		else
+			Tell.notice(admin, BAD, "The world boss is already out")
+		end
 	elseif action == "kick" then
 		kick(admin, a)
 	elseif action == "goto" or action == "bring" then

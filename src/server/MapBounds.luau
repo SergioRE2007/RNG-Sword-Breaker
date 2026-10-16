@@ -42,7 +42,7 @@ end
 
 -- Si el personaje está donde no debería: más allá del muro o por debajo del lobby de mazmorras.
 local function isLost(player: Player, radius: number): boolean
-	if (player:GetAttribute("Dungeon") or 0) ~= 0 then
+	if (player:GetAttribute("Dungeon") or 0) ~= 0 or player:GetAttribute("WorldBoss") == true then
 		return false
 	end
 	local character = player.Character

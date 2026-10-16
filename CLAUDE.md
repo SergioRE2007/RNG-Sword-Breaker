@@ -175,3 +175,4 @@ Lo de cada sistema concreto (cómo funciona, qué pidió el usuario, cómo proba
 - `docs/sistemas/renacer.md` — renacer y su cinemática
 - `docs/sistemas/slimes.md` — enemigos de mazmorra hechos slimes y su animación (`client/Slimes`, `SlimeLooks`)
 - `docs/sistemas/bono-amigos.md` — bono de amigos en el servidor e invitar (`Friends`, `Config.Friends`)
+- `docs/sistemas/jefe-del-mundo.md` — Jefe del mundo: portal del hub, arena, Rey Slime sin vida, fases y premios por daño (`WorldBoss`, `WorldBossMobs`, `WorldBossArena`, `WorldBossInfo`, `WorldBossFx`)

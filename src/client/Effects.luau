@@ -199,7 +199,7 @@ function Effects.start()
 				shake(part)
 			end
 			-- La vida de los objetos de la parcela ya la enseña su cartel (client/ObjectInfo); la barra es para los enemigos.
-			if hitter == player and not CollectionService:HasTag(part, "Destructible") then
+			if hitter == player and not CollectionService:HasTag(part, "Destructible") and part:GetAttribute("MaxHP") then
 				showHealth(part)
 			end
 		end

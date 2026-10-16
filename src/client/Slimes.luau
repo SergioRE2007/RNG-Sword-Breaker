@@ -46,7 +46,13 @@ local KINDS = {
 	grunt = { hop = 0.3, stride = 1.5, stiff = 210, damp = 10, land = 3.2 },
 	brute = { hop = 0.2, stride = 1.1, stiff = 150, damp = 9, land = 4, angry = true },
 	boss = { hop = 0.13, stride = 0.95, stiff = 105, damp = 7, land = 4.6, angry = true, heavy = true },
+	-- El Jefe del mundo (server/WorldBoss): no anda; cae del cielo (Fall), salta en el sitio al atacar (Slam), se infla al
+	-- cargar el súper golpe (ChargeFrom/ChargeTo) y se tambalea aturdido (Stunned). Todo son horas del servidor.
+	king = { hop = 0.08, stride = 1, stiff = 70, damp = 6, land = 6, angry = true, heavy = true },
 }
+local SLAM = 0.9 -- lo que dura el salto en el sitio del rey
+local CHARGE_TINT = Color3.fromRGB(255, 70, 30)
+local STUN_TINT = Color3.fromRGB(255, 235, 120)
 
 local folder: Folder? = nil
 local slimes = {} -- [caja] = slime
@@ -281,6 +287,12 @@ local function build(box: BasePart)
 		return part
 	end, size, color, s)
 
+	-- El rey que cae del cielo no sale de un charco.
+	if box:GetAttribute("Fall") then
+		slime.born = os.clock() - SPAWN
+		slime.falling = true
+	end
+
 	-- Golpes (le baja la vida) y ataques (el servidor apunta la hora y a quién).
 	table.insert(slime.connections, box:GetAttributeChangedSignal("HP"):Connect(function()
 		local hp = box:GetAttribute("HP") or 0
@@ -291,6 +303,13 @@ local function build(box: BasePart)
 			slime.rollV += rng:NextNumber(-5, 5)
 		end
 		slime.hp = hp
+	end))
+	-- El rey del Jefe del mundo no tiene vida: cuenta sus golpes en "Hits". Le pegan todos a la vez: un blanco más
+	-- flojo, o se quedaría blanco todo el rato.
+	table.insert(slime.connections, box:GetAttributeChangedSignal("Hits"):Connect(function()
+		slime.flash = math.max(slime.flash, 0.4)
+		slime.squashV += 3
+		slime.rollV += rng:NextNumber(-3, 3)
 	end))
 	table.insert(slime.connections, box:GetAttributeChangedSignal("AttackAt"):Connect(function()
 		local at = box:GetAttribute("AttackAt")
@@ -312,7 +331,9 @@ local function build(box: BasePart)
 	model.Parent = getFolder()
 	slimes[box] = slime
 	-- Sale de un charco.
-	puddle(box.Position - Vector3.new(0, size.Y / 2, 0), size.X * 1.3, color, PUDDLE_LIFE)
+	if not slime.falling then
+		puddle(box.Position - Vector3.new(0, size.Y / 2, 0), size.X * 1.3, color, PUDDLE_LIFE)
+	end
 	ensureLoop()
 end
 
@@ -436,6 +457,52 @@ local function update(slime, dt: number, now: number, serverNow: number, camera:
 		end
 	end
 
+	-- Rey: caída del cielo, salto en el sitio, carga y aturdido.
+	local drop, grown, special, specialTint = 0, 1, 0, nil
+	if kind == KINDS.king then
+		local fall = box:GetAttribute("Fall")
+		if fall and serverNow < fall then
+			local u = 1 - math.clamp((fall - serverNow) / Config.WorldBoss.FallTime, 0, 1)
+			drop = Config.WorldBoss.FallHeight * (1 - u * u)
+			stretch = math.max(stretch, 0.25)
+		elseif slime.falling then
+			slime.falling = false
+			slime.squashV += kind.land * 2.5
+			puddle(ground, size.X * 2, slime.color, BIG_PUDDLE_LIFE)
+			splash(ground + Vector3.new(0, size.Y * 0.3, 0), ground.Y, slime.color, 18, 26, size.X * 0.06)
+		end
+		local slam = box:GetAttribute("Slam")
+		if slam then
+			local u = (serverNow - slam) / SLAM
+			if u >= 0 and u < 1 then
+				lift += size.Y * 0.45 * math.sin(math.pi * u)
+				stretch = math.max(stretch, 0.2 * math.sin(math.pi * u))
+			elseif u >= 1 and slime.slammed ~= slam then
+				slime.slammed = slam
+				land(slime, ground)
+				slime.squashV += kind.land
+			end
+		end
+		local from, to = box:GetAttribute("ChargeFrom"), box:GetAttribute("ChargeTo")
+		if from and to and serverNow >= from and serverNow < to then
+			local p = (serverNow - from) / math.max(to - from, 0.1)
+			grown = 1 + 0.22 * p
+			special = (0.2 + 0.35 * p) * (0.6 + 0.4 * math.sin(now * (6 + 14 * p)))
+			specialTint = CHARGE_TINT
+		else
+			local stunned = box:GetAttribute("Stunned")
+			if stunned and serverNow < stunned then
+				slime.roll = math.sin(now * 5) * 0.16
+				slime.rollV = 0
+				special = 0.15
+				specialTint = STUN_TINT
+				slime.dizzy = true
+			else
+				slime.dizzy = false
+			end
+		end
+	end
+
 	-- Muelles de la gelatina: aplastado (+) o estirado (-), inclinación adelante (+) / atrás y bamboleo de lado.
 	local breathe = if moving then 0 else math.sin(now * 2.6 + slime.born) * 0.035
 	local squashTarget = -0.15 * air + breathe + 0.26 * slime.wind
@@ -456,12 +523,13 @@ local function update(slime, dt: number, now: number, serverNow: number, camera:
 		grow = math.max(0.01, 1 + 2.7 * t ^ 3 + 1.7 * t ^ 2)
 	end
 
+	grow *= grown
 	local squash = slime.squash
 	local sx = (1 + 0.5 * squash) * (1 - 0.25 * stretch) * grow
 	local sy = (1 - squash) * (1 - 0.15 * stretch) * grow
 	local sz = (1 + 0.5 * squash) * (1 + stretch) * grow
 	local tremble = if slime.wind > 0.05 then Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)) * size.X * 0.025 * slime.wind else Vector3.zero
-	local position = ground + Vector3.new(0, size.Y * kind.hop * air + lift, 0) + (if slime.lungeDir then slime.lungeDir * reach else Vector3.zero) + tremble
+	local position = ground + Vector3.new(0, size.Y * kind.hop * air + lift + drop, 0) + (if slime.lungeDir then slime.lungeDir * reach else Vector3.zero) + tremble
 	local root = CFrame.new(position) * CFrame.Angles(0, slime.yaw, 0) * CFrame.Angles(-slime.lean, 0, slime.roll)
 
 	-- La base solo se desparrama apoyada en el suelo.
@@ -474,7 +542,7 @@ local function update(slime, dt: number, now: number, serverNow: number, camera:
 		slime.blinkAt = now + rng:NextNumber(1.8, 4.5)
 	end
 	local blink = now - slime.blinkStart
-	local open = (if blink < 0.14 then 1 - 0.9 * math.sin(blink / 0.14 * math.pi) else 1) * (1 - 0.4 * slime.wind) * (1 + 0.15 * bite)
+	local open = (if blink < 0.14 then 1 - 0.9 * math.sin(blink / 0.14 * math.pi) else 1) * (1 - 0.4 * slime.wind) * (1 + 0.15 * bite) * (if slime.dizzy then 0.3 else 1)
 	local lookAt = if nearest then root:PointToObjectSpace(nearest) else Vector3.new(0, size.Y * 0.6, -10)
 	for _, eye in slime.eyes do
 		local ox = math.clamp(lookAt.X / 14, -1, 1) * eye.w * 0.18
@@ -509,6 +577,8 @@ local function update(slime, dt: number, now: number, serverNow: number, camera:
 	-- Blanco al recibir un golpe; rojizo y latiendo al prepararse.
 	if slime.flash > 0.01 then
 		tint(slime, WHITE, slime.flash * 0.75)
+	elseif special > 0.01 then
+		tint(slime, specialTint, special)
 	elseif slime.wind > 0.05 then
 		tint(slime, ANGRY, slime.wind * (0.18 + 0.12 * math.sin(now * 28)))
 	else

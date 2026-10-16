@@ -8,6 +8,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local DungeonLobby = require(script.Parent.DungeonLobby)
 local Plots = require(script.Parent.Plots)
+local WorldBossArena = require(script.Parent.WorldBossArena)
 
 local Teleport = {}
 
@@ -29,6 +30,12 @@ local function destination(player: Player, where: unknown, zone: unknown): CFram
 			return nil
 		end
 		return DungeonLobby.returnCFrame(zone, 1, 1)
+	elseif where == "portal" then
+		-- Delante del portal del Jefe del mundo (botón "Ir" de su aviso). Desde una mazmorra, no.
+		if (player:GetAttribute("Dungeon") or 0) ~= 0 then
+			return nil
+		end
+		return WorldBossArena.portalFront()
 	elseif where == "home" then
 		local plot = Plots.get(player)
 		return plot and plot.spawn.CFrame + Vector3.new(0, 4, 0)
