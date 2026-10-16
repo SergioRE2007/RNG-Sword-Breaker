@@ -78,6 +78,7 @@ local pulsing = {}
 local shines = {} -- [degradado] = desfase: brillo blanco que cruza la fila de vez en cuando
 local bobbing = {} -- [icono] = { phase, scale }: el icono flota y late
 local sparkly = {} -- [capa] = { color, window, next }: chispas de fondo en las raras (< 1 %)
+local breathing = {} -- [UIScale] = fase: la letra de un botón marcado de "Parar con" late
 local SHINE_EVERY = 4.5 -- segundos entre dos brillos de la misma fila
 local SHINE_TIME = 0.7 -- lo que tarda el brillo en cruzar
 local SPARKLE_EVERY = 1.6 -- segundos entre chispas de una fila rara
@@ -547,12 +548,12 @@ local function buildShop(kind: string)
 		-- El nombre va en una etiqueta de dentro, con margen a los lados y por encima del labio del botón.
 		local name = Ui.label(toggle, 20)
 		name.Name = "Title"
-		name.Position = UDim2.fromOffset(10, 4)
-		name.Size = UDim2.new(1, -20, 1, -14)
+		name.Position = UDim2.fromOffset(8, 2)
+		name.Size = UDim2.new(1, -16, 1, -8)
 		name.Text = Lang.t(nil, entry.name)
 		name.TextScaled = true
 		local nameLimit = Instance.new("UITextSizeConstraint")
-		nameLimit.MaxTextSize = 20
+		nameLimit.MaxTextSize = 44 -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo sigue encogiéndose para caber
 		nameLimit.MinTextSize = 9
 		nameLimit.Parent = name
 		Ui.layer(toggle, Z.overlay + 2)
@@ -573,13 +574,51 @@ local function buildShop(kind: string)
 		check.ZIndex = Z.overlay + 3
 		Ui.round(check, 11)
 		Ui.stroke(check, Color3.new(0, 0, 0), 2)
+		-- Borde animado como el de la lista de la derecha (pedido por el usuario), solo con el botón marcado: arcoíris
+		-- que gira en las especiales y latido en las muy raras. Apagado, el borde sigue negro y quieto.
+		local spinGradient: UIGradient? = nil
+		local letterGradient: UIGradient? = nil
+		local letterScale = Instance.new("UIScale")
+		letterScale.Parent = name
+		if entry.rainbow then
+			rainbow(name, entry)
+			letterGradient = name:FindFirstChildOfClass("UIGradient")
+		end
+		local pulses = false
+		local baseThickness, baseTransparency = 0, 0
+		if stroke then
+			baseThickness, baseTransparency = stroke.Thickness, stroke.Transparency
+			if entry.rainbow then
+				rainbow(stroke, entry)
+				spinGradient = stroke:FindFirstChildOfClass("UIGradient")
+			else
+				pulses = Modifiers.percent(kind, index) < 0.1
+			end
+		end
 		local function paint()
 			local on = state.stop[index] == true
 			toggle.BackgroundColor3 = if on then tone:Lerp(Color3.new(0, 0, 0), 0.3) else STOP_OFF
 			name.TextColor3 = if on then WHITE else tone:Lerp(WHITE, 0.15)
 			check.Visible = on
+			-- La letra, como el icono de la lista: arcoíris que corre en las especiales y un latido suave.
+			if letterGradient then
+				letterGradient.Enabled = on
+			end
+			breathing[letterScale] = if on then position * 0.9 else nil
+			if not on then
+				letterScale.Scale = 1
+			end
 			if stroke then
-				stroke.Color = if on then tone:Lerp(WHITE, 0.55) else Color3.new(0, 0, 0)
+				stroke.Color = if not on then Color3.new(0, 0, 0) elseif entry.rainbow then WHITE else tone:Lerp(WHITE, 0.55)
+				if spinGradient then
+					spinGradient.Enabled = on
+				end
+				if pulses then
+					pulsing[stroke] = if on then index else nil
+					if not on then
+						stroke.Thickness, stroke.Transparency = baseThickness, baseTransparency
+					end
+				end
 			end
 		end
 		toggle.Activated:Connect(function()
@@ -1551,6 +1590,13 @@ function ModifierShops.start()
 			end
 			icon.Position = UDim2.fromOffset(ICON_X, ICON_Y + math.sin(now * 2 + data.phase) * 3)
 			data.scale.Scale = 1 + math.sin(now * 3 + data.phase) * 0.06
+		end
+		for scale, phase in breathing do
+			if not scale.Parent then
+				breathing[scale] = nil
+				continue
+			end
+			scale.Scale = 1 + math.sin(now * 3 + phase) * 0.06
 		end
 		for layer, data in sparkly do
 			if not layer.Parent then
