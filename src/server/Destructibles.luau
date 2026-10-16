@@ -222,6 +222,20 @@ function Destructibles.ownerOf(part: Instance): Player?
 	return if object then object.plot.owner else nil
 end
 
+-- Objetos vivos de la misma parcela que ese (él incluido; vacío si no lo es): el trébol grande los toma todos.
+function Destructibles.plotObjects(part: Instance): { BasePart }
+	local found = {}
+	local object = objects[part]
+	if object then
+		for other, info in objects do
+			if info.plot == object.plot then
+				table.insert(found, other)
+			end
+		end
+	end
+	return found
+end
+
 -- Si esa pieza es un objeto vivo de la parcela del jugador (lo único de aquí que puede atacar).
 function Destructibles.owns(player: Player, part: Instance): boolean
 	local object = objects[part]

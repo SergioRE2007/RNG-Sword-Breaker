@@ -758,13 +758,13 @@ function Backpack.start()
 			Ui.gemIcon(cell, item.color)
 		end
 		itemLabels[name] = Ui.cellLabel(cell, "x0")
-		if name == Config.Clover.Item then
-			-- Trébol de la suerte: se cierra la mochila y se elige el objeto en la parcela (client/Clover).
+		if Config.Clover.Items[name] then
+			-- Tréboles de la suerte: se cierra la mochila y se elige el objeto en la parcela (client/Clover).
 			cell.Activated:Connect(function()
 				if (player:GetAttribute("Item_" .. name) or 0) >= 1 then
 					Ui.close(window)
 				end
-				Clover.pick()
+				Clover.pick(name)
 			end)
 		end
 		Ui.tip(cell, function()
