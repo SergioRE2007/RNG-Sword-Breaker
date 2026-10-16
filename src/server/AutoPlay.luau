@@ -26,6 +26,10 @@ local PLOT_MARGIN = 6 -- studs de más alrededor de la parcela que aún cuentan 
 local ORANGE = Color3.fromRGB(255, 170, 60)
 local ATTRIBUTES = { click = "AutoClick", farm = "AutoFarm", fight = "AutoFight" } -- atributo que publica cada modo
 
+-- Pedido por el usuario: si el Auto estaba encendido y sales de la parcela, al volver a entrar se enciende solo.
+-- Aquí se recuerda lo que el jugador quiere (lo que pidió con el botón); el atributo "AutoFarm" es lo que vale ahora.
+local wantFarm: { [Player]: boolean } = {}
+
 local member: { [Player]: boolean } = {} -- ya se ha visto que está en el grupo
 local lastCheck: { [Player]: number } = {}
 
@@ -121,6 +125,9 @@ function AutoPlay.set(player: Player, mode: unknown, on: unknown)
 	else
 		setGroup(player, mode :: string)
 	end
+	if mode == "farm" then
+		wantFarm[player] = player:GetAttribute("AutoFarm") == true -- solo se recuerda si de verdad se ha encendido
+	end
 end
 
 function AutoPlay.start()
@@ -128,14 +135,19 @@ function AutoPlay.start()
 	Players.PlayerRemoving:Connect(function(player)
 		member[player] = nil
 		lastCheck[player] = nil
+		wantFarm[player] = nil
 	end)
-	-- El Auto solo vale en tu parcela o en una mazmorra: al salir de ellas (andando o viajando) se apaga.
+	-- El Auto solo vale en tu parcela o en una mazmorra: al salir de ellas (andando o viajando) se apaga, pero se
+	-- acuerda de que estaba encendido y, al volver a una de esas zonas, se enciende de nuevo (si aún tiene el pase).
 	task.spawn(function()
 		while true do
 			task.wait(1)
 			for _, player in Players:GetPlayers() do
-				if player:GetAttribute("AutoFarm") == true and not autoArea(player) then
+				local farm = player:GetAttribute("AutoFarm") == true
+				if farm and not autoArea(player) then
 					player:SetAttribute("AutoFarm", false)
+				elseif not farm and wantFarm[player] and autoArea(player) and Stats.perk(player, "autoFarm") then
+					player:SetAttribute("AutoFarm", true)
 				end
 			end
 		end
