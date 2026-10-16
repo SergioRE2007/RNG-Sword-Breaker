@@ -552,7 +552,7 @@ local function buildShop(kind: string)
 		name.Text = Lang.t(nil, entry.name)
 		name.TextScaled = true
 		local nameLimit = Instance.new("UITextSizeConstraint")
-		nameLimit.MaxTextSize = 20
+		nameLimit.MaxTextSize = 32 -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo sigue encogiéndose para caber
 		nameLimit.MinTextSize = 9
 		nameLimit.Parent = name
 		Ui.layer(toggle, Z.overlay + 2)
