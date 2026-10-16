@@ -776,6 +776,8 @@ return {
 	["Your game couldn't be loaded. Come back in a couple of minutes."] = "No se ha podido cargar tu partida. Vuelve a entrar en un par de minutos.",
 	["Trading isn't available in your region"] = "El comercio no está disponible en tu región",
 	["{name} can't trade in their region"] = "{name} no puede comerciar en su región",
+	["Trading unlocks after your first rebirth"] = "El comercio se desbloquea con tu primer renacimiento",
+	["{name} can't trade until their first rebirth"] = "{name} no puede comerciar hasta su primer renacimiento",
 	["{name} changed one of the swords after accepting"] = "{name} ha cambiado una de las espadas después de aceptar",
 	-- Parte 3: grupo de mazmorra (servidor)
 	["You're already in a dungeon."] = "Ya estás en una mazmorra.",

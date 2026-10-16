@@ -48,7 +48,7 @@ local function advance(player: Player)
 		if edited.tutorial > #cfg.Steps then
 			edited.tutorial = DONE
 			local reward = cfg.Reward
-			edited.items[reward.item] += reward.amount
+			PlayerData.giveBound(edited, reward.item, reward.amount) -- atado a la cuenta: no se comercia
 		end
 	end)
 	publish(player, data)

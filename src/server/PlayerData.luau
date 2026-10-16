@@ -192,6 +192,12 @@ local function publish(player: Player)
 			sent[name] = count
 			player:SetAttribute("Item_" .. name, count)
 		end
+		-- "Bound_<nombre>" = cuántos de esos están atados a la cuenta (no se comercian; ver PlayerData.tradable).
+		local bound = data.bound[name] or 0
+		if sent["bound_" .. name] ~= bound then
+			sent["bound_" .. name] = bound
+			player:SetAttribute("Bound_" .. name, if bound > 0 then bound else nil)
+		end
 	end
 	player:SetAttribute("Artifacts", table.concat(data.artifacts, ","))
 	player:SetAttribute("Gear", table.concat(data.gear, ","))
@@ -492,6 +498,7 @@ local function load(player: Player)
 		pity = Modifiers.newPity(nil),
 		upgrades = {},
 		items = {},
+		bound = {}, -- { [nombre] = cuántos de items[nombre] están atados a la cuenta y no se comercian } (PlayerData.tradable)
 		artifacts = {},
 		gear = {},
 		armor = {},
@@ -596,6 +603,13 @@ local function load(player: Player)
 				if type(saved.items) == "table" then
 					for name in Config.Items do
 						data.items[name] = math.max(0, tonumber(saved.items[name]) or 0)
+					end
+				end
+				if type(saved.bound) == "table" then
+					for name in Config.Items do
+						local bound = tonumber(saved.bound[name]) or 0
+						bound = if bound == bound then math.clamp(math.floor(bound), 0, data.items[name]) else 0
+						data.bound[name] = if bound > 0 then bound else nil
 					end
 				end
 				if type(saved.artifacts) == "table" then
@@ -884,6 +898,30 @@ function PlayerData.isLocked(data, id: unknown): boolean
 	end
 	local copy = PlayerData.findSword(data, id)
 	return copy ~= nil and copy.locked == true
+end
+
+-- Objetos atados a la cuenta (pedido por el usuario): los de los códigos y el tutorial no se comercian, porque con
+-- cuentas nuevas se juntaban en una sola (tréboles y pociones de monedas). data.bound[nombre] = cuántos de
+-- data.items[nombre] están atados; al gastar se gastan antes los atados.
+function PlayerData.tradable(data, name: string): number
+	local owned = data.items[name] or 0
+	return math.max(0, owned - math.min(data.bound[name] or 0, owned))
+end
+
+-- Da `amount` de un objeto atado a la cuenta (dentro de PlayerData.edit).
+function PlayerData.giveBound(data, name: string, amount: number)
+	data.items[name] += amount
+	data.bound[name] = (data.bound[name] or 0) + amount
+end
+
+-- Gasta `amount` de un objeto (dentro de PlayerData.edit; quien llama ya ha comprobado que los tiene).
+function PlayerData.spendItem(data, name: string, amount: number)
+	data.items[name] -= amount
+	local bound = data.bound[name]
+	if bound then
+		bound = math.min(math.max(bound - amount, 0), data.items[name])
+		data.bound[name] = if bound > 0 then bound else nil
+	end
 end
 
 function PlayerData.getCoins(player: Player): number

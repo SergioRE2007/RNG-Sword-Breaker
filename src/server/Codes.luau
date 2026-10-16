@@ -93,8 +93,9 @@ local function give(player: Player, rewards): string
 			table.insert(parts, Lang.t(player, "{n} gems", { n = Format.short(reward.gems, player) }))
 		elseif reward.item and Config.Items[reward.item] then
 			local amount = reward.amount or 1
+			-- Atados a la cuenta: no se comercian (con cuentas nuevas se juntaban en una sola).
 			PlayerData.edit(player, function(edited)
-				edited.items[reward.item] += amount
+				PlayerData.giveBound(edited, reward.item, amount)
 			end)
 			table.insert(parts, `{Format.short(amount, player)} {Lang.t(player, Config.Items[reward.item].name)}`)
 		end

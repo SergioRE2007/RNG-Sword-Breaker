@@ -808,6 +808,16 @@ tf.load("src/server/Trade").start()
 tf.data.edit(tf.player, function(d)
 	d.coins, d.gems = 1e6, 1e6
 	d.items.gradeCrystal = 3
+	-- Tréboles: 2 atados a la cuenta (de códigos o del tutorial) y 1 comprado.
+	d.items.luckClover = 1
+	tf.data.giveBound(d, "luckClover", 2)
+end)
+tf.advance(10)
+-- Sin renacer no se comercia (Config.Trade.MinRebirths).
+tf.remotes.TradeRequest.OnServerEvent:fire(tf.player, 0)
+equal(#tf.remotes.TradeState.sent, 0, "sin renacer no se abre el trato")
+tf.data.edit(tf.player, function(d)
+	d.rebirths = 1
 end)
 tf.advance(10)
 tf.remotes.TradeRequest.OnServerEvent:fire(tf.player, 0)
@@ -816,6 +826,21 @@ local function tradeState()
 	return sent[#sent][2]
 end
 equal(tradeState().state, "editing", "trato abierto con el bot")
+-- Los atados no se ofrecen: de 3 tréboles solo se puede dar 1.
+tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "items", "luckClover", 2)
+equal(tradeState().you.items.luckClover, nil, "los tréboles atados no se ofrecen")
+tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "items", "luckClover", 1)
+equal(tradeState().you.items.luckClover, 1, "el trébol comprado sí se ofrece")
+tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "items", "luckClover", 0)
+-- Al gastar se van antes los atados.
+tf.data.edit(tf.player, function(d)
+	tf.data.spendItem(d, "luckClover", 1)
+end)
+equal(tf.data.tradable(tf.data.read(tf.player), "luckClover"), 1, "gastar uno se lleva un atado")
+tf.data.edit(tf.player, function(d)
+	tf.data.spendItem(d, "luckClover", 2)
+end)
+equal(tf.data.read(tf.player).bound.luckClover, nil, "gastados todos, no quedan atados")
 equal(tradeState().them.coins, 0, "el bot no ofrece monedas")
 equal(tradeState().them.gems, 0, "el bot no ofrece gemas")
 equal(tradeState().them.items.traitCrystal > 0, true, "el bot ofrece cristales")
@@ -1060,6 +1085,8 @@ do
 		bag = { stage = 7, taken = 3, slots = { 30 }, seen = 123456 },
 		index = { code(4, 1, 1), code(lastSword, lastMetal, lastSize) },
 		items = { traitCrystal = 1e30, gradeCrystal = 7, [potionKey] = 3 },
+		-- Atados: nunca más de los que tiene, y sin los que no tiene.
+		bound = { gradeCrystal = 9, [potionKey] = 2, missionToken = 4 },
 		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
 		armor = {
 			{ id = 11, slot = "helmet", quality = lastQuality, level = lastZone, stats = helmetStats },
@@ -1085,7 +1112,7 @@ do
 		},
 		nextSwordId = 5, loadout = { 2, 4 },
 		bag = { stage = 7, taken = 3, slots = { 3 }, seen = 123456 },
-		index = full.index, items = items,
+		index = full.index, items = items, bound = { gradeCrystal = 7, [potionKey] = 2 },
 		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
 		armor = {
 			{ id = 1, slot = "helmet", quality = lastQuality, level = lastZone, stats = helmetStats },
