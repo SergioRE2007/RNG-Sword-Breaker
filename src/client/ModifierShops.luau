@@ -573,13 +573,36 @@ local function buildShop(kind: string)
 		check.ZIndex = Z.overlay + 3
 		Ui.round(check, 11)
 		Ui.stroke(check, Color3.new(0, 0, 0), 2)
+		-- Borde animado como el de la lista de la derecha (pedido por el usuario), solo con el botón marcado: arcoíris
+		-- que gira en las especiales y latido en las muy raras. Apagado, el borde sigue negro y quieto.
+		local spinGradient: UIGradient? = nil
+		local pulses = false
+		local baseThickness, baseTransparency = 0, 0
+		if stroke then
+			baseThickness, baseTransparency = stroke.Thickness, stroke.Transparency
+			if entry.rainbow then
+				rainbow(stroke, entry)
+				spinGradient = stroke:FindFirstChildOfClass("UIGradient")
+			else
+				pulses = Modifiers.percent(kind, index) < 0.1
+			end
+		end
 		local function paint()
 			local on = state.stop[index] == true
 			toggle.BackgroundColor3 = if on then tone:Lerp(Color3.new(0, 0, 0), 0.3) else STOP_OFF
 			name.TextColor3 = if on then WHITE else tone:Lerp(WHITE, 0.15)
 			check.Visible = on
 			if stroke then
-				stroke.Color = if on then tone:Lerp(WHITE, 0.55) else Color3.new(0, 0, 0)
+				stroke.Color = if not on then Color3.new(0, 0, 0) elseif entry.rainbow then WHITE else tone:Lerp(WHITE, 0.55)
+				if spinGradient then
+					spinGradient.Enabled = on
+				end
+				if pulses then
+					pulsing[stroke] = if on then index else nil
+					if not on then
+						stroke.Thickness, stroke.Transparency = baseThickness, baseTransparency
+					end
+				end
 			end
 		end
 		toggle.Activated:Connect(function()
