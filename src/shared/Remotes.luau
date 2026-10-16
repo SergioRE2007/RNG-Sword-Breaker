@@ -69,6 +69,8 @@ local NAMES = {
 	"WeatherSchedule", -- servidor -> cliente: (hora de GetServerTimeNow) cuándo empieza el siguiente clima; solo se manda a los administradores, los demás no ven la cuenta atrás
 	"WorldBoss", -- servidor -> cliente: (tipo, datos) Jefe del mundo: "barrage" ({ spots, radius, at }), "charge" ({ safe, radius, at }), "mega", "launch" ({ from, to, flight }), "boom" (posición), "fall" ({ at }), "rank" ({ list, total, mine, rank, count }), "result" ({ list, rank, rewards? }) (server/WorldBoss)
 	"WorldBossRequest", -- cliente -> servidor: ("leave") salir de la arena del Jefe del mundo y volver al portal del hub
+	"FuseSwords", -- cliente -> servidor: ({ ids }) fusionar Config.Fusion.Count copias de espada (sin usar ni bloquear) pagando las gemas de FusionInfo.cost (server/Fusion)
+	"FusionDone", -- servidor -> cliente: ({ swords = { { sword, metal, size } }, luck }) fusión hecha: las armas que se han metido, para la animación de la máquina (el arma que sale llega por GachaRolled)
 }
 
 local Remotes = {}

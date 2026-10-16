@@ -17,6 +17,7 @@ require(script.PassShop).start()
 require(script.ChatTags).start() -- etiqueta de los pases (VIP) delante del nombre en el chat
 require(script.Trade).start()
 require(script.ModifierShops).start()
+require(script.Fusion).start() -- máquina de fusión del hub; después de Backpack, que le presta sus casillas
 require(script.DropMenu).start() -- menú de botín de mazmorra: después de Potions (usa sus iconos), antes de Dungeons
 require(script.Dungeons).start()
 require(script.Slimes).start() -- el cuerpo animado de los enemigos de mazmorra (el servidor solo deja la caja)

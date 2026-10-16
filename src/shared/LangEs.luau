@@ -1016,4 +1016,16 @@ return {
 	["The {boss} is charging a huge slam!"] = "¡El {boss} está cargando un golpe enorme!",
 	["Stunned! Hit it now!"] = "¡Aturdido! ¡Pégale ahora!",
 	["Shield up! Break the crystals"] = "¡Escudo! Rompe los cristales para quitárselo",
+	-- Máquina de fusión (server/Fusion, client/Fusion)
+	["Fusion Machine"] = "Máquina de fusión",
+	["Put in {n} weapons"] = "Mete {n} armas",
+	["Put in 1 more weapon"] = "Mete 1 arma más",
+	["Put in {n} more weapons"] = "Mete {n} armas más",
+	["Result: 1 in {n} or rarer"] = "Sale: 1 entre {n} o más rara",
+	["Their traits and grades will be lost"] = "Se perderán sus rasgos y grados",
+	["No free weapons: unequip or unlock some first"] = "No hay armas libres: quita o desbloquea alguna antes",
+	["Auto fill"] = "Rellenar",
+	["Fuse"] = "Fusionar",
+	["Confirm fusion"] = "Confirmar fusión",
+	["Not enough gems"] = "No tienes gemas suficientes",
 }

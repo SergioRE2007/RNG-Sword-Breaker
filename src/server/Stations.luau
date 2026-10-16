@@ -279,4 +279,90 @@ function Stations.enchanter(position: Vector3): (Model, Part, number)
 	return model, counter, 12
 end
 
+-- MÁQUINA DE FUSIÓN (server/Fusion): cinco pedestales en pentágono, cada uno con un cristal de un color de rareza que
+-- flota y un conducto hacia el centro, donde una esfera de cristal guarda el núcleo de energía y dos aros dorados giran
+-- a su alrededor. Devuelve además el centro del núcleo: de ahí salen las armas fusionadas (client/Fusion y RollReveal).
+function Stations.fusion(position: Vector3): (Model, Part, number, Vector3)
+	local model = Instance.new("Model")
+	model.Name = "MaquinaFusion"
+	local floor = Config.Plot.FloorHeight
+	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
+	local y0 = floor + 0.5
+	local function at(x: number, y: number, z: number): CFrame
+		return base * CFrame.new(x, y, z)
+	end
+
+	local steel = rgb(58, 62, 84)
+	local darkSteel = rgb(34, 36, 52)
+	local gold = rgb(255, 196, 70)
+	local cyan = rgb(90, 225, 255)
+	local pink = rgb(255, 110, 210)
+	local coreY = y0 + 6.2
+
+	-- Plataforma redonda con un aro que late.
+	disc(model, "Suelo", 0.5, 16, at(0, floor + 0.25, 0), darkSteel, Enum.Material.DiamondPlate)
+	local outer = disc(model, "AroSuelo", 0.12, 15.2, at(0, y0 + 0.02, 0), cyan, Enum.Material.Neon)
+	decor(outer)
+	tag(outer, "StationPulse", { Speed = 1.8 })
+	decor(disc(model, "AroSueloTapa", 0.14, 14.5, at(0, y0 + 0.03, 0), darkSteel, Enum.Material.DiamondPlate))
+
+	-- Columna central con la esfera y el núcleo.
+	disc(model, "Basa", 0.8, 5.6, at(0, y0 + 0.4, 0), steel, Enum.Material.Metal)
+	disc(model, "Columna", 3, 2.6, at(0, y0 + 2.3, 0), darkSteel, Enum.Material.Metal)
+	disc(model, "Copa", 0.7, 4.2, at(0, y0 + 4.1, 0), steel, Enum.Material.Metal)
+	local cupRim = disc(model, "CopaBorde", 0.25, 4.5, at(0, y0 + 4.45, 0), gold, Enum.Material.Metal)
+	decor(cupRim)
+	-- Plástico y no Glass: el material Glass no deja ver las piezas transparentes de detrás, y el núcleo late con transparencia.
+	local glass = ball(model, "Esfera", 4.2, at(0, coreY, 0), rgb(200, 235, 255), Enum.Material.SmoothPlastic)
+	glass.Transparency = 0.8
+	decor(glass)
+	local core = ball(model, "Nucleo", 2.2, at(0, coreY, 0), pink, Enum.Material.Neon)
+	decor(core)
+	tag(core, "StationPulse", { Speed = 3 })
+	tag(core, "StationGlow", { Range = 16, Light = 1.2 })
+	tag(core, "StationMotes", { Color = pink, Rate = 10 })
+
+	-- Dos aros dorados inclinados que giran alrededor de la esfera, cada uno hacia un lado.
+	for index, spec in { { tilt = 35, speed = 0.9, radius = 3.4 }, { tilt = -55, speed = -0.7, radius = 3.9 } } do
+		local ring = Instance.new("Model")
+		ring.Name = "Aro" .. index
+		local segments = 18
+		local plane = at(0, coreY, 0) * CFrame.Angles(math.rad(spec.tilt), 0, 0)
+		for segment = 0, segments - 1 do
+			local angle = segment / segments * math.pi * 2
+			local length = 2 * math.pi * spec.radius / segments + 0.12
+			local piece = make(ring, "Tramo", Vector3.new(0.32, 0.32, length), plane * CFrame.Angles(0, angle, 0) * CFrame.new(spec.radius, 0, 0), gold, Enum.Material.Metal)
+			decor(piece)
+		end
+		ring.WorldPivot = at(0, coreY, 0)
+		ring.Parent = model
+		tag(ring, "StationSpin", { Speed = spec.speed })
+	end
+
+	-- Cinco pedestales con su cristal flotante y un conducto que lleva su luz al centro. El de delante (hacia el hub) queda
+	-- libre: es por donde se acerca el jugador.
+	local colors = { rgb(90, 220, 100), rgb(70, 150, 255), rgb(180, 90, 255), rgb(255, 190, 40), rgb(255, 70, 70) }
+	for index, color in colors do
+		local angle = math.rad(90 + 72 * (index - 1)) -- el primero detrás, los demás repartidos
+		local x, z = math.cos(angle) * 5.6, math.sin(angle) * 5.6
+		local facing = CFrame.Angles(0, -angle, 0)
+		make(model, "PedestalBase", Vector3.new(1.8, 0.6, 1.8), at(x, y0 + 0.3, z) * facing, steel, Enum.Material.Metal)
+		make(model, "Pedestal", Vector3.new(1.1, 2.6, 1.1), at(x, y0 + 1.9, z) * facing, darkSteel, Enum.Material.Metal)
+		make(model, "PedestalTapa", Vector3.new(1.6, 0.35, 1.6), at(x, y0 + 3.35, z) * facing, gold, Enum.Material.Metal)
+		local crystal = make(model, "Cristal", Vector3.new(0.8, 1.4, 0.8), at(x, y0 + 4.6, z) * facing * CFrame.Angles(0, math.rad(45), 0), color, Enum.Material.Neon)
+		decor(crystal)
+		tag(crystal, "StationFloat", { BobHeight = 0.3, BobSpeed = 1.6 + index * 0.15, SpinSpeed = 0.8, Phase = index * 1.1 })
+		-- Conducto: barra fina de la tapa del pedestal a la copa del centro.
+		local from = at(x, y0 + 3.4, z).Position
+		local to = at(0, y0 + 4.3, 0).Position
+		local middle = (from + to) / 2
+		local pipe = make(model, "Conducto", Vector3.new(0.22, 0.22, (to - from).Magnitude), CFrame.lookAt(middle, to), color, Enum.Material.Neon)
+		decor(pipe)
+		tag(pipe, "StationPulse", { Speed = 2 + index * 0.4 })
+	end
+
+	local counter = counterPart(model, at(0, floor + 2.5, -6.5))
+	return model, counter, 12, at(0, coreY, 0).Position
+end
+
 return Stations
