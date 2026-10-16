@@ -5,14 +5,15 @@ local Permanent = require(script.Parent.Permanent)
 
 local FusionInfo = {}
 
--- Suerte de la fusión: la suma de las rarezas totales (arma x metal x tamaño) de las copias que se meten. Es también el
--- "1 entre N" mínimo de lo que sale (Permanent.rollWeapon nunca da menos que la suerte que le llega).
+-- Suerte de la fusión: la suma de las rarezas totales (arma x metal x tamaño) de las copias que se meten, entre
+-- Config.Fusion.Divisor. Es también el "1 entre N" mínimo de lo que sale (Permanent.rollWeapon nunca da menos que la
+-- suerte que le llega).
 function FusionInfo.luck(copies: { any }): number
 	local total = 0
 	for _, copy in copies do
 		total += Permanent.rarity(copy.sword, copy.metal, copy.size)
 	end
-	return total
+	return total / Config.Fusion.Divisor
 end
 
 -- Gemas que cuesta una fusión con esa suerte (entero, nunca menos de MinCost).
