@@ -547,12 +547,12 @@ local function buildShop(kind: string)
 		-- El nombre va en una etiqueta de dentro, con margen a los lados y por encima del labio del botón.
 		local name = Ui.label(toggle, 20)
 		name.Name = "Title"
-		name.Position = UDim2.fromOffset(10, 4)
-		name.Size = UDim2.new(1, -20, 1, -14)
+		name.Position = UDim2.fromOffset(8, 2)
+		name.Size = UDim2.new(1, -16, 1, -8)
 		name.Text = Lang.t(nil, entry.name)
 		name.TextScaled = true
 		local nameLimit = Instance.new("UITextSizeConstraint")
-		nameLimit.MaxTextSize = 32 -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo sigue encogiéndose para caber
+		nameLimit.MaxTextSize = 44 -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo sigue encogiéndose para caber
 		nameLimit.MinTextSize = 9
 		nameLimit.Parent = name
 		Ui.layer(toggle, Z.overlay + 2)
