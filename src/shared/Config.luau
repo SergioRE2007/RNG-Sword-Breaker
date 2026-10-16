@@ -202,12 +202,12 @@ Config.Gacha = {
 -- de las armas ya va dentro de su rareza). Se pierden sus rasgos y grados.
 -- Precio en gemas según esa suerte: CostScale x suerte ^ CostPower (nunca menos de MinCost). Medido con tools/equilibrio
 -- (jugador tipo de 1 a 130 h): sus gemas por hora salen ~1e-6 x S ^ 1,73, siendo S la suma de las rarezas de cinco armas
--- como las de su bolsa. Pedido por el usuario que cueste de verdad: esa fusión cuesta alrededor de 1 h de gemas a
--- cualquier hora del juego (con la suma entera y 1.6e-7 eran unos 10 min).
+-- como las de su bolsa. Pedido por el usuario que cueste de verdad: esa fusión cuesta alrededor de 30 min de gemas a
+-- cualquier hora del juego (con la suma entera y 1.6e-7 eran unos 10 min; con 4.6e-6, 1 h, y el usuario la pidió algo más barata).
 Config.Fusion = {
 	Count = 5, -- armas por fusión
 	Divisor = 2.5, -- la suerte es la suma de las rarezas entre esto
-	CostScale = 4.6e-6,
+	CostScale = 2.3e-6,
 	CostPower = 1.73,
 	MinCost = 100,
 	Cooldown = 1, -- segundos entre fusiones de un mismo jugador
