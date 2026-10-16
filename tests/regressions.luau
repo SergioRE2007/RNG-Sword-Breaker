@@ -1719,7 +1719,9 @@ do
 	equal(high.rolls <= boss.Rewards.MaxRolls and high.traitCrystal <= boss.Rewards.Trait.max, true, "jefe: con su tope")
 	equal(high.tickets, boss.Rewards.Tickets[1], "jefe: tickets para el primero")
 	equal(low.tickets, 0, "jefe: sin tickets fuera del podio")
-	equal(info.nextFall(boss.Interval * 10 + 5), boss.Interval * 11, "jefe: la siguiente caída, al siguiente múltiplo")
+	equal(info.nextFall(1000, 1000), 1000 + boss.First, "jefe: el primero, a los First segundos de abrir")
+	equal(info.nextFall(1000 + boss.First, 1000), 1000 + boss.First + boss.Interval, "jefe: luego cada Interval")
+	equal(info.nextFall(1000 + boss.First + boss.Interval * 2.5, 1000), 1000 + boss.First + boss.Interval * 3, "jefe: el siguiente que toque")
 	equal(info.count(boss.Summon, 100), boss.Summon.Max, "jefe: esbirros con tope")
 	equal(info.clock(65), "1:05", "jefe: reloj")
 end

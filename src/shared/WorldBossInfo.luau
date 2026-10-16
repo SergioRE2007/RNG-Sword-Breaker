@@ -38,10 +38,14 @@ function WorldBossInfo.rewards(share: number, rank: number)
 	}
 end
 
--- Hora (de GetServerTimeNow) de la siguiente caída a partir de `now`: múltiplos de Interval, iguales en todos los
--- servidores.
-function WorldBossInfo.nextFall(now: number): number
-	return math.floor(now / cfg.Interval + 1) * cfg.Interval
+-- Hora de la siguiente caída después de `now` en un servidor que arrancó en `born` (las dos de GetServerTimeNow): a los
+-- First segundos de abrir y luego cada Interval.
+function WorldBossInfo.nextFall(now: number, born: number): number
+	local first = born + cfg.First
+	if now < first then
+		return first
+	end
+	return first + (math.floor((now - first) / cfg.Interval) + 1) * cfg.Interval
 end
 
 -- Dónde está el portal del hub (en el suelo).

@@ -1083,8 +1083,9 @@ Config.AutoClicker = { group = 1002188803 }
 -- 1200); MinSession = segundos mínimos en el servidor antes de poder pedirlo.
 Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 300 }
 
--- JEFE DEL MUNDO (server/WorldBoss, client/WorldBoss; cuentas en shared/WorldBossInfo). Cada Interval segundos (a la misma
--- hora en todos los servidores) se abre un portal en el hub Warning segundos antes de que caiga el Rey Slime en su arena,
+-- JEFE DEL MUNDO (server/WorldBoss, client/WorldBoss; cuentas en shared/WorldBossInfo). Cae a los First segundos de abrir el
+-- servidor y luego cada Interval (pedido por el usuario: minuto 20, 50, 80... de cada servidor, 10 min después de que acabe
+-- cada clima, que empieza en el 30 y dura 10). Se abre un portal en el hub Warning segundos antes de que caiga el Rey Slime en su arena,
 -- lejos de la isla. Todo el servidor le pega a la vez. No tiene vida (pedido por el usuario): a los Lifetime segundos se
 -- va y reparte los premios según el daño de cada uno. Esbirros, cristales del escudo y barriles tienen la vida de lo que
 -- un jugador medio de los que hay quita en sus "Seconds".
@@ -1096,7 +1097,7 @@ Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 3
 --   Rewards: lo que da a cada uno según su parte de todo el daño hecho en la arena (share). Tiradas con la suerte media de
 --   sus objetos (ObjectSpec.meanLuck) por Luck; cristales base + share × perShare hasta max; Tickets, a los tres primeros.
 Config.WorldBoss = {
-	Interval = 1800, Warning = 60, AdminWarning = 10, Lifetime = 180, ReturnDelay = 10,
+	First = 1200, Interval = 1800, Warning = 60, AdminWarning = 10, Lifetime = 180, ReturnDelay = 10,
 	Portal = { Angle = 67.5, Distance = 72 },
 	Origin = Vector3.new(0, 200, -3000), ArenaRadius = 80, FallTime = 1.3, FallHeight = 160,
 	Name = "Slime King", Color = Color3.fromRGB(120, 200, 90), Look = "crown", Size = Vector3.new(34, 28, 34),
