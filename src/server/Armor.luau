@@ -45,7 +45,25 @@ function Armor.roll(level: number, luck: number, forcedSlot: string?, forcedQual
 	end
 	for _ = 1, quality.mods do
 		local mod = cfg.Mods[Modifiers.roll("armorMods", random)]
-		table.insert(stats, { stat = mod.stat, value = rolled(mod.stat, mod.value, quality, level), bonus = true })
+		if mod.stat == "health" and #stats + 1 == cfg.NoHealthAt then
+			-- Se vuelve a tirar unas pocas veces (así sigue mandando el peso de cada modificador) y, si aun así
+			-- sale vida, se coge el primero que no lo sea: nunca queda en un bucle.
+			for _ = 1, 20 do
+				mod = cfg.Mods[Modifiers.roll("armorMods", random)]
+				if mod.stat ~= "health" then
+					break
+				end
+			end
+			if mod.stat == "health" then
+				for _, other in cfg.Mods do
+					if other.stat ~= "health" then
+						mod = other
+						break
+					end
+				end
+			end
+		end
+		table.insert(stats,{ stat = mod.stat, value = rolled(mod.stat, mod.value, quality, level), bonus = true })
 	end
 	return { slot = slot, quality = qualityIndex, level = level, stats = stats }
 end

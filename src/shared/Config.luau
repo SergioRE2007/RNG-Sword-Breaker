@@ -535,6 +535,9 @@ Config.Armor = {
 	MaxPieces = 60, -- con el inventario lleno, las piezas nuevas se desmontan solas
 	BaseHealth = 100, -- vida del personaje sin armadura
 	Roll = { min = 0.8, max = 1.2 },
+	-- Pedido por el usuario: la 4.ª stat de una pieza no puede ser vida máxima (con "Equipar mejores" una pieza con
+	-- 200 de vida de más se quedaba sin elegirse). Un modificador extra que cayera ahí como vida se vuelve a tirar.
+	NoHealthAt = 4,
 	SlotOrder = { "helmet", "chest", "legs", "boots" },
 	Slots = {
 		helmet = { name = "Helmet", stats = { health = 40, luck = 0.05 } },
