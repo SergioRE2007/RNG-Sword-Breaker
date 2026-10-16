@@ -3,6 +3,7 @@ require(script.Language).start() -- lo primero: decide el idioma antes de que na
 require(script.Performance).start()
 require(script.Sfx).start()
 require(script.Hud).start()
+require(script.Orientation).start() -- aviso de pantalla vertical en móvil (el juego es para horizontal)
 require(script.WorldText).start() -- carteles del mundo y avisos de E en el idioma del jugador
 require(script.Potions).start() -- después de Hud (cuelga junto a sus monedas) y antes de Backpack (comparte sus carteles)
 require(script.Backpack).start()

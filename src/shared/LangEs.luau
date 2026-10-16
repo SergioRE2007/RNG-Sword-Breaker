@@ -1028,4 +1028,8 @@ return {
 	["Fuse"] = "Fusionar",
 	["Confirm fusion"] = "Confirmar fusión",
 	["Not enough gems"] = "No tienes gemas suficientes",
+	["You're playing in portrait!"] = "¡Estás jugando en vertical!",
+	["The game is made for landscape. Turn your screen for the best experience."] = "El juego está hecho para jugar en horizontal. Gira la pantalla para jugar mejor.",
+	["Rotate"] = "Girar",
+	["Not now"] = "Ahora no",
 }
