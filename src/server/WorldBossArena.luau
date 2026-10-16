@@ -245,6 +245,122 @@ function WorldBossArena.buildPortal(map: Instance)
 	return model, trigger, setOpen
 end
 
+-- Texto de un cartel del mundo: lo escribe en el idioma de cada uno client/WorldText (Tell.world).
+local function text(parent: Instance, name: string, position: UDim2, size: UDim2, color: Color3, phrase: string, args: { [string]: any }?, align: Enum.TextXAlignment?): TextLabel
+	local label = Instance.new("TextLabel")
+	label.Name = name
+	label.BackgroundTransparency = 1
+	label.Position = position
+	label.Size = size
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = color
+	label.TextXAlignment = align or Enum.TextXAlignment.Center
+	label.Parent = parent
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 3
+	stroke.Parent = label
+	Tell.world(label, phrase, args)
+	return label
+end
+
+local function round(item: GuiObject, radius: number)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius)
+	corner.Parent = item
+end
+
+-- Cartel de premios a la derecha del portal (mirándolo desde el hub), pedido por el usuario: lo que da el jefe según la
+-- parte del daño de cada uno. Las cifras salen de WorldBossInfo.rewards, la misma cuenta que los reparte, con las filas
+-- de Config.WorldBoss.Rewards.Board; abajo, lo que suma estar en el podio.
+function WorldBossArena.buildBoard(map: Instance)
+	local rewards = cfg.Rewards
+	local position = WorldBossInfo.portalPosition()
+	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
+	-- La derecha de quien mira el portal es la izquierda del portal; el cartel se gira un poco hacia delante del portal.
+	local spot = base * CFrame.new(-19, 0, -2) * CFrame.Angles(0, math.rad(-20), 0)
+	local width, height = 15, 12
+	local model = Instance.new("Model")
+	model.Name = "WorldBossRewards"
+
+	for _, side in { -1, 1 } do
+		part(model, "Post", Vector3.new(1.2, height + 3, 1.2), spot * CFrame.new(side * (width / 2 + 0.4), (height + 3) / 2, 0.4), LACQUER, Enum.Material.Wood)
+	end
+	part(model, "Roof", Vector3.new(width + 4, 0.8, 3.4), spot * CFrame.new(0, height + 3.4, 0.4), Color3.fromRGB(40, 32, 36), Enum.Material.Wood)
+	part(model, "RoofTrim", Vector3.new(width + 4.4, 0.3, 3.6), spot * CFrame.new(0, height + 2.9, 0.4), GOLD, Enum.Material.Metal).CanCollide = false
+	local board = part(model, "Board", Vector3.new(width, height, 0.5), spot * CFrame.new(0, height / 2 + 2, 0.4), STONE_DARK, Enum.Material.Wood)
+
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "Rewards"
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0
+	gui.MaxDistance = 160
+	gui.Parent = board
+	local back = Instance.new("Frame")
+	back.Name = "Back"
+	back.Size = UDim2.fromScale(1, 1)
+	back.BackgroundColor3 = WHITE
+	back.Parent = gui
+	round(back, 22)
+	local gradient = Instance.new("UIGradient")
+	gradient.Rotation = 90
+	gradient.Color = ColorSequence.new(Color3.fromRGB(86, 58, 140), Color3.fromRGB(34, 24, 62))
+	gradient.Parent = back
+	local border = Instance.new("UIStroke")
+	border.Thickness = 8
+	border.Parent = back
+
+	text(back, "Title", UDim2.fromScale(0.04, 0.03), UDim2.fromScale(0.92, 0.13), GOLD, "BOSS REWARDS")
+	text(back, "Subtitle", UDim2.fromScale(0.06, 0.16), UDim2.fromScale(0.88, 0.07), Color3.fromRGB(215, 200, 255), "By your share of all the damage")
+
+	-- Tabla: cabecera y una fila por tramo de Board, más la de lo de menos (desde MinShare).
+	local columns = {
+		{ x = 0.04, w = 0.3, color = WHITE, title = "Damage" },
+		{ x = 0.36, w = 0.19, color = GOLD, title = "Rolls" },
+		{ x = 0.57, w = 0.19, color = Color3.fromRGB(90, 230, 255), title = "Trait" },
+		{ x = 0.78, w = 0.19, color = Color3.fromRGB(200, 120, 255), title = "Grade" },
+	}
+	local top, rowHeight = 0.25, 0.088
+	for _, column in columns do
+		text(back, "Head_" .. column.title, UDim2.fromScale(column.x, top), UDim2.fromScale(column.w, rowHeight * 0.85), column.color, column.title)
+	end
+	local rows = table.clone(rewards.Board)
+	table.insert(rows, rewards.MinShare)
+	for index, share in rows do
+		local y = top + rowHeight * index
+		local stripe = Instance.new("Frame")
+		stripe.Name = "Row" .. index
+		stripe.Position = UDim2.fromScale(0.03, y - 0.005)
+		stripe.Size = UDim2.fromScale(0.94, rowHeight - 0.01)
+		stripe.BackgroundColor3 = if index % 2 == 1 then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(0, 0, 0)
+		stripe.BackgroundTransparency = if index % 2 == 1 then 0.9 else 0.8
+		stripe.Parent = back
+		round(stripe, 10)
+		local prize = WorldBossInfo.rewards(share, math.huge)
+		if not prize then
+			continue
+		end
+		local label = if index == #rows then "Less than {n}%" else "{n}%+"
+		local percent = if index == #rows then rows[index - 1] * 100 else share * 100
+		local cells = { { label, { n = percent } }, { "{n}", { n = prize.rolls } }, { "{n}", { n = prize.traitCrystal } }, { "{n}", { n = prize.gradeCrystal } } }
+		for column, cell in cells do
+			local def = columns[column]
+			text(stripe, "Cell" .. column, UDim2.fromScale((def.x - 0.03) / 0.94, 0.1), UDim2.fromScale(def.w / 0.94, 0.8), if column == 1 then WHITE else def.color, cell[1], cell[2])
+		end
+	end
+
+	-- Podio: tirada de más y tickets.
+	local footer = top + rowHeight * (#rows + 1) + 0.01
+	local bonus = rewards.TopBonusRolls
+	text(back, "Top", UDim2.fromScale(0.05, footer), UDim2.fromScale(0.9, 0.07), GOLD, if bonus == 1 then "Top 3: +{n} roll" else "Top 3: +{n} rolls", { n = bonus })
+	text(back, "Tickets", UDim2.fromScale(0.05, footer + 0.075), UDim2.fromScale(0.9, 0.07), Color3.fromRGB(255, 190, 60), "Tickets: 1st {a} · 2nd {b} · 3rd {c}", { a = rewards.Tickets[1] or 0, b = rewards.Tickets[2] or 0, c = rewards.Tickets[3] or 0 })
+
+	model.Parent = map
+	return model
+end
+
 -- Delante del portal, mirándolo (para el botón "Ir" y para volver de la arena).
 function WorldBossArena.portalFront(): CFrame
 	local position = WorldBossInfo.portalPosition()

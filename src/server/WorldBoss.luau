@@ -729,6 +729,7 @@ function WorldBoss.start()
 	WorldBossArena.build()
 	local _, trigger, setOpen = WorldBossArena.buildPortal(workspace:WaitForChild("Map"))
 	setPortal = setOpen
+	WorldBossArena.buildBoard(workspace:WaitForChild("Map"))
 	trigger.Touched:Connect(function(other)
 		local player = Players:GetPlayerFromCharacter(other.Parent)
 		if player then
