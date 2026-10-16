@@ -6,8 +6,8 @@
 --   · Escudo: de vez en cuando (Shield.First, luego cada Shield.Every) se protege hasta que se rompen sus cristales.
 --   · Carga: prepara un golpe a toda la arena salvo unas zonas seguras; si le llegan Charge.Needed barriles (se rompen
 --     a espadazos y salen disparados contra él) queda aturdido y recibe más daño.
--- El rey no tiene vida (pedido por el usuario): no se le mata. Pasados Lifetime segundos se va y reparte los premios según
--- el daño de cada uno (a todo lo de la arena; a esbirros, cristales y barriles, sin contar lo que sobra al romperlos),
+-- El rey no tiene vida (pedido por el usuario): no se le mata. Pasados Lifetime segundos se va y reparte los premios por
+-- tramos de daño (Rewards.Tiers: por cantidad, no por porcentaje) según el daño de cada uno (a todo lo de la arena; a esbirros, cristales y barriles, sin contar lo que sobra al romperlos),
 -- con la tabla final del daño de todos. El estado se publica en atributos de workspace
 -- (WorldBossState = idle/open/fight/over, WorldBossFall = hora de la caída, WorldBossEnds = hora a la que se va) y la lista por el remote
 -- WorldBoss ("rank"); quien está en la arena lleva el atributo "WorldBoss" = true. Números en Config.WorldBoss.
@@ -340,14 +340,13 @@ end
 
 -- Final ------------------------------------------------------------------------------------
 
-local function reward(list, total: number)
+local function reward(list)
 	for rank, row in list do
 		local player = Players:GetPlayerByUserId(row.userId)
 		if not player then
 			continue
 		end
-		local share = if total > 0 then row.amount / total else 0
-		local prize = WorldBossInfo.rewards(share, rank)
+		local prize = WorldBossInfo.rewards(row.amount, rank)
 		if prize then
 			-- Tiradas: la suerte media de los objetos que le salen ahora, por Rewards.Luck. `usual` es esa misma suerte,
 			-- para que la cinemática solo salga cuando la tirada ha tenido suerte de verdad (server/Gacha).
@@ -365,6 +364,15 @@ local function reward(list, total: number)
 				if prize.tickets > 0 then
 					data.items.missionToken = (data.items.missionToken or 0) + prize.tickets
 				end
+				-- Pociones: las de ese tier, de cada familia.
+				for _, family in Config.Potions.Order do
+					if prize.potions > 0 then
+						local key = `potion_{family}_{prize.potionTier}`
+						if Config.Items[key] then
+							data.items[key] = (data.items[key] or 0) + prize.potions
+						end
+					end
+				end
 			end)
 		end
 		Remotes.WorldBoss:FireClient(player, "result", { list = list, rank = rank, rewards = prize })
@@ -381,11 +389,7 @@ local function finish()
 	clearMinor()
 	charge = nil
 	local list = ranking()
-	local total = 0
-	for _, row in list do
-		total += row.amount
-	end
-	reward(list, total)
+	reward(list)
 	Tell.all(PURPLE, function(reader)
 		return Lang.t(reader, "The {boss} has left: rewards for everyone who fought!", { boss = Lang.t(reader, cfg.Name) })
 	end)

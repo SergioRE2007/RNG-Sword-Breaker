@@ -19,22 +19,36 @@ function WorldBossInfo.count(def, players: number): number
 	return math.clamp(math.floor(def.Base + def.PerPlayer * players + 0.5), 1, def.Max or math.huge)
 end
 
--- Lo que le toca a un jugador cuando se va el rey. `share` = su parte (0 a 1) de todo el daño hecho en la arena; `rank` = su
--- puesto. nil si no llega a MinShare.
-function WorldBossInfo.rewards(share: number, rank: number)
+-- Tramo de Rewards.Tiers al que llega ese daño (el más alto), o nil si no llega al primero.
+function WorldBossInfo.tier(damage: number): number?
+	local reached = nil
+	for index, tier in cfg.Rewards.Tiers do
+		if damage >= tier.damage then
+			reached = index
+		end
+	end
+	return reached
+end
+
+-- Lo que le toca a un jugador cuando se va el rey: el tramo de su daño (pedido por el usuario: por cantidad de daño, no
+-- por porcentaje) y, si es de los tres que más daño han hecho (`rank`), las tiradas y los tickets del podio. nil si no
+-- llega al primer tramo. potions = cuántas de cada familia, del tier potionTier.
+function WorldBossInfo.rewards(damage: number, rank: number)
 	local r = cfg.Rewards
-	if share ~= share or share < r.MinShare then
+	local index = if damage == damage then WorldBossInfo.tier(damage) else nil
+	if not index then
 		return nil
 	end
-	local rolls = math.clamp(math.floor(r.RollsBase + share * r.RollsPerShare), 1, r.MaxRolls)
-	if rank <= 3 then
-		rolls = math.min(rolls + r.TopBonusRolls, r.MaxRolls)
-	end
+	local tier = r.Tiers[index]
+	local podium = rank <= 3
 	return {
-		rolls = rolls,
-		traitCrystal = math.min(math.ceil(r.Trait.base + share * r.Trait.perShare), r.Trait.max),
-		gradeCrystal = math.min(math.ceil(r.Grade.base + share * r.Grade.perShare), r.Grade.max),
-		tickets = r.Tickets[rank] or 0,
+		tier = index,
+		rolls = math.min(tier.rolls + (if podium then r.TopBonusRolls else 0), r.MaxRolls),
+		traitCrystal = tier.crystals,
+		gradeCrystal = tier.crystals,
+		potions = tier.potions or 0,
+		potionTier = tier.potionTier or 1,
+		tickets = if podium then r.Tickets[rank] or 0 else 0,
 	}
 end
 

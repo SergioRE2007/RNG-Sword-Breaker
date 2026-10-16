@@ -270,16 +270,16 @@ local function round(item: GuiObject, radius: number)
 	corner.Parent = item
 end
 
--- Cartel de premios a la derecha del portal (mirándolo desde el hub), pedido por el usuario: lo que da el jefe según la
--- parte del daño de cada uno. Las cifras salen de WorldBossInfo.rewards, la misma cuenta que los reparte, con las filas
--- de Config.WorldBoss.Rewards.Board; abajo, lo que suma estar en el podio.
+-- Cartel de premios a la derecha del portal (mirándolo desde el hub), pedido por el usuario: lo que da el jefe por cada
+-- tramo de daño (Config.WorldBoss.Rewards.Tiers: cantidad de daño, no porcentaje); abajo, lo que suma el podio.
 function WorldBossArena.buildBoard(map: Instance)
 	local rewards = cfg.Rewards
+	local tiers = rewards.Tiers
 	local position = WorldBossInfo.portalPosition()
 	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
 	-- La derecha de quien mira el portal es la izquierda del portal; el cartel se gira un poco hacia delante del portal.
 	local spot = base * CFrame.new(-19, 0, -2) * CFrame.Angles(0, math.rad(-20), 0)
-	local width, height = 15, 12
+	local width, height = 15, 15
 	local model = Instance.new("Model")
 	model.Name = "WorldBossRewards"
 
@@ -312,50 +312,44 @@ function WorldBossArena.buildBoard(map: Instance)
 	border.Thickness = 8
 	border.Parent = back
 
-	text(back, "Title", UDim2.fromScale(0.04, 0.03), UDim2.fromScale(0.92, 0.13), GOLD, "BOSS REWARDS")
-	text(back, "Subtitle", UDim2.fromScale(0.06, 0.16), UDim2.fromScale(0.88, 0.07), Color3.fromRGB(215, 200, 255), "By your share of all the damage")
+	text(back, "Title", UDim2.fromScale(0.04, 0.025), UDim2.fromScale(0.92, 0.1), GOLD, "BOSS REWARDS")
+	text(back, "Subtitle", UDim2.fromScale(0.06, 0.125), UDim2.fromScale(0.88, 0.055), Color3.fromRGB(215, 200, 255), "By the damage you deal")
 
-	-- Tabla: cabecera y una fila por tramo de Board, más la de lo de menos (desde MinShare).
+	-- Tabla: cabecera y una fila por tramo (te llevas la del tramo más alto al que llegas).
 	local columns = {
-		{ x = 0.04, w = 0.3, color = WHITE, title = "Damage" },
-		{ x = 0.36, w = 0.19, color = GOLD, title = "Rolls" },
-		{ x = 0.57, w = 0.19, color = Color3.fromRGB(90, 230, 255), title = "Trait" },
-		{ x = 0.78, w = 0.19, color = Color3.fromRGB(200, 120, 255), title = "Grade" },
+		{ x = 0.04, w = 0.22, color = WHITE, title = "Damage" },
+		{ x = 0.27, w = 0.2, color = GOLD, title = "Rolls" },
+		{ x = 0.48, w = 0.24, color = Color3.fromRGB(90, 230, 255), title = "Crystals" },
+		{ x = 0.73, w = 0.24, color = Color3.fromRGB(255, 140, 190), title = "Potions" },
 	}
-	local top, rowHeight = 0.25, 0.088
+	local top, rowHeight = 0.19, 0.063
 	for _, column in columns do
 		text(back, "Head_" .. column.title, UDim2.fromScale(column.x, top), UDim2.fromScale(column.w, rowHeight * 0.85), column.color, column.title)
 	end
-	local rows = table.clone(rewards.Board)
-	table.insert(rows, rewards.MinShare)
-	for index, share in rows do
+	for index, tier in tiers do
 		local y = top + rowHeight * index
 		local stripe = Instance.new("Frame")
 		stripe.Name = "Row" .. index
-		stripe.Position = UDim2.fromScale(0.03, y - 0.005)
-		stripe.Size = UDim2.fromScale(0.94, rowHeight - 0.01)
-		stripe.BackgroundColor3 = if index % 2 == 1 then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(0, 0, 0)
+		stripe.Position = UDim2.fromScale(0.03, y - 0.004)
+		stripe.Size = UDim2.fromScale(0.94, rowHeight - 0.008)
+		stripe.BackgroundColor3 = if index % 2 == 1 then WHITE else Color3.new(0, 0, 0)
 		stripe.BackgroundTransparency = if index % 2 == 1 then 0.9 else 0.8
 		stripe.Parent = back
 		round(stripe, 10)
-		local prize = WorldBossInfo.rewards(share, math.huge)
-		if not prize then
-			continue
-		end
-		local label = if index == #rows then "Less than {n}%" else "{n}%+"
-		local percent = if index == #rows then rows[index - 1] * 100 else share * 100
-		local cells = { { label, { n = percent } }, { "{n}", { n = prize.rolls } }, { "{n}", { n = prize.traitCrystal } }, { "{n}", { n = prize.gradeCrystal } } }
+		local potions = if (tier.potions or 0) > 0 then { "{n} × {tier}", { n = tier.potions, tier = Config.Potions.Tiers[tier.potionTier] or "" } } else { "-", nil }
+		local cells = { { "{n}+", { n = tier.damage } }, { "{n}", { n = tier.rolls } }, { "{n}", { n = tier.crystals } }, potions }
 		for column, cell in cells do
 			local def = columns[column]
 			text(stripe, "Cell" .. column, UDim2.fromScale((def.x - 0.03) / 0.94, 0.1), UDim2.fromScale(def.w / 0.94, 0.8), if column == 1 then WHITE else def.color, cell[1], cell[2])
 		end
 	end
 
-	-- Podio: tirada de más y tickets.
-	local footer = top + rowHeight * (#rows + 1) + 0.01
+	-- Aclaración y podio: tirada de más y tickets.
+	local footer = top + rowHeight * (#tiers + 1) + 0.005
+	text(back, "Each", UDim2.fromScale(0.05, footer), UDim2.fromScale(0.9, 0.045), Color3.fromRGB(215, 200, 255), "Crystals and potions: that many of each")
 	local bonus = rewards.TopBonusRolls
-	text(back, "Top", UDim2.fromScale(0.05, footer), UDim2.fromScale(0.9, 0.07), GOLD, if bonus == 1 then "Top 3: +{n} roll" else "Top 3: +{n} rolls", { n = bonus })
-	text(back, "Tickets", UDim2.fromScale(0.05, footer + 0.075), UDim2.fromScale(0.9, 0.07), Color3.fromRGB(255, 190, 60), "Tickets: 1st {a} · 2nd {b} · 3rd {c}", { a = rewards.Tickets[1] or 0, b = rewards.Tickets[2] or 0, c = rewards.Tickets[3] or 0 })
+	text(back, "Top", UDim2.fromScale(0.05, footer + 0.05), UDim2.fromScale(0.9, 0.05), GOLD, if bonus == 1 then "Top 3: +{n} roll" else "Top 3: +{n} rolls", { n = bonus })
+	text(back, "Tickets", UDim2.fromScale(0.05, footer + 0.1), UDim2.fromScale(0.9, 0.05), Color3.fromRGB(255, 190, 60), "Tickets: 1st {a} · 2nd {b} · 3rd {c}", { a = rewards.Tickets[1] or 0, b = rewards.Tickets[2] or 0, c = rewards.Tickets[3] or 0 })
 
 	model.Parent = map
 	return model
