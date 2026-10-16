@@ -489,8 +489,9 @@ local function buildShop(kind: string)
 
 	local stopper, stopList = overlay("StopAt", Lang.t(nil, if kind == "traits" then "Settings" else "Stop at:"))
 	local STOP_OFF = Color3.fromRGB(44, 46, 66) -- botón de un resultado sin marcar
+	local STOP_HEIGHT = 68 -- alto de los botones de "Parar con" y de los del orden de prioridad (mismo tamaño)
 	local stopGrid = Instance.new("UIGridLayout")
-	stopGrid.CellSize = UDim2.new(1 / 3, -8, 0, 54) -- tres por fila; más alto: en pantallas pequeñas la ventana se encoge
+	stopGrid.CellSize = UDim2.new(1 / 3, -8, 0, STOP_HEIGHT) -- tres por fila; con las letras grandes pide más alto
 	stopGrid.CellPadding = UDim2.fromOffset(12, 10)
 	stopGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	stopGrid.Parent = stopList
@@ -510,12 +511,12 @@ local function buildShop(kind: string)
 		local section = Instance.new("Frame")
 		section.Name = "Priority"
 		section.Position = UDim2.fromOffset(12, 44)
-		section.Size = UDim2.new(1, -24, 0, 92)
+		section.Size = UDim2.new(1, -24, 0, 30 + STOP_HEIGHT)
 		section.BackgroundTransparency = 1
 		section.ZIndex = Z.overlay + 1
 		section.Parent = stopper
 		local hint = Ui.label(section, 18)
-		hint.Size = UDim2.fromScale(1, 0.3)
+		hint.Size = UDim2.new(1, 0, 0, 24)
 		hint.TextColor3 = Color3.fromRGB(200, 200, 210)
 		hint.Text = Lang.t(nil, "On a tie, the top one wins. Click to move up:")
 		hint.TextScaled = true
@@ -525,23 +526,30 @@ local function buildShop(kind: string)
 		hintLimit.Parent = hint
 		local row = Instance.new("Frame")
 		row.Name = "Order"
-		row.Position = UDim2.fromScale(0, 0.36)
-		row.Size = UDim2.fromScale(1, 0.64)
+		row.Position = UDim2.fromOffset(0, 30)
+		row.Size = UDim2.new(1, 0, 0, STOP_HEIGHT)
 		row.BackgroundTransparency = 1
 		row.ZIndex = Z.overlay + 1
 		row.Parent = section
-		local rowLayout = Instance.new("UIListLayout")
-		rowLayout.FillDirection = Enum.FillDirection.Horizontal
-		rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		rowLayout.Padding = UDim.new(0.03, 0)
+		-- Misma rejilla que "Parar con", para que los botones del orden midan lo mismo que los de abajo.
+		local rowLayout = Instance.new("UIGridLayout")
+		rowLayout.CellSize = stopGrid.CellSize
+		rowLayout.CellPadding = stopGrid.CellPadding
 		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 		rowLayout.Parent = row
 		for _, stat in Modifiers.PRIORITY do
 			-- Cada tipo, un botón de su color con el texto en blanco (en gris oscuro con letras de color se leía mal).
 			local chip = Ui.button(row, "", PRIORITY_COLORS[stat]:Lerp(Color3.new(0, 0, 0), 0.35))
 			chip.Name = stat
-			chip.Size = UDim2.fromScale(0.31, 1)
-			chip.TextSize = 22
+			chip.TextScaled = true
+			local chipLimit = Instance.new("UITextSizeConstraint")
+			chipLimit.MaxTextSize = 30 -- el texto del orden es más largo ("2º MONEDAS") que los nombres de abajo
+			chipLimit.MinTextSize = 9
+			chipLimit.Parent = chip
+			local chipPadding = Instance.new("UIPadding")
+			chipPadding.PaddingLeft, chipPadding.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
+			chipPadding.PaddingTop, chipPadding.PaddingBottom = UDim.new(0, 4), UDim.new(0, 8)
+			chipPadding.Parent = chip
 			Ui.layer(chip, Z.overlay + 2)
 			priorityChips[stat] = chip
 			chip.Activated:Connect(function()
@@ -556,12 +564,12 @@ local function buildShop(kind: string)
 		paintPriority()
 		-- La lista de "parar con" va debajo, con su propio título.
 		local stopTitle = Ui.label(stopper, 20)
-		stopTitle.Position = UDim2.fromOffset(12, 142)
+		stopTitle.Position = UDim2.fromOffset(12, 44 + 30 + STOP_HEIGHT + 6)
 		stopTitle.Size = UDim2.new(1, -24, 0, 26)
 		stopTitle.Text = Lang.t(nil, "Stop at:")
 		stopTitle.ZIndex = Z.overlay + 1
-		stopList.Position = UDim2.fromOffset(12, 172)
-		stopList.Size = UDim2.new(1, -24, 1, -252)
+		stopList.Position = UDim2.fromOffset(12, 44 + 30 + STOP_HEIGHT + 36)
+		stopList.Size = UDim2.new(1, -24, 1, -(44 + 30 + STOP_HEIGHT + 36 + 80))
 	end
 	for position, item in displayOrder(kind) do
 		local index = item.index
@@ -587,7 +595,7 @@ local function buildShop(kind: string)
 		name.Text = Lang.t(nil, entry.name)
 		name.TextScaled = true
 		local nameLimit = Instance.new("UITextSizeConstraint")
-		nameLimit.MaxTextSize = 44 -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo sigue encogiéndose para caber
+		nameLimit.MaxTextSize = math.clamp(math.floor(156 / (utf8.len(name.Text) :: number * 0.74)), 9, 44) -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo se encoge según sus letras para no partirse en dos líneas ("TRASCENDENTE")
 		nameLimit.MinTextSize = 9
 		nameLimit.Parent = name
 		Ui.layer(toggle, Z.overlay + 2)
