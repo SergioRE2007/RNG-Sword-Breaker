@@ -251,8 +251,38 @@ local function buildShop(kind: string)
 
 	local state = { selected = nil, auto = false, waiting = false, last = nil, stop = {}, count = 1 }
 	state.priority = Modifiers.priority(player:GetAttribute("TraitPriority"))
-	for index in info.list do
-		state.stop[index] = Modifiers.percent(kind, index) < 1
+	for index, entry in info.list do
+		state.stop[index] = Modifiers.percent(kind, index) < 1 and not entry.noStop
+	end
+	-- "Parar con" guardado (llega al entrar, y puede tardar más que la ventana): se aplica una sola vez; después manda lo
+	-- que el jugador va marcando.
+	local stopAttribute = "StopAt_" .. kind
+	local stopsLoaded = false
+	local stopPaints = {} -- [índice] = repinta ese botón de "Parar con"
+	local function loadStops()
+		local saved = Modifiers.stops(kind, player:GetAttribute(stopAttribute))
+		if stopsLoaded or not saved then
+			return
+		end
+		stopsLoaded = true
+		for index in info.list do
+			state.stop[index] = table.find(saved, index) ~= nil
+		end
+		for _, repaint in stopPaints do
+			repaint()
+		end
+	end
+	loadStops()
+	-- Guarda "Parar con" y el desempate al tocarlos (pedido por el usuario: se perdían al salir del juego).
+	local function savePrefs()
+		stopsLoaded = true
+		local marked = {}
+		for index = 1, #info.list do
+			if state.stop[index] then
+				table.insert(marked, index)
+			end
+		end
+		Remotes.SetModifierPrefs:FireServer(kind, table.concat(marked, ","), if kind == "traits" then table.concat(state.priority, ",") else nil)
 	end
 
 	-- Izquierda: arriba "Main" (la espada elegida y su rasgo; la ruleta lo tapa al tirar) y abajo
@@ -459,8 +489,9 @@ local function buildShop(kind: string)
 
 	local stopper, stopList = overlay("StopAt", Lang.t(nil, if kind == "traits" then "Settings" else "Stop at:"))
 	local STOP_OFF = Color3.fromRGB(44, 46, 66) -- botón de un resultado sin marcar
+	local STOP_HEIGHT = 68 -- alto de los botones de "Parar con" y de los del orden de prioridad (mismo tamaño)
 	local stopGrid = Instance.new("UIGridLayout")
-	stopGrid.CellSize = UDim2.new(1 / 3, -8, 0, 54) -- tres por fila; más alto: en pantallas pequeñas la ventana se encoge
+	stopGrid.CellSize = UDim2.new(1 / 3, -8, 0, STOP_HEIGHT) -- tres por fila; con las letras grandes pide más alto
 	stopGrid.CellPadding = UDim2.fromOffset(12, 10)
 	stopGrid.SortOrder = Enum.SortOrder.LayoutOrder
 	stopGrid.Parent = stopList
@@ -480,12 +511,12 @@ local function buildShop(kind: string)
 		local section = Instance.new("Frame")
 		section.Name = "Priority"
 		section.Position = UDim2.fromOffset(12, 44)
-		section.Size = UDim2.new(1, -24, 0, 92)
+		section.Size = UDim2.new(1, -24, 0, 30 + STOP_HEIGHT)
 		section.BackgroundTransparency = 1
 		section.ZIndex = Z.overlay + 1
 		section.Parent = stopper
 		local hint = Ui.label(section, 18)
-		hint.Size = UDim2.fromScale(1, 0.3)
+		hint.Size = UDim2.new(1, 0, 0, 24)
 		hint.TextColor3 = Color3.fromRGB(200, 200, 210)
 		hint.Text = Lang.t(nil, "On a tie, the top one wins. Click to move up:")
 		hint.TextScaled = true
@@ -495,23 +526,30 @@ local function buildShop(kind: string)
 		hintLimit.Parent = hint
 		local row = Instance.new("Frame")
 		row.Name = "Order"
-		row.Position = UDim2.fromScale(0, 0.36)
-		row.Size = UDim2.fromScale(1, 0.64)
+		row.Position = UDim2.fromOffset(0, 30)
+		row.Size = UDim2.new(1, 0, 0, STOP_HEIGHT)
 		row.BackgroundTransparency = 1
 		row.ZIndex = Z.overlay + 1
 		row.Parent = section
-		local rowLayout = Instance.new("UIListLayout")
-		rowLayout.FillDirection = Enum.FillDirection.Horizontal
-		rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		rowLayout.Padding = UDim.new(0.03, 0)
+		-- Misma rejilla que "Parar con", para que los botones del orden midan lo mismo que los de abajo.
+		local rowLayout = Instance.new("UIGridLayout")
+		rowLayout.CellSize = stopGrid.CellSize
+		rowLayout.CellPadding = stopGrid.CellPadding
 		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 		rowLayout.Parent = row
 		for _, stat in Modifiers.PRIORITY do
 			-- Cada tipo, un botón de su color con el texto en blanco (en gris oscuro con letras de color se leía mal).
 			local chip = Ui.button(row, "", PRIORITY_COLORS[stat]:Lerp(Color3.new(0, 0, 0), 0.35))
 			chip.Name = stat
-			chip.Size = UDim2.fromScale(0.31, 1)
-			chip.TextSize = 22
+			chip.TextScaled = true
+			local chipLimit = Instance.new("UITextSizeConstraint")
+			chipLimit.MaxTextSize = 30 -- el texto del orden es más largo ("2º MONEDAS") que los nombres de abajo
+			chipLimit.MinTextSize = 9
+			chipLimit.Parent = chip
+			local chipPadding = Instance.new("UIPadding")
+			chipPadding.PaddingLeft, chipPadding.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
+			chipPadding.PaddingTop, chipPadding.PaddingBottom = UDim.new(0, 4), UDim.new(0, 8)
+			chipPadding.Parent = chip
 			Ui.layer(chip, Z.overlay + 2)
 			priorityChips[stat] = chip
 			chip.Activated:Connect(function()
@@ -519,18 +557,19 @@ local function buildShop(kind: string)
 				if rank and rank > 1 then
 					state.priority[rank], state.priority[rank - 1] = state.priority[rank - 1], stat
 					paintPriority()
+					savePrefs()
 				end
 			end)
 		end
 		paintPriority()
 		-- La lista de "parar con" va debajo, con su propio título.
 		local stopTitle = Ui.label(stopper, 20)
-		stopTitle.Position = UDim2.fromOffset(12, 142)
+		stopTitle.Position = UDim2.fromOffset(12, 44 + 30 + STOP_HEIGHT + 6)
 		stopTitle.Size = UDim2.new(1, -24, 0, 26)
 		stopTitle.Text = Lang.t(nil, "Stop at:")
 		stopTitle.ZIndex = Z.overlay + 1
-		stopList.Position = UDim2.fromOffset(12, 172)
-		stopList.Size = UDim2.new(1, -24, 1, -252)
+		stopList.Position = UDim2.fromOffset(12, 44 + 30 + STOP_HEIGHT + 36)
+		stopList.Size = UDim2.new(1, -24, 1, -(44 + 30 + STOP_HEIGHT + 36 + 80))
 	end
 	for position, item in displayOrder(kind) do
 		local index = item.index
@@ -538,6 +577,9 @@ local function buildShop(kind: string)
 			continue
 		end
 		local entry = info.list[index]
+		if entry.noStop then
+			continue -- Rasgos I y II no salen en "Parar con" (pedido por el usuario: solo los III o mejores)
+		end
 		-- Pedido por el usuario (verde entero con el nombre en su color no se leía y quedaba feo): apagado, botón
 		-- oscuro con el nombre en el color del rasgo o grado; elegido, el botón entero de ese color con el nombre en
 		-- blanco, borde claro y una marca verde en la esquina. El nombre se encoge para caber en una línea.
@@ -553,7 +595,7 @@ local function buildShop(kind: string)
 		name.Text = Lang.t(nil, entry.name)
 		name.TextScaled = true
 		local nameLimit = Instance.new("UITextSizeConstraint")
-		nameLimit.MaxTextSize = 44 -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo sigue encogiéndose para caber
+		nameLimit.MaxTextSize = math.clamp(math.floor(146 / (utf8.len(name.Text) :: number * 0.74)), 9, 38) -- pedido por el usuario: las letras de los grados (∞, X, Z+...) se veían chicas; el nombre largo se encoge según sus letras para no partirse en dos líneas ("TRASCENDENTE")
 		nameLimit.MinTextSize = 9
 		nameLimit.Parent = name
 		Ui.layer(toggle, Z.overlay + 2)
@@ -624,7 +666,9 @@ local function buildShop(kind: string)
 		toggle.Activated:Connect(function()
 			state.stop[index] = not state.stop[index]
 			paint()
+			savePrefs()
 		end)
+		stopPaints[index] = paint
 		paint()
 	end
 
@@ -1483,6 +1527,7 @@ local function buildShop(kind: string)
 		end
 		refresh()
 	end)
+	player:GetAttributeChangedSignal(stopAttribute):Connect(loadStops)
 	-- El orden guardado llega al entrar (o al cambiarlo desde otra partida).
 	player:GetAttributeChangedSignal("TraitPriority"):Connect(function()
 		state.priority = Modifiers.priority(player:GetAttribute("TraitPriority"))
@@ -1596,7 +1641,7 @@ function ModifierShops.start()
 				breathing[scale] = nil
 				continue
 			end
-			scale.Scale = 1 + math.sin(now * 3 + phase) * 0.06
+			scale.Scale = 1 + math.sin(now * 1.8 + phase) * 0.025 -- ola suave (pedido por el usuario: era muy grande y rápida)
 		end
 		for layer, data in sparkly do
 			if not layer.Parent then
