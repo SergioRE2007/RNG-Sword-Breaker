@@ -220,17 +220,19 @@ Config.Fusion = {
 -- Objetos del inventario. "dropChance" = probabilidad de que lo suelte un objeto raro
 -- (los que dan gemas) al romperse. La del Cristal de rasgo va con el calendario de tools/equilibrio (objetivo.rasgo):
 -- al 5 % de antes la parcela daba ella sola varias veces las tiradas de rasgo que pide el calendario.
-Config.ItemOrder = { "traitCrystal", "missionToken", "gradeCrystal", "luckClover" }
+Config.ItemOrder = { "traitCrystal", "missionToken", "gradeCrystal", "luckClover", "smallClover" }
 Config.Items = {
 	traitCrystal = { name = "Trait Crystal", description = "Spent at the Traits shop in the hub: gives a random trait to the sword you choose (replacing the one it had).", dropChance = 0.007, color = Color3.fromRGB(90, 230, 255), image = "cristal_rasgo" },
 	-- Moneda gratuita (f2p) que dan las misiones diarias y semanales (el usuario los llama "tickets"): con ellos se compran
 	-- los pases de la Tienda (Config.Tickets). No cae de los objetos (sin dropChance) y no se comercia (noTrade: si no,
 	-- con cuentas de más haciendo misiones se le pasarían todos a una sola).
 	missionToken = { name = "Ticket", description = "Earned from daily and weekly missions. Use them to buy the passes in the Shop.", color = Color3.fromRGB(255, 190, 60), image = "ticket", noTrade = true },
-	-- Trébol de la suerte (pedido por el usuario): se pulsa en la mochila, se elige un objeto de tu parcela y su suerte
-	-- de armas se multiplica por Config.Clover.Luck, encima de todo lo que ya tuviera (server/Clover). Se compra con
-	-- Robux (Config.Products) o con tickets (Config.Tickets.Shop); no cae de nada. Se comercia (pedido por el usuario).
-	luckClover = { name = "Lucky Clover", description = "Tap it and pick an object on any plot: its weapon luck is multiplied by 999.", color = Color3.fromRGB(90, 220, 130), image = "trebol" },
+	-- Trébol de la suerte (pedido por el usuario): se pulsa en la mochila, se elige una parcela y la suerte de armas de
+	-- todos sus objetos se multiplica por Config.Clover.Luck, encima de todo lo que ya tuvieran (server/Clover). Se compra
+	-- con Robux (Config.Products) o con tickets (Config.Tickets.Shop); no cae de nada. Se comercia (pedido por el usuario).
+	luckClover = { name = "Lucky Clover", description = "Tap it and pick a plot: the weapon luck of all its objects is multiplied by 999.", color = Color3.fromRGB(90, 220, 130), image = "trebol" },
+	-- Trébol pequeño (pedido por el usuario): x100 en un solo objeto, para recompensas (códigos y demás). No se vende.
+	smallClover = { name = "Small Clover", description = "Tap it and pick an object on any plot: its weapon luck is multiplied by 99.", color = Color3.fromRGB(160, 220, 80), image = "trebol" },
 	-- Lo sueltan los enemigos de las mazmorras y se saca al desmontar armadura. No cae de los objetos (sin dropChance).
 	gradeCrystal = { name = "Grade Crystal", description = "Spent at the Grades shop in the hub: gives a random grade to the sword you choose. Dropped by dungeon enemies.", color = Color3.fromRGB(200, 120, 255), image = "cristal_grado" },
 }
@@ -1002,8 +1004,17 @@ Config.Tutorial = {
 }
 -- CÓDIGOS DE REGALO: la lista (y cómo se escribe cada uno) está en server/CodeList, no aquí: lo de shared lo puede leer
 -- cualquier cliente con trampas.
--- TRÉBOL DE LA SUERTE: Luck = por cuánto multiplica la suerte de armas del objeto elegido (una sola vez por objeto).
-Config.Clover = { Item = "luckClover", Luck = 999 }
+-- TRÉBOLES DE LA SUERTE: Items[clave de Config.Items] = { luck = por cuánto multiplica la suerte de armas (una sola vez
+-- por objeto); plot = a todos los objetos que hay en ese momento en la parcela elegida (pedido por el usuario: el de
+-- x1000 solo se consigue pagando y en un objeto valía poco) }. Item y Luck son los del grande (Tienda, tickets, Misiones).
+Config.Clover = {
+	Item = "luckClover",
+	Luck = 999,
+	Items = {
+		luckClover = { luck = 999, plot = true },
+		smallClover = { luck = 99 },
+	},
+}
 
 -- Bono de amigos (pedido por el usuario): por cada amigo de Roblox en el mismo servidor, +Bonus de suerte
 -- (Stats.luck) y de monedas (Stats.coins), sumado y hasta Max amigos (los servidores son de 8: 7 amigos como mucho).
@@ -1015,9 +1026,9 @@ Config.Friends = { Bonus = 0.1, Max = 7 }
 -- precio real; item y amount = lo que da (clave de Config.Items). icon, tag, ribbon y color, como en los pases.
 Config.ProductOrder = { "clover1", "clover5", "clover10" }
 Config.Products = {
-	clover1 = { id = 3718055245, name = "Lucky Clover", price = 50, item = "luckClover", amount = 1, icon = "trebol", tag = "x1", color = Color3.fromRGB(90, 220, 130), perksText = { "Pick an object on any plot: x999 weapon luck", "Stacks with all the luck it already has" } },
-	clover5 = { id = 3718055248, name = "Pack of 5 Clovers", price = 225, item = "luckClover", amount = 5, icon = "trebol_5", tag = "x5", ribbon = "-10%", color = Color3.fromRGB(60, 205, 190), perksText = { "5 clovers: x999 weapon luck on 5 objects", "Cheaper than buying one at a time" } },
-	clover10 = { id = 3718055274, name = "Pack of 10 Clovers", price = 400, item = "luckClover", amount = 10, icon = "trebol_10", tag = "x10", ribbon = "-20%", color = Color3.fromRGB(255, 190, 60), perksText = { "10 clovers: x999 weapon luck on 10 objects", "The cheapest pack per clover" } },
+	clover1 = { id = 3718055245, name = "Lucky Clover", price = 50, item = "luckClover", amount = 1, icon = "trebol", tag = "x1", color = Color3.fromRGB(90, 220, 130), perksText = { "Pick a plot: x999 weapon luck on all its objects", "Stacks with all the luck they already have" } },
+	clover5 = { id = 3718055248, name = "Pack of 5 Clovers", price = 225, item = "luckClover", amount = 5, icon = "trebol_5", tag = "x5", ribbon = "-10%", color = Color3.fromRGB(60, 205, 190), perksText = { "5 clovers: x999 weapon luck on 5 whole plots", "Cheaper than buying one at a time" } },
+	clover10 = { id = 3718055274, name = "Pack of 10 Clovers", price = 400, item = "luckClover", amount = 10, icon = "trebol_10", tag = "x10", ribbon = "-20%", color = Color3.fromRGB(255, 190, 60), perksText = { "10 clovers: x999 weapon luck on 10 whole plots", "The cheapest pack per clover" } },
 }
 
 Config.GamepassOrder = { "vip", "coins2", "weaponLuck2", "weaponLuck5", "dungeonLoot", "forge", "auto", "arsenal" }

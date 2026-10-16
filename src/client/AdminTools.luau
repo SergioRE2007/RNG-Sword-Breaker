@@ -29,7 +29,7 @@ local LIST_WIDTH = 190
 local CONFIRM_TIME = 3 -- segundos que dura el "¿Seguro?" de echar
 
 -- Lo que se puede regalar, en el orden de sus botones.
-local GIFTS = { "coins", "gems", "missionToken", "traitCrystal", "gradeCrystal", "luckClover" }
+local GIFTS = { "coins", "gems", "missionToken", "traitCrystal", "gradeCrystal", "luckClover", "smallClover" }
 
 local function giftLook(key: string): (string, Color3)
 	if key == "coins" then
@@ -357,7 +357,7 @@ function AdminTools.server(pane: Frame, window: Frame)
 		end
 		Remotes.AdminCommand:FireServer("clover", value)
 		Ui.close(window)
-		Clover.pick(true)
+		Clover.pick("smallClover", true) -- el de un solo objeto
 	end)
 	off.Activated:Connect(function()
 		Remotes.AdminCommand:FireServer("clover", 0)

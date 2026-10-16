@@ -25,8 +25,12 @@ local WHITE = Color3.new(1, 1, 1)
 local AIM_ASSIST = 70 -- píxeles alrededor del dedo o del ratón en los que vale el objeto más cercano
 
 local active = false
+local chosen = cfg.Item -- trébol que se está usando (clave de cfg.Items)
 local banner: Frame? = nil
+local bannerText: TextLabel? = nil
+local bannerIcon: Frame? = nil
 local hover: Highlight? = nil
+local plotLights: { Highlight } = {} -- con el grande se iluminan todos los objetos de la parcela señalada
 local connections: { RBXScriptConnection } = {}
 local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Include
@@ -38,11 +42,13 @@ function Clover.isActive(): boolean
 	return active or os.clock() - closedAt < 0.2
 end
 
--- Objetos de cualquier parcela con dueño (la tuya o la de otro) que aún no llevan trébol.
+-- Objetos de cualquier parcela con dueño (la tuya o la de otro) que aún no llevan trébol. Con el grande valen todos:
+-- se elige la parcela, y el servidor se salta los que ya lo llevan.
 local function candidates(): { BasePart }
 	local list = {}
+	local plot = cfg.Items[chosen].plot
 	for _, part in CollectionService:GetTagged("Destructible") do
-		if part:IsA("BasePart") and part:GetAttribute("Owner") ~= nil and not part:GetAttribute("Clover") and part:IsDescendantOf(workspace) then
+		if part:IsA("BasePart") and part:GetAttribute("Owner") ~= nil and (plot or not part:GetAttribute("Clover")) and part:IsDescendantOf(workspace) then
 			table.insert(list, part)
 		end
 	end
@@ -90,6 +96,38 @@ local function stop()
 		hover.Adornee = nil
 		hover.Enabled = false
 	end
+	for _, light in plotLights do
+		light.Adornee = nil
+		light.Enabled = false
+	end
+end
+
+-- Con el grande, ilumina también los demás objetos de la parcela de `part` (el señalado ya lleva `hover`).
+local function lightPlot(part: BasePart?)
+	local count = 0
+	if part and cfg.Items[chosen].plot then
+		local owner = part:GetAttribute("Owner")
+		for _, other in CollectionService:GetTagged("Destructible") do
+			if other ~= part and other:IsA("BasePart") and other:GetAttribute("Owner") == owner and other:IsDescendantOf(workspace) then
+				count += 1
+				local light = plotLights[count]
+				if not light then
+					light = (hover :: Highlight):Clone()
+					light.Name = "CloverHoverPlot"
+					light.FillTransparency = 0.75
+					light.Parent = workspace
+					plotLights[count] = light
+				end
+				light.FillColor = (hover :: Highlight).FillColor
+				light.Adornee = other
+				light.Enabled = true
+			end
+		end
+	end
+	for i = count + 1, #plotLights do
+		plotLights[i].Adornee = nil
+		plotLights[i].Enabled = false
+	end
 end
 
 local function choose(point: Vector2)
@@ -98,7 +136,7 @@ local function choose(point: Vector2)
 		Sfx.play("error")
 		return
 	end
-	Remotes.UseClover:FireServer(part)
+	Remotes.UseClover:FireServer(part, chosen)
 	Sfx.play("buy")
 	stop()
 end
@@ -120,13 +158,14 @@ local function build()
 	icon.BackgroundTransparency = 1
 	icon.Parent = frame
 	Ui.image(icon, Config.Items[cfg.Item].image)
+	bannerIcon = icon
 	local text = Ui.label(frame, 24)
 	text.Name = "Text"
 	text.Position = UDim2.fromOffset(62, 0)
 	text.Size = UDim2.new(1, -62 - 136, 1, 0)
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	text.TextScaled = true
-	text.Text = Lang.t(nil, "Pick an object on any plot")
+	bannerText = text
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = 24
 	limit.MinTextSize = 14
@@ -151,13 +190,15 @@ local function build()
 	hover = light
 end
 
--- Entra en el modo de elegir objeto. No hace nada sin tréboles, salvo con `test` (el trébol de prueba del menú de
--- admin, que no gasta ninguno: el servidor comprueba que lo tiene puesto).
-function Clover.pick(test: boolean?)
+-- Entra en el modo de elegir objeto con ese trébol (clave de cfg.Items; sin ella, el grande). No hace nada sin
+-- tréboles, salvo con `test` (el trébol de prueba del menú de admin, que no gasta ninguno: el servidor comprueba que
+-- lo tiene puesto).
+function Clover.pick(item: string?, test: boolean?)
 	if active then
 		return
 	end
-	if not test and not player:GetAttribute("CloverTest") and (player:GetAttribute("Item_" .. cfg.Item) or 0) < 1 then
+	local name = if item and cfg.Items[item] then item else cfg.Item
+	if not test and not player:GetAttribute("CloverTest") and (player:GetAttribute("Item_" .. name) or 0) < 1 then
 		Sfx.play("error")
 		Ui.toast(Lang.t(nil, "You have no clovers: get them in the Shop or with tickets"), Ui.COLORS.orange)
 		return
@@ -165,6 +206,13 @@ function Clover.pick(test: boolean?)
 	if not banner then
 		build()
 	end
+	chosen = name
+	local def = Config.Items[name];
+	(hover :: Highlight).FillColor = def.color;
+	(bannerText :: TextLabel).Text = if cfg.Items[name].plot then Lang.t(nil, "Pick a plot: the clover goes to all its objects") else Lang.t(nil, "Pick an object on any plot")
+	local iconFrame = bannerIcon :: Frame
+	iconFrame:ClearAllChildren()
+	Ui.image(iconFrame, def.image)
 	active = true;
 	(banner :: Frame).Visible = true
 	table.insert(connections, RunService.RenderStepped:Connect(function()
@@ -172,6 +220,7 @@ function Clover.pick(test: boolean?)
 		local light = hover :: Highlight
 		light.Adornee = part
 		light.Enabled = part ~= nil
+		lightPlot(part)
 	end))
 	-- El primer clic puede ser el mismo que pulsó la casilla de la mochila: se empieza a escuchar un momento después.
 	task.delay(0.15, function()
