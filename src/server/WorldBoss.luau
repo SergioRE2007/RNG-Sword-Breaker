@@ -450,24 +450,26 @@ local function open()
 end
 
 local function startFight()
-	local list = fighters()
-	if #list == 0 then
-		-- Nadie ha entrado: se cierra sin pelea.
-		state = "idle"
-		setPortal(false)
-		for player in table.clone(inside) do
-			leave(player, true)
+	-- Cae aunque no haya nadie dentro: el portal sigue abierto toda la pelea y se puede entrar en cualquier momento
+	-- (antes, sin nadie dentro al caer, se cerraba y con el aviso corto del admin no daba tiempo a llegar).
+	-- Esbirros, cristales y barriles aguantan lo que les quita en unos segundos un jugador medio de los que hay en la
+	-- arena; sin nadie, de los del servidor que no están en una mazmorra.
+	local players = {}
+	for _, fighter in fighters() do
+		table.insert(players, fighter.player)
+	end
+	if #players == 0 then
+		for _, player in Players:GetPlayers() do
+			if (player:GetAttribute("Dungeon") or 0) == 0 then
+				table.insert(players, player)
+			end
 		end
-		fallAt = WorldBossInfo.nextFall(workspace:GetServerTimeNow() + cfg.Warning, born)
-		publish()
-		return
 	end
-	-- Esbirros, cristales y barriles aguantan lo que les quita en unos segundos un jugador medio de los que hay.
 	local sum = 0
-	for _, fighter in list do
-		sum += dpsOf(fighter.player)
+	for _, player in players do
+		sum += dpsOf(player)
 	end
-	averageDps = math.max(sum / #list, 1)
+	averageDps = math.max(sum / math.max(#players, 1), 1)
 
 	if not folder or not folder.Parent then
 		folder = Instance.new("Folder")

@@ -6,6 +6,7 @@
   - Portal: en el anillo de las estaciones del hub, a 67,5° y a 72 del centro (`Portal`). Es el único hueco libre entre dos caminos: Mejor tirada en 22,5°, Rasgos en 112,5°, Grados en 157,5°, Misiones en 202,5°, clasificaciones en 247,5°, 292,5° y 337,5°.
   - Arena: flotando lejos de la isla, en `Origin` (0, 200, -3000), radio 80, con su propia luz (de noche no se veía).
   - Geometría en `server/WorldBossArena`: arena, portal, `portalFront` y `spawnCFrame`.
+- **Portal**: abierto desde el aviso hasta que se va el rey. El rey cae aunque no haya nadie dentro y se puede entrar en cualquier momento de la pelea (pedido por el usuario: con el aviso corto del botón de admin no daba tiempo a llegar y se cerraba).
 - **Entrar**: tocando el portal abierto (`Trigger`, solo con `CanTouch` abierto), salvo desde una mazmorra. Quien está dentro lleva el atributo `WorldBoss = true`. Con él:
   - `Stats.reach` es siempre `Config.Loadout.Radius`, así el Auto de la parcela no pega desde lejos;
   - `MapBounds` no lo devuelve a su parcela;
