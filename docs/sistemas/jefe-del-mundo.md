@@ -7,6 +7,7 @@
   - Arena: flotando lejos de la isla, en `Origin` (0, 200, -3000), radio 80, con su propia luz (de noche no se veía).
   - Geometría en `server/WorldBossArena`: arena, portal, `portalFront` y `spawnCFrame`.
 - **Portal**: abierto desde el aviso hasta que se va el rey. El rey cae aunque no haya nadie dentro y se puede entrar en cualquier momento de la pelea (pedido por el usuario: con el aviso corto del botón de admin no daba tiempo a llegar y se cerraba).
+- **Cartel de premios** (pedido por el usuario): a la derecha del portal mirándolo desde el hub (`WorldBossArena.buildBoard`, `Map.WorldBossRewards`), una tabla con las tiradas y los cristales según la parte del daño. Filas en `Rewards.Board` más la de "menos del 5 %"; las cifras salen de `WorldBossInfo.rewards`, así que cambian solas con Config. Abajo, la tirada de más del podio y los tickets.
 - **Entrar**: tocando el portal abierto (`Trigger`, solo con `CanTouch` abierto), salvo desde una mazmorra. Quien está dentro lleva el atributo `WorldBoss = true`. Con él:
   - `Stats.reach` es siempre `Config.Loadout.Radius`, así el Auto de la parcela no pega desde lejos;
   - `MapBounds` no lo devuelve a su parcela;

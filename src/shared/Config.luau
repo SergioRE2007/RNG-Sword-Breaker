@@ -1096,6 +1096,8 @@ Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 3
 --   Count de cada cosa = Base + PerPlayer × jugadores en la arena, hasta Max.
 --   Rewards: lo que da a cada uno según su parte de todo el daño hecho en la arena (share). Tiradas con la suerte media de
 --   sus objetos (ObjectSpec.meanLuck) por Luck; cristales base + share × perShare hasta max; Tickets, a los tres primeros.
+--   Board = las filas del cartel de premios junto al portal (parte del daño desde la que se cuenta cada una; la última
+--   fila es lo de menos que eso, desde MinShare).
 Config.WorldBoss = {
 	First = 1200, Interval = 1800, Warning = 60, AdminWarning = 10, Lifetime = 180, ReturnDelay = 10,
 	Portal = { Angle = 67.5, Distance = 72 },
@@ -1106,7 +1108,7 @@ Config.WorldBoss = {
 	Shield = { First = 60, Every = 70, Base = 3, PerPlayer = 0.34, Max = 8, Seconds = 6 },
 	Charge = { Every = 55, Time = 12, Barrels = 4, Needed = 2, BarrelSeconds = 2, Flight = 1.1, StunTime = 8, StunMult = 2,
 		MegaDamage = 0.8, SafeZones = 3, SafeRadius = 10 },
-	Rewards = { MinShare = 0.005, Luck = 10, RollsBase = 1, RollsPerShare = 10, MaxRolls = 5, TopBonusRolls = 1,
+	Rewards = { MinShare = 0.005, Board = { 0.4, 0.2, 0.1, 0.05 }, Luck = 10, RollsBase = 1, RollsPerShare = 10, MaxRolls = 5, TopBonusRolls = 1,
 		Trait = { base = 2, perShare = 20, max = 8 }, Grade = { base = 1, perShare = 10, max = 5 }, Tickets = { 2, 1, 1 } },
 }
 
