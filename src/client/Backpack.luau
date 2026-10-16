@@ -949,10 +949,69 @@ function Backpack.start()
 	gearHint.TextXAlignment = Enum.TextXAlignment.Left
 	gearHint.TextWrapped = true
 
+	-- Pedido por el usuario: los accesorios salen en tres categorías, Daño, Suerte y Monedas, cada una con su título.
+	-- Las gemas (el Colgante de gemas) no son de ninguna de las tres: tienen su propia sección al final, que solo sale
+	-- si se tiene alguna. Cada sección es una rejilla con el mismo tamaño de casilla que el resto de la mochila.
+	local GEAR_SECTIONS = {
+		{ stat = "damage", title = "Damage", color = Color3.fromRGB(255, 100, 100) },
+		{ stat = "luck", title = "Luck", color = Color3.fromRGB(110, 230, 120) },
+		{ stat = "coins", title = "Coins", color = Color3.fromRGB(255, 205, 70) },
+		{ stat = "gems", title = "Gems", color = Color3.fromRGB(200, 130, 255) },
+	}
 	local gearGrid = grid(gearPane, UDim2.fromOffset(398, 46), UDim2.new(1, -406, 1, -54))
+	local gearSections = {}
+	do
+		-- La rejilla de `grid` pasa a ser una lista vertical de secciones.
+		local flat = gearGrid:FindFirstChildOfClass("UIGridLayout")
+		if flat then
+			flat:Destroy()
+		end
+		local list = Instance.new("UIListLayout")
+		list.SortOrder = Enum.SortOrder.LayoutOrder
+		list.Padding = UDim.new(0, 6)
+		list.Parent = gearGrid
+		for order, section in GEAR_SECTIONS do
+			local box = Instance.new("Frame")
+			box.Name = "Section_" .. section.stat
+			box.LayoutOrder = order
+			box.BackgroundTransparency = 1
+			box.Size = UDim2.new(1, -10, 0, 0)
+			box.AutomaticSize = Enum.AutomaticSize.Y
+			box.Parent = gearGrid
+			local boxList = Instance.new("UIListLayout")
+			boxList.SortOrder = Enum.SortOrder.LayoutOrder
+			boxList.Padding = UDim.new(0, 6)
+			boxList.Parent = box
+			local title = Ui.label(box, 22)
+			title.Name = "Title"
+			title.LayoutOrder = 0
+			title.Size = UDim2.new(1, 0, 0, 28)
+			title.TextXAlignment = Enum.TextXAlignment.Left
+			title.TextColor3 = section.color
+			title.Text = Ui.upper(Lang.t(nil, section.title))
+			local cells = Instance.new("Frame")
+			cells.Name = "Cells"
+			cells.LayoutOrder = 1
+			cells.BackgroundTransparency = 1
+			cells.Size = UDim2.new(1, 0, 0, 0)
+			cells.AutomaticSize = Enum.AutomaticSize.Y
+			cells.Parent = box
+			local cellsLayout = Instance.new("UIGridLayout")
+			cellsLayout.CellSize = UDim2.fromOffset(CELL, CELL)
+			cellsLayout.CellPadding = UDim2.fromOffset(16, 16)
+			cellsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			cellsLayout.Parent = cells
+			local cellsPadding = Instance.new("UIPadding") -- hueco para el halo de las casillas raras
+			cellsPadding.PaddingTop = UDim.new(0, 4)
+			cellsPadding.PaddingLeft = UDim.new(0, 4)
+			cellsPadding.PaddingBottom = UDim.new(0, 8)
+			cellsPadding.Parent = cells
+			gearSections[section.stat] = { box = box, cells = cells }
+		end
+	end
 	local gearCells = {}
 	for index, artifact in Config.Artifacts do
-		local cell = Ui.cell(gearGrid, Rarity.tier(artifact.rarity).color)
+		local cell = Ui.cell(gearSections[artifact.stat].cells, Rarity.tier(artifact.rarity).color)
 		cell.Name = "Artifact" .. index
 		cell.LayoutOrder = -index
 		Ui.artifactIcon(cell, artifact)
@@ -1001,12 +1060,20 @@ function Backpack.start()
 		gearHint.Text = if #artifacts == 0
 			then Lang.t(nil, "Break objects to get accessories.")
 			else Lang.t(nil, "Wearing {n}/{max}", { n = #worn, max = Config.GearSlots })
+		local sectionHasAny = {}
 		for index, cell in gearCells do
 			local owned = Stats.copies(artifacts, index)
 			cell.Visible = owned > 0
 			cell.Select.Visible = table.find(worn, index) ~= nil
 			cell.Copies.Visible = owned > 1
 			cell.Copies.Text = "x" .. owned
+			if owned > 0 then
+				sectionHasAny[Config.Artifacts[index].stat] = true
+			end
+		end
+		-- Una categoría sin ningún accesorio no enseña ni su título.
+		for stat, section in gearSections do
+			section.box.Visible = sectionHasAny[stat] == true
 		end
 		for slot, entry in slots do
 			local index = worn[slot]
