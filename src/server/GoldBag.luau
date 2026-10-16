@@ -236,7 +236,7 @@ local function step(player: Player, seconds: number)
 end
 
 local function copyDamage(copy): number
-	return Stats.swordDamage({ sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 })
+	return Stats.swordDamage({ sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0, level = copy.level or 0 })
 end
 
 -- Dejar una copia en la bolsa, o sacarla si ya estaba (o, con "best" / "clear", llenarla con las mejores o vaciarla). Llena, sustituye a la depositada de menos daño; una equipada

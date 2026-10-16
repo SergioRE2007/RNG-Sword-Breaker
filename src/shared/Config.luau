@@ -323,6 +323,14 @@ Config.ModifierPity = { MinOdds = 400 }
 Config.GradeCost = 1 -- Cristales de grado por tirada de grado
 Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grado
 
+-- Nivel de arma (pedido por el usuario): cada copia sube de nivel pagando gemas, hasta MaxLevel. Cada nivel multiplica
+-- el daño de esa arma por PerLevel (x7,2 en el 100). El nivel va con la copia: se guarda, se comercia con ella y se
+-- pierde al venderla o fusionarla; renacer no lo quita. Precio del nivel n -> n+1 (shared/WeaponLevel):
+-- max(MinCost, CostBase * rareza total ^ RarityPower) * Growth ^ n. RarityPower sale de lo que gana de gemas el jugador
+-- tipo frente a lo raras que son sus armas (crecen como rareza ^ 1,5): así subir un arma cuesta parecido a cualquier
+-- hora. El jugador tipo de tools/equilibrio gasta en niveles la parte `gemasNiveles` de sus gemas (objetivo.luau).
+Config.WeaponLevel = { MaxLevel = 100, PerLevel = 1.02, CostBase = 4e-6, RarityPower = 1.5, Growth = 1.06, MinCost = 100 }
+
 -- Renacimiento: solo cuesta monedas y no quita nada (ni monedas ganadas, ni espadas, ni mejoras). Cada uno
 -- multiplica para siempre (por cada renacimiento, ese número elevado a los renacimientos que lleve).
 -- "costs" = precio de cada renacimiento. NÚMEROS GENERADOS por tools/equilibrio/generar.luau para que caigan hacia las

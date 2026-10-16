@@ -8,6 +8,7 @@ require(script.WorldText).start() -- carteles del mundo y avisos de E en el idio
 require(script.Potions).start() -- después de Hud (cuelga junto a sus monedas) y antes de Backpack (comparte sus carteles)
 require(script.Backpack).start()
 require(script.SellMenu).start()
+require(script.LevelMenu).start() -- subir de nivel las armas; después de Backpack, que le presta sus casillas
 require(script.Index).start()
 require(script.Settings).start()
 require(script.Rebirth).start()

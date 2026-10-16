@@ -252,7 +252,7 @@ end
 
 -- Daño de una copia del inventario con su rasgo y su grado (lo que decide cuál es "la mejor" y cuál se sustituye).
 local function copyDamage(copy): number
-	return Stats.swordDamage({ sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 })
+	return Stats.swordDamage({ sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0, level = copy.level or 0 })
 end
 
 -- Equipar (Stats.loadoutSlots armas a la vez: las de Config.Loadout.Slots más las del pase). Con un id, pone esa copia o la quita si ya estaba: va al primer

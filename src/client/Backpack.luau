@@ -23,6 +23,7 @@ local Sfx = require(script.Parent.Sfx)
 
 local Backpack = {}
 local SellMenu = require(script.Parent.SellMenu)
+local LevelMenu = require(script.Parent.LevelMenu)
 
 local player = Players.LocalPlayer
 local CELL = 100
@@ -203,6 +204,9 @@ local function swordTip(copy): (string, Color3, boolean)
 	end
 	if #extras > 0 then
 		table.insert(lines, table.concat(extras, " · "))
+	end
+	if (copy.level or 0) > 0 then
+		table.insert(lines, `<font color="{TIP_GOLD}">{Lang.t(nil, "Level {n}", { n = copy.level })}</font>`)
 	end
 	if trait or grade then
 		table.insert(lines, TIP_SEPARATOR)
@@ -392,9 +396,14 @@ function Backpack.start()
 	detail.Name = "Detail"
 	detail.AnchorPoint = Vector2.new(0, 1)
 	detail.Position = UDim2.new(0, 12, 1, -8)
-	detail.Size = UDim2.fromOffset(172, 62)
+	detail.Size = UDim2.fromOffset(146, 62)
 	detail.TextXAlignment = Enum.TextXAlignment.Left
 	detail.TextWrapped = true
+	detail.TextScaled = true
+	local detailSize = Instance.new("UITextSizeConstraint")
+	detailSize.MaxTextSize = 19
+	detailSize.MinTextSize = 11
+	detailSize.Parent = detail
 
 	local function action(name: string, text: string, color: Color3, right: number, width: number): TextButton
 		local item = Ui.button(swordsPane, text, color)
@@ -404,19 +413,27 @@ function Backpack.start()
 		item.Size = UDim2.fromOffset(width, 62)
 		return item
 	end
-	local bestButton = action("Best", Lang.t(nil, "Equip best"), Ui.COLORS.green, 12, 176)
-	local sellButton = action("Sell", Lang.t(nil, "Sell weapons"), Ui.COLORS.red, 198, 100)
-	bestButton.TextSize = 23
+	local bestButton = action("Best", Lang.t(nil, "Equip best"), Ui.COLORS.green, 12, 140)
+	local sellButton = action("Sell", Lang.t(nil, "Sell weapons"), Ui.COLORS.red, 160, 100)
+	bestButton.TextSize = 21
+	bestButton.TextWrapped = true
 	sellButton.TextSize = 17
+	-- Subir de nivel las armas con gemas (client/LevelMenu), con la elegida ya puesta.
+	local levelButton = action("Level", Lang.t(nil, "Level up"), Ui.COLORS.purple, 450, 104)
+	levelButton.TextSize = 17
+	levelButton.TextWrapped = true
+	Ui.tip(levelButton, function()
+		return Lang.t(nil, "Spend gems to make a weapon stronger"), Ui.COLORS.purple
+	end)
 	-- Orden de la lista (pedido por el usuario): por daño (con rasgo y grado) o por rareza (el "1 entre N" del arma
 	-- con su metal y su tamaño), de más a menos. El botón pasa de uno a otro; solo para esta sesión.
-	local sortButton = action("Sort", "", Ui.COLORS.blue, 378, 112)
+	local sortButton = action("Sort", "", Ui.COLORS.blue, 338, 104)
 	sortButton.TextSize = 17
 	sortButton.TextWrapped = true
 	local swordSort = "damage"
 	-- Candado (pedido por el usuario): con el modo encendido, pulsar un arma la bloquea o desbloquea en vez de
 	-- equiparla. Las bloqueadas no se venden (ni a mano ni solas) ni salen en el comercio; lo valida el servidor.
-	local lockButton = action("Lock", "", Ui.COLORS.gray, 308, 62)
+	local lockButton = action("Lock", "", Ui.COLORS.gray, 268, 62)
 	local lockIcon: Frame? = nil
 	local lockMode = false
 
@@ -427,6 +444,10 @@ function Backpack.start()
 
 	sellButton.Activated:Connect(function()
 		SellMenu.open(selected)
+	end)
+	levelButton.Activated:Connect(function()
+		Sfx.play("click")
+		LevelMenu.open(selected)
 	end)
 	local function paintLock()
 		if lockIcon then
@@ -554,6 +575,21 @@ function Backpack.start()
 			mark.BackgroundTransparency = 1
 			mark.Parent = cell
 			Ui.image(mark, logo).ZIndex = 4
+		end
+		if (copy.level or 0) > 0 then
+			-- Nivel (Config.WeaponLevel) arriba en el centro, entre la "E" y el rasgo.
+			local level = Ui.label(cell, 13)
+			level.Name = "Level"
+			level.AnchorPoint = Vector2.new(0.5, 0)
+			level.Position = UDim2.new(0.5, 0, 0, 4)
+			level.Size = UDim2.fromOffset(40, 18)
+			level.BackgroundTransparency = 0
+			level.BackgroundColor3 = Ui.COLORS.dark
+			level.TextColor3 = Color3.fromRGB(255, 214, 92)
+			level.Text = Lang.t(nil, "Lv {n}", { n = copy.level })
+			level.ZIndex = 4
+			Ui.round(level, 6)
+			Ui.stroke(level, Color3.fromRGB(170, 90, 255), 2)
 		end
 		local gradeDef = Config.Grades[copy.grade]
 		if gradeDef then

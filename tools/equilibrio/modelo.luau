@@ -19,6 +19,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 	local ArmorStats = shared("ArmorStats")
 	local BagInfo = shared("BagInfo")
 	local Format = shared("Format")
+	local WeaponLevel = shared("WeaponLevel")
 
 	local M = {}
 
@@ -442,7 +443,9 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			rebirths = 0,
 			artifacts = {},
 			gear = {},
-			armas = { { sword = 1, metal = 0, size = 0, base = Config.Swords[1].damage } }, -- de más a menos daño
+			-- De más a menos daño: `cruda` = sin nivel, `base` = con él (`nivel`, Config.WeaponLevel).
+			armas = { { sword = 1, metal = 0, size = 0, cruda = Config.Swords[1].damage, base = Config.Swords[1].damage, nivel = 0 } },
+			gemasNiveles = 0, -- gemas apartadas para subir de nivel las armas (objetivo.gemasNiveles)
 			rasgos = table.create(huecos, opts.rasgo or 0), -- [hueco] = índice de Config.Traits (0 = ninguno)
 			grados = table.create(huecos, opts.grado or 0),
 			armadura = { 0, 0, 0 },
@@ -574,7 +577,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				-- Las de la bolsa (pasados los huecos) van sin rasgo ni grado.
 				local rasgo = if slot <= huecos then estado.rasgos[slot] or 0 else 0
 				local grado = if slot <= huecos then estado.grados[slot] or 0 else 0
-				copias[slot] = `{slot}:{arma.sword}:{rasgo}:{grado}:{arma.metal}:{arma.size}`
+				copias[slot] = `{slot}:{arma.sword}:{rasgo}:{grado}:{arma.metal}:{arma.size}:0:{arma.nivel}`
 			end
 			attrs.Swords = table.concat(copias, ",")
 			attrs.Loadout = table.concat(ids, ",", 1, math.min(#copias, huecos))
@@ -619,6 +622,42 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			while habitual <= #tipos and luck >= tipos[habitual].rarity do
 				res.horaTipo[habitual] = t / H
 				habitual += 1
+			end
+		end
+
+		-- Niveles de arma (Config.WeaponLevel): con las gemas apartadas (objetivo.gemasNiveles) sube el nivel más barato de
+		-- sus armas equipadas mientras le lleguen; las de la bolsa no las sube. `siguienteNivel` = lo que cuesta ese nivel,
+		-- para no buscarlo con cada objeto (0 = por saber).
+		local siguienteNivel = 0
+		local function subirNiveles()
+			local subidas = 0
+			while true do
+				local pick, precio = nil, math.huge
+				for slot = 1, math.min(huecos, #estado.armas) do
+					local arma = estado.armas[slot]
+					if arma.nivel < Config.WeaponLevel.MaxLevel then
+						local cost = WeaponLevel.cost(arma, arma.nivel)
+						if cost < precio then
+							pick, precio = arma, cost
+						end
+					end
+				end
+				siguienteNivel = precio
+				if not pick or estado.gemasNiveles < precio then
+					break
+				end
+				estado.gemasNiveles -= precio
+				pick.nivel += 1
+				pick.base = pick.cruda * WeaponLevel.mult(pick.nivel)
+				subidas += 1
+			end
+			if subidas > 0 then
+				-- Con el nivel puede pasar por delante de otras: se reordenan y cambia el corte.
+				table.sort(estado.armas, function(x, y)
+					return x.base > y.base
+				end)
+				corte = if #estado.armas < guardadas then 0 else estado.armas[guardadas].base
+				recalcular()
 			end
 		end
 
@@ -832,7 +871,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				local equipadas = {}
 				for slot, arma in estado.armas do
 					local suya = slot <= huecos
-					equipadas[slot] = { sword = arma.sword, metal = arma.metal, size = arma.size, trait = if suya then estado.rasgos[slot] or 0 else 0, grade = if suya then estado.grados[slot] or 0 else 0 }
+					equipadas[slot] = { sword = arma.sword, metal = arma.metal, size = arma.size, trait = if suya then estado.rasgos[slot] or 0 else 0, grade = if suya then estado.grados[slot] or 0 else 0, level = arma.nivel }
 				end
 				res.fotos[hour] = {
 					bolsa = bolsa.stage,
@@ -848,12 +887,20 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				}
 			end)
 		end
+		-- Niveles de las armas equipadas ("12/8/0/0"), para la línea de cada hora.
+		local function niveles(): string
+			local list = {}
+			for slot = 1, math.min(huecos, #estado.armas) do
+				table.insert(list, estado.armas[slot].nivel)
+			end
+			return table.concat(list, "/")
+		end
 		for hour = 1, opts.horas do
 			a(hour * H, function()
 				table.insert(res.ritmo, { hora = hour, objetos = res.objetos, monedas = res.ganado, bolsa = res.bolsa.ganado })
 				if opts.avisar then
 					-- Una línea por hora para seguir la partida mientras corre (opts.avisar = etiqueta).
-					print(`[{opts.avisar}] {hour} h · suerte {estado.upgrades.luck}/{Config.Upgrades.luck.maxLevel} · renacer {estado.rebirths} · accesorios {#estado.artifacts}/{#Config.Artifacts} · zona {mazZona or 0} · daño {Format.short(damage)}`)
+					print(`[{opts.avisar}] {hour} h · suerte {estado.upgrades.luck}/{Config.Upgrades.luck.maxLevel} · renacer {estado.rebirths} · accesorios {#estado.artifacts}/{#Config.Artifacts} · zona {mazZona or 0} · daño {Format.short(damage)} · niveles {niveles()}`)
 				end
 			end)
 		end
@@ -1034,8 +1081,12 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			if def.gems > 0 then
 				-- La cuenta media, sin tirar el azar de la cantidad ni el de "gemChance".
 				local gems = math.max(1, def.gems * ObjectSpec.reward(quality, scale) * Stats.gems(player) * gemMedia) * (def.gemChance or 1)
-				estado.gems += gems
+				estado.gems += gems * (1 - objetivo.gemasNiveles)
+				estado.gemasNiveles += gems * objetivo.gemasNiveles
 				res.gemas += gems
+				if estado.gemasNiveles >= siguienteNivel then
+					subirNiveles()
+				end
 			end
 
 			-- Tiradas de arma (server/Gacha): la suerte se aplica una vez, a la rareza total del arma con su metal y tamaño.
@@ -1059,10 +1110,11 @@ function Modelo.nuevo(shared, mundo, objetivo)
 					while position > 1 and total > equipadas[position - 1].base do
 						position -= 1
 					end
-					table.insert(equipadas, position, { sword = sword, metal = metal, size = size, base = total })
+					table.insert(equipadas, position, { sword = sword, metal = metal, size = size, cruda = total, base = total, nivel = 0 })
 					equipadas[guardadas + 1] = nil
 					corte = if #equipadas < guardadas then 0 else equipadas[guardadas].base
 					recalcular()
+					siguienteNivel = 0
 				end
 				for _, limit in umbrales do
 					if rarity >= limit and not res.armas[limit] then
@@ -1124,7 +1176,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 							if estado.coins >= cost then
 								-- Renacer lo quita todo (PlayerData.rebirth): monedas, gemas, mejoras y la bolsa a la primera.
 								-- Solo aquí, en el jugador que juega de verdad: el calendario de `objetivo` no lo cuenta.
-								estado.coins, estado.gems = 0, 0
+								estado.coins, estado.gems, estado.gemasNiveles = 0, 0, 0
 								for name in estado.upgrades do
 									estado.upgrades[name] = 0
 								end
