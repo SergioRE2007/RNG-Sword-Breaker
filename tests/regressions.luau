@@ -1717,7 +1717,7 @@ do
 	local low, high = info.rewards(tiers[2].damage * 5, 6), info.rewards(tiers[#tiers].damage * 10, 1)
 	equal(low.tier, 2, "jefe: el tramo más alto al que llega")
 	equal(low.traitCrystal, tiers[2].crystals, "jefe: los cristales de su tramo")
-	equal(low.potions, tiers[2].potions, "jefe: las pociones de su tramo")
+	equal(low.potions, tiers[2].potions or 0, "jefe: las pociones de su tramo")
 	assert(high.rolls > low.rolls and high.potionTier >= low.potionTier, "jefe: más daño, más premio")
 	checks += 1
 	equal(high.rolls <= boss.Rewards.MaxRolls, true, "jefe: tiradas con su tope")
