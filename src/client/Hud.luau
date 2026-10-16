@@ -397,10 +397,17 @@ function Hud.start()
 		menu.AnchorPoint = Vector2.new(0, 0)
 		-- La capa del HUD ignora la franja de Roblox y cuenta en sus unidades (pantalla / escala).
 		local hudScale = gui:FindFirstChildOfClass("UIScale") :: UIScale
+		-- En vertical la muesca del móvil empuja los botones de Roblox hacia abajo (TopbarInset lo cuenta, GetGuiInset no)
+		-- y el menú quedaba debajo de ellos: se baja hasta su borde y un poco más (pedido por el usuario).
 		local function placeMenu()
-			menu.Position = UDim2.fromOffset(MARGIN, GuiService:GetGuiInset().Y / hudScale.Scale + 10)
+			local view = workspace.CurrentCamera.ViewportSize
+			local top = math.max(GuiService:GetGuiInset().Y, GuiService.TopbarInset.Max.Y)
+			local extra = if view.Y > view.X then 40 else 10
+			menu.Position = UDim2.fromOffset(MARGIN, top / hudScale.Scale + extra)
 		end
 		hudScale:GetPropertyChangedSignal("Scale"):Connect(placeMenu)
+		GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(placeMenu)
+		workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(placeMenu)
 		placeMenu()
 	end
 
