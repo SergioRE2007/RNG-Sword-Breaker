@@ -280,7 +280,9 @@ do
 			end
 			for pista, left in quedan do
 				if left > 0 and moneda(pista) == clave then
-					botes[pista] += (ganado - previo) * objetivo.reparto[pista] / peso
+					-- De las gemas, Fortuna solo cuenta con lo que no va a los niveles de las armas.
+					local parte = if clave == "gemas" then 1 - objetivo.gemasNiveles else 1
+					botes[pista] += (ganado - previo) * parte * objetivo.reparto[pista] / peso
 				end
 			end
 			antes[clave] = ganado
@@ -447,7 +449,7 @@ local out = {
 	"-- ARCHIVO GENERADO por tools/equilibrio/generar.luau: no lo edites a mano.",
 	"-- Cómo va el jugador tipo del calendario de progreso a cada hora de juego: lo usa Config.Test.Progress (solo en",
 	"-- Studio) para empezar una partida en esa etapa. `swords` = sus armas, cada una con su metal, su tamaño, su rasgo y su",
-	"-- grado (0 = ninguno): las primeras (hasta Config.Loadout.Slots) son las equipadas, por hueco, y las demás, las que",
+	"-- grado (0 = ninguno) y su nivel: las primeras (hasta Config.Loadout.Slots) son las equipadas, por hueco, y las demás, las que",
 	"-- deja en su Bolsa de oro; `bag` = bolsa por la que va; `armor` = { suerte, ataque, aparición } que suma su armadura.",
 	"return {",
 }
@@ -466,7 +468,7 @@ for _, hour in objetivo.fotos do
 		end
 		local swords = {}
 		for _, arma in foto.armas do
-			table.insert(swords, `\{ sword = {arma.sword}, metal = {arma.metal}, size = {arma.size}, trait = {arma.trait}, grade = {arma.grade} }`)
+			table.insert(swords, `\{ sword = {arma.sword}, metal = {arma.metal}, size = {arma.size}, trait = {arma.trait}, grade = {arma.grade}, level = {arma.level} }`)
 		end
 		table.insert(out, `	\{ hours = {hour}, upgrades = \{ {table.concat(upgrades, ", ")} }, rebirths = {foto.rebirths}, swords = \{ {table.concat(swords, ", ")} }, artifacts = \{ {table.concat(foto.artifacts, ", ")} }, gear = \{ {table.concat(foto.gear, ", ")} }, dungeon = {math.max(zona, 1)}, bag = {foto.bolsa or 1}, armor = \{ {foto.armadura[1]}, {foto.armadura[2]}, {foto.armadura[3]} } },`)
 	end

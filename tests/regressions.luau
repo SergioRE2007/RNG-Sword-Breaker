@@ -447,12 +447,51 @@ f.remotes.RevertGrade.OnServerEvent:fire(player, 3)
 equal(state.pity.grades[#config.Grades], 1, "descarte conserva progreso")
 equal(data.findSword(state, 3).grade, nil, "descarte restaura grado anterior")
 
+-- Nivel de armas: cobra gemas, sube solo lo que se puede pagar, multiplica el daño de esa copia y llega al cliente.
+f.load("src/server/WeaponLevels").start()
+local weaponLevel = f.load("src/shared/WeaponLevel")
+local levelStats = f.load("src/shared/Stats")
+local leveled = data.findSword(state, 3)
+data.edit(player, function(d) d.gems = weaponLevel.cost(leveled, 0) + weaponLevel.cost(leveled, 1) + 1 end)
+f.advance(1)
+f.remotes.LevelSword.OnServerEvent:fire(player, 3, 10)
+equal(leveled.level, 2, "sube solo los niveles que puede pagar")
+equal(state.gems, 1, "cobra lo que cuestan los niveles")
+f.advance(1)
+f.remotes.LevelSword.OnServerEvent:fire(player, 3, 1)
+equal(leveled.level, 2, "sin gemas no sube de nivel")
+equal(weaponLevel.cost(leveled, 5) > weaponLevel.cost(leveled, 4), true, "cada nivel cuesta más que el anterior")
+equal(weaponLevel.cost({ sword = #config.Swords, metal = #config.Metals, size = #config.Sizes }, 0) > weaponLevel.cost(leveled, 0), true, "las armas más raras cuestan más")
+equal(weaponLevel.sanitize(0 / 0), 0, "nivel guardado sin número")
+equal(weaponLevel.sanitize(999), config.WeaponLevel.MaxLevel, "nivel guardado por encima del tope")
+data.edit(player, function(d) data.findSword(d, 3).locked = true end)
+local published = nil
+for _, copy in levelStats.swords(player) do
+	if copy.id == 3 then
+		published = copy
+	end
+end
+equal(published.level, 2, "el nivel llega al cliente")
+equal(published.locked, true, "el candado sigue llegando con nivel")
+local plain = { sword = published.sword, trait = published.trait, grade = published.grade, metal = published.metal, size = published.size }
+near(levelStats.swordDamage(published) / levelStats.swordDamage(plain), config.WeaponLevel.PerLevel ^ 2, "el nivel multiplica el daño de su arma")
+equal(levelStats.sellCoins(published), levelStats.sellCoins(plain), "el nivel no cambia lo que da vender")
+data.edit(player, function(d) data.findSword(d, 3).locked = nil end)
+local badLevels = fixture({ swords = { { id = 1, sword = 1, level = 0 / 0 }, { id = 2, sword = 1, level = 999 } } })
+equal(badLevels.data.read(badLevels.player).swords[1].level, nil, "nivel guardado roto se queda en 0")
+equal(badLevels.data.read(badLevels.player).swords[2].level, config.WeaponLevel.MaxLevel, "nivel guardado se recorta al tope")
+
 -- Guardado real y migración de inventario: conserva elección, Pity y equipa solo lo guardado.
 state.pity.traits[#config.Traits - 1] = 1
 local saved = f.save()
 local restored = fixture(saved)
 equal(restored.data.read(restored.player).pity.traits[#config.Traits - 1], 1, "pity persiste")
 equal(#restored.data.read(restored.player).loadout, 2, "las equipadas persisten")
+local keptLevel = false
+for _, copy in restored.data.read(restored.player).swords do
+	keptLevel = keptLevel or copy.level == 2
+end
+equal(keptLevel, true, "el nivel de las armas persiste")
 equal(restored.data.read(restored.player).swords[restored.data.read(restored.player).loadout[2]].sword, 5, "elección persiste al renumerar ids")
 for _, value in { -2, 3.9, 99, 0 / 0, "4" } do
 	local migrated = fixture({ rebirths = value })

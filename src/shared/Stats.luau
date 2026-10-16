@@ -5,6 +5,7 @@ local Config = require(script.Parent.Config)
 local Permanent = require(script.Parent.Permanent)
 local PotionInfo = require(script.Parent.PotionInfo)
 local Upgrades = require(script.Parent.Upgrades)
+local WeaponLevel = require(script.Parent.WeaponLevel)
 local WeatherInfo = require(script.Parent.WeatherInfo)
 
 local Stats = {}
@@ -19,13 +20,14 @@ function Stats.list(player: Player, attribute: string): { number }
 end
 
 -- Copias de espada del inventario: { id, sword = índice de Config.Swords, metal y size = índices de Config.Metals y Sizes (0 = ninguno), trait = índice de
--- Config.Traits o 0, grade = índice de Config.Grades o 0, locked = con el candado de la mochila }.
+-- Config.Traits o 0, grade = índice de Config.Grades o 0, locked = con el candado de la mochila, level = nivel (0 a
+-- Config.WeaponLevel.MaxLevel) }.
 function Stats.swords(player: Player)
 	local result = {}
 	for entry in string.gmatch(player:GetAttribute("Swords") or "", "[^,]+") do
-		local id, sword, trait, grade, metal, size, locked = string.match(entry, "^(%d+):(%d+):(%d+):?(%d*):?(%d*):?(%d*):?(%d*)$")
+		local id, sword, trait, grade, metal, size, locked, level = string.match(entry, "^(%d+):(%d+):(%d+):?(%d*):?(%d*):?(%d*):?(%d*):?(%d*)$")
 		if id then
-			table.insert(result, { id = tonumber(id), sword = tonumber(sword), trait = tonumber(trait), grade = tonumber(grade) or 0, metal = tonumber(metal) or 0, size = tonumber(size) or 0, locked = locked == "1" })
+			table.insert(result, { id = tonumber(id), sword = tonumber(sword), trait = tonumber(trait), grade = tonumber(grade) or 0, metal = tonumber(metal) or 0, size = tonumber(size) or 0, locked = locked == "1", level = tonumber(level) or 0 })
 		end
 	end
 	return result
@@ -87,17 +89,17 @@ function Stats.isDeposited(player: Player, id: number): boolean
 	return table.find(Stats.list(player, "Bag"), id) ~= nil
 end
 
--- Daño de una copia de espada con su rasgo, su grado, su metal y su tamaño, sin contar artefactos.
+-- Daño de una copia de espada con su rasgo, su grado, su metal, su tamaño y su nivel, sin contar artefactos.
 function Stats.swordDamage(copy): number
 	local trait = Config.Traits[copy.trait]
 	local grade = Config.Grades[copy.grade]
-	return Config.Swords[copy.sword].damage * (if trait then trait.damage or 1 else 1) * (if grade then grade.damage or 1 else 1) * Permanent.damageMult(copy)
+	return Config.Swords[copy.sword].damage * (if trait then trait.damage or 1 else 1) * (if grade then grade.damage or 1 else 1) * Permanent.damageMult(copy) * WeaponLevel.mult(copy.level)
 end
 
 -- Monedas que da vender una copia (a mano o con la venta automática): su daño por Config.Gacha.SellCoins, sin
--- pasar por ningún multiplicador de monedas.
+-- pasar por ningún multiplicador de monedas. Sin su nivel: las gemas gastadas en él no se vuelven monedas.
 function Stats.sellCoins(copy): number
-	return math.floor(Stats.swordDamage(copy) * Config.Gacha.SellCoins)
+	return math.floor(Stats.swordDamage(copy) / WeaponLevel.mult(copy.level) * Config.Gacha.SellCoins)
 end
 
 -- Cuántas copias hay de un accesorio en una lista de índices (data.artifacts o el atributo "Artifacts").

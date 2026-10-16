@@ -72,6 +72,7 @@ local NAMES = {
 	"WorldBossRequest", -- cliente -> servidor: ("leave") salir de la arena del Jefe del mundo y volver al portal del hub
 	"FuseSwords", -- cliente -> servidor: ({ ids }) fusionar Config.Fusion.Count copias de espada (sin usar ni bloquear) pagando las gemas de FusionInfo.cost (server/Fusion)
 	"FusionDone", -- servidor -> cliente: ({ swords = { { sword, metal, size } }, luck }) fusión hecha: las armas que se han metido, para la animación de la máquina (el arma que sale llega por GachaRolled)
+	"LevelSword", -- cliente -> servidor: (id, cuántos) subir de nivel esa copia de espada pagando gemas (shared/WeaponLevel); sube los que pueda pagar, hasta esa cantidad (server/WeaponLevels)
 }
 
 local Remotes = {}

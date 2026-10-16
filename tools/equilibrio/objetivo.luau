@@ -32,6 +32,9 @@ Objetivo.renacer = { 0.5 * H, 4.6 * H, 13.5 * H, 40 * H, 95 * H }
 -- Parte de lo que gana que el jugador tipo dedica a cada cosa mientras le quedan niveles (de ahí salen los precios).
 -- El reparto es entre las que se pagan con la misma moneda: `fortune` es la única de gemas y se las lleva todas.
 Objetivo.reparto = { luck = 0.5, rebirth = 0.25, rollSpeed = 0.15, capacity = 0.1, fortune = 1 }
+-- Parte de las gemas que el jugador tipo gasta en subir de nivel sus armas (Config.WeaponLevel); Fortuna se lleva el
+-- resto. Sube primero el nivel más barato de sus armas equipadas.
+Objetivo.gemasNiveles = 0.5
 
 -- Accesorios (por su posición en Config.Artifacts) y mazmorras (Config.Dungeons): cuándo los consigue o le llega el daño.
 Objetivo.accesorios = { 2 * MIN, 6 * MIN, 15 * MIN, 40 * MIN, 3.4 * H, 9 * H, 22 * H, 49 * H, 86 * H, 123 * H }

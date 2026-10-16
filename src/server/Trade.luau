@@ -79,12 +79,12 @@ local function findArmor(data, id: unknown)
 end
 
 local function swordView(copy)
-	return { id = copy.id, sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0 }
+	return { id = copy.id, sword = copy.sword, trait = copy.trait or 0, grade = copy.grade or 0, metal = copy.metal or 0, size = copy.size or 0, level = copy.level or 0 }
 end
 
 -- Cómo es una copia, en un texto: para comprobar al cerrar el trato que sigue igual que cuando se aceptó.
 local function swordMark(copy): string
-	return `{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}`
+	return `{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{copy.level or 0}`
 end
 
 -- Apunta cómo son las espadas que ofrece ese lado (al bloquearse las ofertas).
@@ -343,7 +343,7 @@ local function give(side, pack)
 			data.items[name] = (data.items[name] or 0) + amount
 		end
 		for _, copy in pack.swords do
-			table.insert(data.swords, { id = data.nextSwordId, sword = copy.sword, trait = copy.trait, grade = copy.grade, metal = copy.metal, size = copy.size })
+			table.insert(data.swords, { id = data.nextSwordId, sword = copy.sword, trait = copy.trait, grade = copy.grade, metal = copy.metal, size = copy.size, level = copy.level })
 			data.nextSwordId += 1
 		end
 		for _, piece in pack.armor do

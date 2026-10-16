@@ -230,7 +230,7 @@ local function build()
 	warning.Position = UDim2.fromScale(0.02, 0.405)
 	warning.Size = UDim2.fromScale(0.96, 0.045)
 	warning.TextColor3 = Color3.fromRGB(255, 170, 90)
-	warning.Text = Lang.t(nil, "Their traits and grades will be lost")
+	warning.Text = Lang.t(nil, "Their traits, grades and levels will be lost")
 	warning.Visible = false
 
 	-- Armas libres ---------------------------------------------------------------------------
@@ -296,7 +296,7 @@ local function build()
 		local count = #selection
 		local hasMods = false
 		for _, copy in selection do
-			if (copy.trait or 0) ~= 0 or (copy.grade or 0) ~= 0 then
+			if (copy.trait or 0) ~= 0 or (copy.grade or 0) ~= 0 or (copy.level or 0) ~= 0 then
 				hasMods = true
 			end
 		end

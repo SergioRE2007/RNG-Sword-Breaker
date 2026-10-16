@@ -15,6 +15,7 @@ local IndexInfo = require(ReplicatedStorage.Shared.IndexInfo)
 local PotionInfo = require(ReplicatedStorage.Shared.PotionInfo)
 local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Lang = require(ReplicatedStorage.Shared.Lang)
+local WeaponLevel = require(ReplicatedStorage.Shared.WeaponLevel)
 
 local PlayerData = {}
 
@@ -151,7 +152,7 @@ local function publish(player: Player)
 	player:SetAttribute("Rebirths", data.rebirths)
 
 	-- "Swords" = copias del inventario como "id:espada:rasgo:grado:metal:tamaño" (0 = ninguno) separadas por comas; las
-	-- bloqueadas por el jugador llevan ":1" al final.
+	-- bloqueadas por el jugador llevan ":1" detrás y, las que tienen nivel (Config.WeaponLevel), "candado:nivel" (":0:12").
 	-- "Loadout" = ids de las copias equipadas, por orden de hueco ("3,7,1"); "Equipped" = el de la primera y
 	-- "SwordLevel" = su tipo (índice de Config.Swords).
 	local swords = {}
@@ -159,7 +160,7 @@ local function publish(player: Player)
 	local equippedType = 1
 	local equippedMetal, equippedSize = 0, 0
 	for _, copy in data.swords do
-		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}{if copy.locked then ":1" else ""}`)
+		table.insert(swords, `{copy.id}:{copy.sword}:{copy.trait or 0}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}{if (copy.level or 0) > 0 then `:{if copy.locked then 1 else 0}:{copy.level}` elseif copy.locked then ":1" else ""}`)
 		if copy.id == first then
 			equippedType = copy.sword
 			equippedMetal, equippedSize = copy.metal or 0, copy.size or 0
@@ -232,9 +233,10 @@ end
 -- Reconstruye el inventario de espadas a partir de lo guardado, en cualquiera de sus formatos.
 local function loadSwords(data, saved)
 	local swords = {}
-	local function add(sword: number, trait: number?, grade: number?, metal: number?, size: number?, locked: boolean?): number
+	local function add(sword: number, trait: number?, grade: number?, metal: number?, size: number?, locked: boolean?, level: number?): number
 		local id = #swords + 1
-		table.insert(swords, { id = id, sword = sword, trait = trait, grade = grade, metal = metal, size = size, locked = locked or nil })
+		local clean = WeaponLevel.sanitize(level)
+		table.insert(swords, { id = id, sword = sword, trait = trait, grade = grade, metal = metal, size = size, locked = locked or nil, level = if clean > 0 then clean else nil })
 		return id
 	end
 
@@ -268,7 +270,7 @@ local function loadSwords(data, saved)
 				break
 			end
 			if type(copy) == "table" and type(copy.sword) == "number" and Config.Swords[copy.sword] then
-				local id = add(copy.sword, validTrait(copy.trait), validGrade(copy.grade), validMetal(copy.metal), validSize(copy.size), copy.locked == true)
+				local id = add(copy.sword, validTrait(copy.trait), validGrade(copy.grade), validMetal(copy.metal), validSize(copy.size), copy.locked == true, copy.level)
 				if type(copy.id) == "number" and copy.id == copy.id then
 					renumbered[copy.id] = id
 				end
@@ -417,6 +419,7 @@ local function applyProgress(data, hours: number)
 				size = if entry.size > 0 then entry.size else nil,
 				trait = if entry.trait > 0 then entry.trait else nil,
 				grade = if entry.grade > 0 then entry.grade else nil,
+				level = if (entry.level or 0) > 0 then entry.level else nil,
 			})
 			table.insert(if #loadout < Config.Loadout.Slots then loadout else deposited, id)
 		end
@@ -458,7 +461,7 @@ end
 
 local function load(player: Player)
 	-- swords = copias { id, sword = índice de Config.Swords, trait = índice de Config.Traits o nil,
-	-- grade = índice de Config.Grades o nil };
+	-- grade = índice de Config.Grades o nil, level = nivel de Config.WeaponLevel o nil };
 	-- loadout = ids de las copias equipadas, por orden de hueco (de 1 a Config.Loadout.Slots, sin repetir; lo guardado
 	-- cuando solo se equipaba una trae "equipped", un solo id); autoSell = se venden solas las espadas de rareza menor (0 = no);
 	-- items = { [nombre] = cantidad } (las pociones también son objetos); artifacts = índices de Config.Artifacts que tiene; gear = los equipados.
@@ -701,7 +704,7 @@ local function load(player: Player)
 		for _ = 1, best do
 			local id = data.nextSwordId
 			data.nextSwordId += 1
-			table.insert(data.swords, { id = id, sword = sword, metal = metal, size = size, trait = trait, grade = grade })
+			table.insert(data.swords, { id = id, sword = sword, metal = metal, size = size, trait = trait, grade = grade, level = Config.WeaponLevel.MaxLevel })
 			if #loadout < Config.Loadout.Slots then
 				table.insert(loadout, id)
 			end
