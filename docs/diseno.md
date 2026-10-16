@@ -167,6 +167,32 @@ Como el gacha es gratis y se tira todo el rato, lo que se mejora es lo rápido q
 - **Clasificaciones** (hecho, ver arriba; faltaría la de mejores tiradas): paneles grandes en el hub, como en la captura de referencia, con las mejores tiradas ("mejor tirada" con su 1 entre N), más monedas y más tiradas; globales entre servidores con OrderedDataStore (necesita el lugar publicado).
 - Decorado de parcelas, sonido al romper, partículas, modelos de espada más trabajados.
 
+### Plan: parcela más grande con cada renacimiento y objetos menos gigantes (pedido por el usuario, 16-10-2026)
+
+Problema: con todo mejorado caben muy pocos objetos en la parcela porque salen enormes. Hoy la parcela mide 100 x 100 (`Config.Plot.Size`) y con `capacity` al máximo pide 30 objetos. Los tipos raros ya miden 14 x 26 (Infinity), y con tamaño Colosal (x2,5) solo los paran los topes `MaxWidth = 30` y `MaxHeight = 56` de `Config.ObjectRolls`.
+
+1. **Separar la escala que cuenta de la que se ve.** `ObjectSpec.roll` sigue tirando la escala de siempre (`Scale`, la que entra en suerte, vida y premio: `scale ^ SizeLuckPower` etc.), así que no se nerfea nada. Aparte calcula una `VisualScale` comprimida, la que usa `Destructibles` para el tamaño físico de la pieza:
+   - De base 1 hacia abajo, igual que ahora.
+   - Por encima, creciendo mucho menos, por ejemplo `1 + (escala - 1) * 0,4`. Así un Colosal x2,5 se ve x1,6.
+   - Con un tope de huella en `Config.ObjectRolls`, por ejemplo `VisualMaxWidth = 18` y `VisualMaxHeight = 32` studs.
+
+   El cartel del objeto sigue diciendo su tamaño de verdad ("Colosal", x2,5): lo grande se nota en el nombre, el aura y los números, no en que ocupe media parcela.
+   - Ojo: hoy `scaleLimits` capa la escala que cuenta con `MaxWidth`/`MaxHeight`, así que los tipos grandes nunca llegan a x2,5. Si ese tope pasa a ser solo visual, los tipos grandes ganan suerte (escala^4) y hay que volver a pasar `tools/equilibrio`. Para no tocar el equilibrio, se deja `scaleLimits` como está para la escala que cuenta y se añade el tope nuevo solo a la visual.
+   - Comprobar el golpe: el círculo (`Hitbox.within`) mide hasta la pieza, y con piezas más pequeñas hay que acercarse más. Mirarlo con la hitbox a la vista.
+2. **Parcela que crece con los renacimientos.** Añadir a `Config.Plot` `SizePerRebirth = 10`: de 100 a 150 con los 5 renacimientos (`Config.Rebirth.max`), que es más del doble de superficie (x2,25). Por qué no más:
+   - Las 8 parcelas están en anillo a 250 del centro, con 191 studs entre centros vecinos.
+   - La esquina exterior de una de 150 llega a unos 356 del centro, y la orilla de la isla está a 382.
+   - Con más de unos 160 se juntan los muros y se pisa la orilla.
+
+   Lo que habría que tocar:
+   - `Plots`: medida de cada parcela según los renacimientos de su dueño (`Stats.plotSize(player)`, múltiplo de 20 por la valla). Redibujar suelo y muro al reclamarla y al renacer, y volver a 100 al quedar libre.
+   - `Destructibles`: repartir los objetos en la medida de su dueño.
+   - `MapBounds`, el saco de la Bolsa de oro de detrás de la parcela, la flecha del tutorial y `SceneryJapan`: los árboles y torii de alrededor tienen que dejar libre la medida máxima (150), no la de 100.
+   - `Config.Loadout.FarmRadius` (170): desde una esquina de una parcela de 150 no llega a la opuesta (212). Subirlo o medirlo desde el centro de la parcela.
+3. **Opcional:** subir `capacity` con los renacimientos, para que la parcela más grande también traiga más objetos. Esto sí cambia el equilibrio y hay que pasarlo por `tools/equilibrio`. Decidirlo con el usuario antes.
+
+Orden propuesto: primero el 1 (se nota enseguida y no toca el mapa) y luego el 2. Cada uno en su conversación.
+
 ## Tareas pendientes implementadas — octubre de 2026
 
 Rama `mejoras-pendientes`, a partir de la lista del usuario. Código implementado y comprobado con Lune y Rojo; las pruebas visuales y de físicas en Studio siguen pendientes. Detalle reproducible y lista de comprobación en [pruebas-mejoras.md](pruebas-mejoras.md).
