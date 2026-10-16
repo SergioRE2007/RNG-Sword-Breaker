@@ -199,7 +199,7 @@ local function onUse(player: Player, requestedFamily: unknown, requestedTier: un
 	end
 
 	PlayerData.edit(player, function(edited)
-		edited.items[key] -= 1
+		PlayerData.spendItem(edited, key, 1)
 		edited.potions[family] = { tier = tier, seconds = seconds }
 	end)
 	publish(player, family, data.potions[family])
