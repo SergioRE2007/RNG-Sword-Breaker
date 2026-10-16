@@ -199,10 +199,18 @@ end
 local HEADWEAR_TYPES = { [Enum.AccessoryType.Hat] = true, [Enum.AccessoryType.Hair] = true, [Enum.AccessoryType.Face] = true }
 local HEADWEAR_ATTACHMENTS = { HatAttachment = true, HairAttachment = true, FaceFrontAttachment = true, FaceCenterAttachment = true }
 
+-- Pedido por el usuario: al ponerse un casco perdía la cabeza de su avatar (un sombrero enorme con forma de cabeza,
+-- como el "Nerd"). Un sombrero que mide al menos el doble de ancho que la cabeza hace de cabeza: no se esconde.
+local HEAD_REPLACEMENT_RATIO = 2
+local function replacesHead(character: Model, handle: BasePart): boolean
+	local head = character:FindFirstChild("Head")
+	return head ~= nil and head:IsA("BasePart") and handle.Size.X >= head.Size.X * HEAD_REPLACEMENT_RATIO
+end
+
 local function hideHeadwear(character: Model, hidden: boolean)
 	for _, item in character:GetChildren() do
 		local handle = item:IsA("Accessory") and item:FindFirstChild("Handle")
-		if handle and handle:IsA("BasePart") then
+		if handle and handle:IsA("BasePart") and not (item.AccessoryType == Enum.AccessoryType.Hat and replacesHead(character, handle)) then
 			local attachment = handle:FindFirstChildWhichIsA("Attachment")
 			if HEADWEAR_TYPES[item.AccessoryType] or (attachment and HEADWEAR_ATTACHMENTS[attachment.Name]) then
 				local original = handle:GetAttribute("ArmorTransparency")
