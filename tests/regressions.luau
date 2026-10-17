@@ -737,9 +737,10 @@ local _, highest = objectSpec.scaleLimits(rarest)
 equal(objectSpec.luck(rarest, 1, 1) * gachaMax / top < 1e-4, true, "el arma más rara es rara con la suerte al máximo")
 equal(objectSpec.luck(rarest, #f.config.ObjectRarities, highest) * gachaMax / top < 0.05, true, "ni el mejor objeto la garantiza")
 -- Ni con el consumible de suerte (x1000 a la suerte de armas de un objeto) y la mejor poción de suerte de armas sale
--- de un objeto corriente del tipo más raro: hacen falta cientos de usos.
+-- de un objeto corriente del tipo más raro a la primera. Eran cientos de usos; con la suerte de más del Génesis (decidido
+-- por el usuario el 17-10-2026: los objetos del endgame tienen que valer la pena) son una docena.
 local weaponPotion = f.config.Potions.Families.weaponLuck.values
-equal(objectSpec.luck(rarest, 1, 1) * gachaMax * weaponPotion[#weaponPotion] * 1000 / top < 0.01, true, "el consumible de suerte no regala el arma más rara")
+equal(objectSpec.luck(rarest, 1, 1) * gachaMax * weaponPotion[#weaponPotion] * 1000 / top < 0.1, true, "el consumible de suerte no regala el arma más rara")
 -- Fortuna: mejora de monedas que se paga con gemas.
 local fortune = f.config.Upgrades.fortune
 equal(fortune.currency, "gems", "Fortuna se paga con gemas")

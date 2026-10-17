@@ -477,10 +477,13 @@ Config.Destructibles = {
 	-- Endgame (pedido por el usuario, 17-10-2026): tres objetos para los niveles 51 a 60 de la suerte. Vida, premio y
 	-- gemas puestos A OJO, sin tools/equilibrio (el usuario no quiso calendario): mucho más duros que el Infinito. La vida, subida
 	-- para el mejor jugador (8,8e18 por andanada de sus 4 armas): el Sol negro le dura unos 2,5 min, la Galaxia 20 y el Génesis 2 h
+	-- con las armas de ahora (pedido por el usuario: "que sea un cambio de verdad"); con las que sueltan bajan unas 10 veces.
+	-- "luck": x5, x10 y x20 a su suerte de armas (pedido por el usuario: si cuestan tanto, que valgan la pena), aunque
+	-- con eso el Colmillo astral a secas se vuelve alcanzable al final (decidido por el usuario el 17-10-2026).
 	-- "accent" = color de su luz (Glow y Halo del modelo, y la de ObjectAmbient), distinto del cuerpo.
-	{ name = "Black Sun", rarity = 1e25, hp = 3e21, reward = 1.1e19, gems = 1e22, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(42, 32, 58), accent = Color3.fromRGB(255, 170, 70), material = Enum.Material.Slate, sound = "energy" },
-	{ name = "Galaxy", rarity = 3e26, hp = 2.5e22, reward = 1.5e20, gems = 3e23, size = Vector3.new(16, 10, 16), color = Color3.fromRGB(90, 70, 200), accent = Color3.fromRGB(255, 140, 220), material = Enum.Material.Neon, sound = "energy" },
-	{ name = "Genesis", rarity = 1e28, hp = 1.5e23, reward = 2e21, gems = 1e25, size = Vector3.new(14, 24, 14), color = Color3.fromRGB(240, 235, 255), accent = Color3.fromRGB(120, 230, 255), material = Enum.Material.Marble },
+	{ name = "Black Sun", rarity = 1e25, hp = 3e21, luck = 5, reward = 1.1e19, gems = 1e22, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(42, 32, 58), accent = Color3.fromRGB(255, 170, 70), material = Enum.Material.Slate, sound = "energy" },
+	{ name = "Galaxy", rarity = 3e26, hp = 2.5e22, luck = 10, reward = 1.5e20, gems = 3e23, size = Vector3.new(16, 10, 16), color = Color3.fromRGB(90, 70, 200), accent = Color3.fromRGB(255, 140, 220), material = Enum.Material.Neon, sound = "energy" },
+	{ name = "Genesis", rarity = 1e28, hp = 1.5e23, luck = 20, reward = 2e21, gems = 1e25, size = Vector3.new(14, 24, 14), color = Color3.fromRGB(240, 235, 255), accent = Color3.fromRGB(120, 230, 255), material = Enum.Material.Marble },
 }
 
 -- Gemas de los objetos de la parcela: cada objeto con "gems" las suelta con probabilidad "gemChance" (1 si no
