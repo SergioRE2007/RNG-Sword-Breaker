@@ -605,7 +605,7 @@ local visitorCharacter, visitorRoot = Instance.new("Model"), Instance.new("Part"
 visitorCharacter.Parent = spawn.workspace
 visitorRoot.Name, visitorRoot.Position, visitorRoot.Parent = "HumanoidRootPart", Vector3.new(0, 3, 0), visitorCharacter
 visitor.Character = visitorCharacter
-local plot = { cframe = CFrame.identity, spawnOffset = Vector3.new(0, 0, -44), owner = spawn.player }
+local plot = { cframe = CFrame.identity, size = 100, spawnOffset = Vector3.new(0, 0, -44), owner = spawn.player }
 spawn.overrides["src/server/Plots"] = { all = function() return { plot } end, get = function() return plot end, onRelease = function() end }
 spawn.overrides["src/shared/ObjectModel"] = { attach = function() end }
 spawn.overrides["src/shared/Chance"] = { roll = function() return false end }
@@ -613,7 +613,7 @@ local specs = spawn.load("src/shared/ObjectSpec")
 local rolls = 0
 specs.roll = function()
 	rolls += 1
-	return { quality = 1, size = 1, scale = 1, hp = 10, luck = 99, rolls = 1, reward = 1, odds = 1 }
+	return { quality = 1, size = 1, scale = 1, visual = 1, hp = 10, luck = 99, rolls = 1, reward = 1, odds = 1 }
 end
 spawn.load("src/server/Destructibles").start()
 spawn.step(2)
@@ -713,6 +713,20 @@ equal(#f.config.Rebirth.costs, f.config.Rebirth.max, "un precio por renacimiento
 local rarest = f.config.Destructibles[#f.config.Destructibles]
 local luckMax = upgrades.value("luck", f.config.Upgrades.luck.maxLevel) * f.config.Rebirth.luck ^ f.config.Rebirth.max
 equal(luckMax < rarest.rarity, true, "la mejora de suerte y los renacimientos no agotan los tipos de objeto")
+-- Objetos menos gigantes: la pieza crece menos que la escala que cuenta y cabe en la huella de Config.
+for _, def in f.config.Destructibles do
+	local _, highest = objectSpec.scaleLimits(def)
+	local visual = objectSpec.visualScale(def, highest)
+	equal(visual <= highest and visual >= math.min(highest, 1), true, `escala visible acotada de {def.name}`)
+	local rolls = f.config.ObjectRolls
+	equal(visual <= 1 or (def.size.X * visual <= rolls.VisualMaxWidth + 0.1 and def.size.Y * visual <= rolls.VisualMaxHeight + 0.1), true, `huella visible de {def.name}`)
+end
+-- La parcela crece con los renacimientos en múltiplos de 20 (la valla) y sin pasar del tope.
+local plotStats = f.load("src/shared/Stats")
+for rebirths = 0, 30 do
+	local side = plotStats.plotSize(rebirths)
+	equal(side % 20 == 0 and side >= f.config.Plot.Size and side <= f.config.Plot.MaxSize, true, `medida de parcela con {rebirths} renacimientos`)
+end
 -- El arma más rara sigue siéndolo con toda la suerte al máximo, y ni el mejor objeto posible la garantiza.
 local top = 0
 for _, sword in f.config.Swords do
@@ -1665,7 +1679,7 @@ do
 	equal(clean.stage == 2 and clean.taken == 400 and clean.seen == 50, true, "bolsa guardada: bolsa entera y lo sacado dentro de lo que lleva")
 
 	-- Depositar: copias 1..6, la k con la k-ésima arma de menos daño.
-	bf.overrides["src/server/Plots"] = { all = function() return {} end }
+	bf.overrides["src/server/Plots"] = { all = function() return {} end, onResize = function() end }
 	bf.load("src/server/Gacha").start()
 	bf.load("src/server/GoldBag").start()
 	local stats = bf.load("src/shared/Stats")
@@ -1756,7 +1770,7 @@ do
 	equal(saved.bag.stage, leftStage, "y la bolsa por la que va")
 	local back = fixture(nil, store)
 	table3(back.config, 2)
-	back.overrides["src/server/Plots"] = { all = function() return {} end }
+	back.overrides["src/server/Plots"] = { all = function() return {} end, onResize = function() end }
 	back.load("src/server/GoldBag").start()
 	local returned = back.data.read(back.player)
 	equal(#returned.bag.slots, 4, "al volver siguen depositadas")

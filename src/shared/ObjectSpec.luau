@@ -38,6 +38,18 @@ function ObjectSpec.scaleLimits(def): (number, number)
 	return math.min(def.minScale or LOWEST, 1), math.max(highest, 1)
 end
 
+-- Escala con la que se ve (y choca) la pieza: la de verdad comprimida por encima de 1 y con el tope de huella de
+-- Config.ObjectRolls. Nunca más que la de verdad ni menos que 1 si la de verdad no lo es.
+function ObjectSpec.visualScale(def, scale: number): number
+	if scale <= 1 then
+		return scale
+	end
+	local cfg = Config.ObjectRolls
+	local visual = 1 + (scale - 1) * cfg.VisualGrowth
+	local fit = math.min(cfg.VisualMaxWidth / math.max(def.size.X, def.size.Z), cfg.VisualMaxHeight / def.size.Y)
+	return math.round(math.clamp(math.min(visual, fit), 1, scale) * 100) / 100
+end
+
 -- Suerte del objeto, la de las tiradas de arma que da al romperse: lo raro que es su tipo, por su rareza, por su
 -- tamaño. Las tres cuentan.
 function ObjectSpec.luck(def, quality: number, scale: number): number
@@ -140,7 +152,7 @@ function ObjectSpec.meanLuck(typeLuck: number, luck: number): number
 end
 
 -- Lo que le toca a un objeto de ese tipo al aparecer. `luck` = Stats.objectLuck del dueño. Devuelve
--- { quality, size (posiciones en Config.ObjectRarities y ObjectSizes), scale, hp, reward (multiplicador de monedas
+-- { quality, size (posiciones en Config.ObjectRarities y ObjectSizes), scale, visual (la que se ve), hp, reward (multiplicador de monedas
 -- y gemas), luck (suerte del objeto), rolls (tiradas de arma, ya decididas), odds ("1 entre N" de que saliera así) }.
 function ObjectSpec.roll(def, luck: number)
 	local cfg = Config.ObjectRolls
@@ -178,6 +190,7 @@ function ObjectSpec.roll(def, luck: number)
 		quality = quality,
 		size = size,
 		scale = scale,
+		visual = ObjectSpec.visualScale(def, scale),
 		hp = ObjectSpec.hp(def, quality, scale),
 		reward = ObjectSpec.reward(quality, scale),
 		luck = ObjectSpec.luck(def, quality, scale),

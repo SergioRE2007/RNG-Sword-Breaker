@@ -23,7 +23,7 @@ local STONE = { Color3.fromRGB(238, 232, 244), Color3.fromRGB(216, 208, 230) }
 local PETALS = { Color3.fromRGB(255, 150, 200), Color3.fromRGB(255, 190, 220), Color3.fromRGB(255, 225, 238), Color3.fromRGB(255, 120, 170) }
 local MIST_MOUNTAINS = { Color3.fromRGB(176, 140, 205), Color3.fromRGB(196, 150, 200), Color3.fromRGB(150, 130, 200) }
 local TREES = { "Sakura", "Sakura", "SakuraB", "SakuraB", "Maple", "Pine" }
-local ISLAND_RADIUS = Config.Plot.RingRadius + Config.Plot.Size * 0.75 + 35
+local ISLAND_RADIUS = Config.Plot.RingRadius + Config.Plot.MaxSize / 2 + 60
 local TREE_SPACE = 5.2 -- sitio que guarda un árbol por cada punto de escala: los troncos no se pegan y las copas solo se rozan
 
 local function part(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material): Part
@@ -82,7 +82,9 @@ local function turn(): CFrame
 	return CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
 end
 
--- Si un punto del césped está libre: fuera del hub, de las parcelas y de los caminos.
+-- Si un punto del césped está libre: fuera del hub, de las parcelas y de los caminos. Las parcelas, con la medida más
+-- grande a la que llegan (Config.Plot.MaxSize) y el decorado que les pone fuera del muro server/PlotLooks.
+local PLOT_HALF = Config.Plot.MaxSize / 2 + 24
 local function isOpen(position: Vector3, margin: number): boolean
 	local cfg = Config.Plot
 	if position.Magnitude < cfg.HubRadius + margin then
@@ -93,14 +95,14 @@ local function isOpen(position: Vector3, margin: number): boolean
 		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
 		local along = position:Dot(direction)
 		local across = math.abs(position:Dot(Vector3.new(-direction.Z, 0, direction.X)))
-		if math.abs(along - cfg.RingRadius) < cfg.Size / 2 + margin and across < cfg.Size / 2 + margin then
+		if math.abs(along - cfg.RingRadius) < PLOT_HALF + margin and across < PLOT_HALF + margin then
 			return false
 		end
 		if along > 0 and along < cfg.RingRadius and across < 14 + margin then
 			return false
 		end
 		-- El patio de la Bolsa de oro, detrás de cada parcela (server/GoldBag).
-		if along > cfg.RingRadius and along < cfg.RingRadius + cfg.Size / 2 + 43 + margin and across < 17 + margin then
+		if along > cfg.RingRadius and along < cfg.RingRadius + cfg.MaxSize / 2 + 43 + margin and across < 17 + margin then
 			return false
 		end
 	end
@@ -291,14 +293,16 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 	local tile = 9
 	local side = Vector3.new(-direction.Z, 0, direction.X)
 	local facing = CFrame.lookAt(Vector3.zero, direction).Rotation
-	local count = math.floor((to - from) / tile)
+	-- Las losas se estiran un poco a lo largo para llegar justo hasta `to` (si no, quedaba un hueco antes de la parcela).
+	local count = math.max(math.round((to - from) / tile), 1)
+	local long = (to - from) / count
 	for step = 0, count - 1 do
 		for lane = 0, 1 do
-			local center = direction * (from + (step + 0.5) * tile) + side * ((lane - 0.5) * tile) + Vector3.new(0, 0.42, 0)
-			decor(part(parent, "Path", Vector3.new(tile - 0.5, 0.12, tile - 0.5), facing + center, STONE[(step + lane) % 2 + 1], Enum.Material.SmoothPlastic))
+			local center = direction * (from + (step + 0.5) * long) + side * ((lane - 0.5) * tile) + Vector3.new(0, 0.42, 0)
+			decor(part(parent, "Path", Vector3.new(tile - 0.5, 0.12, long - 0.5), facing + center, STONE[(step + lane) % 2 + 1], Enum.Material.SmoothPlastic))
 		end
 	end
-	local length = count * tile
+	local length = to - from
 	for _, sign in { 1, -1 } do
 		local middle = direction * (from + length / 2) + side * sign * (width / 2 + 0.6) + Vector3.new(0, 0.6, 0)
 		decor(part(parent, "Curb", Vector3.new(1.2, 0.5, length), facing + middle, Color3.fromRGB(238, 52, 62), Enum.Material.SmoothPlastic))
@@ -344,7 +348,10 @@ local function pond(parent: Instance, center: Vector3, radius: number)
 	decor(disc(parent, "PondBed", center, radius, 0.31, 0.35, Color3.fromRGB(26, 82, 98), Enum.Material.SmoothPlastic))
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(radius * 0.25, 0.7, -radius * 0.2)) * turn(), 1.2)
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(-radius * 0.35, 0.7, radius * 0.3)) * turn(), 1.0)
-	local turnBridge = rng:NextNumber(0, math.pi)
+	-- El puente va hacia el hub, por el medio del hueco entre las dos parcelas: girado al azar, con las parcelas
+	-- grandes su punta quedaba pegada a una esquina. (La tirada se queda para no cambiar el resto del decorado.)
+	rng:NextNumber(0, math.pi)
+	local turnBridge = -math.atan2(center.Z, center.X)
 	PropModel.place(parent, "Bridge", CFrame.new(center + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, turnBridge, 0), radius / 10)
 	-- El puente llega al suelo justo fuera del borde: ni rocas ni valla delante de sus dos entradas.
 	local along = Vector3.new(math.cos(turnBridge), 0, -math.sin(turnBridge))
@@ -486,7 +493,7 @@ function SceneryJapan.start()
 
 	-- Caminos con torii y linternas, con el farolillo del color de cada parcela.
 	ring(cfg.Count, 1, 0, function(direction, index)
-		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1))
+		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.MaxSize / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1))
 	end)
 
 	-- Linternas de piedra en el borde del hub, entre las entradas.
@@ -558,26 +565,7 @@ function SceneryJapan.start()
 
 	-- Sin animales (quitados a petición del usuario): `herd` y `CRITTERS` siguen ahí por si vuelven.
 
-	-- Luces de las parcelas (de noche las enciende el cliente): linternas sobre los pilares del muro, en las esquinas,
-	-- en el medio de los dos lados, a cada lado del paso de atrás (el de la Bolsa de oro: su pilar central no existe) y
-	-- en los dos pilares altos de la entrada. Mismo reparto que
-	-- Plots.buildWall: el -Z de la parcela mira al hub, el muro está a Size / 2 y sus pilares miden 6 (8,4 los de la
-	-- entrada) más el remate.
-	local plot = Config.Plot
-	local half = plot.Size / 2
-	local lampSpots = {
-		Vector3.new(-half, 7.1, -half), Vector3.new(half, 7.1, -half), Vector3.new(-half, 7.1, half), Vector3.new(half, 7.1, half),
-		Vector3.new(-10, 7.1, half), Vector3.new(10, 7.1, half), Vector3.new(-half, 7.1, 0), Vector3.new(half, 7.1, 0),
-		Vector3.new(-10, 9.5, -half), Vector3.new(10, 9.5, -half),
-	}
-	for index = 1, plot.Count do
-		local angle = (index - 1) / plot.Count * math.pi * 2
-		local center = Vector3.new(math.cos(angle) * plot.RingRadius, plot.FloorHeight, math.sin(angle) * plot.RingRadius)
-		local frame = CFrame.lookAt(center, Vector3.new(0, plot.FloorHeight, 0))
-		for _, spot in lampSpots do
-			lit(PropModel.place(folder, "StoneLantern", frame * CFrame.new(spot), 0.8), 1.4, 26)
-		end
-	end
+	-- Las linternas de los muros de las parcelas las pone server/Plots, que los vuelve a montar al crecer.
 
 	-- Pétalos y matas de hierba por el césped libre.
 	local placed = 0

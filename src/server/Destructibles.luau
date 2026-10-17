@@ -13,8 +13,6 @@ local ObjectModel = require(ReplicatedStorage.Shared.ObjectModel)
 local ObjectSpec = require(ReplicatedStorage.Shared.ObjectSpec)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
-local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
-local PlayerData = require(script.Parent.PlayerData)
 local Hitbox = require(ReplicatedStorage.Shared.Hitbox)
 local Plots = require(script.Parent.Plots)
 local Lang = require(ReplicatedStorage.Shared.Lang)
@@ -61,7 +59,7 @@ local function charactersClear(plot, position: Vector3, radius: number, height: 
 end
 
 local function findPosition(plot, radius: number, height: number): Vector3?
-	local limit = Config.Plot.Size / 2 - 2 - radius
+	local limit = plot.size / 2 - 2 - radius
 	if limit <= 0 then return nil end
 	for _ = 1, 15 do
 		local position = Vector3.new(rng:NextNumber(-limit, limit), 0, rng:NextNumber(-limit, limit))
@@ -106,9 +104,10 @@ local function rollSpec(owner: Player)
 	return spec
 end
 
--- Sitio para ese objeto en la parcela: su tamaño, su radio y dónde va (nil si ahora no cabe).
+-- Sitio para ese objeto en la parcela: su tamaño, su radio y dónde va (nil si ahora no cabe). La pieza va con la
+-- escala que se ve (ObjectSpec.visualScale), más pequeña que la que cuenta en los grandes.
 local function place(plot, spec): (Vector3, number, Vector3?)
-	local size = spec.def.size * spec.scale
+	local size = spec.def.size * spec.visual
 	local radius = Vector2.new(size.X, size.Z).Magnitude / 2
 	return size, radius, findPosition(plot, radius, size.Y)
 end
@@ -140,7 +139,7 @@ local function spawnIn(plot)
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.CFrame = plot.cframe * CFrame.new(position + Vector3.new(0, size.Y / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
 	local index = table.find(Config.Destructibles, def) :: number
-	ObjectModel.attach(part, index, def, spec.scale)
+	ObjectModel.attach(part, index, def, spec.visual)
 	part:SetAttribute("Index", index)
 	part:SetAttribute("HP", spec.hp)
 	part:SetAttribute("MaxHP", spec.hp)
@@ -343,8 +342,7 @@ function Destructibles.start()
 					-- muy retrasada: los que no han salido no se recuperan de golpe.
 					local interval = Stats.spawnTime(owner)
 					nextSpawn[plot] = math.max(due, now - interval) + interval
-					local capacity = Upgrades.value("capacity", PlayerData.getUpgrade(owner, "capacity"))
-					if (counts[plot] or 0) < capacity then
+					if (counts[plot] or 0) < Stats.capacity(owner) then
 						spawnIn(plot)
 					end
 				end

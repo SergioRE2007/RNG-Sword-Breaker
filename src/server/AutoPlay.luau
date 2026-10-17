@@ -63,7 +63,7 @@ local function inPlot(player: Player): boolean
 		return false
 	end
 	local point = plot.cframe:PointToObjectSpace(root.Position)
-	local half = Config.Plot.Size / 2 + PLOT_MARGIN
+	local half = plot.size / 2 + PLOT_MARGIN
 	return math.abs(point.X) <= half and math.abs(point.Z) <= half
 end
 

@@ -1,9 +1,13 @@
 -- Construye el hub y las parcelas, y asigna una parcela a cada jugador.
+-- La parcela crece y cambia de aspecto con los renacimientos de su dueño (Stats.plotSize y server/PlotLooks): el suelo,
+-- el muro, sus luces y su decorado van en el Model "Ground" de cada parcela, que se vuelve a montar entero al cambiar.
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Stats = require(ReplicatedStorage.Shared.Stats)
+local PlotLooks = require(script.Parent.PlotLooks)
 local Tell = require(script.Parent.Tell)
 
 local Plots = {}
@@ -21,10 +25,13 @@ local function plotColor(index: number, value: number): Color3
 	return Color3.fromHSV((index - 1) / Config.Plot.Count, 0.65, value)
 end
 
--- plot = { index, cframe (centro, a ras de suelo, -Z mira al hub), spawnOffset, owner, tiles, spawn, label }
+-- plot = { index, cframe (centro, a ras de suelo, -Z mira al hub), size (lado de ahora), look (PlotLooks.get),
+-- spawnOffset, owner, ground (Model con suelo, muro y decorado), tiles, spawn, sign, label }
 local plots = {}
 local byPlayer = {}
+local watchers = {} -- [player] = conexión al cambio de sus renacimientos
 local releaseCallbacks = {}
+local resizeCallbacks = {}
 
 local function block(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3): Part
 	local part = Instance.new("Part")
@@ -40,17 +47,25 @@ local function block(parent: Instance, name: string, size: Vector3, cframe: CFra
 	return part
 end
 
+-- Con dueño, la tarima del aspecto de sus renacimientos y, con "border", un marco de losas en la fila de fuera.
 local function paint(plot, owned: boolean)
-	local colors = if owned then FLOOR_OWNED else FLOOR_FREE
+	local look = plot.look
+	local colors = if owned then (if JAPAN and look.floor then look.floor else FLOOR_OWNED) else FLOOR_FREE
+	local border = owned and look.has.border
 	for _, tile in plot.tiles do
-		tile.part.Color = colors[tile.shade]
-		tile.part.Material = if owned then OWNED_MATERIAL else Enum.Material.SmoothPlastic
+		if border and tile.edge then
+			tile.part.Color = PlotLooks.BORDER[tile.shade]
+			tile.part.Material = Enum.Material.Slate
+		else
+			tile.part.Color = colors[tile.shade]
+			tile.part.Material = if owned then OWNED_MATERIAL else Enum.Material.SmoothPlastic
+		end
 	end
 end
 
 -- Muro japonés (tsuijibei) para el mapa japonés: zócalo de piedra, pared blanca con una franja del color de la
 -- parcela, tejadillo de tejas azules y pilares de piedra con remate; la entrada del lado del hub lleva dos pilares
--- más altos. Mismo recorrido y mismo hueco que la valla de siempre.
+-- más altos. Mismo recorrido y mismo hueco que la valla de siempre. Con "gold" los remates son dorados.
 local WALL_STONE = Color3.fromRGB(150, 146, 168)
 local WALL_PLASTER = Color3.fromRGB(252, 246, 238)
 local WALL_ROOF = Color3.fromRGB(54, 70, 124)
@@ -61,10 +76,12 @@ local function stone(part: Part, material: Enum.Material?)
 	return part
 end
 
-local function buildWall(model: Instance, cframe: CFrame, index: number)
-	local half = Config.Plot.Size / 2
-	local segments = Config.Plot.Size / TILE
+local function buildWall(model: Instance, cframe: CFrame, index: number, size: number, look)
+	local half = size / 2
+	local segments = size / TILE
 	local band = plotColor(index, 0.9)
+	local gold = look.has.gold
+	local ridge = if gold then PlotLooks.GOLD else WALL_ROOF:Lerp(Color3.new(1, 1, 1), 0.15)
 
 	for side = 0, 3 do
 		local line = cframe * CFrame.Angles(0, side * math.pi / 2, 0) * CFrame.new(0, 0, -half)
@@ -79,7 +96,10 @@ local function buildWall(model: Instance, cframe: CFrame, index: number)
 				local width = if gatePost then 2.4 else 1.9
 				stone(block(model, "Post", Vector3.new(width, height, width), line * CFrame.new(x, height / 2, 0), WALL_STONE))
 				block(model, "PostCap", Vector3.new(width + 1.2, 0.6, width + 1.2), line * CFrame.new(x, height + 0.3, 0), if gatePost then GATE_RED else WALL_ROOF)
-				block(model, "PostTop", Vector3.new(width * 0.5, 0.5, width * 0.5), line * CFrame.new(x, height + 0.85, 0), if gatePost then Color3.fromRGB(255, 210, 70) else WALL_STONE)
+				local top = block(model, "PostTop", Vector3.new(width * 0.5, 0.5, width * 0.5), line * CFrame.new(x, height + 0.85, 0), if gatePost or gold then PlotLooks.GOLD else WALL_STONE)
+				if gold then
+					top.Material = Enum.Material.Metal
+				end
 			end
 			if not isGate then
 				local middle = line * CFrame.new(x + TILE / 2, 0, 0)
@@ -87,23 +107,34 @@ local function buildWall(model: Instance, cframe: CFrame, index: number)
 				block(model, "Wall", Vector3.new(TILE, 3.0, 1.3), middle * CFrame.new(0, 3.0, 0), WALL_PLASTER)
 				block(model, "WallBand", Vector3.new(TILE, 0.4, 1.4), middle * CFrame.new(0, 2.2, 0), band)
 				block(model, "WallRoof", Vector3.new(TILE, 0.5, 2.6), middle * CFrame.new(0, 4.75, 0), WALL_ROOF)
-				block(model, "WallRidge", Vector3.new(TILE, 0.4, 1.3), middle * CFrame.new(0, 5.2, 0), WALL_ROOF:Lerp(Color3.new(1, 1, 1), 0.15))
+				block(model, "WallRidge", Vector3.new(TILE, 0.4, 1.3), middle * CFrame.new(0, 5.2, 0), ridge)
 			end
 		end
+	end
+
+	-- Linternas de piedra sobre los pilares (de noche las enciende el cliente): en las esquinas, en el medio de los dos
+	-- lados, a cada lado del paso de atrás (su pilar central no existe) y en los dos pilares altos de la entrada.
+	local spots = {
+		Vector3.new(-half, 7.1, -half), Vector3.new(half, 7.1, -half), Vector3.new(-half, 7.1, half), Vector3.new(half, 7.1, half),
+		Vector3.new(-10, 7.1, half), Vector3.new(10, 7.1, half), Vector3.new(-half, 7.1, 0), Vector3.new(half, 7.1, 0),
+		Vector3.new(-10, 9.5, -half), Vector3.new(10, 9.5, -half),
+	}
+	for _, spot in spots do
+		PlotLooks.lantern(model, cframe * CFrame.new(spot), 0.8, 1.4, 26)
 	end
 end
 
 -- Valla de postes, dos travesaños y aspas, del color de la parcela, con un hueco de entrada
 -- en el lado del hub.
-local function buildFence(model: Instance, cframe: CFrame, index: number)
+local function buildFence(model: Instance, cframe: CFrame, index: number, size: number, look)
 	if JAPAN then
-		buildWall(model, cframe, index)
+		buildWall(model, cframe, index, size, look)
 		return
 	end
-	local half = Config.Plot.Size / 2
-	local segments = Config.Plot.Size / TILE
+	local half = size / 2
+	local segments = size / TILE
 	local rail = plotColor(index, 0.95)
-	local post = plotColor(index, 0.6)
+	local post = if look.has.gold then PlotLooks.GOLD else plotColor(index, 0.6)
 	local slope = math.atan2(2, TILE)
 	local diagonal = math.sqrt(TILE ^ 2 + 2 ^ 2)
 
@@ -129,6 +160,115 @@ local function buildFence(model: Instance, cframe: CFrame, index: number)
 	end
 end
 
+-- Mapa japonés: el camino de losas del decorado llega hasta donde empieza la parcela más grande; mientras esta es más
+-- pequeña, este tramo (con las mismas losas y bordillos) lo une con su entrada.
+local PATH_STONE = { Color3.fromRGB(238, 232, 244), Color3.fromRGB(216, 208, 230) }
+local PATH_CURB = Color3.fromRGB(238, 52, 62)
+
+local function buildApproach(model: Instance, cframe: CFrame, size: number)
+	local from, to = -Config.Plot.MaxSize / 2, -size / 2
+	local length = to - from
+	if not JAPAN or length <= 0 then
+		return
+	end
+	local floor = Config.Plot.FloorHeight
+	local count = math.ceil(length / 9)
+	local step = length / count
+	for row = 0, count - 1 do
+		for lane = 0, 1 do
+			local tile = block(model, "Path", Vector3.new(8.5, 0.12, step - 0.5), cframe * CFrame.new((lane - 0.5) * 9, 0.42 - floor, from + (row + 0.5) * step), PATH_STONE[(row + lane) % 2 + 1])
+			tile.CanQuery = false
+		end
+	end
+	for _, sign in { 1, -1 } do
+		block(model, "Curb", Vector3.new(1.2, 0.5, length), cframe * CFrame.new(sign * 9.6, 0.6 - floor, from + length / 2), PATH_CURB)
+	end
+end
+
+-- (Re)monta suelo, muro, luces y decorado de la parcela con su medida y su aspecto, y pone en su sitio la entrada y el
+-- cartel. Lo nuevo se crea antes de quitar lo viejo, para que nadie se caiga entre medias.
+local function layout(plot, size: number, look)
+	local cfg = Config.Plot
+	local cframe = plot.cframe
+	local old = plot.size
+	local ground = Instance.new("Model")
+	ground.Name = "Ground"
+
+	-- Suelo a cuadros: baldosas de dos tonos que cambian de color según tenga dueño o no.
+	local tiles = {}
+	local perSide = size / TILE
+	for row = 1, perSide do
+		for column = 1, perSide do
+			local tile = block(
+				ground,
+				"Tile",
+				Vector3.new(TILE, cfg.FloorHeight, TILE),
+				cframe * CFrame.new(-size / 2 + (column - 0.5) * TILE, -cfg.FloorHeight / 2, -size / 2 + (row - 0.5) * TILE),
+				FLOOR_FREE[1]
+			)
+			local edge = row == 1 or column == 1 or row == perSide or column == perSide
+			table.insert(tiles, { part = tile, shade = (row + column) % 2 + 1, edge = edge })
+		end
+	end
+
+	buildFence(ground, cframe, plot.index, size, look)
+	buildApproach(ground, cframe, size)
+	if plot.owner then
+		PlotLooks.build({ model = ground, cframe = cframe, half = size / 2, color = plotColor(plot.index, 1), post = if JAPAN then 7.1 else 4.6 }, look)
+	end
+
+	-- Luz repartida sobre el centro sin postes que estorben a los destructibles.
+	local lightCfg = Config.PlotLighting
+	for _, x in { -1, 1 } do
+		for _, z in { -1, 1 } do
+			local anchor = block(ground, "PlotLight", Vector3.one, cframe * CFrame.new(x * size * lightCfg.Offset, lightCfg.Height, z * size * lightCfg.Offset), Color3.new(1, 1, 1))
+			anchor.Transparency = 1
+			anchor.CanCollide = false
+			anchor.CanQuery = false
+			anchor.CanTouch = false
+			anchor.CastShadow = false
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(255, 232, 202)
+			light.Brightness = 0
+			light.Enabled = false
+			light:SetAttribute("Base", lightCfg.Brightness)
+			light.Range = lightCfg.Range
+			light.Parent = anchor
+			CollectionService:AddTag(light, "NightLight")
+		end
+	end
+
+	plot.size = size
+	plot.look = look
+	plot.tiles = tiles
+	plot.spawnOffset = Vector3.new(0, 0, -size / 2 + 6)
+	plot.spawn.CFrame = cframe * CFrame.new(plot.spawnOffset) * CFrame.Angles(0, math.pi, 0)
+	plot.sign.CFrame = cframe * CFrame.new(0, 21, -size / 2)
+	paint(plot, plot.owner ~= nil)
+	ground.Parent = plot.model
+	if plot.ground then
+		plot.ground:Destroy()
+	end
+	plot.ground = ground
+	plot.model:SetAttribute("Size", size)
+
+	if old and old ~= size then
+		for _, callback in resizeCallbacks do
+			task.spawn(callback, plot, old)
+		end
+	end
+end
+
+-- Vuelve a montar la parcela si la medida o el aspecto que le tocan (por los renacimientos de su dueño) han cambiado.
+local function refresh(plot, force: boolean?)
+	local rebirths = if plot.owner then Stats.rebirths(plot.owner) else 0
+	local size = Stats.plotSize(rebirths)
+	local look = PlotLooks.get(rebirths)
+	if force or size ~= plot.size or look.level ~= plot.look.level then
+		layout(plot, size, look)
+	end
+end
+
 local function buildHub(parent: Instance)
 	local cfg = Config.Plot
 	local hub = Instance.new("Part")
@@ -147,51 +287,11 @@ local function buildPlot(index: number, parent: Instance)
 	local angle = (index - 1) / cfg.Count * math.pi * 2
 	local center = Vector3.new(math.cos(angle) * cfg.RingRadius, cfg.FloorHeight, math.sin(angle) * cfg.RingRadius)
 	local cframe = CFrame.lookAt(center, Vector3.new(0, cfg.FloorHeight, 0))
-	local spawnOffset = Vector3.new(0, 0, -cfg.Size / 2 + 6)
 
 	local model = Instance.new("Model")
 	model.Name = "Parcela" .. index
 
-	-- Suelo a cuadros: baldosas de dos tonos que cambian de color según tenga dueño o no.
-	local tiles = {}
-	local perSide = cfg.Size / TILE
-	for row = 1, perSide do
-		for column = 1, perSide do
-			local tile = block(
-				model,
-				"Tile",
-				Vector3.new(TILE, cfg.FloorHeight, TILE),
-				cframe * CFrame.new(-cfg.Size / 2 + (column - 0.5) * TILE, -cfg.FloorHeight / 2, -cfg.Size / 2 + (row - 0.5) * TILE),
-				FLOOR_FREE[1]
-			)
-			table.insert(tiles, { part = tile, shade = (row + column) % 2 + 1 })
-		end
-	end
-
-	buildFence(model, cframe, index)
-
-	-- Luz repartida sobre el centro sin postes que estorben a los destructibles.
-	local lightCfg = Config.PlotLighting
-	for _, x in { -1, 1 } do
-		for _, z in { -1, 1 } do
-			local anchor = block(model, "PlotLight", Vector3.one, cframe * CFrame.new(x * cfg.Size * lightCfg.Offset, lightCfg.Height, z * cfg.Size * lightCfg.Offset), Color3.new(1, 1, 1))
-			anchor.Transparency = 1
-			anchor.CanCollide = false
-			anchor.CanQuery = false
-			anchor.CanTouch = false
-			anchor.CastShadow = false
-			local light = Instance.new("PointLight")
-			light.Color = Color3.fromRGB(255, 232, 202)
-			light.Brightness = 0
-			light.Enabled = false
-			light:SetAttribute("Base", lightCfg.Brightness)
-			light.Range = lightCfg.Range
-			light.Parent = anchor
-			CollectionService:AddTag(light, "NightLight")
-		end
-	end
-
-	-- Mira hacia dentro de la parcela.
+	-- Mira hacia dentro de la parcela (layout la pone en su sitio).
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
 	spawn.Anchored = true
@@ -200,7 +300,6 @@ local function buildPlot(index: number, parent: Instance)
 	spawn.Neutral = true
 	spawn.Duration = 0
 	spawn.Size = Vector3.new(6, 1, 6)
-	spawn.CFrame = cframe * CFrame.new(spawnOffset) * CFrame.Angles(0, math.pi, 0)
 	spawn.Parent = model
 
 	local signAnchor = Instance.new("Part")
@@ -210,7 +309,6 @@ local function buildPlot(index: number, parent: Instance)
 	signAnchor.CanQuery = false
 	signAnchor.Transparency = 1
 	signAnchor.Size = Vector3.one
-	signAnchor.CFrame = cframe * CFrame.new(0, 21, -cfg.Size / 2)
 	signAnchor.Parent = model
 
 	local gui = Instance.new("BillboardGui")
@@ -258,8 +356,10 @@ local function buildPlot(index: number, parent: Instance)
 	Tell.world(label, "Free plot")
 	label.Parent = gui
 
+	local plot = { index = index, cframe = cframe, model = model, owner = nil, spawn = spawn, sign = signAnchor, label = label, avatar = avatar, face = face }
+	layout(plot, cfg.Size, PlotLooks.get(0))
 	model.Parent = parent
-	plots[index] = { index = index, cframe = cframe, spawnOffset = spawnOffset, owner = nil, tiles = tiles, spawn = spawn, label = label, avatar = avatar, face = face }
+	plots[index] = plot
 end
 
 local function moveToPlot(character: Model, plot)
@@ -271,7 +371,13 @@ local function assign(player: Player)
 		if not plot.owner then
 			plot.owner = player
 			byPlayer[player] = plot
-			paint(plot, true)
+			refresh(plot, true)
+			-- Los renacimientos llegan al cargar sus datos (y suben al renacer): la parcela crece y cambia con ellos.
+			watchers[player] = player:GetAttributeChangedSignal("Rebirths"):Connect(function()
+				if byPlayer[player] == plot then
+					refresh(plot)
+				end
+			end)
 			Tell.world(plot.label, "{name}'s plot", { name = player.DisplayName })
 			plot.face.Image = `rbxthumb://type=AvatarHeadShot&id={math.max(player.UserId, 1)}&w=150&h=150`
 			plot.avatar.Visible = true
@@ -302,9 +408,13 @@ local function release(player: Player)
 	for _, callback in releaseCallbacks do
 		callback(plot)
 	end
+	if watchers[player] then
+		watchers[player]:Disconnect()
+		watchers[player] = nil
+	end
 	byPlayer[player] = nil
 	plot.owner = nil
-	paint(plot, false)
+	refresh(plot, true)
 	Tell.world(plot.label, "Free plot")
 	plot.avatar.Visible = false
 end
@@ -320,6 +430,11 @@ end
 -- callback(plot) se llama justo antes de que la parcela quede libre.
 function Plots.onRelease(callback)
 	table.insert(releaseCallbacks, callback)
+end
+
+-- callback(plot, ladoAnterior) se llama cuando la parcela cambia de medida (plot.size ya es la nueva).
+function Plots.onResize(callback)
+	table.insert(resizeCallbacks, callback)
 end
 
 function Plots.start()

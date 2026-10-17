@@ -71,7 +71,7 @@ end
 
 -- Dónde va el saco de una parcela: detrás (del lado contrario al hub), mirando hacia ella.
 function GoldBag.cframe(plot): CFrame
-	return plot.cframe * CFrame.new(0, 0, Config.Plot.Size / 2 + DISTANCE)
+	return plot.cframe * CFrame.new(0, 0, plot.size / 2 + DISTANCE)
 end
 
 -- El saco hecho con piezas, para cuando no están importadas las mallas de Blender: plataforma de piedra, saco atado
@@ -332,6 +332,13 @@ function GoldBag.start()
 	for _, plot in Plots.all() do
 		build(plot, folder)
 	end
+	-- La parcela crece con los renacimientos de su dueño: el saco se aparta con su muro de atrás.
+	Plots.onResize(function(plot, old: number)
+		local model = models[plot.index]
+		if model then
+			model:PivotTo(model:GetPivot() + plot.cframe:VectorToWorldSpace(Vector3.new(0, 0, (plot.size - old) / 2)))
+		end
+	end)
 
 	Remotes.SetBag.OnServerEvent:Connect(onSet)
 

@@ -56,7 +56,7 @@ local function capture(player: Player, hint: unknown)
 		local cframe = root.CFrame
 		if plot then
 			local point = plot.cframe:PointToObjectSpace(cframe.Position)
-			local half = Config.Plot.Size / 2
+			local half = plot.size / 2
 			if math.abs(point.X) <= half and math.abs(point.Z) <= half then
 				data.plot = true
 				cframe = plot.cframe:ToObjectSpace(cframe)
@@ -85,7 +85,7 @@ local function place(player: Player, data): CFrame?
 	local cframe = if look.Magnitude > 0.1 then CFrame.lookAt(position, position + look) else CFrame.new(position)
 	if data.plot == true then
 		local plot = Plots.get(player)
-		local half = Config.Plot.Size / 2
+		local half = Config.Plot.MaxSize / 2 -- al volver puede que su parcela aún no haya crecido
 		if not plot or math.abs(position.X) > half or math.abs(position.Z) > half then
 			return nil
 		end
