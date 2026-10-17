@@ -271,6 +271,24 @@ function Stats.rebirths(player: Player): number
 	return player:GetAttribute("Rebirths") or 0
 end
 
+-- Lado de la parcela con esos renacimientos (Config.Plot: GrowAt, GrowStep y MaxSize).
+function Stats.plotSize(rebirths: number): number
+	local cfg = Config.Plot
+	local size = cfg.Size
+	for _, at in cfg.GrowAt do
+		if rebirths >= at then
+			size += cfg.GrowStep
+		end
+	end
+	return math.min(size, cfg.MaxSize)
+end
+
+-- Objetos a la vez en la parcela: la mejora "Más objetos" y lo que suman los renacimientos.
+function Stats.capacity(player: Player): number
+	local cfg = Config.Plot
+	return upgrade(player, "capacity") + math.min(Stats.rebirths(player) * cfg.CapacityPerRebirth, cfg.MaxRebirthCapacity)
+end
+
 -- Multiplicador permanente de un renacimiento para esa estadística ("coins", "damage", "luck" o "gachaLuck").
 function Stats.rebirthBonus(player: Player, stat: string): number
 	return Config.Rebirth[stat] ^ Stats.rebirths(player)

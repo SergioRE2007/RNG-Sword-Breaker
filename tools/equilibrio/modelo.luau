@@ -597,13 +597,15 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			gacha = Stats.gachaLuck(player)
 			spawnTime = Stats.spawnTime(player)
 			bolsaRate = Stats.bagPower(player, true) -- vida por segundo: las monedas las pone BagInfo.collect
-			local otros = math.max(Upgrades.value("capacity", estado.upgrades.capacity or 0) - 1, 0)
+			-- Con los renacimientos caben más objetos, pero en una parcela más grande: salpica a menos de cada uno.
+			local otros = math.max(Stats.capacity(player) - 1, 0)
+			local reparto = jugador.parcela * (Stats.plotSize(estado.rebirths) / Config.Plot.Size) ^ 2
 			armas, andanada, ritmo = {}, 0, 0
 			for slot, copy in Stats.loadout(player) do
 				local arma = M.arma(player, copy)
 				armas[slot] = arma
 				pausa[slot] = arma.cooldown
-				golpe[slot] = arma.dano * (1 + otros * salpica(arma, jugador.parcela))
+				golpe[slot] = arma.dano * (1 + otros * salpica(arma, reparto))
 				andanada += golpe[slot]
 				ritmo += golpe[slot] / arma.cooldown
 			end

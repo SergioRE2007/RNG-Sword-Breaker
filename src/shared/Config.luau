@@ -246,8 +246,9 @@ Config.Items = {
 -- pega ninguna); Chain = lo mismo al saltar solas al siguiente enemigo de una mazmorra.
 -- MaxSlots = huecos con la ventaja "extraSlots" de los pases (Stats.loadoutSlots): el tope al revisar lo guardado.
 -- FarmRadius = el radio con el Auto de la parcela encendido (pase "auto"): cubre la parcela entera desde cualquier
--- punto de ella, así que las armas llegan a todo sin que el jugador se mueva (Stats.reach).
-Config.Loadout = { Slots = 4, MaxSlots = 8, Radius = 26, FarmRadius = 170, Leash = 8, Travel = 0.25, Chain = 0.15 }
+-- punto de ella, así que las armas llegan a todo sin que el jugador se mueva (Stats.reach); 200 = la diagonal de la
+-- parcela más grande (Config.Plot.MaxSize).
+Config.Loadout = { Slots = 4, MaxSlots = 8, Radius = 26, FarmRadius = 200, Leash = 8, Travel = 0.25, Chain = 0.15 }
 
 -- Bolsa de oro (server/GoldBag, cuentas en shared/BagInfo): detrás de cada parcela hay un saco al que pegan solas las
 -- armas que su dueño deposita (aparte de las equipadas), también mientras está desconectado y sin tope de tiempo.
@@ -428,6 +429,26 @@ Config.Plot = {
 	FloorHeight = 0.4,
 	SpawnInterval = 1.5, -- segundos entre apariciones de objetos en una parcela (sin mejoras: la rama "Velocidad de aparición" lo baja)
 	MinSpawnInterval = 0.3, -- nunca aparecen más rápido que esto
+	-- La parcela crece con los renacimientos (Stats.plotSize, pedido por el usuario): GrowStep studs por lado al llegar a
+	-- cada número de GrowAt, sin pasar de MaxSize. Crece alrededor de su centro: con 140 las esquinas de delante de dos
+	-- parcelas vecinas quedan a 8 studs, así que no cabe más sin mover el anillo. El decorado deja libre MaxSize.
+	GrowAt = { 1, 3 },
+	GrowStep = 20,
+	MaxSize = 140,
+	CapacityPerRebirth = 2, -- objetos de más a la vez por cada renacimiento (Stats.capacity)...
+	MaxRebirthCapacity = 30, -- ...hasta este tope
+}
+
+-- Aspecto de la parcela con cada renacimiento (server/PlotLooks; pedido por el usuario: cambia poco a poco, y habrá 20
+-- o más). La entrada n es la del renacimiento n: "floor" = los dos tonos de la tarima (mapa japonés) y "add" = lo que
+-- se pone desde ese renacimiento y se queda en los siguientes (las piezas de PlotLooks.BUILDERS). Con más renacimientos
+-- que entradas se queda el de la última; para los nuevos, añadir entradas al final.
+Config.PlotLooks = {
+	{ floor = { Color3.fromRGB(218, 158, 100), Color3.fromRGB(198, 136, 86) }, add = { "border" } },
+	{ floor = { Color3.fromRGB(214, 150, 94), Color3.fromRGB(192, 128, 80) }, add = { "banners" } },
+	{ floor = { Color3.fromRGB(206, 140, 88), Color3.fromRGB(184, 118, 74) }, add = { "garden" } },
+	{ floor = { Color3.fromRGB(196, 128, 82), Color3.fromRGB(174, 108, 70) }, add = { "gold" } },
+	{ floor = { Color3.fromRGB(186, 116, 78), Color3.fromRGB(164, 98, 66) }, add = { "torii" } },
 }
 
 -- Ordenados de común a raro. "rarity" = 1 entre N de que salga en cada aparición;
@@ -494,6 +515,12 @@ Config.ObjectRolls = {
 	MaxRolls = 5, -- tope de tiradas de arma de un solo objeto
 	MaxWidth = 30, -- studs: ningún objeto se agranda más que esto de ancho...
 	MaxHeight = 56, -- ...ni de alto (los tipos más grandes llegan a menos escala que los pequeños)
+	-- Lo que se VE (ObjectSpec.visualScale, pedido por el usuario: con todo mejorado salían tan grandes que cabían muy
+	-- pocos): por encima de 1 crece VisualGrowth veces lo que la escala que cuenta (un Colosal x2,5 se ve x1,6) y la
+	-- pieza no pasa de VisualMaxWidth x VisualMaxHeight. La suerte, la vida y el premio siguen con la escala de verdad.
+	VisualGrowth = 0.4,
+	VisualMaxWidth = 18,
+	VisualMaxHeight = 32,
 	NoticeOdds = 250, -- aviso al dueño cuando le aparece un objeto de "1 entre N" o más (rareza por tamaño)
 	AnnounceOdds = 2000, -- y a todo el servidor desde este
 }

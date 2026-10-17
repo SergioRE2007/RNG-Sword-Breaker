@@ -82,7 +82,9 @@ local function turn(): CFrame
 	return CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
 end
 
--- Si un punto del césped está libre: fuera del hub, de las parcelas y de los caminos.
+-- Si un punto del césped está libre: fuera del hub, de las parcelas y de los caminos. Las parcelas, con la medida más
+-- grande a la que llegan (Config.Plot.MaxSize) y el decorado que les pone fuera del muro server/PlotLooks.
+local PLOT_HALF = Config.Plot.MaxSize / 2 + 6
 local function isOpen(position: Vector3, margin: number): boolean
 	local cfg = Config.Plot
 	if position.Magnitude < cfg.HubRadius + margin then
@@ -93,14 +95,14 @@ local function isOpen(position: Vector3, margin: number): boolean
 		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
 		local along = position:Dot(direction)
 		local across = math.abs(position:Dot(Vector3.new(-direction.Z, 0, direction.X)))
-		if math.abs(along - cfg.RingRadius) < cfg.Size / 2 + margin and across < cfg.Size / 2 + margin then
+		if math.abs(along - cfg.RingRadius) < PLOT_HALF + margin and across < PLOT_HALF + margin then
 			return false
 		end
 		if along > 0 and along < cfg.RingRadius and across < 14 + margin then
 			return false
 		end
 		-- El patio de la Bolsa de oro, detrás de cada parcela (server/GoldBag).
-		if along > cfg.RingRadius and along < cfg.RingRadius + cfg.Size / 2 + 43 + margin and across < 17 + margin then
+		if along > cfg.RingRadius and along < cfg.RingRadius + cfg.MaxSize / 2 + 43 + margin and across < 17 + margin then
 			return false
 		end
 	end
@@ -486,7 +488,7 @@ function SceneryJapan.start()
 
 	-- Caminos con torii y linternas, con el farolillo del color de cada parcela.
 	ring(cfg.Count, 1, 0, function(direction, index)
-		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.Size / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1))
+		path(folder, direction, cfg.HubRadius, cfg.RingRadius - cfg.MaxSize / 2, Color3.fromHSV((index - 1) / cfg.Count, 0.7, 1))
 	end)
 
 	-- Linternas de piedra en el borde del hub, entre las entradas.
@@ -558,26 +560,7 @@ function SceneryJapan.start()
 
 	-- Sin animales (quitados a petición del usuario): `herd` y `CRITTERS` siguen ahí por si vuelven.
 
-	-- Luces de las parcelas (de noche las enciende el cliente): linternas sobre los pilares del muro, en las esquinas,
-	-- en el medio de los dos lados, a cada lado del paso de atrás (el de la Bolsa de oro: su pilar central no existe) y
-	-- en los dos pilares altos de la entrada. Mismo reparto que
-	-- Plots.buildWall: el -Z de la parcela mira al hub, el muro está a Size / 2 y sus pilares miden 6 (8,4 los de la
-	-- entrada) más el remate.
-	local plot = Config.Plot
-	local half = plot.Size / 2
-	local lampSpots = {
-		Vector3.new(-half, 7.1, -half), Vector3.new(half, 7.1, -half), Vector3.new(-half, 7.1, half), Vector3.new(half, 7.1, half),
-		Vector3.new(-10, 7.1, half), Vector3.new(10, 7.1, half), Vector3.new(-half, 7.1, 0), Vector3.new(half, 7.1, 0),
-		Vector3.new(-10, 9.5, -half), Vector3.new(10, 9.5, -half),
-	}
-	for index = 1, plot.Count do
-		local angle = (index - 1) / plot.Count * math.pi * 2
-		local center = Vector3.new(math.cos(angle) * plot.RingRadius, plot.FloorHeight, math.sin(angle) * plot.RingRadius)
-		local frame = CFrame.lookAt(center, Vector3.new(0, plot.FloorHeight, 0))
-		for _, spot in lampSpots do
-			lit(PropModel.place(folder, "StoneLantern", frame * CFrame.new(spot), 0.8), 1.4, 26)
-		end
-	end
+	-- Las linternas de los muros de las parcelas las pone server/Plots, que los vuelve a montar al crecer.
 
 	-- Pétalos y matas de hierba por el césped libre.
 	local placed = 0
