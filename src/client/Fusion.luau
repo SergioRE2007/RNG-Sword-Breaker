@@ -247,17 +247,32 @@ local function build()
 	stock.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	stock.Parent = body
 	Ui.round(stock, 10)
+	local STOCK_COLUMNS = 7
+	local STOCK_GAP = 10
+	local STOCK_PAD = 12
 	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.fromOffset(92, 92)
-	grid.CellPadding = UDim2.fromOffset(10, 10)
+	grid.CellSize = UDim2.fromOffset(88, 88)
+	grid.CellPadding = UDim2.fromOffset(STOCK_GAP, STOCK_GAP)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = stock
 	local padding = Instance.new("UIPadding")
-	-- Margen para lo que sobresale de las casillas (crecen con el ratón y las raras llevan halo).
-	padding.PaddingTop = UDim.new(0, 12)
-	padding.PaddingLeft = UDim.new(0, 12)
-	padding.PaddingBottom = UDim.new(0, 12)
+	-- Margen para lo que sobresale de las casillas (crecen con el ratón y las raras llevan halo); a la derecha, también
+	-- la barra de deslizar.
+	padding.PaddingTop = UDim.new(0, STOCK_PAD)
+	padding.PaddingLeft = UDim.new(0, STOCK_PAD)
+	padding.PaddingRight = UDim.new(0, STOCK_PAD + stock.ScrollBarThickness)
+	padding.PaddingBottom = UDim.new(0, STOCK_PAD)
 	padding.Parent = stock
+	-- Casillas cuadradas que llenan el ancho justo (con un lado fijo sobraba un trozo a la derecha). El lado va en
+	-- píxeles de la ventana: AbsoluteSize ya lleva el UIScale de la ventana y CellSize no, así que se deshace.
+	local function sizeStock()
+		local scale = math.max(window.AbsoluteSize.X / SIZE.X, 0.01)
+		local inner = stock.AbsoluteSize.X / scale - STOCK_PAD * 2 - stock.ScrollBarThickness
+		local side = math.floor((inner - STOCK_GAP * (STOCK_COLUMNS - 1)) / STOCK_COLUMNS)
+		grid.CellSize = UDim2.fromOffset(math.max(side, 40), math.max(side, 40))
+	end
+	stock:GetPropertyChangedSignal("AbsoluteSize"):Connect(sizeStock)
+	sizeStock()
 	local empty = Ui.label(stock, 20)
 	empty.Name = "Empty"
 	empty.Size = UDim2.fromOffset(600, 60)
