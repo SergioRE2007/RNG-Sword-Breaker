@@ -1,5 +1,6 @@
 -- Piezas del mapa del bosque japonés hechas en Blender (tools/blender/crear_mapa_japones.py), importadas en Studio y
--- guardadas en Shared.MapMeshes y, para las actualizadas, Shared.MapMeshesPatch: mallas "<Pieza>_<Papel>" y
+-- guardadas en Shared.MapMeshes y, para las actualizadas, Shared.MapMeshesPatch (las del Jefe del mundo, de
+-- tools/blender/crear_jefe.py, en Shared.BossMeshes): mallas "<Pieza>_<Papel>" y
 -- "<Pieza>_Origin" (centro del suelo de la pieza). Las
 -- marcas Axis_* dan la escala y los ejes de la importación. Se leen una vez; sin el archivo `place` devuelve nil y el
 -- mapa se queda sin esas piezas (suelo, luz y agua siguen).
@@ -14,7 +15,7 @@ local function load()
 	end
 	templates = {}
 	-- Una importación parcial sustituye solo sus piezas, conservando las demás del mapa.
-	for _, fileName in { "MapMeshes", "MapMeshesPatch" } do
+	for _, fileName in { "MapMeshes", "MapMeshesPatch", "BossMeshes" } do
 		local folder = script.Parent:FindFirstChild(fileName)
 		local axis = folder and folder:FindFirstChild("Axis_Origin", true) :: BasePart?
 		local up = folder and folder:FindFirstChild("Axis_Up", true) :: BasePart?
@@ -77,6 +78,9 @@ local LOOKS = {
 	Sack = { Color3.fromRGB(214, 164, 98), Enum.Material.Fabric, 0 },
 	SackDark = { Color3.fromRGB(150, 104, 62), Enum.Material.Fabric, 0 },
 	Rope = { Color3.fromRGB(112, 72, 44), Enum.Material.SmoothPlastic, 0 },
+	-- Jefe del mundo: la baba del Rey Slime y los cristales violeta de su arena y su portal.
+	Slime = { Color3.fromRGB(120, 214, 96), Enum.Material.SmoothPlastic, 0 },
+	Crystal = { Color3.fromRGB(176, 128, 255), Enum.Material.Glass, 0.15 },
 }
 
 function PropModel.has(name: string): boolean
@@ -120,6 +124,17 @@ local function collisions(model: Model, name: string, origin: CFrame, scale: num
 					box(Vector3.new(1.1, 6.2, 6.2), CFrame.new(sx * spot[1], 0.55, sz * spot[2]) * upright, Enum.PartType.Cylinder)
 				end
 			end
+		end
+	elseif name == "BossPortal" then
+		-- Peana, escalones, el aro (en tramos alrededor del disco) y los dos pilonos (medidas de boss_portal()).
+		box(Vector3.new(19, 1.4, 8), CFrame.new(0, 0.7, 0))
+		box(Vector3.new(14.3, 0.6, 11.3), CFrame.new(0, 0.3, 0))
+		for index = 1, 16 do
+			local angle = (index - 0.5) / 16 * math.pi * 2
+			box(Vector3.new(2.5, 3.9, 3.2), CFrame.new(math.cos(angle) * 8.95, 9.5 + math.sin(angle) * 8.95, 0) * CFrame.Angles(0, 0, angle))
+		end
+		for _, sign in { -1, 1 } do
+			box(Vector3.new(2.6, 10, 2.6), CFrame.new(sign * 12.6, 5, 0))
 		end
 	elseif name == "StoneLantern" then
 		box(Vector3.new(1.5, 6, 1.5), CFrame.new(0, 3, 0))

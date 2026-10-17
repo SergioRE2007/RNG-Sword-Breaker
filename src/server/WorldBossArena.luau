@@ -5,6 +5,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local PropModel = require(ReplicatedStorage.Shared.PropModel)
 local WorldBossInfo = require(ReplicatedStorage.Shared.WorldBossInfo)
 local Tell = require(script.Parent.Tell)
 
@@ -23,6 +24,25 @@ local WHITE = Color3.new(1, 1, 1)
 
 local FLOOR = 4 -- grosor del suelo de la arena
 local BARRIER = 60 -- alto del muro invisible
+
+-- Piezas de Blender (tools/blender/crear_jefe.py, Shared.BossMeshes), hechas para una arena de radio 80: se escalan
+-- con ArenaRadius. Medidas de allí: radio y alto de la muralla. Sin el archivo se queda la arena de piezas sueltas.
+local MODEL_RADIUS = 80
+local WALL_RADIUS, WALL_HEIGHT = 84.3, 2.8
+local ARENA_TINT = { Stone = Color3.fromRGB(124, 112, 156), StoneDark = Color3.fromRGB(80, 70, 110) }
+local ISLAND_TINT = { Stone = Color3.fromRGB(116, 104, 140), StoneDark = Color3.fromRGB(74, 66, 94) }
+local PORTAL_TINT = { Stone = Color3.fromRGB(138, 122, 182), StoneDark = Color3.fromRGB(90, 78, 134) }
+
+-- Luz en una pieza (los farolillos y los cristales llevan la suya).
+local function glow(holder: Instance?, color: Color3, range: number, brightness: number)
+	if holder then
+		local light = Instance.new("PointLight")
+		light.Color = color
+		light.Range = range
+		light.Brightness = brightness
+		light.Parent = holder
+	end
+end
 
 local function part(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?, shape: Enum.PartType?): Part
 	local p = Instance.new("Part")
@@ -65,23 +85,12 @@ function WorldBossArena.spawnCFrame(index: number): CFrame
 	return CFrame.lookAt(at, Vector3.new(center.X, at.Y, center.Z))
 end
 
--- La arena: suelo de piedra con anillos de baldosas, charco de gelatina en el centro, borde con linternas, columnas
--- con un cristal arriba, un torii en la entrada y un muro invisible alrededor.
-function WorldBossArena.build(): Model
-	local model = Instance.new("Model")
-	model.Name = "WorldBossArena"
-	local center = cfg.Origin
-	local top = center.Y
-	local radius = cfg.ArenaRadius
-
-	disc(model, "Floor", radius * 2 + 8, FLOOR, center, top, STONE_DARK, Enum.Material.Slate)
+-- Arena de piezas sueltas, si no hay modelos de Blender: anillos de baldosas, roca que cuelga, borde con linternas,
+-- columnas con un cristal arriba y un torii en la entrada.
+local function buildBlocks(model: Model, center: Vector3, top: number, radius: number)
 	disc(model, "Ring", radius * 2 - 6, 0.2, center, top + 0.1, STONE, Enum.Material.Slate)
 	disc(model, "Inner", radius * 1.25, 0.24, center, top + 0.12, STONE_DARK, Enum.Material.Cobblestone)
 	disc(model, "Moss", radius * 0.95, 0.28, center, top + 0.14, MOSS:Lerp(STONE, 0.5), Enum.Material.Grass)
-	local puddle = disc(model, "Jelly", cfg.Size.X * 1.4, 0.3, center, top + 0.16, JELLY, Enum.Material.SmoothPlastic)
-	puddle.Transparency = 0.35
-	puddle.Reflectance = 0.15
-	decor(puddle)
 	-- Debajo, roca que cuelga: la arena flota en el cielo.
 	for index = 1, 3 do
 		local width = (radius * 2 + 8) * (1 - index * 0.24)
@@ -135,6 +144,69 @@ function WorldBossArena.build(): Model
 	end
 	part(model, "ToriiBeam", Vector3.new(26, 1.8, 2.6), gate * CFrame.new(0, 20.5, 0), Color3.fromRGB(40, 32, 36), Enum.Material.Wood).CanCollide = false
 	part(model, "ToriiTie", Vector3.new(21, 1.2, 1.8), gate * CFrame.new(0, 16.5, 0), LACQUER, Enum.Material.Wood).CanCollide = false
+end
+
+-- Arena con los modelos de Blender: isla de roca con estalactitas, cristales y baba; baldosas en anillos; muralla con
+-- almenas y linternas de piedra; columnas con baba y su cristal flotando; el torii grande en la entrada y el trono del
+-- rey al fondo, mirando al centro.
+local function buildModels(model: Model, center: Vector3, top: number, radius: number)
+	local k = radius / MODEL_RADIUS
+	local origin = CFrame.new(center.X, top, center.Z)
+	PropModel.place(model, "BossIsland", origin, k, ISLAND_TINT)
+	PropModel.place(model, "BossIslandFloor", origin, k, ARENA_TINT)
+	PropModel.place(model, "BossIslandWall", origin, k, ARENA_TINT)
+
+	-- Linternas de piedra encima de la muralla, cada 40°, sin la de la entrada (+Z).
+	for index = 0, 8 do
+		local angle = math.rad(7.5 + index * 40)
+		if math.abs(math.deg(angle) - 90) < 10 then
+			continue
+		end
+		local at = center + Vector3.new(math.cos(angle) * WALL_RADIUS * k, WALL_HEIGHT * k, math.sin(angle) * WALL_RADIUS * k)
+		local lantern = PropModel.place(model, "StoneLantern", CFrame.lookAt(at, Vector3.new(center.X, at.Y, center.Z)), 1.25, ARENA_TINT)
+		glow(lantern and lantern:FindFirstChild("Paper"), Color3.fromRGB(255, 190, 110), 18, 1.4)
+	end
+
+	-- Columnas (por fuera de la muralla) con el cristal que flota y late encima (client/WorldBossFx, por la etiqueta).
+	for index = 1, 6 do
+		local angle = (index - 0.5) / 6 * math.pi * 2 + math.rad(30)
+		local at = center + Vector3.new(math.cos(angle) * (radius + 9), 0, math.sin(angle) * (radius + 9))
+		PropModel.place(model, "BossPillar", CFrame.new(at.X, top, at.Z) * CFrame.Angles(0, -angle, 0), 1, ARENA_TINT)
+		local holder = PropModel.place(model, "BossCrystal", CFrame.new(at.X, top + 31, at.Z) * CFrame.Angles(0, -angle, 0))
+		local crystal = holder and holder:FindFirstChild("Crystal")
+		if crystal then
+			CollectionService:AddTag(crystal, "WorldBossCrystalGlow")
+			glow(crystal, CRYSTAL, 22, 1.2)
+		end
+	end
+
+	-- Torii por donde se entra (en el lado de las apariciones) y trono del rey enfrente.
+	local gate = CFrame.lookAt(center + Vector3.new(0, top - center.Y, radius + 4), Vector3.new(center.X, top, center.Z))
+	PropModel.place(model, "Torii", gate, 1.35)
+	local throne = center + Vector3.new(0, top - center.Y, -(MODEL_RADIUS + 30) * k)
+	PropModel.place(model, "BossThrone", CFrame.lookAt(throne, Vector3.new(center.X, top, center.Z)), 1.6 * k, ARENA_TINT)
+end
+
+-- La arena: suelo con el charco de gelatina en el centro, decorado (modelos de Blender o, sin ellos, piezas sueltas),
+-- luz propia y un muro invisible alrededor.
+function WorldBossArena.build(): Model
+	local model = Instance.new("Model")
+	model.Name = "WorldBossArena"
+	local center = cfg.Origin
+	local top = center.Y
+	local radius = cfg.ArenaRadius
+
+	local floor = disc(model, "Floor", radius * 2 + 8, FLOOR, center, top, STONE_DARK, Enum.Material.Slate)
+	local puddle = disc(model, "Jelly", cfg.Size.X * 1.4, 0.3, center, top + 0.16, JELLY, Enum.Material.SmoothPlastic)
+	puddle.Transparency = 0.35
+	puddle.Reflectance = 0.15
+	decor(puddle)
+	if PropModel.has("BossIsland") then
+		floor.Color = ARENA_TINT.StoneDark
+		buildModels(model, center, top, radius)
+	else
+		buildBlocks(model, center, top, radius)
+	end
 
 	-- Luz propia: la arena está lejos de la isla y de noche no se veía nada (cada luz llega a 60 studs).
 	for index = 0, 6 do
@@ -167,7 +239,27 @@ function WorldBossArena.build(): Model
 	return model
 end
 
--- El portal del hub: aro de piedra con farolillos, disco de energía (solo se ve abierto) y una pieza invisible que,
+-- Portal de piezas sueltas (sin Shared.BossMeshes): peana, aro de bloques de piedra con remates dorados y farolillos.
+local function buildRing(model: Model, base: CFrame, ringRadius: number, middle: number)
+	part(model, "Base", Vector3.new(18, 1.2, 7), base * CFrame.new(0, 0.6, 0), STONE_DARK, Enum.Material.Slate)
+	part(model, "Step", Vector3.new(14, 0.6, 9), base * CFrame.new(0, 0.3, 0), STONE, Enum.Material.Slate)
+	local pieces = 20
+	for index = 1, pieces do
+		local angle = (index - 0.5) / pieces * math.pi * 2
+		local at = base * CFrame.new(math.cos(angle) * ringRadius, middle + math.sin(angle) * ringRadius, 0) * CFrame.Angles(0, 0, angle)
+		part(model, "Ring", Vector3.new(2, ringRadius * math.pi * 2 / pieces + 0.5, 2.4), at, if index % 5 == 0 then GOLD else STONE, if index % 5 == 0 then Enum.Material.Metal else Enum.Material.Slate)
+	end
+	for _, side in { -1, 1 } do
+		local post = part(model, "Post", Vector3.new(1.4, 10, 1.4), base * CFrame.new(side * 11, 5, 0), LACQUER, Enum.Material.Wood)
+		post.CanCollide = true
+		local lamp = part(model, "Lantern", Vector3.new(2.4, 3, 2.4), base * CFrame.new(side * 11, 11.2, 0), CRYSTAL:Lerp(WHITE, 0.3), Enum.Material.SmoothPlastic)
+		lamp.Transparency = 0.2
+		decor(lamp)
+		glow(lamp, CRYSTAL, 16, 1)
+	end
+end
+
+-- El portal del hub: arco de piedra (modelo de Blender), disco de energía (solo se ve abierto) y una pieza invisible que,
 -- al tocarla, mete al jugador en la arena. Devuelve el modelo, la pieza que se toca y cómo abrirlo o cerrarlo.
 function WorldBossArena.buildPortal(map: Instance)
 	local model = Instance.new("Model")
@@ -179,27 +271,19 @@ function WorldBossArena.buildPortal(map: Instance)
 	local ringRadius = 7.5
 	local middle = floor + ringRadius + 2
 
-	-- Peana.
-	part(model, "Base", Vector3.new(18, 1.2, 7), base * CFrame.new(0, 0.6, 0), STONE_DARK, Enum.Material.Slate)
-	part(model, "Step", Vector3.new(14, 0.6, 9), base * CFrame.new(0, 0.3, 0), STONE, Enum.Material.Slate)
-	-- Aro de bloques de piedra con remates dorados.
-	local pieces = 20
-	for index = 1, pieces do
-		local angle = (index - 0.5) / pieces * math.pi * 2
-		local at = base * CFrame.new(math.cos(angle) * ringRadius, middle - floor + math.sin(angle) * ringRadius, 0) * CFrame.Angles(0, 0, angle)
-		part(model, "Ring", Vector3.new(2, ringRadius * math.pi * 2 / pieces + 0.5, 2.4), at, if index % 5 == 0 then GOLD else STONE, if index % 5 == 0 then Enum.Material.Metal else Enum.Material.Slate)
-	end
-	-- Farolillos a los lados.
-	for _, side in { -1, 1 } do
-		local post = part(model, "Post", Vector3.new(1.4, 10, 1.4), base * CFrame.new(side * 11, 5, 0), LACQUER, Enum.Material.Wood)
-		post.CanCollide = true
-		local lamp = part(model, "Lantern", Vector3.new(2.4, 3, 2.4), base * CFrame.new(side * 11, 11.2, 0), CRYSTAL:Lerp(WHITE, 0.3), Enum.Material.SmoothPlastic)
-		lamp.Transparency = 0.2
-		decor(lamp)
-		local light = Instance.new("PointLight")
-		light.Color = CRYSTAL
-		light.Range = 16
-		light.Parent = lamp
+	-- Modelo de Blender (BossPortal): arco de dovelas con runas, el Rey Slime pequeño con su corona, baba que cae y dos
+	-- pilonos con un cristal, cada uno con su luz. Sin el archivo, el aro de bloques de antes.
+	local signHeight = middle - floor + ringRadius + 5
+	if PropModel.place(model, "BossPortal", base, 1, PORTAL_TINT) then
+		for _, side in { -1, 1 } do
+			local holder = part(model, "Light", Vector3.one, base * CFrame.new(side * 12.6, 12, 0), WHITE)
+			holder.Transparency = 1
+			decor(holder)
+			glow(holder, CRYSTAL, 16, 1)
+		end
+		signHeight = 31
+	else
+		buildRing(model, base, ringRadius, middle - floor)
 	end
 	-- Disco de energía: invisible cerrado.
 	local disk = part(model, "Disk", Vector3.new(0.4, ringRadius * 2 - 1, ringRadius * 2 - 1), base * CFrame.new(0, middle - floor, 0) * CFrame.Angles(0, math.rad(90), 0), CRYSTAL, Enum.Material.Glass, Enum.PartType.Cylinder)
@@ -214,7 +298,7 @@ function WorldBossArena.buildPortal(map: Instance)
 	trigger.CanTouch = false
 
 	-- Cartel encima.
-	local board = part(model, "Sign", Vector3.one, base * CFrame.new(0, middle - floor + ringRadius + 5, 0), WHITE)
+	local board = part(model, "Sign", Vector3.one, base * CFrame.new(0, signHeight, 0), WHITE)
 	board.Transparency = 1
 	decor(board)
 	local gui = Instance.new("BillboardGui")
