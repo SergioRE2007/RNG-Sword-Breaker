@@ -328,8 +328,8 @@ Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grad
 -- pierde al venderla o fusionarla; renacer no lo quita. Precio del nivel n -> n+1 (shared/WeaponLevel):
 -- max(MinCost, CostBase * rareza total ^ RarityPower) * Growth ^ n. RarityPower sale de lo que gana de gemas el jugador
 -- tipo frente a lo raras que son sus armas (crecen como rareza ^ 1,5): así subir un arma cuesta parecido a cualquier
--- hora. El jugador tipo de tools/equilibrio gasta en niveles la parte `gemasNiveles` de sus gemas (objetivo.luau).
-Config.WeaponLevel = { MaxLevel = 100, PerLevel = 1.02, CostBase = 4e-6, RarityPower = 1.5, Growth = 1.06, MinCost = 100 }
+-- hora. CostBase medido con tools/equilibrio/informe.luau sin regenerar lo demás (docs/sistemas/nivel-armas.md). El jugador tipo de tools/equilibrio gasta en niveles la parte `gemasNiveles` de sus gemas (objetivo.luau).
+Config.WeaponLevel = { MaxLevel = 100, PerLevel = 1.02, CostBase = 1e-4, RarityPower = 1.5, Growth = 1.06, MinCost = 100 }
 
 -- Renacimiento: solo cuesta monedas y no quita nada (ni monedas ganadas, ni espadas, ni mejoras). Cada uno
 -- multiplica para siempre (por cada renacimiento, ese número elevado a los renacimientos que lleve).

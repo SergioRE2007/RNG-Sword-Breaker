@@ -18,10 +18,16 @@ Pedido por el usuario (16-10-2026): subir de nivel cada arma gastando gemas, has
 - Remoto: +1, +10 y "Máx" (tope 100), el daño sube x1,02 por nivel, el atributo `Swords` lleva el nivel.
 - Ventana: abrir desde la mochila, elegir otra arma, +10 y Máx, botones en gris al máximo (capturas vistas). Sin errores en la consola.
 - `lune run tests/regressions.luau`: comprobaciones nuevas (cobro, tope, sin gemas, guardado, nivel roto, candado + nivel, venta).
-- Sin probar: "No tienes gemas suficientes" en Studio (con `InfiniteMoney` las gemas son infinitas; lo cubre la regresión), móvil, comercio de un arma con nivel entre dos jugadores.
+- Sin probar: móvil, comercio de un arma con nivel entre dos jugadores.
 
-## Equilibrio (PENDIENTE)
+## Equilibrio
 
-- `tools/equilibrio` ya lo sabe: el jugador tipo aparta `objetivo.gemasNiveles` (0,5) de sus gemas y sube el nivel más barato de sus armas equipadas (`subirNiveles` en `modelo.luau`); Fortuna cuenta solo con el resto (`generar.luau`); la línea de cada hora del informe enseña los niveles; `BalanceSnapshots` guardará `level`.
-- Con `CostBase` 4e-8 maxeaba las cuatro armas en 2 h; con **4e-6** (lo que hay) los niveles suben poco a poco y solo llegan a 100 las que se quedan muchas horas (informe de 1 partida, 40 h).
-- **Falta regenerar**: `lune run tools/equilibrio/generar.luau 9 aplicar` (unos 10 min, lanzarlo con `Start-Process` y esperar). Se lanzó y se cortó a medias por falta de tiempo; `Config` y `BalanceSnapshots` siguen con los números de antes, así que de momento el nivel es daño de más y el calendario va adelantado. Después, pasar `informe.luau` y mirar que el juego sigue en ~100 h.
+- Decidido por el usuario (17-10-2026): el nivel de armas no regenera el resto del equilibrio (vidas, precios, renacimientos siguen como estaban; el endgame más difícil vendrá aparte). Solo se ajusta `CostBase`.
+- `tools/equilibrio` lo simula: el jugador tipo aparta `objetivo.gemasNiveles` (0,5) de sus gemas y sube el nivel más barato de sus armas equipadas (`subirNiveles` en `modelo.luau`); la línea de cada hora del informe enseña los niveles.
+- Medido con `informe.luau 9` (mediana de 9 partidas, 100 h), 5.º renacimiento / niveles a media partida:
+  - sin niveles (`gemasNiveles` 0): 86 h; nadie completa el juego en 100 h.
+  - `CostBase` 4e-6: 69 h y juego completado a 90 h; niveles 87-89 a las 14 h (demasiado barato).
+  - 4e-5: 73 h; niveles 10-40. 2e-4: 81 h; niveles 0-10 casi toda la partida.
+  - **1e-4 (lo que hay)**: 75 h, nadie completa el juego en 100 h; niveles 0-15 hasta las 20 h, 15-45 a media partida y la mejor arma cerca de 100 hacia las 90 h. Entre partidas los hitos bailan ±10 h.
+- Los niveles bajan a 0 a menudo en la simulación: al cambiar a un arma nueva mejor, empieza sin nivel.
+- Probado en Studio (17-10-2026): con 0 gemas, `LevelSword` da el aviso "No tienes gemas suficientes" abajo a la derecha y no cambia nada.
