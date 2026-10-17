@@ -15,12 +15,11 @@ local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local ArmorPane = require(script.Parent.ArmorPane)
-local Backpack = require(script.Parent.Backpack)
 local Performance = require(script.Parent.Performance)
 local Potions = require(script.Parent.Potions)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
-local WeaponPreview = require(script.Parent.WeaponPreview)
+local WeaponCell = require(script.Parent.WeaponCell)
 
 local Trade = {}
 
@@ -92,14 +91,9 @@ local function clear(scroll: Instance)
 end
 
 -- Casillas de cada tipo de cosa (las mismas en las ofertas y en tu inventario).
+-- Las armas, con la casilla de siempre (client/WeaponCell), sin la "E": en el comercio no entran las equipadas.
 local function swordCell(parent: Instance, copy): TextButton
-	local color = Rarity.tier(Stats.rarity(copy)).color
-	local cell = Ui.cell(parent, color)
-	WeaponPreview.attach(cell, copy.sword, color, copy.metal)
-	Ui.tip(cell, function()
-		return Backpack.swordTip(copy)
-	end, true)
-	return cell
+	return WeaponCell.create(parent, copy, { owner = false })
 end
 
 local function armorCell(parent: Instance, piece): TextButton

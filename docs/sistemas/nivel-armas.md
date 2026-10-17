@@ -10,7 +10,7 @@ Pedido por el usuario (16-10-2026): subir de nivel cada arma gastando gemas, has
 - Daño: `Stats.swordDamage` lo multiplica por `WeaponLevel.mult(copy.level)` (y con eso `weaponDamage`, la bolsa, "Equipar mejores"…). `Stats.sellCoins` lo quita: vender no devuelve las gemas en monedas.
 - Servidor: `server/WeaponLevels`, remoto `LevelSword:FireServer(id, cuántos)`: sube los que pueda pagar hasta esa cantidad; avisos "Not enough gems" y "Max level".
 - Cliente: `client/LevelMenu`, ventana `Hud.LevelUp`, que abre el botón "Subir nivel" de la mochila (`Hud.Backpack.Body.Swords.Level`, con la elegida). Izquierda: todas las armas de más a menos daño (`Body.Stock.Sword<id>`, 4 columnas, solo se rehacen las casillas que cambian). Derecha (`Body.Info`): casilla grande, nombre, "Nivel n/100" con barra, daño ahora → con el siguiente, precio del siguiente nivel y botones `Buttons.Up1`, `Up10`, `UpMax`. Al subir suena "buy" y el nivel y el daño dan un salto.
-- Casillas de armas (`Backpack.swordCell`): marca "Nv N" arriba en el centro; el cartel enseña "Nivel N". La Fusión avisa de que se pierden los niveles.
+- Casillas de armas (`client/WeaponCell`, la misma en todos los menús): marca "Nv N" arriba en el centro; la clave `WeaponCell.key` lleva el nivel, así que la casilla se rehace al subirlo (antes la mochila no lo veía); el cartel enseña "Nivel N". La Fusión avisa de que se pierden los niveles.
 - `Config.Test.BestWeapons` da las armas ya al nivel máximo.
 
 ## Probado (Studio, 16-10-2026)

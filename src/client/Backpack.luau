@@ -8,14 +8,12 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
-local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
-local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
-local WeaponPreview = require(script.Parent.WeaponPreview)
+local WeaponCell = require(script.Parent.WeaponCell)
 local ArmorPane = require(script.Parent.ArmorPane)
 local Clover = require(script.Parent.Clover)
 local Potions = require(script.Parent.Potions)
@@ -142,104 +140,6 @@ do
 	for rank, index in order do
 		damageRank[index] = rank
 	end
-end
-
--- Cartel de una copia de espada (nombre, rareza, tipo, rasgo, grado, daño). También lo usan
--- las tiendas de Rasgos y Grados (Backpack.swordTip).
--- Nombre de un rasgo o grado con letras animadas, como en las tiendas: el arcoíris corre por las
--- letras y los demás llevan un destello blanco que las cruza. Hay que volver a pedirlo cada
--- fotograma (el cartel lo hace solo si swordTip devuelve `true` como tercer valor).
-local function animatedName(entry): string
-	local now = os.clock()
-	local name = Lang.t(nil, entry.name)
-	local shine = (now * 7) % ((utf8.len(name) or #name) + 10) - 5
-	local letters = {}
-	local index = 0
-	for _, code in utf8.codes(name) do
-		index += 1
-		local color
-		if entry.tones then
-			color = Modifiers.toneAt(entry, now * 4 + index * 0.9)
-		elseif entry.rainbow then
-			color = Color3.fromHSV((now * 0.6 + index * 0.09) % 1, 0.6, 1)
-		else
-			color = entry.color:Lerp(Color3.new(1, 1, 1), math.max(0, 1 - math.abs(index - shine) / 2.5) * 0.85)
-		end
-		table.insert(letters, `<font color="{hex(color)}">{utf8.char(code)}</font>`)
-	end
-	return table.concat(letters)
-end
-
-local TIP_TITLE = 28 -- tamaño del nombre en el cartel (el resto va a 21, el de Ui.tip)
-local TIP_ODDS = 16 -- y el de la probabilidad
-local TIP_FAINT = "#868b9c" -- gris tenue de la probabilidad
-local TIP_VALUE = 25 -- tamaño del número de daño
-local TIP_DAMAGE = "#ff7d5e" -- la palabra "Daño"
-local TIP_GOLD = "#ffd65c" -- y su número
--- Separador entre las partes del cartel (pedido por el usuario, con una captura de otro juego de referencia): una
--- línea fina y tenue hecha de texto, porque el cartel es un solo TextLabel.
-local TIP_SEPARATOR = `<font size="11" color="#4c5370">━━━━━━━━━━━━━━━━━━━━</font>`
-
-local function swordTip(copy): (string, Color3, boolean)
-	local sword = Config.Swords[copy.sword]
-	local trait = Config.Traits[copy.trait]
-	local rarity = Stats.rarity(copy)
-	local tier = Rarity.tier(rarity)
-	-- Pedido por el usuario: el nombre más grande que el resto y con la animación de su rareza, y la probabilidad más
-	-- pequeña y en gris tenue.
-	-- Sin el tipo de arma (pedido por el usuario): debajo del nombre, solo la rareza.
-	local lines = { `<font size="{TIP_TITLE}">{Ui.rarityText(Lang.t(nil, sword.name), tier.color, table.find(Config.RarityTiers, tier))}</font>`, `<font color="{hex(tier.color)}">{Lang.t(nil, tier.name)}</font>` }
-	local icon = nil -- logo del rasgo, al principio de su línea (Ui.tip)
-	local grade = Config.Grades[copy.grade]
-	local border = tier.color
-	-- Metal y tamaño (permanentes, salen con el arma): solo el nombre, en una línea. Pedido por el usuario: el cartel
-	-- es para niños, sin lo que multiplica cada uno ni su probabilidad por separado.
-	local metal, size = Permanent.metal(copy), Permanent.size(copy)
-	local extras = {}
-	if metal then
-		table.insert(extras, `<font color="{hex(metal.color)}">{Lang.t(nil, metal.name)}</font>`)
-	end
-	if size then
-		table.insert(extras, `<font color="{hex(size.color)}">{Lang.t(nil, size.name)}</font>`)
-	end
-	if #extras > 0 then
-		table.insert(lines, table.concat(extras, " · "))
-	end
-	if (copy.level or 0) > 0 then
-		table.insert(lines, `<font color="{TIP_GOLD}">{Lang.t(nil, "Level {n}", { n = copy.level })}</font>`)
-	end
-	if trait or grade then
-		table.insert(lines, TIP_SEPARATOR)
-	end
-	if trait then
-		-- Su logo y su nombre, sin "Rasgo:" ni lo que da (pedido por el usuario: el cartel queda más limpio).
-		local logo = Ui.traitLogo(trait)
-		table.insert(lines, (if logo then Ui.TIP_ICON_GAP else "") .. animatedName(trait))
-		icon = if logo then { image = logo, line = #lines } else nil
-		if trait.rainbow then
-			border = if trait.tones then Modifiers.toneAt(trait, os.clock() * 3) else Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
-		end
-	end
-	if grade then
-		table.insert(lines, `<font color="{hex(grade.color)}">{Lang.t(nil, "Grade:")}</font> {animatedName(grade)}`)
-		if grade.rainbow then
-			border = if grade.tones then Modifiers.toneAt(grade, os.clock() * 3) else Color3.fromHSV(os.clock() * 0.5 % 1, 0.55, 1)
-		end
-	end
-	if copy.locked then
-		table.insert(lines, `<font color="{hex(Ui.COLORS.coins)}">{Lang.t(nil, "Locked")}</font>`)
-	end
-	-- El daño destaca (pedido por el usuario: no tan plano): la palabra en rojo cálido y el número más grande en dorado.
-	table.insert(lines, TIP_SEPARATOR)
-	table.insert(lines, `<font color="{TIP_DAMAGE}">{Lang.t(nil, "Damage")}</font> <font size="{TIP_VALUE}" color="{TIP_GOLD}">{Format.multiplier(Stats.swordDamage(copy))}</font>`)
-	table.insert(lines, TIP_SEPARATOR)
-	if not sword.rarity then
-		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">{Lang.t(nil, "Starter sword")}</font>`)
-	else
-		-- Una sola probabilidad: la del arma entera, con su metal y su tamaño.
-		table.insert(lines, `<font size="{TIP_ODDS}" color="{TIP_FAINT}">{Lang.t(nil, "1 in {n}", { n = Format.short(rarity) })}</font>`)
-	end
-	return table.concat(lines, "\n"), border, true, icon -- animado: el nombre lleva el brillo de su rareza
 end
 
 local function artifactTip(index: number): (string, Color3)
@@ -514,104 +414,6 @@ function Backpack.start()
 		end
 	end
 
-	-- Casilla de una copia (la de la lista y la de su hueco son la misma): vista 3D, daño y marcas.
-	local function swordCell(parent: Instance, copy, isEquipped: boolean, inBag: boolean): TextButton
-		local trait = Config.Traits[copy.trait]
-		local tier = Rarity.tier(Stats.rarity(copy))
-		local cell = Ui.cell(parent, tier.color, table.find(Config.RarityTiers, tier))
-		WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
-		-- Daño grande abajo a la izquierda.
-		local damage = Ui.cellLabel(cell, Format.multiplier(Stats.swordDamage(copy)))
-		damage.Position = UDim2.new(0.5, 3, 1, -3)
-		damage.Size = UDim2.new(1, -10, 0, 26)
-		damage.TextXAlignment = Enum.TextXAlignment.Left
-		damage:FindFirstChildOfClass("UITextSizeConstraint").MaxTextSize = 23
-		damage:FindFirstChildOfClass("UIStroke").Thickness = 2.5
-		Ui.gradient(damage, Color3.new(1, 1, 1), tier.color:Lerp(Color3.new(1, 1, 1), 0.45), 90)
-		if isEquipped then
-			Ui.cellTag(cell, "E", Ui.COLORS.green)
-		elseif inBag then
-			Ui.cellTag(cell, "B", Ui.COLORS.coins) -- depositada en la Bolsa de oro
-		end
-		if copy.locked then
-			-- Candado arriba, junto a la "E" o la "B" si la lleva.
-			local badge = Instance.new("Frame")
-			badge.Name = "Locked"
-			badge.Position = UDim2.fromOffset(if isEquipped or inBag then 28 else 4, 4)
-			badge.Size = UDim2.fromOffset(22, 22)
-			badge.BackgroundColor3 = Ui.COLORS.dark
-			badge.BorderSizePixel = 0
-			badge.Parent = cell
-			Ui.round(badge, 6)
-			Ui.stroke(badge, Color3.new(0, 0, 0), 2)
-			Ui.lockIcon(badge, Ui.COLORS.coins)
-			Ui.layer(badge, 4)
-		end
-		-- Metal (círculo de su color) y tamaño (cartelito con su inicial) en el lado izquierdo, bajo la "E".
-		local metalDef, sizeDef = Permanent.metal(copy), Permanent.size(copy)
-		if metalDef then
-			local dot = Instance.new("Frame")
-			dot.Name = "Metal"
-			dot.Position = UDim2.fromOffset(6, 30)
-			dot.Size = UDim2.fromOffset(18, 18)
-			dot.BackgroundColor3 = metalDef.color
-			dot.BorderSizePixel = 0
-			dot.ZIndex = 3
-			dot.Parent = cell
-			Ui.round(dot, 9)
-			Ui.stroke(dot, Color3.new(0, 0, 0), 2)
-		end
-		if sizeDef then
-			Ui.cellTag(cell, string.sub(Lang.t(nil, sizeDef.name), 1, 1), sizeDef.color).Position = UDim2.fromOffset(4, if metalDef then 52 else 30)
-		end
-		-- Rasgo arriba a la derecha (su logo) y grado abajo a la derecha (su nombre en su color), pedido por el usuario.
-		local logo = trait and Ui.traitLogo(trait)
-		if logo then
-			local mark = Instance.new("Frame")
-			mark.Name = "Trait"
-			mark.AnchorPoint = Vector2.new(1, 0)
-			mark.Position = UDim2.new(1, -2, 0, 2)
-			mark.Size = UDim2.fromOffset(36, 36)
-			mark.BackgroundTransparency = 1
-			mark.Parent = cell
-			Ui.image(mark, logo).ZIndex = 4
-		end
-		if (copy.level or 0) > 0 then
-			-- Nivel (Config.WeaponLevel) arriba en el centro, entre la "E" y el rasgo.
-			local level = Ui.label(cell, 13)
-			level.Name = "Level"
-			level.AnchorPoint = Vector2.new(0.5, 0)
-			level.Position = UDim2.new(0.5, 0, 0, 4)
-			level.Size = UDim2.fromOffset(40, 18)
-			level.BackgroundTransparency = 0
-			level.BackgroundColor3 = Ui.COLORS.dark
-			level.TextColor3 = Color3.fromRGB(255, 214, 92)
-			level.Text = Lang.t(nil, "Lv {n}", { n = copy.level })
-			level.ZIndex = 4
-			Ui.round(level, 6)
-			Ui.stroke(level, Color3.fromRGB(170, 90, 255), 2)
-		end
-		local gradeDef = Config.Grades[copy.grade]
-		if gradeDef then
-			local tag = Ui.label(cell, 16)
-			tag.Name = "Grade"
-			tag.AnchorPoint = Vector2.new(1, 1)
-			tag.Position = UDim2.new(1, -5, 1, -5)
-			tag.Size = UDim2.fromOffset(math.max(24, 8 + 10 * (utf8.len(gradeDef.name) or 1)), 22)
-			tag.BackgroundTransparency = 0
-			tag.BackgroundColor3 = Ui.COLORS.dark
-			tag.TextColor3 = gradeDef.color
-			tag.Text = Lang.t(nil, gradeDef.name)
-			tag.ZIndex = 4
-			Ui.round(tag, 6)
-			Ui.stroke(tag, gradeDef.color, 2)
-		end
-		Ui.tip(cell, function()
-			return swordTip(copy)
-		end, true)
-		return cell
-	end
-	Backpack.swordCell = swordCell -- la misma casilla en el menú de vender (client/SellMenu)
 
 	-- Fila de huecos: cada uno es un marco del tamaño de una casilla de la lista, encogido con su UIScale, así la
 	-- casilla de dentro es la misma que la de la lista y no hace falta otra con medidas más pequeñas.
@@ -669,7 +471,7 @@ function Backpack.start()
 					copy = candidate
 				end
 			end
-			local key = if copy then `{copy.id}:{copy.sword}:{copy.metal}:{copy.size}:{copy.trait}:{copy.grade}:{copy.locked}` else ""
+			local key = if copy then WeaponCell.key(copy) else ""
 			if key == slotKeys[index] then
 				continue
 			end
@@ -679,7 +481,7 @@ function Backpack.start()
 			end
 			local cell
 			if copy then
-				cell = swordCell(holder, copy, false, false)
+				cell = WeaponCell.create(holder, copy, { owner = false })
 				cell.Name = "Sword"
 				cell.Activated:Connect(function()
 					-- Quitar la del hueco.
@@ -708,9 +510,7 @@ function Backpack.start()
 		local seen = {}
 		for _, copy in copies do
 			seen[copy.id] = true
-			local isEquipped = table.find(worn, copy.id) ~= nil
-			local inBag = Stats.isDeposited(player, copy.id)
-			local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{isEquipped}:{inBag}:{copy.locked}`
+			local key = WeaponCell.key(copy)
 			if cellKeys[copy.id] == key then
 				continue
 			end
@@ -721,7 +521,7 @@ function Backpack.start()
 			cellKeys[copy.id] = key
 
 			-- (El orden de las casillas, de más a menos daño, se pone al final de syncSwords.)
-			local cell = swordCell(swordGrid, copy, isEquipped, inBag)
+			local cell = WeaponCell.create(swordGrid, copy)
 			cell.Name = "Sword" .. copy.id
 			cell.Activated:Connect(function()
 				-- Pulsar un arma la equipa, o la quita si ya lo estaba (como en el menú de la bolsa).
@@ -1147,6 +947,5 @@ function Backpack.start()
 	refresh()
 end
 
-Backpack.swordTip = swordTip
 
 return Backpack

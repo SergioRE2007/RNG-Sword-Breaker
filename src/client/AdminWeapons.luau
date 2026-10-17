@@ -16,6 +16,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local AdminScope = require(script.Parent.AdminScope)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local WeaponCell = require(script.Parent.WeaponCell)
 
 local AdminWeapons = {}
 
@@ -293,12 +294,9 @@ function AdminWeapons.build(pane: Frame)
 			grade = if chosen.grade > 0 then chosen.grade else nil,
 		}
 		preview:ClearAllChildren()
-		local swordCell = (require(script.Parent.Backpack) :: any).swordCell
-		if swordCell then
-			local cell = swordCell(preview, copy, false, false)
-			cell.Name = "Cell"
-			cell.Size = UDim2.fromScale(1, 1)
-		end
+		local cell = WeaponCell.create(preview, copy, { owner = false })
+		cell.Name = "Cell"
+		cell.Size = UDim2.fromScale(1, 1)
 		local tier = Rarity.tier(Permanent.rarity(chosen.sword, copy.metal, copy.size))
 		name.Text = Permanent.name(chosen.sword, copy.metal, copy.size)
 		name.TextColor3 = tier.color:Lerp(Color3.new(1, 1, 1), 0.35)

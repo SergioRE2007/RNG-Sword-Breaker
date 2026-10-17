@@ -14,6 +14,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local WeaponCell = require(script.Parent.WeaponCell)
 
 local SellMenu = {}
 local player = Players.LocalPlayer
@@ -215,8 +216,7 @@ function SellMenu.start()
 		cells = {}
 		local eligible = {}
 		-- Pedido por el usuario: mismo orden (de más a menos daño) y misma casilla y cartel que en la mochila; antes
-		-- iban por orden de llegada y con otra información. Backpack se pide aquí porque él ya pide este módulo.
-		local swordCell = (require(script.Parent.Backpack) :: any).swordCell
+		-- iban por orden de llegada y con otra información.
 		local copies = table.clone(Stats.swords(player))
 		table.sort(copies, function(a, b)
 			local left, right = Stats.swordDamage(a), Stats.swordDamage(b)
@@ -230,7 +230,7 @@ function SellMenu.start()
 			if copy.locked or Stats.isEquipped(player, copy.id) or Stats.isDeposited(player, copy.id) then continue end
 			eligible[copy.id] = true
 			local tier = Rarity.tier(Stats.rarity(copy))
-			local cell = swordCell(stock, copy, false, false)
+			local cell = WeaponCell.create(stock, copy)
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = position
 			cell:SetAttribute("Base", tier.color) -- color de su fondo sin elegir

@@ -13,16 +13,13 @@ local BagInfo = require(ReplicatedStorage.Shared.BagInfo)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
-local Permanent = require(ReplicatedStorage.Shared.Permanent)
-local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 
-local Backpack = require(script.Parent.Backpack)
 local ForgeScene = require(script.Parent.ForgeScene)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
-local WeaponPreview = require(script.Parent.WeaponPreview)
+local WeaponCell = require(script.Parent.WeaponCell)
 
 local BagMenu = {}
 
@@ -105,40 +102,21 @@ local function coinsPerHit(copy): number
 	return Stats.bagCoins(player, copy)
 end
 
+-- Cartel del arma con lo que saca por golpe y lo que pasa al pulsarla.
 local function swordTip(copy, line: string)
-	local text, color, animated, icon = Backpack.swordTip(copy)
+	local text, color, animated, icon = WeaponCell.tip(copy)
 	return `{text}\n<font color="{GOLD_HEX}">{Lang.t(nil, "+{n} coins per hit", { n = Format.short(coinsPerHit(copy)) })}</font>\n<font color="{Ui.SOFT}">{line}</font>`, color, animated, icon
 end
 
--- Casilla de un arma: vista 3D, lo que saca por golpe abajo y sus marcas (metal, tamaño y rasgo, como en la mochila).
-local function swordCell(parent: Instance, copy): TextButton
-	local tier = Rarity.tier(Stats.rarity(copy))
-	local cell = Ui.cell(parent, tier.color, table.find(Config.RarityTiers, tier))
-	WeaponPreview.attach(cell, copy.sword, tier.color, copy.metal)
-	local amount = Ui.cellLabel(cell, "+" .. Format.short(coinsPerHit(copy)))
-	amount.Name = "Coins"
-	amount.Size = UDim2.new(1, -8, 0, 24)
-	Ui.gradient(amount, WHITE, GOLD, 90)
-	local metal, size = Permanent.metal(copy), Permanent.size(copy)
-	if metal then
-		local dot = Instance.new("Frame")
-		dot.Name = "Metal"
-		dot.AnchorPoint = Vector2.new(1, 0)
-		dot.Position = UDim2.new(1, -6, 0, 6)
-		dot.Size = UDim2.fromOffset(16, 16)
-		dot.BackgroundColor3 = metal.color
-		dot.BorderSizePixel = 0
-		dot.ZIndex = 3
-		dot.Parent = cell
-		Ui.round(dot, 8)
-		Ui.stroke(dot, BLACK, 2)
-	end
-	if size then
-		local tag = Ui.cellTag(cell, string.sub(Lang.t(nil, size.name), 1, 1), size.color)
-		tag.AnchorPoint = Vector2.new(1, 0)
-		tag.Position = UDim2.new(1, -4, 0, if metal then 26 else 4)
-	end
-	return cell
+-- Casilla de un arma (client/WeaponCell), con lo que saca por golpe abajo en vez del daño y el cartel de la bolsa.
+local function swordCell(parent: Instance, copy, line: () -> string): TextButton
+	return WeaponCell.create(parent, copy, {
+		value = "+" .. Format.short(coinsPerHit(copy)),
+		valueColor = GOLD,
+		tip = function()
+			return swordTip(copy, line())
+		end,
+	})
 end
 
 -- Hueco libre de la bolsa: marco oscuro con un "+".
@@ -174,7 +152,7 @@ end
 local function syncSlots(deposited)
 	local parts = {}
 	for _, copy in deposited do
-		table.insert(parts, `{copy.id}:{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}`)
+		table.insert(parts, WeaponCell.key(copy))
 	end
 	local count = Stats.bagSlots(player)
 	local key = table.concat(parts, ",") .. "|" .. tostring(player:GetAttribute("BagRate")) .. "|" .. count
@@ -202,10 +180,9 @@ local function syncSlots(deposited)
 		local copy = deposited[slot]
 		local item: GuiObject
 		if copy then
-			local cell = swordCell(slotRow, copy)
-			Ui.tip(cell, function()
-				return swordTip(copy, Lang.t(nil, "Click to take it out of the bag"))
-			end, true)
+			local cell = swordCell(slotRow, copy, function()
+				return Lang.t(nil, "Click to take it out of the bag")
+			end)
 			cell.Activated:Connect(function()
 				ask(copy.id)
 			end)
@@ -234,8 +211,7 @@ local function syncStock(copies, worn: { number }, deposited)
 		end
 		seen[copy.id] = true
 		table.insert(shown, copy)
-		local isEquipped = table.find(worn, copy.id) ~= nil
-		local key = `{copy.sword}:{copy.trait}:{copy.grade or 0}:{copy.metal or 0}:{copy.size or 0}:{isEquipped}:{global}`
+		local key = `{WeaponCell.key(copy)}:{global}`
 		if stockKeys[copy.id] == key then
 			continue
 		end
@@ -243,17 +219,12 @@ local function syncStock(copies, worn: { number }, deposited)
 			stockCells[copy.id]:Destroy()
 		end
 		stockKeys[copy.id] = key
-		local cell = swordCell(stockGrid, copy)
-		cell.Name = "Sword" .. copy.id
-		if isEquipped then
-			Ui.cellTag(cell, "E", Ui.COLORS.green)
-		end
-		Ui.tip(cell, function()
-			local line = if Stats.isEquipped(player, copy.id) then Lang.t(nil, "Equipped: it will be unequipped")
+		local cell = swordCell(stockGrid, copy, function()
+			return if Stats.isEquipped(player, copy.id) then Lang.t(nil, "Equipped: it will be unequipped")
 				elseif #Stats.list(player, "Bag") >= Stats.bagSlots(player) then Lang.t(nil, "Bag full: it replaces the worst one")
 				else Lang.t(nil, "Click: into the bag")
-			return swordTip(copy, line)
-		end, true)
+		end)
+		cell.Name = "Sword" .. copy.id
 		cell.Activated:Connect(function()
 			ask(copy.id)
 		end)
