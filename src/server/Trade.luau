@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -209,14 +210,6 @@ local function isEmpty(offer): boolean
 	return offer.coins == 0 and offer.gems == 0 and next(offer.items) == nil and next(offer.swords) == nil and next(offer.armor) == nil and next(offer.artifacts) == nil
 end
 
-local function count(set): number
-	local total = 0
-	for _ in set do
-		total += 1
-	end
-	return total
-end
-
 -- El motivo de un trato que no se puede cerrar, para leerlo cada uno en su idioma: (lector) -> texto.
 local function why(text: string, side, item: string?)
 	return function(reader: Player?): string
@@ -264,16 +257,9 @@ local function problem(side, other): any
 			return why("{name} no longer has one of the accessories", side)
 		end
 	end
-	-- Lo que recibe.
+	-- Lo que recibe. Sin sitio para armas o armadura el trato sigue: `give` se queda con las mejores (pedido por el
+	-- usuario: muchos tratos se cancelaban por la mochila llena).
 	local incoming = other.offer
-	local swordsIn = if other.bot then #other.fake.swords else count(incoming.swords)
-	local armorIn = if other.bot then #other.fake.armor else count(incoming.armor)
-	if #data.swords - count(offer.swords) + swordsIn > Config.MaxSwords then
-		return why("{name} doesn't have room for that many swords", side)
-	end
-	if #data.armor - count(offer.armor) + armorIn > Config.Armor.MaxPieces then
-		return why("{name} doesn't have room for that much armor", side)
-	end
 	for index in incoming.artifacts do
 		-- Se pueden tener repetidos, hasta el tope de copias (un trato mueve una copia de cada accesorio).
 		if Stats.copies(data.artifacts, index) >= Config.ArtifactCopies and not offer.artifacts[index] then
@@ -330,11 +316,52 @@ local function take(side)
 	return pack
 end
 
+-- Con más armas o piezas que el tope, quita las peores hasta caber: armas por daño (sin tocar equipadas, de la bolsa
+-- ni con candado) y piezas por nota (sin tocar las puestas). Las que acaban de llegar cuentan igual: si son peores que
+-- todas, son ellas las que se van. Devuelve cuántas quitó de cada.
+local function trim(data): (number, number)
+	local swords, armor = 0, 0
+	while #data.swords > Config.MaxSwords do
+		local worst, worstDamage = nil, math.huge
+		for position, copy in data.swords do
+			if not PlayerData.isLocked(data, copy.id) then
+				local damage = Stats.swordDamage(copy)
+				if damage < worstDamage then
+					worst, worstDamage = position, damage
+				end
+			end
+		end
+		if not worst then
+			break
+		end
+		table.remove(data.swords, worst)
+		swords += 1
+	end
+	while #data.armor > Config.Armor.MaxPieces do
+		local worst, worstScore = nil, math.huge
+		for position, piece in data.armor do
+			if data.armorWorn[piece.slot] ~= piece.id then
+				local score = ArmorStats.score(piece)
+				if score < worstScore then
+					worst, worstScore = position, score
+				end
+			end
+		end
+		if not worst then
+			break
+		end
+		table.remove(data.armor, worst)
+		armor += 1
+	end
+	return swords, armor
+end
+
 -- Mete un paquete en el inventario de un lado (con ids nuevos).
 local function give(side, pack)
 	if side.bot then
 		return
 	end
+	local droppedSwords, droppedArmor = 0, 0
 	PlayerData.editArmor(side.player, function(data)
 		-- No cuenta como monedas ganadas (clasificaciones): se suman a mano, sin addCoins.
 		data.coins += pack.coins
@@ -356,7 +383,11 @@ local function give(side, pack)
 			end
 		end
 		table.sort(data.artifacts)
+		droppedSwords, droppedArmor = trim(data)
 	end)
+	if droppedSwords + droppedArmor > 0 then
+		Tell.notice(side.player, Color3.fromRGB(255, 170, 60), "Backpack full: you kept the best ones and {n} worse items were removed.", { n = droppedSwords + droppedArmor })
+	end
 end
 
 -- Copia profunda de lo que toca un trato, para deshacerlo si el cambio falla a medias.

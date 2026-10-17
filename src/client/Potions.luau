@@ -84,7 +84,9 @@ function Potions.start()
 	strip.Name = "Potions"
 	strip.AnchorPoint = Vector2.new(1, 1)
 	strip.Position = UDim2.new(1, -14, 1, -14)
-	strip.Size = UDim2.fromOffset(COLUMNS * TILE_W + (COLUMNS - 1) * GAP, 0)
+	-- Con holgura: el UIScale del ratón (y el salto al sumar tiempo) agranda la casilla también para el layout, y sin
+	-- ella una fila llena se partía al pasar el ratón, la casilla se iba de debajo y volvía sin parar.
+	strip.Size = UDim2.fromOffset(COLUMNS * TILE_W + (COLUMNS - 1) * GAP + math.ceil(TILE_W * 0.3), 0)
 	strip.AutomaticSize = Enum.AutomaticSize.Y
 	strip.BackgroundTransparency = 1
 	strip.Parent = gui
