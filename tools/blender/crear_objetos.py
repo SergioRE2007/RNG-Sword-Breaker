@@ -13,6 +13,7 @@
 import math
 import os
 import random
+import sys
 
 import bmesh
 import bpy
@@ -23,14 +24,17 @@ OUT_DIR = os.path.join(os.path.expanduser("~"), "Documents", "Roblox", "modelos"
 ROLE_COLORS = {  # solo para verlo en Blender; en el juego manda ObjectModel
     "Body": (0.6, 0.6, 0.6, 1), "Dark": (0.2, 0.2, 0.25, 1), "Trim": (0.95, 0.78, 0.3, 1),
     "Gem": (0.5, 0.9, 1, 1), "Glow": (1, 0.85, 0.4, 1), "Marker": (1, 0, 1, 1),
+    "Ring": (0.95, 0.78, 0.3, 1), "Halo": (1, 0.85, 0.4, 1),
 }
 # Color del cuerpo de cada objeto (el de Config.Destructibles), solo para la vista previa.
 BODY = {
     1: (0.67, 0.49, 0.29), 2: (0.47, 0.29, 0.18), 3: (0.43, 0.43, 0.45), 4: (0.88, 0.86, 0.8), 5: (0.43, 0.86, 1),
     6: (1, 0.47, 0.16), 7: (0.18, 0.16, 0.24), 8: (0.9, 0.75, 0.27), 9: (0.78, 0.27, 0.12), 10: (0.24, 1, 0.55),
     11: (1, 0.94, 0.59), 12: (0.02, 0.02, 0.04), 13: (0.51, 0.2, 1), 14: (1, 0.24, 0.78), 15: (1, 1, 1),
-    16: (1, 0.16, 0.24),
+    16: (1, 0.16, 0.24), 17: (0.16, 0.12, 0.22), 18: (0.35, 0.27, 0.78), 19: (0.94, 0.92, 1),
 }
+# Color de la luz (Glow y Halo) de los que llevan "accent" en Config.Destructibles.
+ACCENT = {17: (1, 0.67, 0.27), 18: (1, 0.55, 0.86), 19: (0.47, 0.9, 1)}
 
 
 # ---------- Geometría ----------
@@ -407,8 +411,105 @@ def infinito(o):  # 14 x 26 x 14
     o.ring_of("Body", gem(0.35, 1.4), 8, 6.0, 0.8, 0, spin=10)
 
 
+def directions(count, seed=0):
+    """`count` direcciones repartidas por la esfera (espiral de Fibonacci), con un giro según la semilla."""
+    out = []
+    golden = math.pi * (3 - math.sqrt(5))
+    for i in range(count):
+        y = 1 - 2 * (i + 0.5) / count
+        r = math.sqrt(1 - y * y)
+        a = golden * i + seed
+        out.append(Vector((r * math.cos(a), y, r * math.sin(a))))
+    return out
+
+
+def toward(d):
+    """Matriz que lleva el eje Y a la dirección d."""
+    return d.to_track_quat("Y", "Z").to_matrix().to_4x4()
+
+
+# Endgame (pedido por el usuario, 17-10-2026): tres objetos por encima del Infinito, con más capas que giran cada una
+# a su aire. Además de los papeles de siempre usan Ring (se ve como Trim) y Halo (se ve como Glow), para que
+# client/ObjectAmbient pueda mover más piezas por separado.
+def sol_negro(o):  # 13 x 13 x 13
+    o.add("Dark", sphere(3.5, 16, 10))  # la luna que tapa el sol
+    rng = random.Random(61)
+    for d in directions(34, 0.3):  # corona de llamas
+        h = rng.uniform(1.8, 3.0)
+        o.add("Glow", spike(rng.uniform(0.3, 0.45), h, 5), toward(d) @ T(0, 3.2, 0))
+    o.add("Halo", torus(4.6, 0.16, 44, 5), R("X", 78))
+    o.add("Halo", torus(5.1, 0.1, 44, 4), R("X", 78) @ R("Z", 8))
+    o.add("Trim", torus(5.6, 0.22, 48, 6), R("Z", 24))
+    for i in range(3):  # tres lunas pequeñas en el anillo de oro
+        a = 2 * math.pi * i / 3
+        o.add("Trim", sphere(0.55, 8, 5), R("Z", 24) @ T(5.6 * math.cos(a), 0, 5.6 * math.sin(a)))
+    for i in range(7):  # esquirlas de obsidiana alrededor
+        a = 2 * math.pi * i / 7
+        o.add("Gem", gem(0.42, 1.9), T(6.0 * math.cos(a), 0.9 * math.sin(3 * a), 6.0 * math.sin(a)) @ R("Z", 25))
+    for i in range(5):  # roca rota debajo, donde se apoya
+        a = 2 * math.pi * i / 5 + 0.4
+        o.add("Body", rock((1.3, 0.6, 1.1), 62 + i), T(1.9 * math.cos(a), -5.8, 1.9 * math.sin(a)))
+    o.add("Body", rock((1.6, 0.5, 1.6), 67), T(0, -6.1, 0))
+
+
+def galaxia(o):  # 16 x 10 x 16
+    o.add("Glow", sphere(1.8, 12, 8))  # el núcleo
+    o.add("Gem", sphere(2.7, 12, 8), S(1, 0.8, 1))
+    for s in (-1, 1):  # chorros de luz arriba y abajo
+        o.add("Glow", spike(0.55, 3.0, 6), R("X", 0 if s > 0 else 180) @ T(0, 1.6, 0))
+    rng = random.Random(71)
+    for arm in range(3):  # tres brazos en espiral
+        base = 2 * math.pi * arm / 3
+        for k in range(16):
+            t = k / 15
+            r = 2.4 + 5.2 * t
+            a = base + 3.4 * t
+            y = 0.6 * math.sin(a * 2) * t
+            size = 1.15 - 0.6 * t
+            o.add("Body", gem(size, size * 1.6, 5), T(r * math.cos(a), y, r * math.sin(a)) @ R("Z", 90) @ R("X", rng.uniform(0, 90)))
+            if k % 2 == 1:  # estrellas que brillan a lo largo del brazo
+                b = a + 0.18
+                o.add("Halo", sphere(0.22 + 0.1 * (1 - t), 6, 4), T((r + 0.5) * math.cos(b), y + 0.35, (r + 0.5) * math.sin(b)))
+    o.add("Dark", torus(4.4, 0.55, 40, 6), S(1, 0.35, 1))  # polvo
+    o.add("Trim", torus(7.7, 0.16, 56, 5), R("X", 8))
+    o.add("Ring", torus(3.3, 0.12, 36, 4), R("X", 90))
+    o.add("Ring", torus(3.3, 0.12, 36, 4), R("Z", 90))
+    o.add("Dark", lathe([(2.6, -5.0), (2.6, -4.6), (1.4, -4.2), (0.5, -3.4), (0, -3.3)], 16))  # peana
+
+
+def genesis(o):  # 14 x 24 x 14
+    o.add("Body", lathe([(6.4, -12.0), (6.4, -11.4), (5.0, -11.0), (4.6, -10.2), (3.0, -9.8), (0, -9.8)], 20))
+    o.ring_of("Body", spike(0.8, 4.4), 8, 4.4, -10.2, 18)
+    o.ring_of("Trim", spike(0.4, 2.6), 8, 3.4, -10.0, 10, spin=22.5)
+    o.add("Trim", torus(6.0, 0.2, 48, 5), T(0, -11.2, 0))
+    egg = [(0, -6.6), (2.4, -6.0), (3.6, -4.2), (4.0, -1.6), (3.8, 1.4), (3.0, 4.4), (1.7, 6.6), (0, 7.6)]
+    o.add("Gem", lathe(egg, 18))  # el huevo cósmico
+    rng = random.Random(81)
+    for i in range(7):  # grietas de luz por la cáscara
+        a = 2 * math.pi * i / 7 + rng.uniform(-0.2, 0.2)
+        for j, (y, r) in enumerate(((-3.0, 4.0), (-1.2, 4.05), (0.8, 3.95), (2.6, 3.55))):
+            zig = 0.35 * (1 if j % 2 else -1)
+            b = a + zig / r
+            o.add("Glow", box(0.22, 1.9, 0.18), T((r + 0.02) * math.cos(b), y, (r + 0.02) * math.sin(b)) @ R("Y", -math.degrees(b)) @ R("X", 18 * zig))
+    o.add("Glow", gem(0.6, 2.0, 6), T(0, 9.0, 0))
+    o.add("Trim", torus(5.3, 0.2, 48, 6), T(0, 0.5, 0) @ R("X", 35))
+    o.add("Trim", torus(5.3, 0.2, 48, 6), T(0, 0.5, 0) @ R("X", -35))
+    o.add("Ring", torus(6.3, 0.14, 52, 5), T(0, 0.5, 0) @ R("Z", 70))
+    for i in range(4):
+        a = math.pi / 2 * i
+        o.add("Ring", gem(0.35, 1.1), T(0, 0.5, 0) @ R("Z", 70) @ T(6.3 * math.cos(a), 0, 6.3 * math.sin(a)))
+    o.add("Halo", torus(2.0, 0.14, 32, 5), T(0, 10.6, 0))
+    for i in range(8):  # chispas que dan vueltas por debajo del huevo
+        a = 2 * math.pi * i / 8
+        o.add("Halo", gem(0.3, 1.0), T(6.2 * math.cos(a), -5.0 + 0.6 * (i % 2), 6.2 * math.sin(a)))
+    for i in range(6):  # trozos de cáscara flotando
+        a = 2 * math.pi * i / 6 + 0.5
+        y = rng.uniform(-3, 5)
+        o.add("Dark", rock((0.9, 0.25, 0.7), 90 + i, 6, 4, 0.25), T(5.4 * math.cos(a), y, 5.4 * math.sin(a)) @ R("Y", -math.degrees(a)) @ R("Z", 70))
+
+
 BUILDERS = [caja, barril, roca, pilar, cristal, roca_armas, monolito, obelisco, meteorito, nucleo, estrella, agujero,
-            fragmento, singularidad, origen, infinito]
+            fragmento, singularidad, origen, infinito, sol_negro, galaxia, genesis]
 
 
 # ---------- Pasar a Blender y exportar ----------
@@ -429,6 +530,8 @@ def material(index, role):
         color = tuple(c * 0.45 for c in BODY[index]) + (1,)
     elif role == "Gem":
         color = BODY[index] + (1,)
+    elif role in ("Glow", "Halo") and index in ACCENT:
+        color = ACCENT[index] + (1,)
     mat.diffuse_color = color
     return mat
 
@@ -478,6 +581,12 @@ def render_preview(path, first, last):
 
 
 def main():
+    # "-- --only 17 18 19": solo esos objetos, a objetos_parche.fbx (para pasarlos a src/shared/ObjectMeshesPatch.rbxmx
+    # sin volver a importar los demás) con su vista objetos_parche.png.
+    args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    only = [int(a) for a in args[args.index("--only") + 1:]] if "--only" in args else None
+    name = "objetos_parche" if only else "objetos"
+
     for obj in list(bpy.data.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
     for mesh in list(bpy.data.meshes):
@@ -488,6 +597,8 @@ def main():
     marker("Axis_Front", (-20, 0, -2))
 
     for index, build in enumerate(BUILDERS, start=1):
+        if only and index not in only:
+            continue
         o = Obj()
         build(o)
         offset = ((index - 1) * 20.0, 0, 0)  # en fila, de 20 en 20 (solo para verlos juntos en Blender)
@@ -496,17 +607,21 @@ def main():
             make_object("O%02d_%s" % (index, role), index, role, verts, faces, offset)
 
     os.makedirs(OUT_DIR, exist_ok=True)
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT_DIR, "objetos.blend"))
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT_DIR, name + ".blend"))
     bpy.ops.export_scene.fbx(
-        filepath=os.path.join(OUT_DIR, "objetos.fbx"),
+        filepath=os.path.join(OUT_DIR, name + ".fbx"),
         object_types={"MESH"},
         axis_forward="-Z",
         axis_up="Y",
         apply_scale_options="FBX_SCALE_UNITS",
         mesh_smooth_type="FACE",
     )
-    render_preview(os.path.join(OUT_DIR, "objetos1.png"), 1, 8)
-    render_preview(os.path.join(OUT_DIR, "objetos2.png"), 9, 16)
+    if only:
+        render_preview(os.path.join(OUT_DIR, name + ".png"), min(only), max(only))
+    else:
+        render_preview(os.path.join(OUT_DIR, "objetos1.png"), 1, 8)
+        render_preview(os.path.join(OUT_DIR, "objetos2.png"), 9, 16)
+        render_preview(os.path.join(OUT_DIR, "objetos3.png"), 17, len(BUILDERS))
     print("Exportados", len(BUILDERS), "objetos y", len(bpy.data.objects), "mallas a", OUT_DIR)
 
 

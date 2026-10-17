@@ -36,6 +36,9 @@ local STYLES = {
 	{ { "Gem", "shard", 6, 0.3 }, { "Glow", "orb", 4, 0.2 }, { "Body", "shard", 6, 0.16 }, { "Trim", "disc", 3, 0.4 } }, -- Singularidad
 	{ { "Body", "shard", 8, 0.34 }, { "Gem", "shard", 5, 0.3 }, { "Glow", "orb", 5, 0.2 }, { "Trim", "disc", 4, 0.4 } }, -- Origen
 	{ { "Body", "shard", 8, 0.34 }, { "Gem", "shard", 6, 0.3 }, { "Glow", "shard", 5, 0.24 }, { "Glow", "orb", 4, 0.16 }, { "Trim", "disc", 4, 0.4 } }, -- Infinito
+	{ { "Dark", "orb", 5, 0.28 }, { "Glow", "shard", 8, 0.22 }, { "Trim", "disc", 3, 0.45 }, { "Gem", "shard", 5, 0.18 }, { "Body", "wedge", 3, 0.16 } }, -- Sol negro
+	{ { "Body", "shard", 10, 0.2 }, { "Gem", "orb", 3, 0.28 }, { "Glow", "orb", 4, 0.18 }, { "Trim", "disc", 3, 0.5 }, { "Dark", "disc", 2, 0.4 } }, -- Galaxia
+	{ { "Gem", "shard", 10, 0.32 }, { "Glow", "shard", 6, 0.2 }, { "Trim", "disc", 4, 0.42 }, { "Body", "shard", 6, 0.26 }, { "Dark", "wedge", 4, 0.16 } }, -- Génesis
 }
 
 local function newPart(shape: string, s: number): BasePart
@@ -247,7 +250,7 @@ function ObjectBreak.play(cframe: CFrame, size: Vector3, index: number)
 				cframe.Y - size.Y / 2
 			)
 			-- La luz se apaga antes que la piedra.
-			fade(piece, if role == "Glow" then LIFETIME * 0.6 else LIFETIME)
+			fade(piece, if role == "Glow" or role == "Halo" then LIFETIME * 0.6 else LIFETIME)
 		end
 	end
 end

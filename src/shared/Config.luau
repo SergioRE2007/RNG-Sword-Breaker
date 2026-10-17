@@ -474,6 +474,12 @@ Config.Destructibles = {
 	{ name = "Singularity", rarity = 1e18, hp = 1.1e14, reward = 6.3e13, gems = 3e15, size = Vector3.new(10, 10, 10), color = Color3.fromRGB(255, 60, 200), material = Enum.Material.Neon },
 	{ name = "Origin", rarity = 1e21, hp = 2.4e16, reward = 1.1e16, gems = 1e18, size = Vector3.new(14, 18, 14), color = Color3.fromRGB(255, 255, 255), material = Enum.Material.Neon },
 	{ name = "Infinity", rarity = 1e24, hp = 1.8e18, reward = 2e18, gems = 5e20, size = Vector3.new(14, 26, 14), color = Color3.fromRGB(255, 40, 60), material = Enum.Material.Neon },
+	-- Endgame (pedido por el usuario, 17-10-2026): tres objetos para los niveles 51 a 60 de la suerte. Vida, premio y
+	-- gemas puestos A OJO, sin tools/equilibrio (el usuario no quiso calendario): mucho más duros que el Infinito.
+	-- "accent" = color de su luz (Glow y Halo del modelo, y la de ObjectAmbient), distinto del cuerpo.
+	{ name = "Black Sun", rarity = 1e25, hp = 1.5e19, reward = 1.1e19, gems = 1e22, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(42, 32, 58), accent = Color3.fromRGB(255, 170, 70), material = Enum.Material.Slate, sound = "energy" },
+	{ name = "Galaxy", rarity = 3e26, hp = 1.2e20, reward = 1.5e20, gems = 3e23, size = Vector3.new(16, 10, 16), color = Color3.fromRGB(90, 70, 200), accent = Color3.fromRGB(255, 140, 220), material = Enum.Material.Neon, sound = "energy" },
+	{ name = "Genesis", rarity = 1e28, hp = 8e20, reward = 2e21, gems = 1e25, size = Vector3.new(14, 24, 14), color = Color3.fromRGB(240, 235, 255), accent = Color3.fromRGB(120, 230, 255), material = Enum.Material.Marble },
 }
 
 -- Gemas de los objetos de la parcela: cada objeto con "gems" las suelta con probabilidad "gemChance" (1 si no
@@ -566,7 +572,9 @@ Config.Upgrades = {
 	-- lo que falta hasta la rareza del objeto más raro (1e24) lo ponen renacer, el rasgo, los accesorios y la armadura
 	-- (con x3 por nivel la mejora sola ya los agotaba y todo lo demás sobraba). Multiplica la probabilidad
 	-- de los tipos raros de Config.Destructibles, que son los que dan más monedas, gemas y suerte de armas.
-	luck = { name = "Destructible Luck", short = "Luck", desc = "Raises the chance of finding rare destructibles, which give better weapons.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 2.5, maxLevel = 50, costs = { 22, 170, 1200, 6200, 17000, 89000, 1e6, 7.3e6, 1.8e7, 1.6e8, 4.3e9, 1.5e10, 3.1e10, 6.7e10, 1.1e11, 4.7e11, 2.3e12, 5.4e12, 1.5e13, 1.3e14, 9.9e14, 4.9e15, 2.5e16, 9e16, 3.2e17, 2e18, 1.9e19, 7.8e19, 1.4e20, 2.4e20, 5.6e20, 1.3e21, 3.3e21, 8e21, 1.8e22, 1.5e23, 1.5e24, 5e24, 1.9e25, 6.7e25, 1.1e26, 1.8e26, 6.5e26, 1.8e27, 4.4e27, 3.9e28, 2.8e29, 6.3e29, 1.5e30, 2.9e30 }, display = "x%s" },
+	-- Niveles 51 a 60 (endgame, pedido por el usuario el 17-10-2026): precios A OJO, que saltan mucho más (de x7 a
+	-- x30 por nivel) y traen el Sol negro, la Galaxia y el Génesis. Si se regenera con tools/equilibrio se pisan.
+	luck = { name = "Destructible Luck", short = "Luck", desc = "Raises the chance of finding rare destructibles, which give better weapons.", icon = "luck", color = Color3.fromRGB(70, 200, 90), mode = "mul", base = 1, perLevel = 2.5, maxLevel = 60, costs = { 22, 170, 1200, 6200, 17000, 89000, 1e6, 7.3e6, 1.8e7, 1.6e8, 4.3e9, 1.5e10, 3.1e10, 6.7e10, 1.1e11, 4.7e11, 2.3e12, 5.4e12, 1.5e13, 1.3e14, 9.9e14, 4.9e15, 2.5e16, 9e16, 3.2e17, 2e18, 1.9e19, 7.8e19, 1.4e20, 2.4e20, 5.6e20, 1.3e21, 3.3e21, 8e21, 1.8e22, 1.5e23, 1.5e24, 5e24, 1.9e25, 6.7e25, 1.1e26, 1.8e26, 6.5e26, 1.8e27, 4.4e27, 3.9e28, 2.8e29, 6.3e29, 1.5e30, 2.9e30, 2e31, 1.6e32, 1.5e33, 1.6e34, 2e35, 3e36, 5e37, 1e39, 2.5e40, 8e41 }, display = "x%s" },
 	-- Segundos entre apariciones de objetos en la parcela (lo lee Stats.spawnTime): cada objeto trae tiradas de arma, así
 	-- que es la antigua "Velocidad de tirada" (misma clave, para no perder lo comprado). 1,5 s al principio, -12 % por
 	-- nivel, ~0,42 s al final. Con Config.Gacha.FreeRoll también acorta la tirada gratis (Stats.rollTime).
