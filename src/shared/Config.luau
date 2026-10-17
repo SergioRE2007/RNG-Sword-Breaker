@@ -423,15 +423,16 @@ Config.Weather = {
 Config.Plot = {
 	Count = 8,
 	Size = 100, -- lado de la parcela (múltiplo de 20: la valla va en tramos de 10 con la entrada en el centro)
-	RingRadius = 250, -- distancia del centro del mapa al centro de cada parcela
+	RingRadius = 300, -- distancia del centro del mapa al centro de cada parcela (era 250: con las parcelas de 140 se pisaban con el decorado)
 	HubRadius = 90,
-	LimitRadius = 425, -- radio del muro invisible que cierra el mapa (server/MapBounds); la orilla de la isla queda a 382
+	LimitRadius = 495, -- radio del muro invisible que cierra el mapa (server/MapBounds); la orilla de la isla queda a 452
 	FloorHeight = 0.4,
 	SpawnInterval = 1.5, -- segundos entre apariciones de objetos en una parcela (sin mejoras: la rama "Velocidad de aparición" lo baja)
 	MinSpawnInterval = 0.3, -- nunca aparecen más rápido que esto
 	-- La parcela crece con los renacimientos (Stats.plotSize, pedido por el usuario): GrowStep studs por lado al llegar a
 	-- cada número de GrowAt, sin pasar de MaxSize. Crece alrededor de su centro: con 140 las esquinas de delante de dos
-	-- parcelas vecinas quedan a 8 studs, así que no cabe más sin mover el anillo. El decorado deja libre MaxSize.
+	-- parcelas vecinas quedan a 46 studs, con sitio para el estanque y el santuario de entre medias. El decorado deja
+	-- libre MaxSize.
 	GrowAt = { 1, 3 },
 	GrowStep = 20,
 	MaxSize = 140,
@@ -442,13 +443,13 @@ Config.Plot = {
 -- Aspecto de la parcela con cada renacimiento (server/PlotLooks; pedido por el usuario: cambia poco a poco, y habrá 20
 -- o más). La entrada n es la del renacimiento n: "floor" = los dos tonos de la tarima (mapa japonés) y "add" = lo que
 -- se pone desde ese renacimiento y se queda en los siguientes (las piezas de PlotLooks.BUILDERS). Con más renacimientos
--- que entradas se queda el de la última; para los nuevos, añadir entradas al final.
+-- que entradas se queda el de la última; para los siguientes, añadir entradas al final.
 Config.PlotLooks = {
 	{ floor = { Color3.fromRGB(218, 158, 100), Color3.fromRGB(198, 136, 86) }, add = { "border" } },
 	{ floor = { Color3.fromRGB(214, 150, 94), Color3.fromRGB(192, 128, 80) }, add = { "banners" } },
 	{ floor = { Color3.fromRGB(206, 140, 88), Color3.fromRGB(184, 118, 74) }, add = { "garden" } },
 	{ floor = { Color3.fromRGB(196, 128, 82), Color3.fromRGB(174, 108, 70) }, add = { "gold" } },
-	{ floor = { Color3.fromRGB(186, 116, 78), Color3.fromRGB(164, 98, 66) }, add = { "torii" } },
+	{ floor = { Color3.fromRGB(186, 116, 78), Color3.fromRGB(164, 98, 66) }, add = { "sakura" } },
 }
 
 -- Ordenados de común a raro. "rarity" = 1 entre N de que salga en cada aparición;

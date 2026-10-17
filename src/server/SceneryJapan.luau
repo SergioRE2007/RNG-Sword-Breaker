@@ -23,7 +23,7 @@ local STONE = { Color3.fromRGB(238, 232, 244), Color3.fromRGB(216, 208, 230) }
 local PETALS = { Color3.fromRGB(255, 150, 200), Color3.fromRGB(255, 190, 220), Color3.fromRGB(255, 225, 238), Color3.fromRGB(255, 120, 170) }
 local MIST_MOUNTAINS = { Color3.fromRGB(176, 140, 205), Color3.fromRGB(196, 150, 200), Color3.fromRGB(150, 130, 200) }
 local TREES = { "Sakura", "Sakura", "SakuraB", "SakuraB", "Maple", "Pine" }
-local ISLAND_RADIUS = Config.Plot.RingRadius + Config.Plot.Size * 0.75 + 35
+local ISLAND_RADIUS = Config.Plot.RingRadius + Config.Plot.MaxSize / 2 + 60
 local TREE_SPACE = 5.2 -- sitio que guarda un árbol por cada punto de escala: los troncos no se pegan y las copas solo se rozan
 
 local function part(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material): Part
@@ -84,7 +84,7 @@ end
 
 -- Si un punto del césped está libre: fuera del hub, de las parcelas y de los caminos. Las parcelas, con la medida más
 -- grande a la que llegan (Config.Plot.MaxSize) y el decorado que les pone fuera del muro server/PlotLooks.
-local PLOT_HALF = Config.Plot.MaxSize / 2 + 6
+local PLOT_HALF = Config.Plot.MaxSize / 2 + 24
 local function isOpen(position: Vector3, margin: number): boolean
 	local cfg = Config.Plot
 	if position.Magnitude < cfg.HubRadius + margin then
@@ -346,7 +346,10 @@ local function pond(parent: Instance, center: Vector3, radius: number)
 	decor(disc(parent, "PondBed", center, radius, 0.31, 0.35, Color3.fromRGB(26, 82, 98), Enum.Material.SmoothPlastic))
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(radius * 0.25, 0.7, -radius * 0.2)) * turn(), 1.2)
 	PropModel.place(parent, "Lotus", CFrame.new(center + Vector3.new(-radius * 0.35, 0.7, radius * 0.3)) * turn(), 1.0)
-	local turnBridge = rng:NextNumber(0, math.pi)
+	-- El puente va hacia el hub, por el medio del hueco entre las dos parcelas: girado al azar, con las parcelas
+	-- grandes su punta quedaba pegada a una esquina. (La tirada se queda para no cambiar el resto del decorado.)
+	rng:NextNumber(0, math.pi)
+	local turnBridge = -math.atan2(center.Z, center.X)
 	PropModel.place(parent, "Bridge", CFrame.new(center + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, turnBridge, 0), radius / 10)
 	-- El puente llega al suelo justo fuera del borde: ni rocas ni valla delante de sus dos entradas.
 	local along = Vector3.new(math.cos(turnBridge), 0, -math.sin(turnBridge))

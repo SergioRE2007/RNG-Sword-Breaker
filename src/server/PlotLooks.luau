@@ -80,13 +80,22 @@ function BUILDERS.garden(ctx)
 	end
 end
 
--- Torii en la entrada, con farolillos del color de la parcela.
-function BUILDERS.torii(ctx)
-	local scale = 10 / 6.55 -- columnas a 10 del centro: por fuera de los pilares de la entrada
-	local gate = ctx.cframe * CFrame.new(0, -Config.Plot.FloorHeight, -ctx.half - 4) * CFrame.Angles(0, math.pi, 0)
-	if PropModel.place(ctx.model, "Torii", gate, scale) then
-		for _, sign in { 1, -1 } do
-			PropModel.place(ctx.model, "Chochin", gate * CFrame.new(sign * 6.3, 9.15 * scale - 2.73, 0), 1.3, { Red = ctx.color })
+-- Cerezos por fuera del medio de los dos muros de los lados (el sitio que más sobra entre parcelas), con un corro de
+-- pétalos caídos. Cambiado a petición del usuario: antes era un torii con farolillos en la entrada.
+local PETALS = { Color3.fromRGB(255, 190, 220), Color3.fromRGB(255, 150, 200) }
+
+function BUILDERS.sakura(ctx)
+	local floor = Config.Plot.FloorHeight
+	for _, side in { -1, 1 } do
+		-- A 1,8 mide unos 35 de alto y de ancho, como los cerezos medianos del bosque: la copa asoma un poco sobre el muro.
+		local base = ctx.cframe * CFrame.new(side * (ctx.half + 14), -floor, 0)
+		PropModel.place(ctx.model, "Sakura", base * CFrame.Angles(0, side * 1.3, 0), 1.8)
+		for index = 1, 10 do
+			local angle = index * 2.4
+			local distance = 4 + (index % 4) * 2.5
+			local petal = decor(block(ctx.model, "Petals", Vector3.new(0.05, 2.4, 2.4), base * CFrame.new(math.cos(angle) * distance, 0.33, math.sin(angle) * distance) * CFrame.Angles(0, 0, math.pi / 2), PETALS[index % 2 + 1]))
+			petal.Shape = Enum.PartType.Cylinder
+			petal.CastShadow = false
 		end
 	end
 end

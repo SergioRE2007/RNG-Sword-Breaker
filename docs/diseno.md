@@ -169,7 +169,7 @@ Como el gacha es gratis y se tira todo el rato, lo que se mejora es lo rápido q
 
 ### Plan: parcela más grande con cada renacimiento y objetos menos gigantes (pedido por el usuario, 16-10-2026)
 
-**Hecho el 17-10-2026** (los tres puntos, y además la parcela cambia de aspecto con cada renacimiento): ver [sistemas/parcela-renacer.md](sistemas/parcela-renacer.md). La parcela llega a 140, no a 150: con 150 las esquinas de delante de dos vecinas ya se pisan.
+**Hecho el 17-10-2026** (los tres puntos, y además la parcela cambia de aspecto con cada renacimiento): ver [sistemas/parcela-renacer.md](sistemas/parcela-renacer.md). La parcela llega a 140, y el anillo de parcelas se alejó del centro (de 250 a 300) para que no se pisen con el decorado.
 
 Problema: con todo mejorado caben muy pocos objetos en la parcela porque salen enormes. Hoy la parcela mide 100 x 100 (`Config.Plot.Size`) y con `capacity` al máximo pide 30 objetos. Los tipos raros ya miden 14 x 26 (Infinity), y con tamaño Colosal (x2,5) solo los paran los topes `MaxWidth = 30` y `MaxHeight = 56` de `Config.ObjectRolls`.
 
