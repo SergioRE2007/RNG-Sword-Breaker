@@ -13,38 +13,41 @@ local function load()
 		return templates
 	end
 	templates = {}
-	local folder = script.Parent:FindFirstChild("ObjectMeshes")
-	local axis = folder and folder:FindFirstChild("Axis_Origin", true) :: BasePart?
-	local up = folder and folder:FindFirstChild("Axis_Up", true) :: BasePart?
-	local front = folder and folder:FindFirstChild("Axis_Front", true) :: BasePart?
-	if not (axis and up and front) then
-		return templates
-	end
-	local upVector = up.Position - axis.Position
-	local studs = upVector.Magnitude / 2 -- lo que mide un stud en la importación
-	local back = (axis.Position - front.Position).Unit
-	local frame = CFrame.fromMatrix(Vector3.zero, upVector.Unit:Cross(back), upVector.Unit, back)
-
-	local origins = {}
-	for _, item in folder:GetDescendants() do
-		local index = item:IsA("BasePart") and tonumber(string.match(item.Name, "^O(%d+)_Origin$"))
-		if index then
-			origins[index] = item
+	-- ObjectMeshesPatch (objetos añadidos después, con `crear_objetos.py -- --only`) trae sus propias marcas Axis_* y
+	-- manda sobre ObjectMeshes en los objetos que tenga.
+	for _, name in { "ObjectMeshes", "ObjectMeshesPatch" } do
+		local folder = script.Parent:FindFirstChild(name)
+		local axis = folder and folder:FindFirstChild("Axis_Origin", true) :: BasePart?
+		local up = folder and folder:FindFirstChild("Axis_Up", true) :: BasePart?
+		local front = folder and folder:FindFirstChild("Axis_Front", true) :: BasePart?
+		if not (folder and axis and up and front) then
+			continue
 		end
-	end
-	for _, item in folder:GetDescendants() do
-		local index, role = string.match(item.Name, "^O(%d+)_(%a+)$")
-		index = tonumber(index)
-		if item:IsA("BasePart") and index and role ~= "Origin" and origins[index] then
-			local list = templates[index] or {}
-			templates[index] = list
-			table.insert(list, {
-				part = item,
-				role = role,
-				offset = CFrame.new(frame:VectorToObjectSpace(item.Position - origins[index].Position) / studs)
-					* (frame.Rotation:Inverse() * item.CFrame.Rotation),
-				size = item.Size / studs,
-			})
+		local upVector = up.Position - axis.Position
+		local studs = upVector.Magnitude / 2 -- lo que mide un stud en la importación
+		local back = (axis.Position - front.Position).Unit
+		local frame = CFrame.fromMatrix(Vector3.zero, upVector.Unit:Cross(back), upVector.Unit, back)
+
+		local origins = {}
+		for _, item in folder:GetDescendants() do
+			local index = item:IsA("BasePart") and tonumber(string.match(item.Name, "^O(%d+)_Origin$"))
+			if index then
+				origins[index] = item
+				templates[index] = {}
+			end
+		end
+		for _, item in folder:GetDescendants() do
+			local index, role = string.match(item.Name, "^O(%d+)_(%a+)$")
+			index = tonumber(index)
+			if item:IsA("BasePart") and index and role ~= "Origin" and origins[index] then
+				table.insert(templates[index], {
+					part = item,
+					role = role,
+					offset = CFrame.new(frame:VectorToObjectSpace(item.Position - origins[index].Position) / studs)
+						* (frame.Rotation:Inverse() * item.CFrame.Rotation),
+					size = item.Size / studs,
+				})
+			end
 		end
 	end
 	return templates
@@ -59,20 +62,22 @@ local function calm(material: Enum.Material): Enum.Material
 	return material
 end
 
--- Color, material y transparencia de cada papel de las mallas.
+-- Color, material y transparencia de cada papel de las mallas. Ring se ve como Trim y Halo como Glow: son capas de
+-- más para que client/ObjectAmbient las mueva por separado. "accent" (opcional en Config.Destructibles) es el color
+-- de la luz cuando no es el del cuerpo.
 local function roleLook(role: string, def): (Color3, Enum.Material, number)
 	if role == "Dark" then
 		return def.color:Lerp(Color3.new(0, 0, 0), 0.5), calm(def.material), 0
-	elseif role == "Trim" then
+	elseif role == "Trim" or role == "Ring" then
 		return def.color:Lerp(GOLD, 0.65), Enum.Material.Metal, 0
 	elseif role == "Gem" then
 		-- Opaco: el cristal es la pieza más grande de varios objetos y, medio transparente, se veía a través de él
 		-- (y el vidrio transparente esconde las partículas y lo translúcido que tenga detrás).
 		return def.color, Enum.Material.Glass, 0
-	elseif role == "Glow" then
+	elseif role == "Glow" or role == "Halo" then
 		-- Oscurecido (pedido por el usuario: brillaban demasiado): el neón aclarado, con el brillo de pantalla, se
 		-- quedaba en una mancha blanca.
-		return def.color:Lerp(Color3.new(0, 0, 0), 0.3), Enum.Material.Neon, 0.2
+		return (def.accent or def.color):Lerp(Color3.new(0, 0, 0), 0.3), Enum.Material.Neon, 0.2
 	end
 	return def.color, calm(def.material), 0
 end
@@ -111,7 +116,7 @@ function ObjectModel.attach(part: BasePart, index: number, def, scale: number?):
 		mesh.CanQuery = false
 		mesh.CanTouch = false
 		mesh.Massless = true
-		mesh.CastShadow = piece.role ~= "Glow"
+		mesh.CastShadow = piece.role ~= "Glow" and piece.role ~= "Halo"
 		mesh.Color = color
 		mesh.Material = material
 		mesh.Transparency = transparency

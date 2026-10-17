@@ -169,6 +169,9 @@ return {
 	["Singularity"] = "Singularidad",
 	["Origin"] = "Origen",
 	["Infinity"] = "Infinito",
+	["Black Sun"] = "Sol negro",
+	["Galaxy"] = "Galaxia",
+	["Genesis"] = "Génesis",
 	-- Mejoras
 	["More Objects"] = "Más objetos",
 	["Objects"] = "Objetos",

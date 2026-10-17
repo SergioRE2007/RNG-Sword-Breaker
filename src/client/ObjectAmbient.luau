@@ -30,6 +30,11 @@ local STYLES = {
 	[14] = { motion = { Body = { spin = 1.4 }, Trim = { spin = -1.0 }, Gem = { spin = 0.6 }, Dark = { spin = -0.7 }, Glow = { pulse = true } }, sparks = { 16, 4, 0.7, EMBER }, light = 2 },
 	[15] = { motion = { Trim = { spin = 0.9 }, Glow = { spin = -1.2, pulse = true }, Gem = { spin = 0.5, bob = { 0.4, 1.0 } } }, sparks = { 20, 6, 0.9, EMBER }, light = 2.5 },
 	[16] = { motion = { Glow = { spin = 0.9, pulse = true }, Trim = { spin = -0.5, bob = { 0.3, 0.9 } }, Gem = { bob = { 0.3, 1.0 } } }, sparks = { 26, 7, 1.0, EMBER }, smoke = 3, light = 3 },
+	-- Endgame: más capas (Ring y Halo son papeles de más de sus modelos) y cada una a su ritmo. Lo que va junto (las
+	-- estrellas de los brazos de la Galaxia, las grietas de la cáscara del Génesis) lleva el mismo movimiento.
+	[17] = { motion = { Glow = { spin = 0.45, pulse = true }, Halo = { spin = -1.1, pulse = true }, Trim = { spin = 0.8 }, Gem = { spin = -0.6, bob = { 0.4, 1.1 } } }, sparks = { 28, 6, 0.9, EMBER }, smoke = 3, light = 3 },
+	[18] = { motion = { Body = { spin = 0.5 }, Halo = { spin = 0.5, pulse = true }, Dark = { spin = 0.35 }, Trim = { spin = -0.4 }, Ring = { spin = 1.2 }, Glow = { pulse = true } }, sparks = { 30, 5, 0.8, EMBER }, light = 3 },
+	[19] = { motion = { Gem = { bob = { 0.3, 0.9 } }, Glow = { bob = { 0.3, 0.9 }, pulse = true }, Trim = { spin = 0.7 }, Ring = { spin = -0.9 }, Halo = { spin = 1.3, pulse = true }, Dark = { spin = -0.35, bob = { 0.5, 0.8 } } }, sparks = { 34, 7, 1.0, EMBER }, smoke = 3, light = 3.5 },
 }
 
 type Piece = { part: BasePart, offset: CFrame, base: number, spin: number, bob: { number }?, pulse: boolean }
@@ -59,7 +64,7 @@ local function setup(part: BasePart)
 		return
 	end
 	local def = Config.Destructibles[index]
-	local light = def.color:Lerp(Color3.new(1, 1, 1), 0.35)
+	local light = (def.accent or def.color):Lerp(Color3.new(1, 1, 1), 0.35)
 
 	local pieces = {}
 	for role, motion in style.motion do
