@@ -18,12 +18,11 @@ local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Rarity = require(ReplicatedStorage.Shared.Rarity)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
-local Backpack = require(script.Parent.Backpack)
 local ForgeScene = require(script.Parent.ForgeScene)
 local Ui = require(script.Parent.Ui)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
-local WeaponPreview = require(script.Parent.WeaponPreview)
+local WeaponCell = require(script.Parent.WeaponCell)
 
 local ModifierShops = {}
 
@@ -351,7 +350,7 @@ local function buildShop(kind: string)
 	Ui.tip(slot, function()
 		for _, copy in Stats.swords(player) do
 			if copy.id == state.selected then
-				return Backpack.swordTip(copy)
+				return WeaponCell.tip(copy)
 			end
 		end
 		return Lang.t(nil, "Click to pick a sword"), WHITE
@@ -921,27 +920,26 @@ local function buildShop(kind: string)
 			copy = selectedCopy()
 		end
 		if copy then
-			local sword = Config.Swords[copy.sword]
 			local tierColor = Rarity.tier(Stats.rarity(copy)).color
-			local look = `{copy.sword}:{copy.metal or 0}`
+			-- La casilla de siempre (client/WeaponCell), pintada dentro de la de la tienda: se rehace si cambia algo
+			-- de lo que enseña (también el rasgo o el grado que acaba de salir).
+			local look = WeaponCell.key(copy)
 			if state.shown ~= look then
 				state.shown = look
-				for _, name in { "Glow", "Preview" } do
-					local old = slot:FindFirstChild(name)
-					if old then
-						old:Destroy()
-					end
-				end
-				WeaponPreview.attach(slot, copy.sword, tierColor, copy.metal)
+				WeaponCell.fill(slot, copy)
 			end
 			slot:FindFirstChildOfClass("UIStroke").Color = tierColor
-			slotHint.Text = Lang.t(nil, sword.name)
+			slotHint.Text = ""
 			if not state.waiting then
 				local current = info.list[copy[info.field]]
 				paintName(nameLabel, current)
 				effect.Text = if current then Modifiers.effect(current) else ""
 			end
 		else
+			if state.shown then
+				state.shown = nil
+				WeaponCell.clear(slot)
+			end
 			slotHint.Text = Lang.t(nil, "Pick sword")
 		end
 		if kind == "traits" then
@@ -978,27 +976,15 @@ local function buildShop(kind: string)
 			return a.id < b.id
 		end)
 		for position, copy in copies do
-			local sword = Config.Swords[copy.sword]
-			local cell = Ui.cell(pickerList, Rarity.tier(Stats.rarity(copy)).color)
+			local cell = WeaponCell.create(pickerList, copy)
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = position
 			cell.ZIndex = Z.overlay + 2
-			WeaponPreview.attach(cell, copy.sword, Rarity.tier(Stats.rarity(copy)).color, copy.metal)
-			local current = info.list[copy[info.field]]
-			if current then
-				Ui.cellLabel(cell, Lang.t(nil, current.name))
-			end
-			if table.find(worn, copy.id) then
-				Ui.cellTag(cell, "E", Ui.COLORS.green)
-			end
 			for _, descendant in cell:GetDescendants() do
 				if descendant:IsA("GuiObject") then
 					descendant.ZIndex = Z.overlay + 3
 				end
 			end
-			Ui.tip(cell, function()
-				return Backpack.swordTip(copy)
-			end)
 			cell.Activated:Connect(function()
 				state.selected = copy.id
 				picker.Visible = false

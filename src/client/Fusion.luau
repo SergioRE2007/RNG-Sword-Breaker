@@ -20,6 +20,7 @@ local SwordModel = require(ReplicatedStorage.Shared.SwordModel)
 local RollCinematic = require(script.Parent.RollCinematic)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local WeaponCell = require(script.Parent.WeaponCell)
 
 local Fusion = {}
 
@@ -289,7 +290,6 @@ local function build()
 	fuse.LayoutOrder = 2
 	Ui.sparkle(fuse)
 
-	local swordCell = (require(script.Parent.Backpack) :: any).swordCell
 	local stockCells = {}
 
 	local function paintInfo(selection)
@@ -349,7 +349,7 @@ local function build()
 			square.Parent = slot
 			local copy = selection[index]
 			if copy then
-				local cell = swordCell(slot, copy, false, false)
+				local cell = WeaponCell.create(slot, copy)
 				cell.Name = "Sword"
 				cell.Size = UDim2.fromScale(1, 1)
 				cell.Activated:Connect(function()
@@ -396,7 +396,7 @@ local function build()
 		end)
 		empty.Visible = #list == 0 and #chosen == 0
 		for position, copy in list do
-			local cell = swordCell(stock, copy, false, false)
+			local cell = WeaponCell.create(stock, copy)
 			cell.Name = "Sword" .. copy.id
 			cell.LayoutOrder = position
 			cell.Activated:Connect(function()

@@ -16,6 +16,7 @@ local Stats = require(ReplicatedStorage.Shared.Stats)
 local WeaponLevel = require(ReplicatedStorage.Shared.WeaponLevel)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
+local WeaponCell = require(script.Parent.WeaponCell)
 
 local LevelMenu = {}
 
@@ -206,18 +207,14 @@ function LevelMenu.start()
 	Ui.sparkle(ups.UpMax)
 
 	-- Casillas: se rehacen solo las que cambian (al subir de nivel cambia el atributo Swords entero).
-	local swordCell = (require(script.Parent.Backpack) :: any).swordCell
 	local cells = {} -- [id] = { cell, mark = cómo era la copia al hacerla }
 	local shown = nil -- casilla grande de la elegida
 	local shownMark = nil
 	local lastLevel = {} -- [id] = nivel que se enseñaba (para el efecto al subir)
-
-	local function mark(copy, equipped: boolean, inBag: boolean): string
-		return `{copy.sword}:{copy.trait}:{copy.grade}:{copy.metal}:{copy.size}:{copy.level}:{copy.locked}:{equipped}:{inBag}`
-	end
+	local BIG = { owner = false } -- la casilla grande, sin la "E"
 
 	local function paintInfo(copy)
-		if shown and shownMark ~= (copy and mark(copy, false, false)) then
+		if shown and shownMark ~= (copy and WeaponCell.key(copy, BIG)) then
 			shown:Destroy()
 			shown = nil
 		end
@@ -229,10 +226,10 @@ function LevelMenu.start()
 			return
 		end
 		if not shown then
-			shown = swordCell(preview, copy, false, false)
+			shown = WeaponCell.create(preview, copy, BIG)
 			shown.Name = "Sword"
 			shown.Size = UDim2.fromScale(1, 1)
-			shownMark = mark(copy, false, false)
+			shownMark = WeaponCell.key(copy, BIG)
 		end
 		local tier = Rarity.tier(Stats.rarity(copy))
 		local level = copy.level or 0
@@ -290,15 +287,14 @@ function LevelMenu.start()
 		local alive = {}
 		for position, copy in copies do
 			alive[copy.id] = true
-			local equipped, inBag = Stats.isEquipped(player, copy.id), Stats.isDeposited(player, copy.id)
-			local signature = mark(copy, equipped, inBag)
+			local signature = WeaponCell.key(copy)
 			local entry = cells[copy.id]
 			if entry and entry.mark ~= signature then
 				entry.cell:Destroy()
 				entry = nil
 			end
 			if not entry then
-				local cell = swordCell(stock, copy, equipped, inBag)
+				local cell = WeaponCell.create(stock, copy)
 				cell.Name = "Sword" .. copy.id
 				cell.Activated:Connect(function()
 					selected = copy.id
