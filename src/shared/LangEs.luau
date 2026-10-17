@@ -491,7 +491,7 @@ return {
 	["Playtime"] = "Tiempo jugado",
 	["Daily streak"] = "Racha diaria",
 	["Today"] = "Hoy",
-	["Come back tomorrow"] = "Vuelve mañana",
+	["Tap to claim!"] = "¡Toca para cobrar!",
 	["Reward claimed!"] = "¡Recompensa cobrada!",
 	["{n} min"] = "{n} min",
 	["{n} h"] = "{n} h",

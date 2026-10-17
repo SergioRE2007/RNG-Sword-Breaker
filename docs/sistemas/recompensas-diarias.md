@@ -1,7 +1,8 @@
 # Recompensas diarias
 
 - Pedido por el usuario el 16-10-2026, hecho el 17-10-2026. Dos partes, con los números en `Config.DailyRewards`:
-  - **Por tiempo jugado** (`Playtime`): cinco premios al llegar a 10 min, 30 min, 1 h, 2 h y 4 h de juego en el día.
+  - **Por tiempo jugado** (`Playtime`): seis premios al llegar a 5 min, 15 min, 30 min, 1 h, 2 h y 4 h de juego en el día.
+  - Los premios se hicieron más generosos a petición del usuario, que pidió mejorarlos. El día 7 da además 15 tickets (pocos a propósito, porque los pases se compran con ellos).
   - **Por días** (`Streak`): siete casillas, una por día que entras. Tras la 7.ª vuelve a la 1.
 - Reglas:
   - El día cambia a la vez que las misiones diarias (00:00 UTC, `MissionList.dayId`).
@@ -20,8 +21,13 @@
   - `client/PassShop` pone en la cabecera las pestañas `Hud.PassShop.Header.TabShop` y `TabRewards`, a la izquierda de la X, y llama a `DailyRewards.build(ventana, Body.Rewards, TabRewards)`.
   - La Tienda se abre siempre en su pestaña normal: `AutoPlay` la abre para vender el pase del Auto.
   - Dentro, las pestañas `Body.Rewards.TabPlaytime` y `TabStreak`.
-  - Tiempo jugado: `Rewards.Playtime.Cards.Reward_<n>`, con su `Claim`.
-  - Racha: `Rewards.Streak.Days.Day_<n>` y `Rewards.Streak.Claim`.
+  - Tiempo jugado: `Rewards.Playtime.Cards.Reward_<n>`. Racha: `Rewards.Streak.Days.Day_<n>`.
+  - Se cobra tocando la tarjeta o una de sus casillas: el usuario pidió quitar el botón "Cobrar", que le quedaba raro.
+  - Una tarjeta lista gira rayos detrás, su borde dorado late, sus premios botan y lleva el texto "¡Toca para cobrar!" (`Tap`).
+  - Al tocarla da un bote y suelta destellos. Cuando el servidor lo confirma, cae el sello "Cobrada" (`Done.Stamp`).
+  - Tocar una que no está lista la sacude.
+  - Las tarjetas entran una a una al enseñar la pestaña, y el día 7 lleva rayos siempre.
+  - Todo lo animado va en un solo bucle `RenderStepped`, que solo vive con la pestaña a la vista y nunca en Rendimiento.
   - Al enseñarse, sale la pestaña de dentro que tiene algo listo.
   - Entre publicaciones, el cliente adelanta solo el tiempo.
   - Con algo por recoger, llevan un aviso rojo (`Alert`) con la cuenta: el botón "Tienda" del menú (el aviso se balancea), la pestaña `TabRewards` y la pestaña de dentro.
@@ -30,7 +36,10 @@
   - Con el juego parado, bajar temporalmente los `minutes` de los primeros premios (p. ej. 0.25 y 0.5) y restaurarlos.
   - Desde `Client`: `Remotes.ClaimDaily:FireServer("playtime", 1)` y `("streak")`, luego mirar `Daily` y `Bound_<objeto>` del jugador.
   - El cambio de día y la racha de varios días están cubiertos en `tests/regressions.luau`.
-- Probado en Studio (17-10-2026, escritorio): la pestaña dentro de la Tienda, las dos de dentro, recoger, que una repetida o una no lista no dé nada y los avisos.
+- Probado en Studio (17-10-2026, escritorio):
+  - La pestaña dentro de la Tienda y las dos de dentro, con los avisos.
+  - Cobrar tocando la tarjeta, con sus destellos y su sello, en las dos pestañas.
+  - Que una repetida o una no lista no dé nada.
 - Sin probar:
   - Móvil.
   - Guardar y volver en el juego publicado.

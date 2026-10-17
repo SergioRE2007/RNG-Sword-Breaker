@@ -1037,23 +1037,25 @@ Config.Friends = { Bonus = 0.1, Max = 7 }
 -- diarias, 00:00 UTC, y lo no recogido se pierde). Streak = una casilla por día que entras, de la 1 a la 7 y vuelta a
 -- empezar; faltar un día no hace perder la racha (decidido por el usuario: sigue por donde iba). Cada premio es una lista
 -- de { item = clave de Config.Items, amount = N }, atados a la cuenta (no se comercian: con cuentas de más se juntarían).
--- Nada de pago: el Trébol grande (x999) sigue siendo solo de compra.
+-- Nada de pago: el Trébol grande (x999) sigue siendo solo de compra. Los tickets del día 7 son pocos a propósito (las
+-- misiones dan 200 a la semana y con ellos se compran los pases). Números puestos a ojo, más generosos tras pedirlo el usuario.
 Config.DailyRewards = {
 	Playtime = {
-		{ minutes = 10, rewards = { { item = "traitCrystal", amount = 10 } } },
-		{ minutes = 30, rewards = { { item = "gradeCrystal", amount = 10 }, { item = "potion_coins_2", amount = 1 } } },
-		{ minutes = 60, rewards = { { item = "traitCrystal", amount = 20 }, { item = "potion_weaponLuck_3", amount = 1 } } },
-		{ minutes = 120, rewards = { { item = "gradeCrystal", amount = 20 }, { item = "potion_boxLuck_4", amount = 1 } } },
-		{ minutes = 240, rewards = { { item = "smallClover", amount = 1 }, { item = "potion_damage_4", amount = 1 } } },
+		{ minutes = 5, rewards = { { item = "traitCrystal", amount = 15 } } },
+		{ minutes = 15, rewards = { { item = "gradeCrystal", amount = 15 }, { item = "potion_coins_3", amount = 1 } } },
+		{ minutes = 30, rewards = { { item = "traitCrystal", amount = 30 }, { item = "potion_weaponLuck_3", amount = 1 } } },
+		{ minutes = 60, rewards = { { item = "smallClover", amount = 1 }, { item = "gradeCrystal", amount = 30 }, { item = "potion_boxLuck_4", amount = 1 } } },
+		{ minutes = 120, rewards = { { item = "traitCrystal", amount = 50 }, { item = "gradeCrystal", amount = 50 }, { item = "potion_damage_5", amount = 1 } } },
+		{ minutes = 240, rewards = { { item = "smallClover", amount = 2 }, { item = "potion_weaponLuck_5", amount = 1 }, { item = "potion_coins_5", amount = 1 } } },
 	},
 	Streak = {
-		{ { item = "traitCrystal", amount = 15 } },
-		{ { item = "potion_coins_3", amount = 1 } },
-		{ { item = "gradeCrystal", amount = 15 } },
-		{ { item = "potion_weaponLuck_4", amount = 1 } },
-		{ { item = "traitCrystal", amount = 25 }, { item = "gradeCrystal", amount = 25 } },
-		{ { item = "potion_boxLuck_5", amount = 1 } },
-		{ { item = "smallClover", amount = 2 }, { item = "potion_weaponLuck_5", amount = 1 } },
+		{ { item = "traitCrystal", amount = 20 }, { item = "potion_coins_3", amount = 1 } },
+		{ { item = "gradeCrystal", amount = 20 }, { item = "potion_damage_3", amount = 1 } },
+		{ { item = "smallClover", amount = 1 }, { item = "potion_boxLuck_4", amount = 1 } },
+		{ { item = "traitCrystal", amount = 40 }, { item = "potion_weaponLuck_4", amount = 1 } },
+		{ { item = "gradeCrystal", amount = 40 }, { item = "potion_coins_5", amount = 1 } },
+		{ { item = "smallClover", amount = 2 }, { item = "potion_boxLuck_5", amount = 1 } },
+		{ { item = "smallClover", amount = 3 }, { item = "potion_weaponLuck_5", amount = 1 }, { item = "missionToken", amount = 15 } },
 	},
 }
 
