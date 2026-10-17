@@ -416,8 +416,93 @@ def boss_throne(p):
         p.add("Crystal", gem(0.8, 4.4), T(x - s * 0.7, 3.1, -6.8) @ toward((-s * 0.4, 1, -0.5)))
 
 
+def boss_barrel(p):
+    """Barril de baba de la fase de carga, de pie: 4,4 de alto y 3,6 de ancho (la caja que se golpea en
+    WorldBossMobs.barrel), con el origen abajo. Duelas que se abomban, aros de hierro y baba que rebosa por arriba."""
+    p.add("Wood", lathe([(1.5, 0), (1.72, 0.6), (1.84, 1.4), (1.88, 2.2), (1.84, 3.0), (1.72, 3.8), (1.5, 4.3)], 16))
+    for y, r in ((0.45, 1.66), (1.35, 1.86), (3.05, 1.86), (3.95, 1.66)):
+        p.add("Black", torus(r, 0.13, 20, 4), T(0, y, 0))
+    p.add("Slime", torus(1.92, 0.2, 20, 5), T(0, 2.2, 0))
+    p.add("Wood", cyl(1.38, 0.15, 14), T(0, 4.15, 0))
+    p.add("Slime", lathe([(0, 0), (1.45, 0.05), (1.7, 0.35), (1.3, 0.75), (0.6, 1.0), (0, 1.05)], 12), T(0, 4.15, 0))
+    for k, length in enumerate((1.4, 2.4, 1.0, 1.8)):
+        a = math.radians(20 + k * 90)
+        p.add("Slime", drip(0.32, length, 8), T(1.62 * math.cos(a), 4.35, 1.62 * math.sin(a)))
+    slime_eyes(p, 0, 4.75, -1.42, 0.45)
+
+
+def boss_shield_base(p):
+    """Peana del cristal del escudo (5 de ancho, origen en el suelo): piedra octogonal, ribete dorado, círculo de
+    runas arriba y esquirlas de cristal alrededor."""
+    p.add("StoneDark", lathe([(2.75, 0), (2.75, 0.45), (2.35, 0.65)], 8))
+    p.add("Stone", lathe([(2.05, 0.6), (1.85, 1.3), (2.45, 1.45), (2.45, 1.75)], 8))
+    p.add("Gold", torus(2.5, 0.12, 16, 4), T(0, 1.6, 0) @ R("Y", 22.5))
+    p.add("Gold", torus(1.55, 0.1, 20, 4), T(0, 1.78, 0) @ S(1, 0.5, 1))
+    for k in range(6):
+        a = 2 * math.pi * k / 6
+        p.add("Crystal", sphere(0.2, 6, 4), T(1.55 * math.cos(a), 1.8, 1.55 * math.sin(a)) @ S(1, 0.5, 1))
+    for k in range(4):
+        a = 2 * math.pi * (k + 0.5) / 4
+        p.add("Crystal", gem(0.38, 1.6), T(2.55 * math.cos(a), 0.3, 2.55 * math.sin(a)) @ toward((math.cos(a) * 0.5, 1, math.sin(a) * 0.5)))
+
+
+def boss_shield_crystal(p):
+    """El cristal del escudo que flota (4 x 8, centrado en el origen): punta doble, esquirlas y un aro dorado."""
+    p.add("Crystal", gem(1.9, 8.0, 6, 0.58), T(0, -4.0, 0))
+    p.add("Crystal", gem(0.75, 3.2), T(0.9, -2.6, 0.3) @ toward((0.6, 1, 0.2)))
+    p.add("Crystal", gem(0.65, 2.8), T(-0.8, -2.3, -0.4) @ toward((-0.55, 1, -0.4)))
+    p.add("Gold", torus(1.95, 0.16, 20, 5), T(0, 0.2, 0) @ R("X", 12))
+    for k in range(3):
+        a = 2 * math.pi * k / 3
+        p.add("Gold", sphere(0.28, 6, 4), T(1.95 * math.cos(a), 0.2 + 0.41 * math.sin(a), 1.95 * math.sin(a)))
+
+
+def boss_board(p):
+    """Marco del cartel de premios (el tablero con el texto es una Part de WorldBossArena.buildBoard, de 15 x 19, con
+    la cara delantera en z=0,15): postes lacados, tejado con remate dorado, marco dorado, farolillos y la corona del
+    rey con su baba encima. Origen en el suelo, al frente -Z."""
+    for s in (-1, 1):
+        x = s * 8.35
+        p.add("StoneDark", frustum(2.4, 2.4, 2.0, 2.0, 0.8), T(x, 0.4, 0.4))
+        p.add("Red", box(1.25, 22.6, 1.25), T(x, 0.8 + 11.3, 0.4))
+        p.add("Gold", box(1.4, 0.3, 1.4), T(x, 1.2, 0.4))
+        p.add("Gold", box(1.4, 0.3, 1.4), T(x, 21.0, 0.4))
+    # Marco dorado alrededor del tablero.
+    p.add("Gold", box(15.9, 0.5, 0.9), T(0, 21.25, 0.4))
+    p.add("Gold", box(15.9, 0.5, 0.9), T(0, 1.75, 0.4))
+    for s in (-1, 1):
+        p.add("Gold", box(0.5, 19.9, 0.9), T(s * 7.75, 11.5, 0.4))
+        p.add("Gold", sphere(0.45, 8, 5), T(s * 7.75, 21.25, -0.1))
+        p.add("Gold", sphere(0.45, 8, 5), T(s * 7.75, 1.75, -0.1))
+    # Tejado: viga roja, alero negro que se curva hacia arriba en las puntas y remate dorado.
+    p.add("Red", box(18.2, 1.0, 1.5), T(0, 22.3, 0.4))
+    def roof_y(x):
+        return 23.1 + 0.9 * (abs(x) / 10.5) ** 2.4
+    n = 16
+    loops = []
+    for i in range(n + 1):
+        x = -10.5 + 21.0 * i / n
+        y = roof_y(x)
+        loops.append([(x, y, -1.6), (x, y, 2.4), (x, y + 0.7, 2.0), (x, y + 1.3, 0.4), (x, y + 0.7, -1.2)])
+    p.add("Black", loft(loops))
+    p.add("Gold", box(13.0, 0.35, 0.5), T(0, roof_y(0) + 1.4, 0.4))
+    # Corona del rey sobre un poco de baba en el centro del tejado, y baba que gotea por el alero.
+    p.add("Slime", lathe([(0, 0), (2.1, 0.08), (2.5, 0.6), (2.1, 1.3), (1.0, 1.75), (0, 1.85)], 12), T(0, roof_y(0) + 1.2, 0.4) @ S(1, 1, 0.8))
+    slime_eyes(p, 0, roof_y(0) + 2.15, -1.25, 0.6)
+    crown(p, roof_y(0) + 2.8, 1.25, 1.6, 5, "Red", z=0.4)
+    for x, length in ((-6.0, 1.6), (-2.6, 2.4), (3.4, 1.4), (6.6, 2.0)):
+        p.add("Slime", drip(0.28, length, 8), T(x, roof_y(x) + 0.2, -1.55))
+    # Farolillos colgando de las puntas del alero.
+    for s in (-1, 1):
+        x = s * 9.6
+        p.add("Black", box(0.12, 1.2, 0.12), T(x, roof_y(x) - 0.55, 0.4))
+        p.add("Red", lathe([(0.0, -0.9), (0.65, -0.75), (0.95, -0.3), (1.0, 0), (0.95, 0.3), (0.65, 0.75), (0, 0.9)], 10), T(x, roof_y(x) - 2.1, 0.4))
+        p.add("Paper", lathe([(0.0, -0.82), (0.55, -0.68), (0.9, -0.27), (0.92, 0), (0.9, 0.27), (0.55, 0.68), (0, 0.82)], 10), T(x, roof_y(x) - 2.1, 0.4) @ S(1.04, 1, 1.04))
+
+
 PIECES = {"BossPortal": boss_portal, "BossIsland": boss_island, "BossPillar": boss_pillar, "BossCrystal": boss_crystal,
-          "BossThrone": boss_throne}
+          "BossThrone": boss_throne, "BossBarrel": boss_barrel, "BossShieldBase": boss_shield_base,
+          "BossShieldCrystal": boss_shield_crystal, "BossBoard": boss_board}
 
 # Vistas de prueba: (altura que se mira, ancho en studs, giro, grados por encima).
 VIEWS = {
@@ -426,12 +511,17 @@ VIEWS = {
     "BossPillar": [(14.0, 34.0, 20.0, 10.0)],
     "BossCrystal": [(0.0, 10.0, 20.0, 10.0)],
     "BossThrone": [(14.0, 60.0, 20.0, 12.0), (8.0, 60.0, 315.0, 25.0)],
+    "BossBarrel": [(2.5, 9.0, 20.0, 15.0)],
+    "BossShieldBase": [(1.0, 9.0, 20.0, 25.0)],
+    "BossShieldCrystal": [(0.0, 11.0, 20.0, 10.0)],
+    "BossBoard": [(13.0, 30.0, 20.0, 8.0)],
 }
 
 
 def place(name):
     """Dónde va cada pieza en la escena de Blender (solo para verlas por separado)."""
-    return {"BossPortal": 0.0, "BossIsland": 400.0, "BossPillar": 80.0, "BossCrystal": 120.0, "BossThrone": 180.0}[name]
+    return {"BossPortal": 0.0, "BossIsland": 400.0, "BossPillar": 80.0, "BossCrystal": 120.0, "BossThrone": 180.0, "BossBarrel": 240.0, "BossShieldBase": 260.0,
+            "BossShieldCrystal": 280.0, "BossBoard": 320.0}[name]
 
 
 def main():

@@ -368,11 +368,23 @@ function WorldBossArena.buildBoard(map: Instance)
 	local model = Instance.new("Model")
 	model.Name = "WorldBossRewards"
 
-	for _, side in { -1, 1 } do
-		part(model, "Post", Vector3.new(1.2, height + 3, 1.2), spot * CFrame.new(side * (width / 2 + 0.4), (height + 3) / 2, 0.4), LACQUER, Enum.Material.Wood)
+	-- Marco de Blender (BossBoard): postes lacados, tejado curvo, marco dorado, farolillos y la corona del rey con su
+	-- baba encima. Sin el archivo, postes y tejado de piezas sueltas.
+	local frame = PropModel.place(model, "BossBoard", spot, 1, { Red = LACQUER:Lerp(Color3.fromRGB(238, 52, 62), 0.4) })
+	if frame then
+		glow(frame:FindFirstChild("Paper"), Color3.fromRGB(255, 190, 110), 12, 1)
+		for _, side in { -1, 1 } do
+			-- Los postes chocan, como los de antes.
+			local post = part(model, "Post", Vector3.new(1.25, height + 4, 1.25), spot * CFrame.new(side * 8.35, (height + 4) / 2, 0.4), LACQUER, Enum.Material.Wood)
+			post.Transparency = 1
+		end
+	else
+		for _, side in { -1, 1 } do
+			part(model, "Post", Vector3.new(1.2, height + 3, 1.2), spot * CFrame.new(side * (width / 2 + 0.4), (height + 3) / 2, 0.4), LACQUER, Enum.Material.Wood)
+		end
+		part(model, "Roof", Vector3.new(width + 4, 0.8, 3.4), spot * CFrame.new(0, height + 3.4, 0.4), Color3.fromRGB(40, 32, 36), Enum.Material.Wood)
+		part(model, "RoofTrim", Vector3.new(width + 4.4, 0.3, 3.6), spot * CFrame.new(0, height + 2.9, 0.4), GOLD, Enum.Material.Metal).CanCollide = false
 	end
-	part(model, "Roof", Vector3.new(width + 4, 0.8, 3.4), spot * CFrame.new(0, height + 3.4, 0.4), Color3.fromRGB(40, 32, 36), Enum.Material.Wood)
-	part(model, "RoofTrim", Vector3.new(width + 4.4, 0.3, 3.6), spot * CFrame.new(0, height + 2.9, 0.4), GOLD, Enum.Material.Metal).CanCollide = false
 	local board = part(model, "Board", Vector3.new(width, height, 0.5), spot * CFrame.new(0, height / 2 + 2, 0.4), STONE_DARK, Enum.Material.Wood)
 
 	local gui = Instance.new("SurfaceGui")

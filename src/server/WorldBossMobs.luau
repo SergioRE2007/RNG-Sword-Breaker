@@ -6,6 +6,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local PropModel = require(ReplicatedStorage.Shared.PropModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local WorldBossMobs = {}
@@ -14,6 +15,31 @@ local cfg = Config.WorldBoss
 local random = Random.new()
 
 local TAG = "WorldBossTarget"
+local SHIELD_TINT = { Crystal = Color3.fromRGB(110, 190, 255), Stone = Color3.fromRGB(124, 112, 156), StoneDark = Color3.fromRGB(80, 70, 110) }
+
+-- Viste la caja que se golpea con su modelo de Blender (tools/blender/crear_jefe.py, Shared.BossMeshes): la caja se
+-- vuelve invisible y el modelo va dentro de ella, así se borra con ella. Con `weld`, las mallas van pegadas a la caja
+-- para que la sigan cuando sale volando. Sin el archivo devuelve nil y la caja se queda como estaba.
+local function dress(p: BasePart, name: string, cframe: CFrame, tint: { [string]: Color3 }?, weld: boolean): Model?
+	local model = PropModel.place(p, name, cframe, 1, tint)
+	if not model then
+		return nil
+	end
+	p.Transparency = 1
+	if weld then
+		for _, mesh in model:GetDescendants() do
+			if mesh:IsA("BasePart") then
+				mesh.Anchored = false
+				mesh.Massless = true
+				local joint = Instance.new("WeldConstraint")
+				joint.Part0 = p
+				joint.Part1 = mesh
+				joint.Parent = mesh
+			end
+		end
+	end
+	return model
+end
 
 local function body(folder: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, hp: number): Part
 	local p = Instance.new("Part")
@@ -130,6 +156,13 @@ function WorldBossMobs.crystal(folder: Instance, index: number, count: number, h
 	light.Range = 16
 	light.Brightness = 2
 	light.Parent = p
+	-- Con modelo: cristal de pie con su aro dorado sobre una peana tallada (la caja, recta, para que coincidan).
+	p.CFrame = CFrame.new(ground + Vector3.new(0, 6, 0)) * CFrame.Angles(0, angle, 0)
+	if dress(p, "BossShieldCrystal", p.CFrame, SHIELD_TINT, false) then
+		PropModel.place(p, "BossShieldBase", CFrame.new(ground) * CFrame.Angles(0, angle, 0), 1, SHIELD_TINT)
+		return p, { kind = "crystal" }
+	end
+	p.CFrame *= CFrame.Angles(0, 0, math.rad(45))
 	local beam = Instance.new("Part")
 	beam.Name = "Pedestal"
 	beam.Anchored = true
@@ -149,6 +182,10 @@ function WorldBossMobs.barrel(folder: Instance, hp: number)
 	p.Shape = Enum.PartType.Cylinder
 	p.Anchored = true
 	p.Material = Enum.Material.Wood
+	-- Con modelo: barril de duelas y aros de hierro rebosando baba (pegado a la caja: sale volando con ella).
+	if dress(p, "BossBarrel", CFrame.new(ground) * CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0), nil, true) then
+		return p, { kind = "barrel" }
+	end
 	local band = Instance.new("Part")
 	band.Name = "Band"
 	band.Anchored = true
