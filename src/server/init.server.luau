@@ -46,6 +46,7 @@ require(script.Clover).start() -- Trébol de la suerte: después de Destructible
 require(script.Codes).start() -- códigos de regalo de la Tienda
 require(script.DailyRewards).start() -- recompensas por tiempo jugado y por días seguidos
 require(script.Products).start() -- productos de Robux (ProcessReceipt)
+require(script.CloverRefund).start() -- regalo de tréboles a quien los compró antes del cambio (una vez)
 require(script.AutoPlay).start() -- autoclicker y Auto de la parcela: después de Plots y Passes
 require(script.Rejoin).start() -- reconexión antes de la expulsión por inactividad: después de Party, Dungeons y AutoPlay
 require(script.Admin).start() -- antes de quien obedece órdenes de admin

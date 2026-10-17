@@ -1066,4 +1066,7 @@ return {
 	["The game is made for landscape. Turn your screen for the best experience."] = "El juego está hecho para jugar en horizontal. Gira la pantalla para jugar mejor.",
 	["Rotate"] = "Girar",
 	["Not now"] = "Ahora no",
+	["Clovers have changed! Now they boost a whole plot. Thanks for buying before: here is 1 Lucky Clover!"] = "¡Los tréboles han cambiado! Ahora valen para toda la parcela. Por haberlos comprado antes: ¡aquí tienes 1 Trébol de la suerte!",
+	["Clovers have changed! Now they boost a whole plot. Thanks for buying before: here are {n} Lucky Clovers!"] = "¡Los tréboles han cambiado! Ahora valen para toda la parcela. Por haberlos comprado antes: ¡aquí tienes {n} Tréboles de la suerte!",
+	["GIFT"] = "REGALO",
 }
