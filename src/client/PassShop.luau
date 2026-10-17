@@ -24,6 +24,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
+local DailyRewards = require(script.Parent.DailyRewards)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
 local Ui = require(script.Parent.Ui)
@@ -362,6 +363,47 @@ function PassShop.start()
 	list.CanvasSize = UDim2.new()
 	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	list.Parent = body
+
+	-- Pestañas en la cabecera, a la izquierda de la X: la Tienda (la lista de arriba) y las Recompensas diarias
+	-- (client/DailyRewards, en Body.Rewards; pedido por el usuario: no cabían más botones en pantalla). Siempre se abre en
+	-- la Tienda (AutoPlay la abre para vender el pase del Auto); los avisos rojos llevan a la otra.
+	local rewards = Instance.new("Frame")
+	rewards.Name = "Rewards"
+	rewards.Size = UDim2.fromScale(1, 1)
+	rewards.BackgroundTransparency = 1
+	rewards.Visible = false
+	rewards.Parent = body
+	local headerTabs = {}
+	local function showTab(name: string)
+		list.Visible = name == "Shop"
+		rewards.Visible = name == "Rewards"
+		for key, tab in headerTabs do
+			Ui.setSelected(tab, key == name)
+		end
+	end
+	local x = -72
+	for _, entry in { { "Rewards", "Rewards", Color3.fromRGB(240, 130, 40), 250 }, { "Shop", "Shop", Color3.fromRGB(225, 50, 75), 180 } } do
+		local tab = Ui.button(window.Header, Lang.t(nil, entry[2]), entry[3])
+		tab.Name = "Tab" .. entry[1]
+		tab.AnchorPoint = Vector2.new(1, 0.5)
+		tab.Position = UDim2.new(1, x, 0.5, 0)
+		tab.Size = UDim2.fromOffset(entry[4], 46)
+		tab.TextSize = 28
+		tab.ZIndex = 3
+		x -= entry[4] + 10
+		headerTabs[entry[1]] = tab
+		tab.Activated:Connect(function()
+			showTab(entry[1])
+		end)
+	end
+	DailyRewards.build(window, rewards, headerTabs.Rewards)
+	showTab("Shop")
+	window:GetPropertyChangedSignal("Visible"):Connect(function()
+		if not window.Visible then
+			showTab("Shop")
+		end
+	end)
+
 	local padding = Instance.new("UIPadding")
 	-- Margen para que la tarjeta que crece con el ratón no se corte contra el borde de la lista.
 	padding.PaddingTop = UDim.new(0, 8)

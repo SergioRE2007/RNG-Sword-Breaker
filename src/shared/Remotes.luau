@@ -35,6 +35,7 @@ local NAMES = {
 	"TutorialCheck", -- cliente -> servidor: (id del paso, opcional) "creo que ya he cumplido el paso del tutorial": el servidor lo comprueba
 	"TutorialSkip", -- cliente -> servidor: dar el tutorial por terminado, sin premio
 	"ClaimMission", -- cliente -> servidor: (periodo "daily" o "weekly", id de la misión) cobrar la recompensa de una misión cumplida
+	"ClaimDaily", -- cliente -> servidor: ("playtime", posición) o ("streak") recoger una recompensa diaria (server/DailyRewards)
 	"AdminSetModifier", -- cliente -> servidor: (kind "traits" o "grades", id de la copia, índice o 0 = quitar) modo admin de pruebas, solo en Studio
 	"TradeRequest", -- cliente -> servidor: (userId) invitar a comerciar a ese jugador (0 = bot de pruebas, solo en Studio)
 	"TradeRespond", -- cliente -> servidor: (userId de quien invitó, true o false) aceptar o rechazar la invitación

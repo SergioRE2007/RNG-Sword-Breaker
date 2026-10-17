@@ -195,6 +195,8 @@ Orden propuesto: primero el 1 (se nota enseguida y no toca el mapa) y luego el 2
 
 ### Plan: recompensas por tiempo jugado y por días seguidos (pedido por el usuario, 16-10-2026)
 
+**Hecho el 17-10-2026**: ver [sistemas/recompensas-diarias.md](sistemas/recompensas-diarias.md). La racha sigue por donde iba si faltas un día (decidido por el usuario).
+
 1. **Diaria por tiempo jugado.** Cinco premios al llegar a 10 min, 30 min, 1 h, 2 h y 4 h de juego en el día.
    - El día cambia a la misma hora que las misiones diarias (`MissionList`, días de 86400 s), así todo se reinicia a la vez.
    - El tiempo es tiempo de juego, contado en el servidor con un bucle de 1 s, como las pociones. No es la hora de entrada: si sales y vuelves, sigue sumando.

@@ -1032,6 +1032,33 @@ Config.Clover = {
 -- Lo cuenta server/Friends y lo publica en el atributo "Friends". No entra en tools/equilibrio, como los pases.
 Config.Friends = { Bonus = 0.1, Max = 7 }
 
+-- RECOMPENSAS DIARIAS (pedido por el usuario; server/DailyRewards, client/DailyRewards). Playtime = premios por tiempo
+-- de juego en el día (minutos de juego de verdad, contados por el servidor; el día cambia a la vez que las misiones
+-- diarias, 00:00 UTC, y lo no recogido se pierde). Streak = una casilla por día que entras, de la 1 a la 7 y vuelta a
+-- empezar; faltar un día no hace perder la racha (decidido por el usuario: sigue por donde iba). Cada premio es una lista
+-- de { item = clave de Config.Items, amount = N }, atados a la cuenta (no se comercian: con cuentas de más se juntarían).
+-- Nada de pago: el Trébol grande (x999) sigue siendo solo de compra. Los tickets del día 7 son pocos a propósito (las
+-- misiones dan 200 a la semana y con ellos se compran los pases). Números puestos a ojo, más generosos tras pedirlo el usuario.
+Config.DailyRewards = {
+	Playtime = {
+		{ minutes = 5, rewards = { { item = "traitCrystal", amount = 15 } } },
+		{ minutes = 15, rewards = { { item = "gradeCrystal", amount = 15 }, { item = "potion_coins_3", amount = 1 } } },
+		{ minutes = 30, rewards = { { item = "traitCrystal", amount = 30 }, { item = "potion_weaponLuck_3", amount = 1 } } },
+		{ minutes = 60, rewards = { { item = "smallClover", amount = 1 }, { item = "gradeCrystal", amount = 30 }, { item = "potion_boxLuck_4", amount = 1 } } },
+		{ minutes = 120, rewards = { { item = "traitCrystal", amount = 50 }, { item = "gradeCrystal", amount = 50 }, { item = "potion_damage_5", amount = 1 } } },
+		{ minutes = 240, rewards = { { item = "smallClover", amount = 2 }, { item = "potion_weaponLuck_5", amount = 1 }, { item = "potion_coins_5", amount = 1 } } },
+	},
+	Streak = {
+		{ { item = "traitCrystal", amount = 20 }, { item = "potion_coins_3", amount = 1 } },
+		{ { item = "gradeCrystal", amount = 20 }, { item = "potion_damage_3", amount = 1 } },
+		{ { item = "smallClover", amount = 1 }, { item = "potion_boxLuck_4", amount = 1 } },
+		{ { item = "traitCrystal", amount = 40 }, { item = "potion_weaponLuck_4", amount = 1 } },
+		{ { item = "gradeCrystal", amount = 40 }, { item = "potion_coins_5", amount = 1 } },
+		{ { item = "smallClover", amount = 2 }, { item = "potion_boxLuck_5", amount = 1 } },
+		{ { item = "smallClover", amount = 3 }, { item = "potion_weaponLuck_5", amount = 1 }, { item = "missionToken", amount = 15 } },
+	},
+}
+
 -- PRODUCTOS DE ROBUX que se compran las veces que se quiera (server/Products; salen los primeros en la Tienda). "id" =
 -- id del producto en Roblox (0 = aún no se vende, "Pronto"); "price" = Robux que se enseñan hasta que Roblox dice el
 -- precio real; item y amount = lo que da (clave de Config.Items). icon, tag, ribbon y color, como en los pases.

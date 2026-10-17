@@ -1,0 +1,47 @@
+# Recompensas diarias
+
+- Pedido por el usuario el 16-10-2026, hecho el 17-10-2026. Dos partes, con los números en `Config.DailyRewards`:
+  - **Por tiempo jugado** (`Playtime`): seis premios al llegar a 5 min, 15 min, 30 min, 1 h, 2 h y 4 h de juego en el día.
+  - Los premios se hicieron más generosos a petición del usuario, que pidió mejorarlos. El día 7 da además 15 tickets (pocos a propósito, porque los pases se compran con ellos).
+  - **Por días** (`Streak`): siete casillas, una por día que entras. Tras la 7.ª vuelve a la 1.
+- Reglas:
+  - El día cambia a la vez que las misiones diarias (00:00 UTC, `MissionList.dayId`).
+  - Lo que no recojas de un día se pierde.
+  - Faltar un día no reinicia la racha: sigue por donde iba (decidido por el usuario).
+- Los premios son objetos de `Config.Items` (cristales, pociones y Trébol pequeño) y van atados a la cuenta (`PlayerData.giveBound`): no se comercian. Con cuentas de más se juntarían en una sola. Nada de pago.
+- `shared/DailyInfo`: cuentas comunes y `sanitize` de lo guardado. Datos en `data.daily = { day, seconds, claimed, streak, streakDay }`:
+  - `claimed`: lista de las posiciones recogidas hoy.
+  - `streak`: la casilla que toca.
+  - `streakDay`: el día de la última casilla recogida.
+- `server/DailyRewards`:
+  - Un bucle de 1 s suma tiempo de juego a quien tiene los datos cargados.
+  - Publica el atributo `Daily` (JSON) cada 15 s, al cambiar el día y en cuanto un premio queda listo.
+  - Entrega con `ClaimDaily:FireServer("playtime", posición)` o `("streak")`, validado en el servidor.
+- `client/DailyRewards` (librería sin `start()`): es una pestaña de la Tienda, no un botón propio. Primero tuvo un séptimo botón en el menú, pero el usuario lo pidió dentro de un menú porque ya había demasiados botones en pantalla, y eligió la Tienda.
+  - `client/PassShop` pone en la cabecera las pestañas `Hud.PassShop.Header.TabShop` y `TabRewards`, a la izquierda de la X, y llama a `DailyRewards.build(ventana, Body.Rewards, TabRewards)`.
+  - La Tienda se abre siempre en su pestaña normal: `AutoPlay` la abre para vender el pase del Auto.
+  - Dentro, las pestañas `Body.Rewards.TabPlaytime` y `TabStreak`.
+  - Tiempo jugado: `Rewards.Playtime.Cards.Reward_<n>`. Racha: `Rewards.Streak.Days.Day_<n>`.
+  - Se cobra tocando la tarjeta o una de sus casillas: el usuario pidió quitar el botón "Cobrar", que le quedaba raro.
+  - Una tarjeta lista gira rayos detrás, su borde dorado late, sus premios botan y lleva el texto "¡Toca para cobrar!" (`Tap`).
+  - Al tocarla da un bote y suelta destellos. Cuando el servidor lo confirma, cae el sello "Cobrada" (`Done.Stamp`).
+  - Tocar una que no está lista la sacude.
+  - Las tarjetas entran una a una al enseñar la pestaña, y el día 7 lleva rayos siempre.
+  - Todo lo animado va en un solo bucle `RenderStepped`, que solo vive con la pestaña a la vista y nunca en Rendimiento.
+  - Al enseñarse, sale la pestaña de dentro que tiene algo listo.
+  - Entre publicaciones, el cliente adelanta solo el tiempo.
+  - Con algo por recoger, llevan un aviso rojo (`Alert`) con la cuenta: el botón "Tienda" del menú (el aviso se balancea), la pestaña `TabRewards` y la pestaña de dentro.
+  - La ventana de la Tienda sale encogida (es muy ancha), por eso los textos de la pestaña van más grandes que en otras ventanas.
+- Probar:
+  - Con el juego parado, bajar temporalmente los `minutes` de los primeros premios (p. ej. 0.25 y 0.5) y restaurarlos.
+  - Desde `Client`: `Remotes.ClaimDaily:FireServer("playtime", 1)` y `("streak")`, luego mirar `Daily` y `Bound_<objeto>` del jugador.
+  - El cambio de día y la racha de varios días están cubiertos en `tests/regressions.luau`.
+- Probado en Studio (17-10-2026, escritorio):
+  - La pestaña dentro de la Tienda y las dos de dentro, con los avisos.
+  - Cobrar tocando la tarjeta, con sus destellos y su sello, en las dos pestañas.
+  - Que una repetida o una no lista no dé nada.
+- Sin probar:
+  - Móvil.
+  - Guardar y volver en el juego publicado.
+  - Que el día cambie con la partida abierta en Studio.
+- Los cristales, pociones y tréboles que da no se han pasado por `tools/equilibrio`: falta comprobar cuánto adelantan.
