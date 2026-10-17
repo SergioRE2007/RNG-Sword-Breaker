@@ -78,8 +78,8 @@ function PotionInfo.sanitize(saved: unknown): { [string]: { tier: number, second
 	end
 	for family, info in Config.Potions.Families do
 		local entry = (saved :: any)[family]
-		if type(entry) == "table" and type(entry.tier) == "number" and info.values[entry.tier] and type(entry.seconds) == "number" and entry.seconds > 0 then
-			-- seconds > 0 descarta NaN y negativos; el tope recorta infinitos y lo que ya no cabe.
+		if type(entry) == "table" and type(entry.tier) == "number" and info.values[entry.tier] and type(entry.seconds) == "number" and entry.seconds > 0 and entry.seconds < math.huge then
+			-- seconds > 0 descarta NaN y negativos, y < huge los infinitos; el tope recorta lo que ya no cabe.
 			result[family] = { tier = entry.tier, seconds = math.min(entry.seconds, PotionInfo.cap(entry.tier)) }
 		end
 	end

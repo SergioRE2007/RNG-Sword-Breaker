@@ -211,7 +211,7 @@ local function fixture(saved, customStore)
 	data.start()
 	return {
 		load = loadModule, config = config, data = data, player = player, remotes = remotes, services = services,
-		overrides = overrides, warnings = warnings, workspace = workspace, players = players, random = random, tags = tags,
+		overrides = overrides, warnings = warnings, workspace = workspace, players = players, random = random, tags = tags, task = fakeTask,
 		advance = function(seconds) now += seconds end,
 		step = function(seconds)
 			now += seconds
@@ -892,6 +892,30 @@ tf.remotes.TradeOffer.OnServerEvent:fire(tf.player, "swords", 3, 1)
 equal(next(tradeState().you.swords) ~= nil, true, "una sin equipar sí se ofrece")
 tf.remotes.TradeCancel.OnServerEvent:fire(tf.player)
 equal(tf.data.read(tf.player).coins, 1e6, "el trato cancelado no toca las monedas")
+-- Con la mochila llena el trato se cierra igual: el arma del bot, mejor, echa a la peor sin equipar.
+tf.data.edit(tf.player, function(d)
+	d.swords = {}
+	for id = 1, f.config.MaxSwords do
+		d.swords[id] = { id = id, sword = 1 }
+	end
+	d.nextSwordId = f.config.MaxSwords + 1
+	d.loadout = { 1 }
+end)
+tf.advance(10)
+-- Lo que espera (el bot acepta al segundo, la cuenta atrás) pasa en el momento.
+local realDelay = tf.task.delay
+tf.task.delay = function(_, fn, ...) fn(...) end
+tf.remotes.TradeRequest.OnServerEvent:fire(tf.player, 0)
+tf.advance(1)
+tf.remotes.TradeAccept.OnServerEvent:fire(tf.player, true)
+tf.advance(1)
+tf.remotes.TradeConfirm.OnServerEvent:fire(tf.player)
+tf.task.delay = realDelay
+local fullAfter = tf.data.read(tf.player)
+equal(#fullAfter.swords, f.config.MaxSwords, "mochila llena: sigue en el tope tras el trato")
+equal(fullAfter.swords[#fullAfter.swords].sword, 8, "mochila llena: el arma recibida se queda")
+equal(tf.data.findSword(fullAfter, 1) ~= nil, true, "mochila llena: la equipada no se quita")
+equal(fullAfter.items.traitCrystal > 0, true, "mochila llena: el trato se ha hecho")
 
 -- Varias armas equipadas (Config.Loadout.Slots): poner, quitar, sustituir a la de menos daño y "best"; y las cuentas de
 -- Stats: el daño se suma, la suerte y las monedas de los rasgos se multiplican y el grado va al daño, no a las monedas.
@@ -1303,13 +1327,13 @@ do
 	equal(bits.items.missionToken, 7, "objeto guardado como texto")
 	equal(bits.items.inventado, nil, "objeto que no existe")
 	equal(bits.items[potionKey], 0, "objeto que no es un número")
-	same(bits.artifacts, { 2, 2, 1 }, "accesorios: solo los que existen (los repetidos valen)")
+	same(bits.artifacts, { 2, 1 }, "accesorios: solo los que existen, uno de cada")
 	same(bits.gear, { 2, 1 }, "equipados: solo los que se tienen, sin repetir")
 	same(bits.index, { code(4, 1, 1) }, "índice roto limpio")
 	equal(bits.pity.traits[1], 0, "pity que no es una tabla")
 	equal(bits.pity.grades[3], 0, "pity de un grado fácil al cargar")
 	equal(bits.pity.grades[9], modifiers.pityLimit("grades", 9), "pity acotado al cargar")
-	same(bits.potions, { weaponLuck = { tier = 1, seconds = potionInfo.cap(1) }, coins = { tier = 2, seconds = 30 } }, "pociones: solo las válidas")
+	same(bits.potions, { coins = { tier = 2, seconds = 30 } }, "pociones: solo las válidas")
 	same(bits.missions, { weekly = { id = 2800, progress = { c = 3 }, claimed = { c = true } } }, "misiones: solo progreso y premios válidos")
 	equal(table.concat(modifiers.priority(bits.traitPriority), ","), table.concat(modifiers.PRIORITY, ","), "prioridad de rasgos sin sentido: la de siempre")
 	same(bits.stopAt, { traits = {}, grades = { 1 } }, "\"Parar con\" roto: solo índices que existen")

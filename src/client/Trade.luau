@@ -466,6 +466,12 @@ local function buildTrade()
 	local stockKey: string? = nil
 	local allow = Config.Trade.Allow
 	local TABS = { { "swords", Lang.t(nil, "Swords"), Ui.COLORS.red }, { "armor", Lang.t(nil, "Armor"), Ui.COLORS.orange }, { "artifacts", Lang.t(nil, "Accessories"), Ui.COLORS.purple }, { "amounts", Lang.t(nil, if allow.coins or allow.gems then "Coins and items" else "Items"), Ui.COLORS.blue } }
+	-- Sin pestaña lo que no se comercia (los accesorios, pedido por el usuario).
+	for order = #TABS, 1, -1 do
+		if TABS[order][1] ~= "amounts" and not allow[TABS[order][1]] then
+			table.remove(TABS, order)
+		end
+	end
 
 	local function locked(): boolean
 		return current == nil or current.state ~= "editing"

@@ -345,7 +345,7 @@ Config.Rebirth = { max = 5, costs = { 5e7, 1.2e13, 6.4e17, 1.8e22, 3.7e27 }, coi
 -- no deben pasar de la rareza del objeto más raro; antes llegaban a x1000 y x1e6 y lo rompían todo). Las "rarity" son
 -- NÚMEROS GENERADOS por tools/equilibrio para que cada uno caiga a su hora (de los 5 min a las 155 h): no los retoques.
 Config.GearSlots = 3
-Config.ArtifactCopies = 5 -- copias de un mismo accesorio que se pueden tener (para comerciar con las que sobran); equipado solo va uno de cada
+Config.ArtifactCopies = 1 -- copias de un mismo accesorio que se pueden tener (pedido por el usuario: uno de cada y sin comerciar; al cargar, lo que sobre se quita)
 Config.Artifacts = {
 	{ name = "Copper Amulet", stat = "coins", mult = 1.5, rarity = 830, color = Color3.fromRGB(200, 120, 70), image = "acc_amuleto_cobre" },
 	{ name = "Sharp Ring", stat = "damage", mult = 2, rarity = 9100, color = Color3.fromRGB(200, 205, 210), image = "acc_anillo_afilado" },
@@ -995,8 +995,8 @@ Config.Trade = {
 	SuggestCooldown = 0.4,
 	SuggestTime = 20,
 	SuggestMaxAmount = 1e36,
-	SuggestWant = { items = true, swords = true, armor = true, artifacts = true },
-	Allow = { items = true, swords = true, armor = true, artifacts = true },
+	SuggestWant = { items = true, swords = true, armor = true },
+	Allow = { items = true, swords = true, armor = true }, -- accesorios no (pedido por el usuario: uno de cada, atado a la cuenta)
 }
 
 -- PASES DE JUEGO (gamepass; tienda del menú, client/PassShop y server/Passes). "id" = id del pase en Roblox
@@ -1259,7 +1259,7 @@ Config.Potions = {
 	-- Duración de cada tier en segundos de juego: 10, 15, 20, 25 y 30 min. Solo corre con el jugador conectado
 	-- (lo que queda se guarda en sus datos, así que sale y vuelve y sigue igual).
 	Durations = { 600, 900, 1200, 1500, 1800 },
-	MaxStack = 2, -- usar otra del mismo tier suma su duración, hasta esta cantidad de veces la duración del tier
+	MaxStack = math.huge, -- usar otra del mismo tier suma su duración, hasta esta cantidad de veces la duración del tier (sin tope, pedido por el usuario)
 	UseCooldown = 0.3, -- segundos mínimos entre dos usos de un jugador
 	LowTime = 60, -- el HUD avisa (el tiempo se pone rojo y late) cuando quedan menos segundos
 	AnnounceFrom = 5, -- desde este tier se anuncia a todo el servidor al conseguirla

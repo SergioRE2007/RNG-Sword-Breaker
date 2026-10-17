@@ -85,21 +85,35 @@ function Potions.start()
 	strip.AnchorPoint = Vector2.new(1, 1)
 	strip.Position = UDim2.new(1, -14, 1, -14)
 	strip.Size = UDim2.fromOffset(COLUMNS * TILE_W + (COLUMNS - 1) * GAP, 0)
-	strip.AutomaticSize = Enum.AutomaticSize.Y
 	strip.BackgroundTransparency = 1
 	strip.Parent = gui
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-	layout.Wraps = true
-	layout.Padding = UDim.new(0, GAP)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = strip
 
 	-- [familia] = { cell, tier, endsAt, text (reloj), pulse (UIScale del latido), shown (segundos que enseña) }
 	local tiles = {}
 	local active = 0
+
+	-- Coloca las casillas a mano, de la fila de abajo hacia arriba (pedido por el usuario: la fila que sobra va arriba,
+	-- no abajo), en el orden de cfg.Order de izquierda a derecha; una fila a medias va pegada a la derecha. Sin
+	-- UIListLayout: el UIScale del ratón agrandaba la casilla también para el layout, la fila llena se partía y la
+	-- casilla se iba de debajo del ratón sin parar.
+	local function arrange()
+		local shown = {}
+		for _, family in cfg.Order do
+			if tiles[family] then
+				table.insert(shown, tiles[family])
+			end
+		end
+		for index, tile in shown do
+			local row = (index - 1) // COLUMNS
+			local inRow = math.min(COLUMNS, #shown - row * COLUMNS)
+			local column = COLUMNS - inRow + (index - 1) % COLUMNS
+			-- Anclada al centro, para que el UIScale del ratón la agrande hacia todos los lados.
+			tile.cell.AnchorPoint = Vector2.new(0.5, 0.5)
+			tile.cell.Position = UDim2.new(0, column * (TILE_W + GAP) + TILE_W / 2, 1, -row * (TILE_H + GAP) - TILE_H / 2)
+		end
+		local rows = math.ceil(#shown / COLUMNS)
+		strip.Size = UDim2.fromOffset(COLUMNS * TILE_W + (COLUMNS - 1) * GAP, math.max(0, rows * TILE_H + (rows - 1) * GAP))
+	end
 
 	local function remaining(tile): number
 		return math.max(0, tile.endsAt - workspace:GetServerTimeNow())
@@ -168,6 +182,7 @@ function Potions.start()
 				tile.cell:Destroy()
 				tiles[family] = nil
 				active -= 1
+				arrange()
 			end
 			return
 		end
@@ -181,6 +196,7 @@ function Potions.start()
 			tile = build(family, tier, endsAt)
 			tiles[family] = tile
 			active += 1
+			arrange()
 		elseif endsAt > tile.endsAt + 1 and not Performance.get() then
 			-- Le han sumado tiempo: un pequeño salto.
 			local press = tile.cell:FindFirstChild("PressScale") :: UIScale?
