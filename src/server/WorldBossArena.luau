@@ -362,8 +362,9 @@ function WorldBossArena.buildBoard(map: Instance)
 	local position = WorldBossInfo.portalPosition()
 	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
 	-- La derecha de quien mira el portal es la izquierda del portal; el cartel se gira un poco hacia delante del portal.
-	-- Más allá del pilono del portal (que llega a 14,5 del centro): con -19 el cartel lo tapaba.
-	local spot = base * CFrame.new(-25, 0, -3) * CFrame.Angles(0, math.rad(-25), 0)
+	-- Detrás y a un lado del portal, en la hierba (pedido por el usuario: a su lado tapaba el pilono y luego la salida
+	-- del camino de una parcela).
+	local spot = base * CFrame.new(-14, 0, 21) * CFrame.Angles(0, math.rad(-20), 0)
 	local width, height = 15, 19 -- alto para los 13 tramos
 	local model = Instance.new("Model")
 	model.Name = "WorldBossRewards"
