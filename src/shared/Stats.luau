@@ -283,10 +283,9 @@ function Stats.plotSize(rebirths: number): number
 	return math.min(size, cfg.MaxSize)
 end
 
--- Objetos a la vez en la parcela: la mejora "Más objetos" y lo que suman los renacimientos.
+-- Objetos a la vez en la parcela: la mejora "Más objetos" (decidido por el usuario: renacer no da objetos de más).
 function Stats.capacity(player: Player): number
-	local cfg = Config.Plot
-	return upgrade(player, "capacity") + math.min(Stats.rebirths(player) * cfg.CapacityPerRebirth, cfg.MaxRebirthCapacity)
+	return upgrade(player, "capacity")
 end
 
 -- Multiplicador permanente de un renacimiento para esa estadística ("coins", "damage", "luck" o "gachaLuck").

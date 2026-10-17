@@ -436,8 +436,6 @@ Config.Plot = {
 	GrowAt = { 1, 3 },
 	GrowStep = 20,
 	MaxSize = 140,
-	CapacityPerRebirth = 2, -- objetos de más a la vez por cada renacimiento (Stats.capacity)...
-	MaxRebirthCapacity = 30, -- ...hasta este tope
 }
 
 -- Aspecto de la parcela con cada renacimiento (server/PlotLooks; pedido por el usuario: cambia poco a poco, y habrá 20
@@ -563,7 +561,7 @@ Config.ObjectSizes = {
 Config.UpgradeOrder = { "capacity", "luck", "rollSpeed", "fortune", "bagBoost" }
 Config.Upgrades = {
 	-- Pocos niveles y cada uno da mucho (pedido por el usuario: el árbol era demasiado largo).
-	capacity = { name = "More Objects", short = "Objects", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 6, perLevel = 3, maxLevel = 8, costs = { 27, 380, 3000, 17000, 86000, 1.7e6, 1e7, 5.5e7 }, display = "%d" },
+	capacity = { name = "More Objects", short = "Objects", icon = "box", color = Color3.fromRGB(235, 150, 60), mode = "add", base = 8, perLevel = 4, maxLevel = 8, costs = { 27, 380, 3000, 17000, 86000, 1.7e6, 1e7, 5.5e7 }, display = "%d" },
 	-- Suerte de destructibles (misma clave de siempre, "luck": lo comprado se conserva). x2,5 por nivel, x79Qi al máximo:
 	-- lo que falta hasta la rareza del objeto más raro (1e24) lo ponen renacer, el rasgo, los accesorios y la armadura
 	-- (con x3 por nivel la mejora sola ya los agotaba y todo lo demás sobraba). Multiplica la probabilidad
