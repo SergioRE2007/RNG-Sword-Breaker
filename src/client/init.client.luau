@@ -13,6 +13,7 @@ require(script.Index).start()
 require(script.Settings).start()
 require(script.Rebirth).start()
 require(script.Missions).start()
+require(script.DailyRewards).start() -- recompensas diarias; después de Hud (le pone el aviso a su botón del menú)
 require(script.Tutorial).start() -- tutorial de los primeros minutos: tarjeta y flechas
 require(script.Clover).start() -- Trébol de la suerte: elegir objeto y brillo de los que ya lo llevan
 require(script.PassShop).start()

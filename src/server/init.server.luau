@@ -44,6 +44,7 @@ require(script.Tutorial).start() -- tutorial de los primeros minutos: después d
 require(script.TicketShop).start() -- lo que se compra con tickets en el puesto de Misiones
 require(script.Clover).start() -- Trébol de la suerte: después de Destructibles
 require(script.Codes).start() -- códigos de regalo de la Tienda
+require(script.DailyRewards).start() -- recompensas por tiempo jugado y por días seguidos
 require(script.Products).start() -- productos de Robux (ProcessReceipt)
 require(script.AutoPlay).start() -- autoclicker y Auto de la parcela: después de Plots y Passes
 require(script.Rejoin).start() -- reconexión antes de la expulsión por inactividad: después de Party, Dungeons y AutoPlay

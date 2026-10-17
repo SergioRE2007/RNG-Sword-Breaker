@@ -1,0 +1,36 @@
+# Recompensas diarias
+
+- Pedido por el usuario el 16-10-2026, hecho el 17-10-2026. Dos partes, con los números en `Config.DailyRewards`:
+  - **Por tiempo jugado** (`Playtime`): cinco premios al llegar a 10 min, 30 min, 1 h, 2 h y 4 h de juego en el día.
+  - **Por días** (`Streak`): siete casillas, una por día que entras. Tras la 7.ª vuelve a la 1.
+- Reglas:
+  - El día cambia a la vez que las misiones diarias (00:00 UTC, `MissionList.dayId`).
+  - Lo que no recojas de un día se pierde.
+  - Faltar un día no reinicia la racha: sigue por donde iba (decidido por el usuario).
+- Los premios son objetos de `Config.Items` (cristales, pociones y Trébol pequeño) y van atados a la cuenta (`PlayerData.giveBound`): no se comercian. Con cuentas de más se juntarían en una sola. Nada de pago.
+- `shared/DailyInfo`: cuentas comunes y `sanitize` de lo guardado. Datos en `data.daily = { day, seconds, claimed, streak, streakDay }`:
+  - `claimed`: lista de las posiciones recogidas hoy.
+  - `streak`: la casilla que toca.
+  - `streakDay`: el día de la última casilla recogida.
+- `server/DailyRewards`:
+  - Un bucle de 1 s suma tiempo de juego a quien tiene los datos cargados.
+  - Publica el atributo `Daily` (JSON) cada 15 s, al cambiar el día y en cuanto un premio queda listo.
+  - Entrega con `ClaimDaily:FireServer("playtime", posición)` o `("streak")`, validado en el servidor.
+- `client/DailyRewards`:
+  - Ventana `Hud.DailyRewards` con las pestañas `Body.TabPlaytime` y `Body.TabStreak`.
+  - Tiempo jugado: `Body.Playtime.Cards.Reward_<n>`, con su `Claim`.
+  - Racha: `Body.Streak.Days.Day_<n>` y `Body.Streak.Claim`.
+  - Entre publicaciones, el cliente adelanta solo el tiempo.
+  - Botón "Recompensas" del menú de la izquierda (`Hud.HudRoot.Menu.DailyRewards`, logo `codigos`). Con algo por recoger, el botón lleva un aviso rojo (`Alert`) con la cuenta y la pestaña su propio aviso.
+  - Al abrir la ventana sale la pestaña que tiene algo listo.
+- Con siete botones, el menú de la izquierda va apoyado encima del bono de amigos (`AnchorPoint` abajo): centrado, la cuarta fila lo pisaba. En móvil se recoloca arriba, como antes.
+- Probar:
+  - Con el juego parado, bajar temporalmente los `minutes` de los primeros premios (p. ej. 0.25 y 0.5) y restaurarlos.
+  - Desde `Client`: `Remotes.ClaimDaily:FireServer("playtime", 1)` y `("streak")`, luego mirar `Daily` y `Bound_<objeto>` del jugador.
+  - El cambio de día y la racha de varios días están cubiertos en `tests/regressions.luau`.
+- Probado en Studio (17-10-2026, escritorio): la ventana, las dos pestañas, recoger, que una repetida o una no lista no dé nada, el aviso del menú y el menú recolocado.
+- Sin probar:
+  - Móvil.
+  - Guardar y volver en el juego publicado.
+  - Que el día cambie con la partida abierta en Studio.
+- Los cristales, pociones y tréboles que da no se han pasado por `tools/equilibrio`: falta comprobar cuánto adelantan.

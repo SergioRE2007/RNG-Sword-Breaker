@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local BagInfo = require(ReplicatedStorage.Shared.BagInfo)
+local DailyInfo = require(ReplicatedStorage.Shared.DailyInfo)
 local BalanceSnapshots = require(ReplicatedStorage.Shared.BalanceSnapshots)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -488,6 +489,7 @@ local function load(player: Player)
 		codes = {}, -- códigos de regalo ya canjeados: { [código] = true } (server/Codes)
 		passes = {}, -- pases comprados con tickets de misión: { [clave de Config.Gamepasses] = true } (ver server/Passes)
 		missions = {}, -- misiones: { daily = { id, progress, claimed }, weekly = { ... } } (ver server/Missions)
+		daily = DailyInfo.sanitize(nil), -- recompensas por tiempo jugado y por días (ver shared/DailyInfo)
 		swords = { { id = 1, sword = 1 } },
 		nextSwordId = 2,
 		loadout = { 1 },
@@ -587,6 +589,7 @@ local function load(player: Player)
 				if type(saved.missions) == "table" then
 					data.missions = loadMissions(saved.missions)
 				end
+				data.daily = DailyInfo.sanitize(saved.daily)
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
 				data.armorHidden = saved.armorHidden == true
 				data.pity = Modifiers.newPity(saved.pity)

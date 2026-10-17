@@ -1095,6 +1095,7 @@ do
 		},
 		armorWorn = { helmet = 11, boots = 12 }, armorHidden = true,
 		potions = { damage = { tier = 3, seconds = 120 }, coins = { tier = topTier, seconds = 1.5 } },
+		daily = { day = 20000, seconds = 1800.5, claimed = { 2, 1 }, streak = 4, streakDay = 19999 },
 		upgrades = levels,
 	}
 	local items = {}
@@ -1120,7 +1121,7 @@ do
 			{ id = 3, slot = "helmet", quality = 1, level = 1, stats = {} },
 		},
 		nextArmorId = 4, armorWorn = { helmet = 1, boots = 2 }, armorHidden = true,
-		potions = full.potions, upgrades = levels,
+		potions = full.potions, daily = full.daily, upgrades = levels,
 	}
 	local loaded, lf = stable(stored(full), "partida completa")
 	same(loaded, expected, "partida completa: se carga todo lo guardado")
@@ -1935,6 +1936,62 @@ do
 		end
 	end
 	for _, path in DONE do scan(path) end
+end
+
+-- Recompensas diarias (server/DailyRewards, shared/DailyInfo): racha de un premio por día que no se pierde al faltar,
+-- premios por tiempo jugado solo al llegar al tiempo y una vez, el día nuevo lo reinicia y lo guardado roto se limpia.
+do
+	local df = fixture(nil)
+	local cfg = df.config
+	local dailyInfo = df.load("src/shared/DailyInfo")
+	df.load("src/server/DailyRewards").start()
+	local function state() return df.data.read(df.player).daily end
+	local function owned(name) return df.data.read(df.player).items[name] end
+	local function claim(...)
+		df.advance(1)
+		df.remotes.ClaimDaily.OnServerEvent:fire(df.player, ...)
+	end
+	local first = cfg.DailyRewards.Streak[1][1]
+	local before = owned(first.item)
+	claim("streak")
+	equal(owned(first.item) - before, first.amount, "racha: el día 1 da su premio")
+	equal(df.data.read(df.player).bound[first.item], first.amount, "racha: lo que da va atado a la cuenta")
+	equal(state().streak, 2, "racha: pasa a la casilla 2")
+	claim("streak")
+	equal(state().streak, 2, "racha: una sola casilla por día")
+	df.advance(86400 * 3)
+	claim("streak")
+	equal(state().streak, 3, "racha: faltar días no la reinicia")
+
+	local goal = cfg.DailyRewards.Playtime[1].minutes * 60
+	claim("playtime", 1)
+	equal(#state().claimed, 0, "tiempo: sin jugar no se recoge")
+	for _ = 1, goal do df.step(1) end
+	equal(state().seconds >= goal, true, "tiempo: se cuenta cada segundo")
+	local reward = cfg.DailyRewards.Playtime[1].rewards[1]
+	before = owned(reward.item)
+	claim("playtime", 1)
+	equal(owned(reward.item) - before, reward.amount, "tiempo: da su premio")
+	claim("playtime", 1)
+	equal(owned(reward.item) - before, reward.amount, "tiempo: una sola vez al día")
+	for _, bad in { 2, 0, 99, "x", 0 / 0, {}, true } do
+		claim("playtime", bad)
+	end
+	equal(table.concat(state().claimed, ","), "1", "tiempo: lo que no está listo o no existe no se recoge")
+	equal(type(df.player:GetAttribute("Daily")), "string", "estado publicado")
+	df.advance(86400)
+	df.step(1)
+	equal(#state().claimed, 0, "día nuevo: lo recogido vuelve a cero")
+	equal(state().seconds <= 2, true, "día nuevo: el tiempo vuelve a cero")
+	equal(state().streak, 3, "día nuevo: la racha sigue")
+
+	local broken = dailyInfo.sanitize({ day = 0 / 0, seconds = -5, claimed = { 1, 1, 99, "x", 2 }, streak = 50, streakDay = math.huge })
+	equal(broken.day, 0, "guardado roto: día")
+	equal(broken.seconds, 0, "guardado roto: segundos")
+	equal(table.concat(broken.claimed, ","), "1,2", "guardado roto: recogidos sin repetir ni inventar")
+	equal(broken.streak, 1, "guardado roto: casilla de la racha")
+	equal(broken.streakDay, 0, "guardado roto: día de la racha")
+	equal(dailyInfo.sanitize("x").streak, 1, "guardado que no es tabla")
 end
 
 print(`OK: {checks} comprobaciones; {compiled} scripts Luau compilados.`)
