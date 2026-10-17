@@ -1362,7 +1362,9 @@ local function buildShop(kind: string)
 				TweenService:Create(shade, TweenInfo.new(0.3), { BackgroundTransparency = 0.45 }):Play()
 				-- El selector entero (marco y flechas) se apaga a la vez, sin medias flechas oscuras.
 				local fade = TweenInfo.new(0.3)
-				for _, part in column.box.Selector:GetDescendants() do
+				-- Si otra tirada empezó antes de acabar esta, sus columnas ya se borraron.
+				local selector = column.box:FindFirstChild("Selector")
+				for _, part in if selector then selector:GetDescendants() else {} do
 					if part:IsA("UIStroke") then
 						TweenService:Create(part, fade, { Transparency = 0.6 }):Play()
 					elseif part:IsA("Frame") then

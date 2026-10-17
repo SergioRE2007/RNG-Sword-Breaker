@@ -351,24 +351,25 @@ local function setupSeller(model: Model)
 		right = attachment(model:FindFirstChild("RightUpperArm"), "RightShoulderRigAttachment"),
 		left = attachment(model:FindFirstChild("LeftUpperArm"), "LeftShoulderRigAttachment"),
 	}
-	-- Grupos que se mueven juntos.
-	local headGroup: { BasePart } = { head }
+	-- Grupos que se mueven juntos. Solo piezas con su posición guardada: con streaming, una pieza
+	-- (la cabeza incluida) puede irse y volver durante la espera de arriba y faltar en `original`.
+	local headGroup: { BasePart } = if original[head] then { head } else {}
 	local arms = { right = {}, left = {} }
 	for _, name in { "RightUpperArm", "RightLowerArm", "RightHand" } do
 		local part = model:FindFirstChild(name)
-		if part then
+		if part and original[part] then
 			table.insert(arms.right, part)
 		end
 	end
 	for _, name in { "LeftUpperArm", "LeftLowerArm", "LeftHand" } do
 		local part = model:FindFirstChild(name)
-		if part then
+		if part and original[part] then
 			table.insert(arms.left, part)
 		end
 	end
 	for _, accessory in model:GetChildren() do
 		local handle = accessory:IsA("Accessory") and accessory:FindFirstChild("Handle")
-		if handle and handle:IsA("BasePart") and (handle:FindFirstChild("HairAttachment") or handle:FindFirstChild("HatAttachment") or handle:FindFirstChild("FaceFrontAttachment")) then
+		if handle and handle:IsA("BasePart") and original[handle] and (handle:FindFirstChild("HairAttachment") or handle:FindFirstChild("HatAttachment") or handle:FindFirstChild("FaceFrontAttachment")) then
 			table.insert(headGroup, handle)
 		end
 	end
