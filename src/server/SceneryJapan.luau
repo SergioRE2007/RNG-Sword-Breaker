@@ -293,14 +293,16 @@ local function path(parent: Instance, direction: Vector3, from: number, to: numb
 	local tile = 9
 	local side = Vector3.new(-direction.Z, 0, direction.X)
 	local facing = CFrame.lookAt(Vector3.zero, direction).Rotation
-	local count = math.floor((to - from) / tile)
+	-- Las losas se estiran un poco a lo largo para llegar justo hasta `to` (si no, quedaba un hueco antes de la parcela).
+	local count = math.max(math.round((to - from) / tile), 1)
+	local long = (to - from) / count
 	for step = 0, count - 1 do
 		for lane = 0, 1 do
-			local center = direction * (from + (step + 0.5) * tile) + side * ((lane - 0.5) * tile) + Vector3.new(0, 0.42, 0)
-			decor(part(parent, "Path", Vector3.new(tile - 0.5, 0.12, tile - 0.5), facing + center, STONE[(step + lane) % 2 + 1], Enum.Material.SmoothPlastic))
+			local center = direction * (from + (step + 0.5) * long) + side * ((lane - 0.5) * tile) + Vector3.new(0, 0.42, 0)
+			decor(part(parent, "Path", Vector3.new(tile - 0.5, 0.12, long - 0.5), facing + center, STONE[(step + lane) % 2 + 1], Enum.Material.SmoothPlastic))
 		end
 	end
-	local length = count * tile
+	local length = to - from
 	for _, sign in { 1, -1 } do
 		local middle = direction * (from + length / 2) + side * sign * (width / 2 + 0.6) + Vector3.new(0, 0.6, 0)
 		decor(part(parent, "Curb", Vector3.new(1.2, 0.5, length), facing + middle, Color3.fromRGB(238, 52, 62), Enum.Material.SmoothPlastic))
