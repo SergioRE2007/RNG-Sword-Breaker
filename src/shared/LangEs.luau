@@ -488,7 +488,6 @@ return {
 	["Resets in {time}"] = "Se reinicia en {time}",
 	-- Recompensas diarias (client/DailyRewards, server/DailyRewards)
 	["Rewards"] = "Recompensas",
-	["Daily rewards"] = "Recompensas diarias",
 	["Playtime"] = "Tiempo jugado",
 	["Daily streak"] = "Racha diaria",
 	["Today"] = "Hoy",

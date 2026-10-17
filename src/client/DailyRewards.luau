@@ -1,8 +1,10 @@
--- Ventana de Recompensas diarias (Hud.DailyRewards; botón "Recompensas" del menú de la izquierda, Hud.HudRoot.Menu.DailyRewards).
--- Dos pestañas: "Tiempo jugado" (Body.Playtime: una tarjeta Reward_<n> por premio de Config.DailyRewards.Playtime, con su
--- barra y su botón Claim) y "Racha diaria" (Body.Streak: siete tarjetas Day_<n> y el botón Body.Streak.Claim). El
--- servidor cuenta el tiempo y lo publica en el atributo "Daily" (JSON, ver shared/DailyInfo) cada pocos segundos; aquí se
--- adelanta solo entre medias. Con algo por recoger, el botón del menú y la pestaña llevan un aviso rojo (Alert) con la cuenta.
+-- Recompensas diarias, librería sin start(): es la pestaña "Recompensas" de la Tienda (pedido por el usuario: había
+-- demasiados botones en pantalla), y client/PassShop la monta con DailyRewards.build en Hud.PassShop.Body.Rewards.
+-- Dentro, dos pestañas: "Tiempo jugado" (Rewards.Playtime: una tarjeta Reward_<n> por premio de
+-- Config.DailyRewards.Playtime, con su barra y su botón Claim) y "Racha diaria" (Rewards.Streak: siete tarjetas Day_<n>
+-- y el botón Rewards.Streak.Claim). El servidor cuenta el tiempo y lo publica en el atributo "Daily" (JSON, ver
+-- shared/DailyInfo) cada pocos segundos; aquí se adelanta solo entre medias. Con algo por recoger, el botón "Tienda" del
+-- menú, la pestaña de la Tienda y la de dentro llevan un aviso rojo (Alert) con la cuenta.
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -198,18 +200,18 @@ local function strip(parent: Instance, color: Color3): (TextLabel, TextLabel)
 	frame.Name = "Strip"
 	frame.AnchorPoint = Vector2.new(0.5, 0)
 	frame.Position = UDim2.new(0.5, 0, 0, 2)
-	frame.Size = UDim2.new(1, -24, 0, 40)
+	frame.Size = UDim2.new(1, -24, 0, 52)
 	frame.BackgroundColor3 = WHITE
 	frame.Parent = parent
 	Ui.round(frame, 10)
 	Ui.stroke(frame, BLACK, 3)
 	Ui.panel(frame, color:Lerp(BLACK, 0.15))
-	local left = Ui.label(frame, 22)
+	local left = Ui.label(frame, 30)
 	left.Name = "Left"
 	left.Position = UDim2.fromOffset(14, 0)
 	left.Size = UDim2.new(0.6, -14, 1, 0)
 	left.TextXAlignment = Enum.TextXAlignment.Left
-	local right = Ui.label(frame, 18)
+	local right = Ui.label(frame, 26)
 	right.Name = "Right"
 	right.AnchorPoint = Vector2.new(1, 0)
 	right.Position = UDim2.new(1, -14, 0, 0)
@@ -218,11 +220,15 @@ local function strip(parent: Instance, color: Color3): (TextLabel, TextLabel)
 	return left, right
 end
 
-function DailyRewards.start()
-	local window, body = Ui.window("DailyRewards", Lang.t(nil, "Daily rewards"), Vector2.new(720, 560), function(parent)
-		Ui.image(parent, "codigos")
-	end)
+-- Cuántas cosas hay por recoger ahora mismo (PassShop abre la Tienda en esta pestaña si hay alguna).
+function DailyRewards.pending(): number
+	local now, today, seconds = current()
+	return DailyInfo.pending(now, today, seconds)
+end
 
+-- Monta la pestaña dentro de `body` (el panel de la ventana `window` de la Tienda); `shopTab` es el botón de la pestaña
+-- en la cabecera, que lleva su aviso.
+function DailyRewards.build(window: GuiObject, body: Frame, shopTab: GuiObject)
 	-- Pestañas, como en Misiones.
 	local panes, tabs, tabAlerts = {}, {}, {}
 	local function show(name: string)
@@ -235,15 +241,15 @@ function DailyRewards.start()
 		local name = entry[1]
 		local tab = Ui.button(body, Lang.t(nil, entry[2]), entry[3])
 		tab.Name = "Tab" .. name
-		tab.Position = UDim2.fromOffset(12 + (order - 1) * 196, 4)
-		tab.Size = UDim2.fromOffset(186, 38)
-		tab.TextSize = 20
+		tab.Position = UDim2.fromOffset(12 + (order - 1) * 262, 6)
+		tab.Size = UDim2.fromOffset(250, 50)
+		tab.TextSize = 28
 		tabs[name] = tab
-		tabAlerts[name] = { alertDot(tab, 24) }
+		tabAlerts[name] = { alertDot(tab, 30) }
 		local pane = Instance.new("Frame")
 		pane.Name = name
-		pane.Position = UDim2.fromOffset(0, 50)
-		pane.Size = UDim2.new(1, 0, 1, -50)
+		pane.Position = UDim2.fromOffset(0, 64)
+		pane.Size = UDim2.new(1, 0, 1, -64)
 		pane.BackgroundTransparency = 1
 		pane.Parent = body
 		panes[name] = pane
@@ -256,8 +262,8 @@ function DailyRewards.start()
 	local playLeft, playRight = strip(panes.Playtime, Ui.COLORS.blue)
 	local row = Instance.new("Frame")
 	row.Name = "Cards"
-	row.Position = UDim2.fromOffset(12, 52)
-	row.Size = UDim2.new(1, -24, 1, -60)
+	row.Position = UDim2.fromOffset(12, 64)
+	row.Size = UDim2.new(1, -24, 1, -74)
 	row.BackgroundTransparency = 1
 	row.Parent = panes.Playtime
 	local rowList = Instance.new("UIListLayout")
@@ -274,15 +280,15 @@ function DailyRewards.start()
 		frame.LayoutOrder = position
 		frame.Size = UDim2.new(1 / count, -8 * (count - 1) / count, 1, 0)
 
-		local title = Ui.label(frame, 30)
+		local title = Ui.label(frame, 40)
 		title.Name = "Title"
 		title.AnchorPoint = Vector2.new(0.5, 0)
-		title.Position = UDim2.new(0.5, 0, 0, 10)
-		title.Size = UDim2.new(1, -10, 0, 36)
+		title.Position = UDim2.new(0.5, 0, 0, 14)
+		title.Size = UDim2.new(1, -10, 0, 46)
 		title.Text = durationText(entry.minutes)
 		Ui.gradient(title, WHITE, color:Lerp(WHITE, 0.3), 90)
 
-		local rewards = rewardRow(frame, entry.rewards, 70, true)
+		local rewards = rewardRow(frame, entry.rewards, 104, true)
 		rewards.AnchorPoint = Vector2.new(0.5, 0.5)
 		rewards.Position = UDim2.new(0.5, 0, 0.5, -10)
 		rewards.Size = UDim2.new(1, -10, 0.5, 0)
@@ -290,8 +296,8 @@ function DailyRewards.start()
 		local track = Instance.new("Frame")
 		track.Name = "Track"
 		track.AnchorPoint = Vector2.new(0.5, 1)
-		track.Position = UDim2.new(0.5, 0, 1, -64)
-		track.Size = UDim2.new(1, -16, 0, 22)
+		track.Position = UDim2.new(0.5, 0, 1, -82)
+		track.Size = UDim2.new(1, -16, 0, 28)
 		track.BackgroundColor3 = Ui.COLORS.dark
 		track.Parent = frame
 		Ui.round(track, 11)
@@ -304,7 +310,7 @@ function DailyRewards.start()
 		fill.Parent = track
 		Ui.round(fill, 11)
 		Ui.gradient(fill, color:Lerp(WHITE, 0.35), color:Lerp(BLACK, 0.2), 90)
-		local left = Ui.label(track, 15)
+		local left = Ui.label(track, 19)
 		left.Name = "Time"
 		left.Size = UDim2.fromScale(1, 1)
 		left.ZIndex = 3
@@ -313,8 +319,8 @@ function DailyRewards.start()
 		claim.Name = "Claim"
 		claim.AnchorPoint = Vector2.new(0.5, 1)
 		claim.Position = UDim2.new(0.5, 0, 1, -10)
-		claim.Size = UDim2.new(1, -16, 0, 44)
-		claim.TextSize = 20
+		claim.Size = UDim2.new(1, -16, 0, 58)
+		claim.TextSize = 28
 		Ui.sparkle(claim, 3)
 		claim.Activated:Connect(function()
 			local now, _, seconds = current()
@@ -331,8 +337,8 @@ function DailyRewards.start()
 	local streakLeft, streakRight = strip(panes.Streak, STREAK_COLOR)
 	local days = Instance.new("Frame")
 	days.Name = "Days"
-	days.Position = UDim2.fromOffset(8, 48)
-	days.Size = UDim2.new(1, -16, 1, -48 - 70)
+	days.Position = UDim2.fromOffset(8, 60)
+	days.Size = UDim2.new(1, -16, 1, -60 - 86)
 	days.BackgroundTransparency = 1
 	days.Parent = panes.Streak
 	local streakCards = {}
@@ -348,10 +354,10 @@ function DailyRewards.start()
 		frame.Position = UDim2.fromScale(column * 0.25 + width / 2, line * 0.5 + 0.25)
 		frame.Size = UDim2.new(width, -8, 0.5, -8)
 
-		local title = Ui.label(frame, 22)
+		local title = Ui.label(frame, 28)
 		title.Name = "Title"
-		title.Position = UDim2.fromOffset(10, 4)
-		title.Size = UDim2.new(1, -20, 0, 30)
+		title.Position = UDim2.fromOffset(12, 6)
+		title.Size = UDim2.new(1, -24, 0, 34)
 		title.TextXAlignment = Enum.TextXAlignment.Left
 		title.Text = Lang.t(nil, "Day {n}", { n = index })
 		Ui.gradient(title, WHITE, color:Lerp(WHITE, 0.3), 90)
@@ -359,8 +365,8 @@ function DailyRewards.start()
 		local today = Ui.label(frame, 15)
 		today.Name = "Today"
 		today.AnchorPoint = Vector2.new(1, 0)
-		today.Position = UDim2.new(1, -8, 0, 8)
-		today.Size = UDim2.fromOffset(70, 22)
+		today.Position = UDim2.new(1, -10, 0, 10)
+		today.Size = UDim2.fromOffset(80, 26)
 		today.BackgroundTransparency = 0
 		today.BackgroundColor3 = GOLD:Lerp(BLACK, 0.1)
 		today.Text = Lang.t(nil, "Today")
@@ -368,18 +374,18 @@ function DailyRewards.start()
 		Ui.round(today, 8)
 		Ui.stroke(today, BLACK, 2)
 
-		local holder = rewardRow(frame, rewards, if index == total then 74 else 62, false)
+		local holder = rewardRow(frame, rewards, if index == total then 130 else 104, false)
 		holder.AnchorPoint = Vector2.new(0.5, 1)
 		holder.Position = UDim2.new(0.5, 0, 1, -10)
-		holder.Size = UDim2.new(1, -10, 1, -46)
+		holder.Size = UDim2.new(1, -10, 1, -50)
 		streakCards[index] = { border = border, scale = scale, done = done, today = today, mode = nil }
 	end
 	local streakClaim = Ui.button(panes.Streak, Lang.t(nil, "Claim"), Ui.COLORS.green)
 	streakClaim.Name = "Claim"
 	streakClaim.AnchorPoint = Vector2.new(0.5, 1)
 	streakClaim.Position = UDim2.new(0.5, 0, 1, -10)
-	streakClaim.Size = UDim2.fromOffset(320, 54)
-	streakClaim.TextSize = 26
+	streakClaim.Size = UDim2.fromOffset(420, 68)
+	streakClaim.TextSize = 34
 	Ui.sparkle(streakClaim, 3)
 	streakClaim.Activated:Connect(function()
 		local now, today = current()
@@ -390,9 +396,10 @@ function DailyRewards.start()
 		end
 	end)
 
-	-- Aviso del botón del menú.
-	local tile = Ui.hud():FindFirstChild("Menu") and Ui.hud().Menu:FindFirstChild("DailyRewards")
+	-- Avisos del botón "Tienda" del menú y de la pestaña de la Tienda.
+	local tile = Ui.hud():FindFirstChild("Menu") and Ui.hud().Menu:FindFirstChild("PassShop")
 	local tileAlert = if tile then { alertDot(tile, 34) } else nil
+	local shopAlert = { alertDot(shopTab, 26) }
 	local pulse: Tween? = nil
 	local function setAlert(alert, amount: number)
 		if not alert then
@@ -442,6 +449,7 @@ function DailyRewards.start()
 		setAlert(tabAlerts.Playtime, pendingPlay)
 		setAlert(tabAlerts.Streak, pendingStreak)
 		setAlert(tileAlert, pendingPlay + pendingStreak)
+		setAlert(shopAlert, pendingPlay + pendingStreak)
 		-- El aviso del menú late mientras hay algo por recoger.
 		local alerting = tileAlert ~= nil and pendingPlay + pendingStreak > 0 and not Performance.get()
 		if alerting and not pulse then
@@ -471,9 +479,9 @@ function DailyRewards.start()
 	readState()
 	lastClaimed = #state.claimed + state.streak
 
-	-- Al abrir, la pestaña que tenga algo por recoger (la de tiempo si las dos).
-	window:GetPropertyChangedSignal("Visible"):Connect(function()
-		if window.Visible then
+	-- Al enseñarse, la pestaña de dentro que tenga algo por recoger (la de tiempo si las dos).
+	local function onShown()
+		if body.Visible and window.Visible then
 			local now, today, seconds = current()
 			local playReady = false
 			for position in Config.DailyRewards.Playtime do
@@ -482,7 +490,9 @@ function DailyRewards.start()
 			show(if not playReady and DailyInfo.streakReady(now, today) then "Streak" else "Playtime")
 			refresh()
 		end
-	end)
+	end
+	body:GetPropertyChangedSignal("Visible"):Connect(onShown)
+	window:GetPropertyChangedSignal("Visible"):Connect(onShown)
 	show("Playtime")
 	refresh()
 

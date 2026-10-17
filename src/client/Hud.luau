@@ -350,10 +350,11 @@ function Hud.start()
 	-- Menú
 	local menu = Instance.new("Frame")
 	menu.Name = "Menu"
-	-- Apoyado justo encima del bono de amigos (con cuatro filas, centrado lo pisaba). En móvil se recoloca arriba (más abajo).
+	menu.AnchorPoint = Vector2.new(0, 0.5)
+	-- Algo por encima del centro: en un móvil apaisado (HUD al mínimo) el menú llegaba a tocar las gemas (y encima de
+	-- ellas va el bono de amigos).
+	menu.Position = UDim2.new(0, 14, 0.455, 0)
 	local menuGap = 12 -- el borde negro va por fuera del botón: con menos se pisan al crecer
-	menu.AnchorPoint = Vector2.new(0, 1)
-	menu.Position = UDim2.new(0, 14, 1, -MARGIN - 2 * 64 - FRIENDS_HEIGHT - menuGap)
 	menu.Size = UDim2.fromOffset(MenuTile.SIZE * 2 + menuGap, 0) -- dos botones por fila
 	menu.AutomaticSize = Enum.AutomaticSize.Y
 	menu.BackgroundTransparency = 1
@@ -375,8 +376,6 @@ function Hud.start()
 		{ "TradeList", "Trades", Color3.fromRGB(40, 170, 200), "trade" },
 		-- Índice de armas (client/Index).
 		{ "Index", "Index", Ui.COLORS.purple, "indice" },
-		-- Recompensas diarias (client/DailyRewards, que le pone el aviso rojo).
-		{ "DailyRewards", "Rewards", Color3.fromRGB(240, 120, 40), "codigos" },
 	}
 	for order, entry in menuItems do
 		local item = MenuTile.new(menu, Lang.t(nil, entry[2]), entry[3], entry[4], false, entry[5])

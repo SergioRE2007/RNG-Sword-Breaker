@@ -16,19 +16,21 @@
   - Un bucle de 1 s suma tiempo de juego a quien tiene los datos cargados.
   - Publica el atributo `Daily` (JSON) cada 15 s, al cambiar el día y en cuanto un premio queda listo.
   - Entrega con `ClaimDaily:FireServer("playtime", posición)` o `("streak")`, validado en el servidor.
-- `client/DailyRewards`:
-  - Ventana `Hud.DailyRewards` con las pestañas `Body.TabPlaytime` y `Body.TabStreak`.
-  - Tiempo jugado: `Body.Playtime.Cards.Reward_<n>`, con su `Claim`.
-  - Racha: `Body.Streak.Days.Day_<n>` y `Body.Streak.Claim`.
+- `client/DailyRewards` (librería sin `start()`): es una pestaña de la Tienda, no un botón propio. Primero tuvo un séptimo botón en el menú, pero el usuario lo pidió dentro de un menú porque ya había demasiados botones en pantalla, y eligió la Tienda.
+  - `client/PassShop` pone en la cabecera las pestañas `Hud.PassShop.Header.TabShop` y `TabRewards`, a la izquierda de la X, y llama a `DailyRewards.build(ventana, Body.Rewards, TabRewards)`.
+  - La Tienda se abre siempre en su pestaña normal: `AutoPlay` la abre para vender el pase del Auto.
+  - Dentro, las pestañas `Body.Rewards.TabPlaytime` y `TabStreak`.
+  - Tiempo jugado: `Rewards.Playtime.Cards.Reward_<n>`, con su `Claim`.
+  - Racha: `Rewards.Streak.Days.Day_<n>` y `Rewards.Streak.Claim`.
+  - Al enseñarse, sale la pestaña de dentro que tiene algo listo.
   - Entre publicaciones, el cliente adelanta solo el tiempo.
-  - Botón "Recompensas" del menú de la izquierda (`Hud.HudRoot.Menu.DailyRewards`, logo `codigos`). Con algo por recoger, el botón lleva un aviso rojo (`Alert`) con la cuenta y la pestaña su propio aviso.
-  - Al abrir la ventana sale la pestaña que tiene algo listo.
-- Con siete botones, el menú de la izquierda va apoyado encima del bono de amigos (`AnchorPoint` abajo): centrado, la cuarta fila lo pisaba. En móvil se recoloca arriba, como antes.
+  - Con algo por recoger, llevan un aviso rojo (`Alert`) con la cuenta: el botón "Tienda" del menú (el aviso se balancea), la pestaña `TabRewards` y la pestaña de dentro.
+  - La ventana de la Tienda sale encogida (es muy ancha), por eso los textos de la pestaña van más grandes que en otras ventanas.
 - Probar:
   - Con el juego parado, bajar temporalmente los `minutes` de los primeros premios (p. ej. 0.25 y 0.5) y restaurarlos.
   - Desde `Client`: `Remotes.ClaimDaily:FireServer("playtime", 1)` y `("streak")`, luego mirar `Daily` y `Bound_<objeto>` del jugador.
   - El cambio de día y la racha de varios días están cubiertos en `tests/regressions.luau`.
-- Probado en Studio (17-10-2026, escritorio): la ventana, las dos pestañas, recoger, que una repetida o una no lista no dé nada, el aviso del menú y el menú recolocado.
+- Probado en Studio (17-10-2026, escritorio): la pestaña dentro de la Tienda, las dos de dentro, recoger, que una repetida o una no lista no dé nada y los avisos.
 - Sin probar:
   - Móvil.
   - Guardar y volver en el juego publicado.
