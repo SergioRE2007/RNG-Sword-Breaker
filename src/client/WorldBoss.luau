@@ -16,6 +16,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local WorldBossInfo = require(ReplicatedStorage.Shared.WorldBossInfo)
+local BossRewards = require(script.Parent.BossRewards)
 local Ui = require(script.Parent.Ui)
 local WorldBossFx = require(script.Parent.WorldBossFx)
 
@@ -47,7 +48,6 @@ local chargeText: TextLabel
 local list: Frame
 local rows: { Frame } = {}
 local youText: TextLabel
-local prizeText: TextLabel
 
 local lastRank = nil -- último "rank" del servidor
 local result = nil -- { data, until }
@@ -214,14 +214,6 @@ local function build()
 	youText.Size = UDim2.new(1, 0, 0, 22)
 	youText.TextXAlignment = Enum.TextXAlignment.Left
 	youText.TextColor3 = GOLD
-	prizeText = Ui.label(content, 18)
-	prizeText.Name = "Prize"
-	prizeText.LayoutOrder = 6
-	prizeText.Size = UDim2.new(1, 0, 0, 0)
-	prizeText.AutomaticSize = Enum.AutomaticSize.Y
-	prizeText.TextWrapped = true
-	prizeText.TextXAlignment = Enum.TextXAlignment.Left
-	prizeText.TextColor3 = Color3.fromRGB(190, 255, 170)
 end
 
 -- Rellena la lista con las filas que llegan del servidor ({ userId, name, amount }) y la parte de cada uno.
@@ -246,21 +238,6 @@ local function fillRanking(entries, total: number, rank: number?, mine: number?,
 	if youText.Visible then
 		youText.Text = Lang.t(nil, "You: #{rank} · {n}", { rank = rank, n = Format.short(mine or 0) })
 	end
-end
-
-local function prizeLine(prize): string
-	local parts = {
-		Lang.t(nil, if prize.rolls == 1 then "+{n} weapon roll" else "+{n} weapon rolls", { n = prize.rolls }),
-		Lang.t(nil, "+{n} Trait Crystals", { n = prize.traitCrystal }),
-		Lang.t(nil, "+{n} Grade Crystals", { n = prize.gradeCrystal }),
-	}
-	if prize.potions > 0 then
-		table.insert(parts, Lang.t(nil, "+{n} of each potion ({tier})", { n = prize.potions, tier = Config.Potions.Tiers[prize.potionTier] or "" }))
-	end
-	if prize.tickets > 0 then
-		table.insert(parts, Lang.t(nil, if prize.tickets == 1 then "+{n} Ticket" else "+{n} Tickets", { n = prize.tickets }))
-	end
-	return table.concat(parts, " · ")
 end
 
 local function refresh()
@@ -295,14 +272,9 @@ local function refresh()
 			end
 		end
 		fillRanking(data.list, total, data.rank, mine, ROWS)
-		prizeText.Visible = data.rewards ~= nil
-		if data.rewards then
-			prizeText.Text = prizeLine(data.rewards)
-		end
 		return
 	end
 
-	prizeText.Visible = false
 	if inDungeon or (state ~= "open" and state ~= "fight") then
 		panel.Visible = false
 		return
@@ -397,6 +369,13 @@ local function onEvent(kind: string, data)
 		lastRank = nil
 		WorldBossFx.clearCharge()
 		result = { data = data, ends = workspace:GetServerTimeNow() + RESULT_TIME }
+		local mine = 0
+		for _, entry in data.list do
+			if entry.userId == player.UserId then
+				mine = entry.amount
+			end
+		end
+		BossRewards.show(data.rewards, data.rank, mine)
 	end
 	refresh()
 end
