@@ -235,6 +235,17 @@ function Destructibles.plotObjects(part: Instance): { BasePart }
 	return found
 end
 
+-- Objetos vivos de todas las parcelas con dueño: el "Trébol para todos" del menú de admin (server/Clover).
+function Destructibles.ownedObjects(): { BasePart }
+	local found = {}
+	for part, info in objects do
+		if info.plot.owner then
+			table.insert(found, part)
+		end
+	end
+	return found
+end
+
 -- Si esa pieza es un objeto vivo de la parcela del jugador (lo único de aquí que puede atacar).
 function Destructibles.owns(player: Player, part: Instance): boolean
 	local object = objects[part]

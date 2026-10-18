@@ -10,9 +10,10 @@
 --   "announce", texto              aviso a todo el servidor (pasa por el filtro de texto de Roblox)
 --   "banner", texto                mensaje grande arriba de la pantalla de todos (también filtrado)
 --   "boost", stat, multiplicador, minutos / "stopBoost", stat   evento de admin (server/AdminEvents)
+--   "cloverAll"                    el trébol grande en todas las parcelas con dueño (Clover.blessAll)
 -- Con "all" delante (AdminCommand:FireServer("all", acción, ...)) la orden vale en todos los servidores del juego
 -- (server/Broadcast): "give" y "sword" con userId 0 (a todos los que estén jugando en ese momento), "announce",
--- "banner", "boost", "stopBoost" y "weather" (un id de clima, "none" o "auto"). Cada servidor vuelve a comprobar
+-- "banner", "boost", "stopBoost", "cloverAll" y "weather" (un id de clima, "none" o "auto"). Cada servidor vuelve a comprobar
 -- lo que le llega.
 -- Lo regalado no cuenta como monedas ganadas (clasificaciones). Cada orden deja una línea en la consola del servidor.
 local Players = game:GetService("Players")
@@ -322,6 +323,13 @@ local function onCommand(admin: Player, action: unknown, ...: unknown)
 		if AdminEvents.stop(a, global) then
 			print(`[Admin] {admin.Name} stops the {a} event{if global then " on all servers" else ""}`)
 		end
+	elseif action == "cloverAll" then
+		print(`[Admin] {admin.Name} puts a clover on every plot{if global then " on all servers" else ""}`)
+		if global then
+			Broadcast.send("cloverAll", {})
+		else
+			require(script.Parent.Clover).blessAll()
+		end
 	elseif global then
 		-- Lo demás (echar, ir, traer) no existe para todos los servidores; el clima de uno solo va por AdminWeather.
 		if action == "weather" then
@@ -380,6 +388,9 @@ function AdminCommands.start()
 			-- Se pide aquí: Weather arranca después que este módulo.
 			require(script.Parent.Weather).force(data.action)
 		end
+	end)
+	Broadcast.on("cloverAll", function()
+		require(script.Parent.Clover).blessAll()
 	end)
 	Remotes.AdminCommand.OnServerEvent:Connect(onCommand)
 end
