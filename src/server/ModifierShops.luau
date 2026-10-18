@@ -100,15 +100,6 @@ local function onRoll(player: Player, kind: string, id: unknown, count: unknown,
 	-- `rolls` = todas las tiradas, en orden, para que el cliente las enseñe en la ruleta.
 	Remotes.ModifierRolled:FireClient(player, kind, id, index, rolls, previous)
 
-	local entry = info.list[index]
-	-- El aviso cuenta la probabilidad real, con la suerte de la poción.
-	local odds = Modifiers.odds(kind, index, luck)
-	if odds >= Config.AnnounceOdds then
-		local text = if kind == "traits" then "{player} rolled the {name} trait (1 in {n})!" else "{player} rolled the {name} grade (1 in {n})!"
-		Tell.all(entry.color, function(reader)
-			return Lang.t(reader, text, { player = player.DisplayName, name = Lang.t(reader, entry.name), n = Format.short(odds, reader) })
-		end)
-	end
 end
 
 -- Modo admin de pruebas (Config.Test.Admin): solo existe al darle a Jugar en Studio, nunca en el juego publicado.

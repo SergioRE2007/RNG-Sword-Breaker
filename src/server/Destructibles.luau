@@ -169,21 +169,10 @@ local function spawnIn(plot)
 	part.Parent = folder
 
 	-- Avisos cortos (pedido por el usuario): qué ha salido y nada más; la suerte y las tiradas las enseña el cartel del
-	-- objeto. Rareza y tamaño fuera de lo normal: aviso al dueño y, si es muy raro, a todos. Un solo aviso a todos por
-	-- objeto, aunque sea raro por su tipo y por su rareza a la vez.
+	-- objeto. Rareza y tamaño fuera de lo normal: aviso solo al dueño (al chat de todos solo van las armas).
 	local rarity = ObjectSpec.rarity(spec.quality)
 	if spec.odds >= Config.ObjectRolls.NoticeOdds then
 		Tell.notice(owner, rarity.color, "{object} appeared on your plot!", { object = describe(def, spec, owner) })
-	end
-	if spec.odds >= Config.ObjectRolls.AnnounceOdds then
-		Tell.all(rarity.color, function(reader)
-			return Lang.t(reader, "{object} appeared on {player}'s plot!", { player = owner.DisplayName, object = describe(def, spec, reader) })
-		end)
-	elseif spec.typeOdds >= Config.AnnounceOdds then
-		Tell.all(def.color, function(reader)
-			local odds = Lang.t(reader, "1 in {n}", { n = Format.short(spec.typeOdds, reader) })
-			return Lang.t(reader, "{object} appeared on {player}'s plot!", { player = owner.DisplayName, object = `{Lang.t(reader, def.name)} ({odds})` })
-		end)
 	end
 end
 

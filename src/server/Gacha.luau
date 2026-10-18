@@ -36,15 +36,12 @@ local function broadcast(player: Player, entry)
 	if entry.odds >= Config.Gacha.AuraOdds then
 		Remotes.GachaAura:FireAllClients(player, entry.index, entry.odds)
 	end
-	if entry.odds >= Config.Gacha.AnnounceOdds then
-		Tell.all(if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color, function(reader)
-			return Lang.t(reader, "{player} got {weapon} ({odds})!", {
-				player = player.DisplayName,
-				weapon = Permanent.name(entry.index, entry.metal, entry.size, reader),
-				odds = Permanent.describeOdds(entry.index, entry.metal, entry.size, reader),
-			})
-		end)
-	end
+	local weapon = { entry.index, entry.metal or 0, entry.size or 0 }
+	Tell.rare("weapon", entry.odds, if entry.metal and entry.metal > 0 then Config.Metals[entry.metal].color else sword.color, "{player} got {weapon} ({odds})!", {
+		player = player.DisplayName,
+		weapon = { weapon = weapon },
+		odds = { odds = weapon },
+	})
 end
 
 -- Con la mochila llena: posición de la copia menos rara de las que el jugador no ha tocado (ni equipada, ni con

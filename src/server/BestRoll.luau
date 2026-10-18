@@ -316,16 +316,13 @@ function BestRoll.submit(player: Player, sword: number, metal: number?, size: nu
 		return
 	end
 	task.spawn(save, record)
-	-- Al principio cualquier arma bate el récord: solo es noticia si de verdad es rara.
-	if record.rarity >= Config.Gacha.AnnounceOdds then
-		Tell.all(Color3.fromRGB(255, 226, 70), function(reader)
-			return Lang.t(reader, "{player} has the BEST ROLL ever! {weapon} · 1 in {n}", {
-				player = player.DisplayName,
-				weapon = Permanent.name(sword, metal, size, reader),
-				n = Format.short(record.rarity, reader),
-			})
-		end)
-	end
+	-- Al principio cualquier arma bate el récord: solo es noticia si de verdad es rara (como un arma de las tiradas,
+	-- pero con su rareza a secas: el récord es de todo el juego).
+	Tell.rare("weapon", record.rarity, Color3.fromRGB(255, 226, 70), "{player} has the BEST ROLL ever! {weapon} · 1 in {n}", {
+		player = player.DisplayName,
+		weapon = { weapon = { sword, metal or 0, size or 0 } },
+		n = record.rarity,
+	})
 end
 
 function BestRoll.start()

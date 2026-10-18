@@ -1,9 +1,6 @@
 -- Todos los números del juego están aquí. Para equilibrar, toca solo este archivo.
 local Config = {}
 
--- Se anuncia a todo el servidor lo que tenía, con la suerte del jugador ya aplicada,
--- como mucho 1 entre este número de probabilidades de salir.
-Config.AnnounceOdds = 500
 Config.WalkSpeed = 30 -- velocidad al andar (la normal de Roblox es 16)
 
 -- Modo de pruebas: solo actúa al darle a Jugar dentro de Studio, nunca en el juego publicado.
@@ -190,9 +187,18 @@ Config.Gacha = {
 	ShowcaseOdds = 2000, -- (solo con FreeRoll) desde aquí la tirada gratis pasa a pantalla completa
 	RevealTimeout = 30, -- si el cliente no avisa de que ha destapado una tirada rara, su aura y aviso salen igual a los N segundos
 	AuraOdds = 500, -- desde aquí el aura se ve en el personaje (también para los demás)
-	AnnounceOdds = 25000, -- desde aquí se anuncia el arma a todo el servidor
+	AnnounceOdds = 25000, -- con AuraOdds: desde el menor el cliente avisa de que ha destapado la tirada (el chat va por Config.Announce)
 	SellValue = 0, -- gemas por vender una espada (a mano o con la venta automática). 0: las gemas salen de la parcela
 	SellCoins = 30, -- monedas por vender una espada, por cada punto de su daño (Stats.sellCoins; a mano y con la venta automática). Tal cual, sin multiplicadores de monedas
+}
+
+-- Avisos en el chat de lo que le sale a alguien (pedido por el usuario el 18-10-2026: salían avisos de todo): solo
+-- armas (y el récord de "Mejor tirada"); objetos, rasgos, grados, armadura, accesorios, pociones y renacer ya no van
+-- al chat, solo el aviso a quien le sale. Van con el mismo "1 entre N" que decide la animación de la tirada (lo
+-- difícil que era para quien la saca) y con sus mismos cortes (pedido por el usuario): Supernova = chat de su
+-- servidor, Supernova absoluta = chat de todos los servidores (server/Tell, Tell.rare).
+Config.Announce = {
+	weapon = { Server = Config.Gacha.RevealOdds[4], Global = Config.Gacha.RevealOdds[5] },
 }
 
 -- Máquina de fusión (pedida por el usuario; server/Fusion, client/Fusion, cuentas en shared/FusionInfo): se meten Count
@@ -531,7 +537,6 @@ Config.ObjectRolls = {
 	VisualMaxWidth = 18,
 	VisualMaxHeight = 32,
 	NoticeOdds = 250, -- aviso al dueño cuando le aparece un objeto de "1 entre N" o más (rareza por tamaño)
-	AnnounceOdds = 2000, -- y a todo el servidor desde este
 }
 
 -- Rarezas de los objetos, de peor a mejor. Son suyas (no son las de las espadas ni las de la armadura), pero con
@@ -1262,7 +1267,6 @@ Config.Potions = {
 	MaxStack = math.huge, -- usar otra del mismo tier suma su duración, hasta esta cantidad de veces la duración del tier (sin tope, pedido por el usuario)
 	UseCooldown = 0.3, -- segundos mínimos entre dos usos de un jugador
 	LowTime = 60, -- el HUD avisa (el tiempo se pone rojo y late) cuando quedan menos segundos
-	AnnounceFrom = 5, -- desde este tier se anuncia a todo el servidor al conseguirla
 	Families = {
 		damage = {
 			name = "Damage Potion", effect = "Damage", desc = "Multiplies the damage of your hits.",
