@@ -987,6 +987,7 @@ return {
 	-- Pantalla de carga (src/first/Loading)
 	["Loading"] = "Cargando",
 	["Skip"] = "Saltar",
+	["Let's go!"] = "¡Vamos!",
 	["Great roll!"] = "¡Tiradón!",
 	["A star falls for you!"] = "¡Una estrella cae para ti!",
 	["Forged by the heavens!"] = "¡Forjada por los cielos!",
