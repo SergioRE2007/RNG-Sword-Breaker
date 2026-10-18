@@ -3,7 +3,7 @@
 -- ReplicatedStorage al arrancar, y se hace sus propias piezas con el mismo estilo (FredokaOne, borde negro, degradado).
 -- Dos fases: primero lo imprescindible (el juego replicado, los datos del jugador y el HUD montado) y después las
 -- imágenes y los sonidos, que se pueden esperar jugando: en cuanto acaba la primera sale el botón "Saltar".
--- Se cierra sola (se va hacia arriba) al acabar la segunda o a los MAX_WAIT segundos, para no dejar parado a quien vuelve de una
+-- Se cierra sola (se funde con un destello) al acabar la segunda o a los MAX_WAIT segundos, para no dejar parado a quien vuelve de una
 -- reconexión por inactividad sin estar delante.
 -- Rehecha porque al usuario le parecía sosa: ruleta de casillas de rareza que gira mientras carga y cae en una al
 -- terminar, objetos que suben flotando por el fondo, rayos que cambian de color y brillos en el título y la barra.
@@ -28,6 +28,7 @@ local STEP = 86
 local SPEED = 420
 local LAND_TIME = 0.8
 local POP_TIME = 0.4
+local EXIT_TIME = 0.45 -- segundos que tarda en fundirse al irse
 local FLOATERS = 14 -- objetos que suben por el fondo
 
 -- Imágenes de Ui.IMAGES (Ui aún no ha llegado): espada, rayos y rombos, y las de las casillas y el fondo.
@@ -170,7 +171,7 @@ gui.AutoLocalize = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Un Frame y no un CanvasGroup: allí el degradado del fondo teñía de morado todo lo de dentro y no llegaba a tapar
--- la pantalla entera (lo vio el usuario). Al cerrar, la pantalla se va hacia arriba en vez de fundirse.
+-- la pantalla entera (lo vio el usuario).
 local root = Instance.new("Frame")
 root.Name = "Root"
 root.Size = UDim2.fromScale(1, 1)
@@ -579,6 +580,54 @@ local function land()
 	task.wait(POP_TIME)
 end
 
+-- Salida (pedida por el usuario: irse hacia arriba quedaba feísimo): destello blanco, el contenido se acerca un poco y
+-- todo se funde a transparente. Como Root es un Frame y no un CanvasGroup, se funde pieza a pieza desde su valor.
+local function exit()
+	root.Active = false -- se puede jugar mientras se funde
+	local faded = {}
+	local function remember(item: Instance, property: string)
+		local value = (item :: any)[property]
+		if value < 1 then
+			table.insert(faded, { item = item, property = property, from = value })
+		end
+	end
+	for _, item in { root, unpack(root:GetDescendants()) } do
+		if item:IsA("GuiObject") then
+			remember(item, "BackgroundTransparency")
+		end
+		if item:IsA("ImageLabel") then
+			remember(item, "ImageTransparency")
+		elseif item:IsA("TextLabel") or item:IsA("TextButton") then
+			remember(item, "TextTransparency")
+		elseif item:IsA("UIStroke") then
+			remember(item, "Transparency")
+		end
+	end
+	local flash = Instance.new("Frame")
+	flash.Name = "Flash"
+	flash.Size = UDim2.fromScale(1, 1)
+	flash.BackgroundColor3 = WHITE
+	flash.BackgroundTransparency = 0.35
+	flash.BorderSizePixel = 0
+	flash.ZIndex = 20
+	flash.Parent = root
+	local fitted = scale.Scale
+	local begin = os.clock()
+	while true do
+		local t = math.min((os.clock() - begin) / EXIT_TIME, 1)
+		local alpha = t * t
+		for _, entry in faded do
+			(entry.item :: any)[entry.property] = entry.from + (1 - entry.from) * alpha
+		end
+		flash.BackgroundTransparency = 0.35 + 0.65 * math.min(t * 2, 1)
+		scale.Scale = fitted * (1 + 0.15 * easeOut(t))
+		if t >= 1 then
+			break
+		end
+		RunService.RenderStepped:Wait()
+	end
+end
+
 local function close()
 	if closing then
 		return
@@ -594,9 +643,7 @@ local function close()
 		status.Text = say("Let's go!")
 		land()
 	end
-	local fade = TweenService:Create(root, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.fromScale(0, -1.1) })
-	fade:Play()
-	fade.Completed:Wait()
+	exit()
 	loop:Disconnect()
 	gui:Destroy()
 end
