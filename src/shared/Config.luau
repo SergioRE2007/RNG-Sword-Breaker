@@ -208,12 +208,13 @@ Config.Announce = {
 -- de las armas ya va dentro de su rareza). Se pierden sus rasgos y grados.
 -- Precio en gemas según esa suerte: CostScale x suerte ^ CostPower (nunca menos de MinCost). Medido con tools/equilibrio
 -- (jugador tipo de 1 a 130 h): sus gemas por hora salen ~1e-6 x S ^ 1,73, siendo S la suma de las rarezas de cinco armas
--- como las de su bolsa. Pedido por el usuario que cueste de verdad: esa fusión cuesta alrededor de 30 min de gemas a
--- cualquier hora del juego (con la suma entera y 1.6e-7 eran unos 10 min; con 4.6e-6, 1 h, y el usuario la pidió algo más barata).
+-- como las de su bolsa. Pedido por el usuario que cueste de verdad: esa fusión cuesta alrededor de 20 min de gemas a
+-- cualquier hora del juego (con la suma entera y 1.6e-7 eran unos 10 min; con 4.6e-6, 1 h; con 2.3e-6, 30 min, y el 18-10-2026 la pidió
+-- otra vez algo más barata).
 Config.Fusion = {
 	Count = 5, -- armas por fusión
 	Divisor = 2.5, -- la suerte es la suma de las rarezas entre esto
-	CostScale = 2.3e-6,
+	CostScale = 1.5e-6,
 	CostPower = 1.73,
 	MinCost = 100,
 	Cooldown = 1, -- segundos entre fusiones de un mismo jugador
@@ -484,12 +485,13 @@ Config.Destructibles = {
 	-- gemas puestos A OJO, sin tools/equilibrio (el usuario no quiso calendario): mucho más duros que el Infinito. La vida, subida
 	-- para el mejor jugador (8,8e18 por andanada de sus 4 armas): el Sol negro le dura unos 2,5 min, la Galaxia 20 y el Génesis 2 h
 	-- con las armas de ahora (pedido por el usuario: "que sea un cambio de verdad"); con las que sueltan bajan unas 10 veces.
-	-- "luck": x5, x10 y x20 a su suerte de armas (pedido por el usuario: si cuestan tanto, que valgan la pena), aunque
+	-- "luck": x15, x30 y x24 a su suerte de armas (pedido por el usuario: si cuestan tanto, que valgan la pena; subida el
+	-- 18-10-2026 desde x5, x10 y x20, que se quedaban cortos; el Génesis, el más raro, casi no sube: x24 es lo más que dejan las pruebas "el consumible de suerte no regala el arma más rara"), aunque
 	-- con eso el Colmillo astral a secas se vuelve alcanzable al final (decidido por el usuario el 17-10-2026).
 	-- "accent" = color de su luz (Glow y Halo del modelo, y la de ObjectAmbient), distinto del cuerpo.
-	{ name = "Black Sun", rarity = 1e25, hp = 3e21, luck = 5, reward = 1.1e19, gems = 1e22, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(42, 32, 58), accent = Color3.fromRGB(255, 170, 70), material = Enum.Material.Slate, sound = "energy" },
-	{ name = "Galaxy", rarity = 3e26, hp = 2.5e22, luck = 10, reward = 1.5e20, gems = 3e23, size = Vector3.new(16, 10, 16), color = Color3.fromRGB(90, 70, 200), accent = Color3.fromRGB(255, 140, 220), material = Enum.Material.Neon, sound = "energy" },
-	{ name = "Genesis", rarity = 1e28, hp = 1.5e23, luck = 20, reward = 2e21, gems = 1e25, size = Vector3.new(14, 24, 14), color = Color3.fromRGB(240, 235, 255), accent = Color3.fromRGB(120, 230, 255), material = Enum.Material.Marble },
+	{ name = "Black Sun", rarity = 1e25, hp = 3e21, luck = 15, reward = 1.1e19, gems = 1e22, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(42, 32, 58), accent = Color3.fromRGB(255, 170, 70), material = Enum.Material.Slate, sound = "energy" },
+	{ name = "Galaxy", rarity = 3e26, hp = 2.5e22, luck = 30, reward = 1.5e20, gems = 3e23, size = Vector3.new(16, 10, 16), color = Color3.fromRGB(90, 70, 200), accent = Color3.fromRGB(255, 140, 220), material = Enum.Material.Neon, sound = "energy" },
+	{ name = "Genesis", rarity = 1e28, hp = 1.5e23, luck = 24, reward = 2e21, gems = 1e25, size = Vector3.new(14, 24, 14), color = Color3.fromRGB(240, 235, 255), accent = Color3.fromRGB(120, 230, 255), material = Enum.Material.Marble },
 }
 
 -- Gemas de los objetos de la parcela: cada objeto con "gems" las suelta con probabilidad "gemChance" (1 si no
