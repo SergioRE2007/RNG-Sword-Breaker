@@ -32,3 +32,4 @@ Pedido por el usuario (16-10-2026): subir de nivel cada arma gastando gemas, has
 - Los niveles bajan a 0 a menudo en la simulación: al cambiar a un arma nueva mejor, empieza sin nivel.
 - Probado en Studio (17-10-2026): con 0 gemas, `LevelSword` da el aviso "No tienes gemas suficientes" abajo a la derecha y no cambia nada.
 - Bajado el 18-10-2026 (el usuario lo veía "absurdamente caro"; probados 1e-5 y 1e-9, el segundo demasiado barato): `CostBase` 1e-7, 1000 veces menos que antes, y `MinCost` 10. Medido con `informe.luau 3`: 5.º renacimiento a 51,9 h (antes 75 h); el jugador tipo, que aparta la mitad de sus gemas, lleva casi siempre sus armas al 100.
+- Y otra vez (pidió "un poco más"): `CostBase` 3e-8, unas 3300 veces menos que el 1e-4 del principio. 5.º renacimiento a 58 h con `informe.luau 3` (los hitos bailan ±10 h entre tandas).
