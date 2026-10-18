@@ -14,6 +14,14 @@ return {
 		{ item = "potion_weaponLuck_5", amount = 2 },
 		{ item = "potion_coins_5", amount = 2 },
 	} },
+	-- Actualización 1: cosillas (pedido por el usuario el 18-10-2026).
+	ACT1 = { rewards = {
+		{ item = "smallClover", amount = 1 },
+		{ item = "traitCrystal", amount = 10 },
+		{ item = "gradeCrystal", amount = 10 },
+		{ item = "potion_weaponLuck_3", amount = 1 },
+		{ item = "potion_boxLuck_3", amount = 1 },
+	} },
 	-- 5467 tickets = lo que cuestan en tickets los ocho pases juntos (Stats.ticketPrice). Para 10 jugadores.
 	["FUNDADOR-K7Q4X9"] = { maxUses = 10, rewards = { { item = "missionToken", amount = 5467 } } },
 }
