@@ -206,16 +206,16 @@ Config.Announce = {
 -- x tamaño) entre Divisor (pedido por el usuario: con la suma entera estaba muy rota). Así sale siempre algo de "1 entre
 -- esa suerte" o más raro: cinco iguales dan una 2 veces más rara, y con suerte mucho más. Ninguna otra suerte se suma (la
 -- de las armas ya va dentro de su rareza). Se pierden sus rasgos y grados.
--- Precio en gemas según esa suerte: CostScale x suerte ^ CostPower (nunca menos de MinCost). Medido con tools/equilibrio
--- (jugador tipo de 1 a 130 h): sus gemas por hora salen ~1e-6 x S ^ 1,73, siendo S la suma de las rarezas de cinco armas
--- como las de su bolsa. Pedido por el usuario que cueste de verdad: esa fusión cuesta alrededor de 12 min de gemas a
--- cualquier hora del juego (con la suma entera y 1.6e-7 eran unos 10 min; con 4.6e-6, 1 h; con 2.3e-6, 30 min, y el 18-10-2026 la pidió
--- otra vez algo más barata: 1.5e-6, 20 min, y luego un poco más).
+-- Precio en gemas según esa suerte: CostScale x suerte ^ CostPower (nunca menos de MinCost). Antes iba con 1e-6 y
+-- potencia 1,73, sacado de tools/equilibrio, pero en el juego de verdad las gemas crecen mucho más despacio que eso: un
+-- jugador con 50 h, 200 Sp de gemas y armas de 150 Qi pagaba ~3e29 por fusión (18-10-2026, pedido por el usuario que
+-- pueda fusionar). Ajustado a ojo con dos puntos: armas de 1K (suerte 2K) ~340 gemas; las de ese jugador (suerte 3e20)
+-- ~1e24, el 0,5 % de sus gemas.
 Config.Fusion = {
 	Count = 5, -- armas por fusión
 	Divisor = 2.5, -- la suerte es la suma de las rarezas entre esto
-	CostScale = 1e-6,
-	CostPower = 1.73,
+	CostScale = 0.025,
+	CostPower = 1.25,
 	MinCost = 100,
 	Cooldown = 1, -- segundos entre fusiones de un mismo jugador
 	Reach = 40, -- studs desde la máquina en los que el servidor acepta la fusión (la ventana se abre a OpenDistance)
