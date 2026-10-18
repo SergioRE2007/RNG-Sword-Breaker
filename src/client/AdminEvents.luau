@@ -4,7 +4,8 @@
 -- servidor o a todos según client/AdminScope.
 --   `Body.Events.Card.Content`: `MessageRow.Message` y `.Send`; `Stats.Stat_<stat>` (qué se multiplica), `Inputs.Mult`,
 --     `Inputs.Minutes` e `Inputs.Start`; `Active.Row_<stat>` (los que hay en marcha, con su `Stop`); `WorldBoss` hace salir
---     ya el Jefe del mundo en este servidor (AdminCommand "worldBoss").
+--     ya el Jefe del mundo en este servidor (AdminCommand "worldBoss"); `CloverAll` pone el trébol grande en todas las
+--     parcelas (AdminCommand "cloverAll", según AdminScope).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -192,19 +193,31 @@ function AdminEvents.build(pane: Frame, window: Frame)
 		AdminScope.command("boost", chosen, value, math.floor(time))
 	end)
 
-	-- Eventos en marcha ---------------------------------------------------------------------------
-	local listTop = top + 28 + STAT * 2 + GAP * 2 + ROW + 14
-	heading(content, "ActiveTitle", Lang.t(nil, "Events running on this server"), listTop)
+	-- Acciones de un golpe, en su fila: trébol para todos y Jefe del mundo ----------------------------
+	local actionsTop = top + 28 + STAT * 2 + GAP * 2 + ROW + GAP + 4
+	-- Trébol para todos: el grande en todas las parcelas (este servidor o todos, según AdminScope).
+	local clover = Ui.button(content, Lang.t(nil, "Clover for everyone"), Config.Items.luckClover.color:Lerp(BLACK, 0.3))
+	clover.Name = "CloverAll"
+	clover.Position = UDim2.fromOffset(0, actionsTop)
+	clover.Size = UDim2.new(0.5, -GAP / 2, 0, STAT)
+	clover.TextSize = 18
+	clover.Activated:Connect(function()
+		AdminScope.command("cloverAll")
+	end)
 	-- Jefe del mundo: siempre en este servidor (cada uno lleva su calendario).
 	local summon = Ui.button(content, Lang.t(nil, "Summon world boss"), Color3.fromRGB(150, 90, 220))
 	summon.Name = "WorldBoss"
 	summon.AnchorPoint = Vector2.new(1, 0)
-	summon.Position = UDim2.new(1, 0, 0, listTop - 4)
-	summon.Size = UDim2.fromOffset(200, 30)
-	summon.TextSize = 15
+	summon.Position = UDim2.new(1, 0, 0, actionsTop)
+	summon.Size = UDim2.new(0.5, -GAP / 2, 0, STAT)
+	summon.TextSize = 18
 	summon.Activated:Connect(function()
 		Remotes.AdminCommand:FireServer("worldBoss")
 	end)
+
+	-- Eventos en marcha ---------------------------------------------------------------------------
+	local listTop = actionsTop + STAT + 12
+	heading(content, "ActiveTitle", Lang.t(nil, "Events running on this server"), listTop)
 	local active = Instance.new("ScrollingFrame")
 	active.Name = "Active"
 	active.Position = UDim2.fromOffset(0, listTop + 28)

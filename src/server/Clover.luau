@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Destructibles = require(script.Parent.Destructibles)
 local PlayerData = require(script.Parent.PlayerData)
@@ -79,6 +80,24 @@ function Clover.setCustom(player: Player, luck: unknown): number?
 	custom[player] = if luck >= 1 then luck else nil
 	player:SetAttribute("CloverTest", custom[player])
 	return custom[player] or 0
+end
+
+-- "Trébol para todos" (menú de admin, pedido por el usuario para el admin abuse): el trébol grande, gratis, en todos
+-- los objetos de todas las parcelas con dueño de este servidor, con mensaje grande para todos. Se salta los que ya
+-- llevan trébol. Devuelve cuántos objetos ha tocado.
+function Clover.blessAll(): number
+	local luck = cfg.Items[cfg.Item].luck
+	local boosted = 0
+	for _, part in Destructibles.ownedObjects() do
+		if not part:GetAttribute("Clover") and Destructibles.boost(part, luck) then
+			boosted += 1
+		end
+	end
+	for _, player in Players:GetPlayers() do
+		local text = Lang.t(player, "An admin put a Lucky Clover on every plot: x{n} weapon luck! Break everything!", { n = Format.short(luck, player) })
+		Remotes.AdminBanner:FireClient(player, text)
+	end
+	return boosted
 end
 
 function Clover.start()
