@@ -48,12 +48,6 @@ local function onRebirth(player: Player)
 	Missions.add(player, "rebirth")
 	local count = Stats.rebirths(player)
 	Remotes.Reborn:FireAllClients(player, count, coins, gems)
-	-- Los números redondos y los primeros se anuncian a todos.
-	if count <= 3 or count % 5 == 0 then
-		Tell.all(GOLD, function(reader)
-			return Lang.t(reader, if count == 1 then "{player} has been reborn {count} time!" else "{player} has been reborn {count} times!", { player = player.DisplayName, count = count })
-		end)
-	end
 	-- Un cambio así de gordo se guarda al momento.
 	task.spawn(PlayerData.save, player)
 end

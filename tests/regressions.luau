@@ -131,6 +131,7 @@ local function fixture(saved, customStore)
 		RunService = { IsStudio = function() return false end, Heartbeat = signal() },
 		TextService = {},
 		HttpService = http,
+		MessagingService = { PublishAsync = function() end, SubscribeAsync = function() end },
 		DataStoreService = { GetDataStore = function() return store end },
 		CollectionService = {
 			AddTag = function(_, item, tag)

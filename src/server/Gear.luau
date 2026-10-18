@@ -30,16 +30,6 @@ function Gear.onBroken(player: Player)
 				table.sort(edited.artifacts)
 			end)
 			Tell.notice(player, artifact.color, "Accessory: {name}!", { name = Lang.t(player, artifact.name) })
-			-- Solo se anuncia a todos el primero: los repetidos no son noticia.
-			if owned == 0 and artifact.rarity / luck >= Config.AnnounceOdds then
-				Tell.all(artifact.color, function(reader)
-					return Lang.t(reader, "{player} found {name} (1 in {n})!", {
-						player = player.DisplayName,
-						name = Lang.t(reader, artifact.name),
-						n = Format.short(artifact.rarity / luck, reader),
-					})
-				end)
-			end
 			return
 		end
 	end

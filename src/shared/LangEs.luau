@@ -1069,4 +1069,5 @@ return {
 	["Clovers have changed! Now they boost a whole plot. Thanks for buying before: here is 1 Lucky Clover!"] = "¡Los tréboles han cambiado! Ahora valen para toda la parcela. Por haberlos comprado antes: ¡aquí tienes 1 Trébol de la suerte!",
 	["Clovers have changed! Now they boost a whole plot. Thanks for buying before: here are {n} Lucky Clovers!"] = "¡Los tréboles han cambiado! Ahora valen para toda la parcela. Por haberlos comprado antes: ¡aquí tienes {n} Tréboles de la suerte!",
 	["GIFT"] = "REGALO",
+	["[Global] {text}"] = "[Global] {text}",
 }

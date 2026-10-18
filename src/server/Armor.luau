@@ -106,17 +106,6 @@ function Armor.store(player: Player, piece, luck: number): boolean
 			{ name = ArmorStats.name(piece, player), n = Format.short(crystals, player) }
 		)
 	end
-	local odds = quality.odds / luck
-	if odds >= Config.AnnounceOdds then
-		Tell.all(quality.color, function(reader)
-			return Lang.t(reader, "{player} got {name} ({quality}, 1 in {n})!", {
-				player = player.DisplayName,
-				name = ArmorStats.name(piece, reader),
-				quality = Lang.t(reader, quality.name),
-				n = Format.short(odds, reader),
-			})
-		end)
-	end
 	return kept
 end
 

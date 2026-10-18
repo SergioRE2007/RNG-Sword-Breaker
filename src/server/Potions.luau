@@ -123,11 +123,6 @@ function Potions.give(player: Player, family: string, tier: number): string?
 		data.items[key] += 1
 	end)
 	Remotes.Notice:FireClient(player, `+1 {Lang.t(player, item.name)}`, item.color)
-	if tier >= cfg.AnnounceFrom then
-		Tell.all(item.color, function(reader)
-			return Lang.t(reader, "{player} got {item}!", { player = player.DisplayName, item = Lang.t(reader, item.name) })
-		end)
-	end
 	return key
 end
 
