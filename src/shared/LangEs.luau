@@ -269,7 +269,7 @@ return {
 	-- Tutorial
 	["Click an object on your plot to break it"] = "Haz clic en un objeto de tu parcela para romperlo",
 	["Break 10 objects: they drop coins and weapons"] = "Rompe 10 objetos: sueltan monedas y armas",
-	["Open the Backpack and equip another weapon"] = "Abre la Mochila y equipa otra arma",
+	["Open the Backpack and press Equip best"] = "Abre la Mochila y pulsa Equipar mejores",
 	["Buy an upgrade with your coins"] = "Compra una mejora con tus monedas",
 	["Tap the sack behind your plot and leave a weapon: it will earn coins on its own"] = "Toca el saco de detrás de tu parcela y deja un arma: te dará monedas sola",
 	["Go to the Missions stall in the center and take a look"] = "Ve al puesto de Misiones del centro y míralas",

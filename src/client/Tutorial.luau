@@ -611,7 +611,7 @@ local function insideTarget(info): GuiObject?
 		if swords and swords:IsA("GuiObject") and not swords.Visible then
 			return window:FindFirstChild("TabSwords") :: GuiObject?
 		end
-		return firstCell(swords and swords:FindFirstChild("Grid"), notEquipped)
+		return if swords then swords:FindFirstChild("Best") :: GuiObject? else nil
 	elseif info.kind == "bag" then
 		local window = gui:FindFirstChild("BagMenu")
 		if not (window and window:IsA("GuiObject") and Ui.isOpen(window)) then

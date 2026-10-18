@@ -1049,7 +1049,7 @@ Config.Tutorial = {
 	Steps = {
 		{ id = "break", kind = "breaks", goal = 1, text = "Click an object on your plot to break it", point = "object" },
 		{ id = "break10", kind = "breaks", goal = 10, text = "Break 10 objects: they drop coins and weapons", point = "object" },
-		{ id = "equip", kind = "equip", text = "Open the Backpack and equip another weapon", point = "button:Menu.Backpack" },
+		{ id = "equip", kind = "equip", text = "Open the Backpack and press Equip best", point = "button:Menu.Backpack" },
 		{ id = "upgrade", kind = "upgrades", goal = 1, text = "Buy an upgrade with your coins", point = "button:Menu.Upgrades" },
 		{ id = "bag", kind = "bag", text = "Tap the sack behind your plot and leave a weapon: it will earn coins on its own", point = "bag" },
 		{ id = "missions", kind = "seen", window = "Missions", text = "Go to the Missions stall in the center and take a look", point = "stall:missions" },
