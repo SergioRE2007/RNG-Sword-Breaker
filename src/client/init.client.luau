@@ -48,6 +48,7 @@ require(script.Ambience).start()
 require(script.ObjectAmbient).start()
 require(script.ObjectInfo).start()
 require(script.ArmorAura).start()
+require(script.MysteryAura).start() -- aura misteriosa de los jugadores de Config.MysteryAura
 require(script.PotionFx).start()
 require(script.JapanFx).start()
 require(script.Weather).start() -- después de DayCycle, DungeonFx y JapanFx: mezcla su luz y amaina sus pétalos

@@ -1072,4 +1072,5 @@ return {
 	["[Global] {text}"] = "[Global] {text}",
 	["Clover for everyone"] = "Trébol para todos",
 	["An admin put a Lucky Clover on every plot: x{n} weapon luck! Break everything!"] = "¡Un admin ha puesto un Trébol de la suerte en todas las parcelas: x{n} de suerte de armas! ¡Rómpelo todo!",
+	["emanates a mysterious aura"] = "emana un aura misteriosa",
 }

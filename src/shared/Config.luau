@@ -31,6 +31,9 @@ Config.Admins = { 4490621018 }
 -- Jugadores que van aparte (pedido por el usuario, para su propia cuenta): juegan y guardan como todos, pero no salen en
 -- las clasificaciones globales ni pueden tener la "Mejor tirada" del hub (server/Leaderboards y server/BestRoll).
 Config.Unranked = { 4490621018 }
+-- Jugadores que emanan siempre un aura misteriosa (pedido por el usuario): humo violeta y el texto "emana un aura
+-- misteriosa" saliendo de ellos. Solo se ve, no da nada (client/MysteryAura).
+Config.MysteryAura = { 1076648621 }
 Config.BaseCooldown = 0.35 -- segundos entre golpes de una espada (cada tipo de arma lo multiplica por su "cooldown"). No hay mejora ni poción que lo baje
 Config.MinCooldown = 0.1 -- tiempo mínimo entre golpes, por rápida que sea el arma
 Config.StartCoins = 0
