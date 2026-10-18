@@ -728,10 +728,11 @@ for rebirths = 0, 30 do
 	local side = plotStats.plotSize(rebirths)
 	equal(side % 20 == 0 and side >= f.config.Plot.Size and side <= f.config.Plot.MaxSize, true, `medida de parcela con {rebirths} renacimientos`)
 end
--- El arma más rara sigue siéndolo con toda la suerte al máximo, y ni el mejor objeto posible la garantiza.
+-- El arma más rara (con el mejor metal y el mejor tamaño, Etherio y Universal: decidido por el usuario el 18-10-2026,
+-- no la mejor arma a secas) sigue siéndolo con toda la suerte al máximo, y ni el mejor objeto posible la garantiza.
 local top = 0
-for _, sword in f.config.Swords do
-	top = math.max(top, sword.rarity or 0)
+for sword in f.config.Swords do
+	top = math.max(top, permanent.rarity(sword, #f.config.Metals, #f.config.Sizes))
 end
 local gachaMax = f.config.Rebirth.gachaLuck ^ f.config.Rebirth.max
 local _, highest = objectSpec.scaleLimits(rarest)

@@ -485,13 +485,13 @@ Config.Destructibles = {
 	-- gemas puestos A OJO, sin tools/equilibrio (el usuario no quiso calendario): mucho más duros que el Infinito. La vida, subida
 	-- para el mejor jugador (8,8e18 por andanada de sus 4 armas): el Sol negro le dura unos 2,5 min, la Galaxia 20 y el Génesis 2 h
 	-- con las armas de ahora (pedido por el usuario: "que sea un cambio de verdad"); con las que sueltan bajan unas 10 veces.
-	-- "luck": x15, x30 y x24 a su suerte de armas (pedido por el usuario: si cuestan tanto, que valgan la pena; subida el
-	-- 18-10-2026 desde x5, x10 y x20, que se quedaban cortos; el Génesis, el más raro, casi no sube: x24 es lo más que dejan las pruebas "el consumible de suerte no regala el arma más rara"), aunque
+	-- "luck": x20, x60 y x200 a su suerte de armas (pedido por el usuario: si cuestan tanto, que valgan la pena; subida el
+	-- 18-10-2026 desde x5, x10 y x20, que se quedaban cortos), aunque
 	-- con eso el Colmillo astral a secas se vuelve alcanzable al final (decidido por el usuario el 17-10-2026).
 	-- "accent" = color de su luz (Glow y Halo del modelo, y la de ObjectAmbient), distinto del cuerpo.
-	{ name = "Black Sun", rarity = 1e25, hp = 3e21, luck = 15, reward = 1.1e19, gems = 1e22, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(42, 32, 58), accent = Color3.fromRGB(255, 170, 70), material = Enum.Material.Slate, sound = "energy" },
-	{ name = "Galaxy", rarity = 3e26, hp = 2.5e22, luck = 30, reward = 1.5e20, gems = 3e23, size = Vector3.new(16, 10, 16), color = Color3.fromRGB(90, 70, 200), accent = Color3.fromRGB(255, 140, 220), material = Enum.Material.Neon, sound = "energy" },
-	{ name = "Genesis", rarity = 1e28, hp = 1.5e23, luck = 24, reward = 2e21, gems = 1e25, size = Vector3.new(14, 24, 14), color = Color3.fromRGB(240, 235, 255), accent = Color3.fromRGB(120, 230, 255), material = Enum.Material.Marble },
+	{ name = "Black Sun", rarity = 1e25, hp = 3e21, luck = 20, reward = 1.1e19, gems = 1e22, size = Vector3.new(13, 13, 13), color = Color3.fromRGB(42, 32, 58), accent = Color3.fromRGB(255, 170, 70), material = Enum.Material.Slate, sound = "energy" },
+	{ name = "Galaxy", rarity = 3e26, hp = 2.5e22, luck = 60, reward = 1.5e20, gems = 3e23, size = Vector3.new(16, 10, 16), color = Color3.fromRGB(90, 70, 200), accent = Color3.fromRGB(255, 140, 220), material = Enum.Material.Neon, sound = "energy" },
+	{ name = "Genesis", rarity = 1e28, hp = 1.5e23, luck = 200, reward = 2e21, gems = 1e25, size = Vector3.new(14, 24, 14), color = Color3.fromRGB(240, 235, 255), accent = Color3.fromRGB(120, 230, 255), material = Enum.Material.Marble },
 }
 
 -- Gemas de los objetos de la parcela: cada objeto con "gems" las suelta con probabilidad "gemChance" (1 si no
@@ -528,7 +528,7 @@ Config.ObjectRolls = {
 	SizeLuckPower = 4, -- el tamaño cuenta de verdad: al 70 % x0.24, al 115 % x1.75, al 150 % x5, al 200 % x16, al 250 % x39
 	SizeHpPower = 2,
 	SizeRewardPower = 2,
-	MaxLuck = 1e16, -- tope de seguridad de la suerte de un objeto (un Infinito mítico y colosal no llega a x1e14)
+	MaxLuck = 1e18, -- tope de seguridad de la suerte de un objeto (un Génesis mítico y colosal llega a unos x3e17)
 	MaxRolls = 5, -- tope de tiradas de arma de un solo objeto
 	MaxWidth = 30, -- studs: ningún objeto se agranda más que esto de ancho...
 	MaxHeight = 56, -- ...ni de alto (los tipos más grandes llegan a menos escala que los pequeños)
