@@ -210,12 +210,12 @@ Config.Announce = {
 -- potencia 1,73, sacado de tools/equilibrio, pero en el juego de verdad las gemas crecen mucho más despacio que eso: un
 -- jugador con 50 h, 200 Sp de gemas y armas de 150 Qi pagaba ~3e29 por fusión (18-10-2026, pedido por el usuario que
 -- pueda fusionar). Ajustado a ojo con dos puntos: armas de 1K (suerte 2K) ~340 gemas; las de ese jugador (suerte 3e20)
--- ~1e24, el 0,5 % de sus gemas.
+-- ~4e25, el 20 % de sus gemas (pedido por el usuario: con el 0,5 % era regalada).
 Config.Fusion = {
 	Count = 5, -- armas por fusión
 	Divisor = 2.5, -- la suerte es la suma de las rarezas entre esto
-	CostScale = 0.025,
-	CostPower = 1.25,
+	CostScale = 0.0125,
+	CostPower = 1.345,
 	MinCost = 100,
 	Cooldown = 1, -- segundos entre fusiones de un mismo jugador
 	Reach = 40, -- studs desde la máquina en los que el servidor acepta la fusión (la ventana se abre a OpenDistance)
