@@ -31,6 +31,7 @@
   - `info.usual` es esa misma suerte. `Gacha` (línea de `usual`) la usa también para `"worldBoss"`: si no, con suerte ×N todas las tiradas parecerían de "1 entre N" y saldría el premio gordo en cada una.
   - Cristales y pociones directos a `data.items`, sin `Loot.roll`, que mete el pase `dungeonLoot`.
   - Tickets para los tres primeros.
+- **Ventana de premios** (pedido por el usuario el 18-10-2026: antes eran una línea de texto en el panel): al llegar `result`, `client/BossRewards` abre `Hud.BossRewards`, como el botín de mazmorra: "#puesto · Tu daño" arriba, una tarjeta por premio (`Body.Grid.Reward<n>`: tiradas, cristales, una por poción y tickets, con imagen y "xN") que salen una a una, y el botón `Body.Bar.Collect`. Solo enseña: el servidor ya lo ha dado. Probar desde `Server`: `Remotes.WorldBoss:FireClient(jugador, "result", { list = { { userId, name, amount } }, rank = 1, rewards = { rolls = 4, traitCrystal = 12, gradeCrystal = 12, potions = 2, potionTier = 3, tickets = 3 } })`.
 - **Cliente**:
   - `client/WorldBoss`, panel `Hud.HudRoot.WorldBoss` con estas piezas:
     - `Content.Head` (`Title`, `Detail`, `Action`: "Ir" fuera, que usa `Teleport("portal")`, y "Salir" dentro);
