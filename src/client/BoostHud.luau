@@ -122,7 +122,8 @@ end
 
 local banner: CanvasGroup? = nil
 
-local function showBanner(text: unknown)
+-- tagText y seconds solo los manda el servidor en sus propios mensajes (server/CloverRefund); el de admin no los lleva.
+local function showBanner(text: unknown, tagText: unknown, seconds: unknown)
 	if type(text) ~= "string" or text == "" then
 		return
 	end
@@ -179,7 +180,7 @@ local function showBanner(text: unknown)
 	tag.Position = UDim2.fromOffset(0, 16)
 	tag.Size = UDim2.new(1, 0, 0, 22)
 	tag.TextColor3 = GOLD
-	tag.Text = "★  ADMIN  ★"
+	tag.Text = if type(tagText) == "string" then `★  {tagText}  ★` else "★  ADMIN  ★"
 	tag.ZIndex = Z_BANNER + 1
 	local body = Ui.label(plate, 36)
 	body.Name = "Text"
@@ -195,6 +196,7 @@ local function showBanner(text: unknown)
 	limit.MinTextSize = 16
 	limit.Parent = body
 
+	local stay = if type(seconds) == "number" then math.clamp(seconds, 1, 30) else cfg.BannerTime
 	local function leave()
 		if banner == group then
 			banner = nil
@@ -202,14 +204,14 @@ local function showBanner(text: unknown)
 		group:Destroy()
 	end
 	if Performance.get() then
-		task.delay(cfg.BannerTime, leave)
+		task.delay(stay, leave)
 		return
 	end
 	scale.Scale = 0.6
 	group.GroupTransparency = 1
 	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	TweenService:Create(group, TweenInfo.new(0.25), { GroupTransparency = 0 }):Play()
-	task.delay(cfg.BannerTime, function()
+	task.delay(stay, function()
 		if group.Parent then
 			TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.85 }):Play()
 			local out = TweenService:Create(group, TweenInfo.new(0.3), { GroupTransparency = 1 })
