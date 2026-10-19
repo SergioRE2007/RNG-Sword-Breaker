@@ -76,8 +76,10 @@ local function preview(cell: GuiObject, piece)
 	viewport.CurrentCamera = camera
 end
 
--- X roja sobre las piezas marcadas para desmontar, como la del menú de vender armas.
+-- Las piezas marcadas para desmontar se ven como las armas elegidas en el menú de vender (pedido por el usuario):
+-- fondo rojo y una X roja medio transparente.
 local MARK_COLOR = Color3.fromRGB(235, 45, 55)
+local MARK_ALPHA = 0.4
 local function salvageMark(cell: GuiObject): Frame
 	local mark = Instance.new("Frame")
 	mark.Name = "SalvageMark"
@@ -93,7 +95,7 @@ local function salvageMark(cell: GuiObject): Frame
 		bar.Size = UDim2.fromScale(0.95, 0.15)
 		bar.Rotation = turn
 		bar.BackgroundColor3 = MARK_COLOR
-		bar.BackgroundTransparency = 0.25
+		bar.BackgroundTransparency = MARK_ALPHA
 		bar.BorderSizePixel = 0
 		bar.ZIndex = 5
 		bar.Parent = mark
@@ -307,7 +309,9 @@ function ArmorPane.build(pane: Frame, helpers)
 		for id, cell in cells do
 			local item = cell :: any
 			item.Select.Visible = not salvaging and id == selected
-			item.SalvageMark.Visible = salvaging and marked[id] == true
+			local on = salvaging and marked[id] == true
+			item.SalvageMark.Visible = on
+			item.BackgroundColor3 = if on then MARK_COLOR else item:GetAttribute("Base")
 		end
 		if salvaging then
 			local count, crystals = 0, 0
@@ -432,6 +436,7 @@ function ArmorPane.build(pane: Frame, helpers)
 				return pieceTip(find(piece.id) or piece)
 			end, true)
 			salvageMark(cell)
+			cell:SetAttribute("Base", quality.color) -- color de su fondo sin marcar
 			cell.Activated:Connect(function()
 				if salvaging then
 					local current = find(piece.id)
