@@ -97,6 +97,41 @@ function Permanent.rollWeapon(luck: number): (number, number, number)
 	return last.sword, last.metal, last.size
 end
 
+-- Tirada de la fusión (pedido por el usuario): la suerte asegura "1 entre N" y la probabilidad de sacar algo X veces
+-- más raro que eso es 1/X (el doble de raro, 50 %; diez veces, 10 %). Con la cascada de rollWeapon, que suma las
+-- combinaciones cercanas, con suerte N salía algo 10 veces más raro el 95 % de las veces. Es una tirada de cola
+-- pareto: P(rareza >= R) = suerte / R, hecha por niveles de rareza (de más raro a más común) para que siga exacta con
+-- números enormes; las combinaciones de un mismo nivel se reparten al azar.
+local levels = nil
+function Permanent.rollFusion(luck: number): (number, number, number)
+	if not levels then
+		levels = {}
+		for _, combo in Permanent.combos() do
+			local last = levels[#levels]
+			if last and last.rarity == combo.rarity then
+				table.insert(last.members, combo)
+			else
+				table.insert(levels, { rarity = combo.rarity, members = { combo } })
+			end
+		end
+	end
+	local picked = levels[#levels]
+	for index, level in levels do
+		local chance = luck / level.rarity
+		if index > 1 then
+			local above = levels[index - 1].rarity
+			-- (luck/r - luck/above) / (1 - luck/above), sin restar números casi iguales
+			chance = if luck >= above then 1 else luck * (above - level.rarity) / (level.rarity * above - luck * level.rarity)
+		end
+		if chance >= 1 or Chance.roll(chance) then
+			picked = level
+			break
+		end
+	end
+	local combo = picked.members[math.random(#picked.members)]
+	return combo.sword, combo.metal, combo.size
+end
+
 -- "1 entre N" de que una tirada con esa suerte saque algo tan raro como esa arma o más (cualquier combinación de
 -- su rareza total para arriba). No es Permanent.odds, que mide esa combinación sola: hay cientos igual de raras, y
 -- que salga alguna es mucho más fácil. Es lo que mide el espectáculo de una tirada (server/Gacha).

@@ -97,7 +97,8 @@ local function draw(player: Player, boost: number, source: string, info)
 	-- armas de alrededor de "1 entre N" en total. Tirados aparte, con la suerte en las tres tiradas, un objeto de x4
 	-- sacaba metal y tamaño 4 x 4 x 4 veces más; y con la suerte propia sola, a partir de x10 todo salía de Cobre.
 	local luck = base * boost
-	local index, metal, size = Permanent.rollWeapon(luck)
+	local rollWeapon = if fusion then Permanent.rollFusion else Permanent.rollWeapon
+	local index, metal, size = rollWeapon(luck)
 	local rarity = Permanent.rarity(index, metal, size)
 	Index.record(player, index, metal, size) -- al Índice va todo lo que sale, se quede o se venda solo
 	-- Lo difícil que era para el jugador ("1 entre N"): es lo que mide el espectáculo, el aura y el aviso. Es la
@@ -117,7 +118,8 @@ local function draw(player: Player, boost: number, source: string, info)
 	-- La fusión, contra su propia suerte: lo que sale "de serie" (1 entre la suma) no se celebra; lo que la supera, sí.
 	local usual = if source == "object" or source == "worldBoss" then base * mean elseif fusion then luck else base
 	local clover = if info and type(info.clover) == "number" then math.max(info.clover, 1) else 1
-	local odds = Permanent.rollOdds(index, metal, size, usual)
+	-- En la fusión la probabilidad de sacar algo así o más raro es suerte / rareza (Permanent.rollFusion).
+	local odds = if fusion then math.max(rarity / luck, 1) else Permanent.rollOdds(index, metal, size, usual)
 	-- El Trébol de la suerte no cuenta (pedido por el usuario: lo que saca de más se celebra): su tirada se mide
 	-- contra la suerte que tenía ese objeto sin él, así que un trébol de xN da tiradas de alrededor de "1 entre N".
 	-- Y como mínimo la primera cinemática: es de pago y tiene que sentirse (por la suerte sola salía en 2 de cada 3).
