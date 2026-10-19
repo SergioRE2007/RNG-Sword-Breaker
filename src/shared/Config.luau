@@ -1204,7 +1204,7 @@ Config.AutoClicker = { group = 1002188803 }
 -- se reconecta; Countdown = segundos de aviso (tocar algo lo cancela); DungeonWait = cuánto se espera, como mucho, a que
 -- acabe la partida de mazmorra en curso para no perder sus premios (After + DungeonWait tiene que quedar por debajo de
 -- 1200); MinSession = segundos mínimos en el servidor antes de poder pedirlo.
-Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, MinSession = 300 }
+Config.Rejoin = { After = 1020, Countdown = 10, DungeonWait = 90, Deadline = 1110, MinSession = 300 }
 
 -- JEFE DEL MUNDO (server/WorldBoss, client/WorldBoss; cuentas en shared/WorldBossInfo). Cae a los First segundos de abrir el
 -- servidor y luego cada Interval (pedido por el usuario: minuto 20, 50, 80... de cada servidor, 10 min después de que acabe
