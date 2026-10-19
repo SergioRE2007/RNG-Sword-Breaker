@@ -62,7 +62,7 @@ function Rejoin.start()
 		end
 	end)
 
-	local function attempt()
+	local function attempt(idle: number)
 		busy = true
 		token += 1
 		local mine = token
@@ -73,7 +73,9 @@ function Rejoin.start()
 		if zone > 0 then
 			title.Text = Lang.t(nil, "Reconnecting when the run ends…")
 			local run = player:GetAttribute("DungeonRun")
-			local limit = os.clock() + cfg.DungeonWait
+			-- Sin pasarse del plazo: la petición tiene que salir antes de cfg.Deadline s de inactividad, o el viaje no llega
+			-- antes de la expulsión de los 20 min (el aviso puede llegar tarde y la espera sumaba hasta 100 s).
+			local limit = math.min(os.clock() + cfg.DungeonWait, os.clock() - idle + cfg.Deadline - cfg.Countdown)
 			while mine == token and os.clock() < limit do
 				if (player:GetAttribute("Dungeon") or 0) == 0 or player:GetAttribute("DungeonRun") ~= run then
 					break
@@ -103,13 +105,13 @@ function Rejoin.start()
 
 	player.Idled:Connect(function(seconds: number)
 		if seconds >= cfg.After and not busy then
-			task.spawn(attempt)
+			task.spawn(attempt, seconds)
 		end
 	end)
 	-- Pruebas en Studio: lanza el aviso sin esperar 17 minutos.
 	player:GetAttributeChangedSignal("RejoinTest"):Connect(function()
 		if player:GetAttribute("RejoinTest") and not busy then
-			task.spawn(attempt)
+			task.spawn(attempt, cfg.After)
 		end
 	end)
 end
