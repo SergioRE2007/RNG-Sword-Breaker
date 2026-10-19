@@ -428,8 +428,8 @@ local function build()
 		paintInfo(selection)
 	end
 
-	-- Rellenar: los huecos libres con las armas libres más raras que no llevan rasgo ni grado (las que no se ha
-	-- trabajado el jugador); si no hay bastantes, con las que sí.
+	-- Rellenar: los huecos libres con las armas libres menos raras (pedido por el usuario: las peores) que no llevan
+	-- rasgo ni grado (las que no se ha trabajado el jugador); si no hay bastantes, con las que sí.
 	fill.Activated:Connect(function()
 		local copies = copiesById()
 		local list = {}
@@ -446,7 +446,7 @@ local function build()
 			end
 			local left, right = Stats.rarity(a), Stats.rarity(b)
 			if left ~= right then
-				return left > right
+				return left < right
 			end
 			return a.id < b.id
 		end)
