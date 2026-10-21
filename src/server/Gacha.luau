@@ -209,7 +209,9 @@ function Gacha.give(player: Player, boost: number, source: string, rolls: number
 	if count ~= count or boost ~= boost or boost <= 0 then
 		return
 	end
-	count = math.clamp(math.floor(count), 0, Config.ObjectRolls.MaxRolls)
+	-- El jefe del mundo tiene su propio tope (más tiradas en los tramos altos).
+	local cap = if source == "worldBoss" then Config.WorldBoss.Rewards.MaxRolls else Config.ObjectRolls.MaxRolls
+	count = math.clamp(math.floor(count), 0, cap)
 	batches += 1
 	for index = 1, count do
 		local extra = if info then table.clone(info) else {}

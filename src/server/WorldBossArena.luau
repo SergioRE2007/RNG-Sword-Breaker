@@ -420,7 +420,8 @@ function WorldBossArena.buildBoard(map: Instance)
 		{ x = 0.48, w = 0.24, color = Color3.fromRGB(90, 230, 255), title = "Crystals" },
 		{ x = 0.73, w = 0.24, color = Color3.fromRGB(255, 140, 190), title = "Potions" },
 	}
-	local top, rowHeight = 0.145, 0.0485
+	-- Las filas se estrechan si hay más de 13 tramos, para que la tabla y el podio sigan cabiendo en el cartel.
+	local top, rowHeight = 0.145, math.min(0.0485, 0.63 / (#tiers + 1))
 	for _, column in columns do
 		text(back, "Head_" .. column.title, UDim2.fromScale(column.x, top), UDim2.fromScale(column.w, rowHeight * 0.85), column.color, column.title)
 	end

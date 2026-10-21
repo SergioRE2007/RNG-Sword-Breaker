@@ -105,16 +105,17 @@ end
 local function addContrib(player: Player, amount: number)
 	local entry = contrib[player.UserId]
 	if not entry then
-		entry = { name = player.DisplayName, amount = 0 }
+		entry = { name = player.DisplayName, amount = 0, stay = 0, last = 0 }
 		contrib[player.UserId] = entry
 	end
 	entry.amount += amount
+	entry.last = os.clock()
 end
 
 local function ranking()
 	local list = {}
 	for userId, entry in contrib do
-		table.insert(list, { userId = userId, name = entry.name, amount = entry.amount })
+		table.insert(list, { userId = userId, name = entry.name, amount = entry.amount, stay = entry.stay })
 	end
 	table.sort(list, function(a, b)
 		return a.amount > b.amount
@@ -346,7 +347,7 @@ local function reward(list)
 		if not player then
 			continue
 		end
-		local prize = WorldBossInfo.rewards(row.amount, rank)
+		local prize = WorldBossInfo.rewards(row.amount, rank, row.stay)
 		if prize then
 			-- Tiradas: la suerte media de los objetos que le salen ahora, por Rewards.Luck. `usual` es esa misma suerte,
 			-- para que la cinemática solo salga cuando la tirada ha tenido suerte de verdad (server/Gacha).
@@ -619,6 +620,13 @@ local function step(dt: number)
 		end
 	elseif state == "fight" then
 		stepFight(os.clock())
+		-- Tiempo peleando: solo suma quien está dentro y ha pegado hace poco (quedarse quieto en la arena no vale).
+		for player in inside do
+			local entry = contrib[player.UserId]
+			if entry and os.clock() - entry.last <= cfg.Rewards.ActiveWindow then
+				entry.stay += delta
+			end
+		end
 		rankElapsed += delta
 		if rankElapsed >= RANK_EVERY and state == "fight" then
 			rankElapsed = 0
@@ -640,7 +648,7 @@ local function step(dt: number)
 						break
 					end
 				end
-				Remotes.WorldBoss:FireClient(player, "rank", { list = top, total = total, mine = mine and mine.amount or 0, rank = rank, count = #list })
+				Remotes.WorldBoss:FireClient(player, "rank", { list = top, total = total, mine = mine and mine.amount or 0, stay = mine and mine.stay or 0, rank = rank, count = #list })
 			end
 		end
 	end

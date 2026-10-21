@@ -1838,6 +1838,19 @@ do
 	equal(high.rolls <= boss.Rewards.MaxRolls, true, "jefe: tiradas con su tope")
 	equal(high.tickets, boss.Rewards.Tickets[1], "jefe: tickets para el primero")
 	equal(low.tickets, 0, "jefe: sin tickets fuera del podio")
+	-- Tiempo peleando: entrar un segundo con un golpe enorme no da el premio del tramo.
+	local full = boss.Rewards.FullStay * boss.Lifetime
+	local top = tiers[#tiers].damage * 10
+	local visit, half, whole = info.rewards(top, 1, 1), info.rewards(top, 1, full / 2), info.rewards(top, 1, full)
+	equal(visit.rolls, 0, "jefe: un segundo dentro, sin tiradas")
+	equal(visit.tickets, 0, "jefe: un segundo dentro, sin tickets")
+	assert(visit.traitCrystal < whole.traitCrystal * 0.05, "jefe: un segundo dentro, casi sin cristales")
+	checks += 1
+	assert(half.traitCrystal > visit.traitCrystal and half.traitCrystal < whole.traitCrystal, "jefe: a medias, la mitad")
+	checks += 1
+	equal(whole.traitCrystal, tiers[#tiers].crystals, "jefe: el tiempo entero cobra el tramo entero")
+	equal(whole.tickets, boss.Rewards.Tickets[1], "jefe: el podio, con el tiempo entero")
+	equal(info.share(full * 5), 1, "jefe: la parte cobrada no pasa del entero")
 	for index = 2, #tiers do
 		assert(tiers[index].damage > tiers[index - 1].damage, "jefe: los tramos, de menos a más daño")
 		checks += 1

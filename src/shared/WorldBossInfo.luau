@@ -33,23 +33,33 @@ end
 -- Lo que le toca a un jugador cuando se va el rey: el tramo de su daño (pedido por el usuario: por cantidad de daño, no
 -- por porcentaje) y, si es de los tres que más daño han hecho (`rank`), las tiradas y los tickets del podio. nil si no
 -- llega al primer tramo. potions = cuántas de cada familia, del tier potionTier.
-function WorldBossInfo.rewards(damage: number, rank: number)
+-- `stay` = segundos que lleva peleando de verdad (nil = el premio entero, para el cartel).
+function WorldBossInfo.rewards(damage: number, rank: number, stay: number?)
 	local r = cfg.Rewards
 	local index = if damage == damage then WorldBossInfo.tier(damage) else nil
 	if not index then
 		return nil
 	end
 	local tier = r.Tiers[index]
-	local podium = rank <= 3
+	local share = if stay then WorldBossInfo.share(stay) else 1
+	-- Con el tiempo peleado a medias, la mitad del premio (tiradas y pociones redondeadas); el podio, solo con el entero.
+	local podium = rank <= 3 and share >= 1
+	local rolls = math.floor(tier.rolls * share + 0.5)
 	return {
 		tier = index,
-		rolls = math.min(tier.rolls + (if podium then r.TopBonusRolls else 0), r.MaxRolls),
-		traitCrystal = tier.crystals,
-		gradeCrystal = tier.crystals,
-		potions = tier.potions or 0,
+		share = share,
+		rolls = if rolls > 0 then math.min(rolls + (if podium then r.TopBonusRolls else 0), r.MaxRolls) else 0,
+		traitCrystal = math.floor(tier.crystals * share),
+		gradeCrystal = math.floor(tier.crystals * share),
+		potions = math.floor((tier.potions or 0) * share + 0.5),
 		potionTier = tier.potionTier or 1,
 		tickets = if podium then r.Tickets[rank] or 0 else 0,
 	}
+end
+
+-- Qué parte del premio de su tramo cobra quien ha peleado `stay` segundos: el entero a partir de FullStay × Lifetime.
+function WorldBossInfo.share(stay: number): number
+	return math.clamp(stay / (cfg.Rewards.FullStay * cfg.Lifetime), 0, 1)
 end
 
 -- Hora de la siguiente caída después de `now` en un servidor que arrancó en `born` (las dos de GetServerTimeNow): a los
