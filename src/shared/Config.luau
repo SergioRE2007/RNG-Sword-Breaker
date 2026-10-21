@@ -1232,7 +1232,10 @@ Config.WorldBoss = {
 	Shield = { First = 60, Every = 70, Base = 3, PerPlayer = 0.34, Max = 8, Seconds = 6 },
 	Charge = { Every = 55, Time = 12, Barrels = 4, Needed = 2, BarrelSeconds = 2, Flight = 1.1, StunTime = 8, StunMult = 2,
 		MegaDamage = 0.8, SafeZones = 3, SafeRadius = 10 },
-	Rewards = { Luck = 10, MaxRolls = 5, TopBonusRolls = 1, Tickets = { 2, 1, 1 },
+	-- FullStay: fracción de Lifetime que hay que pasar peleando para cobrar el premio entero (el tramo lo da el daño, pero
+	-- lo que se cobra del tramo crece con el tiempo peleando: entrar un segundo, dar un golpe enorme y salir ya no vale).
+	-- ActiveWindow: segundos desde el último golpe en los que se sigue contando como peleando (quien se queda quieto no suma).
+	Rewards = { Luck = 10, MaxRolls = 5, TopBonusRolls = 1, Tickets = { 2, 1, 1 }, FullStay = 0.6, ActiveWindow = 6,
 		Tiers = {
 			{ damage = 10, rolls = 1, crystals = 10 },
 			{ damage = 1e3, rolls = 1, crystals = 50 },

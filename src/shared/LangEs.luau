@@ -1026,6 +1026,7 @@ return {
 	["Potions"] = "Pociones",
 	["Crystals and potions: that many of each"] = "Cristales y pociones: esa cantidad de cada uno",
 	["Your damage: {n} / {goal}"] = "Tu daño: {n} / {goal}",
+	["Leaves in {time} · Prize {p}%"] = "Se va en {time} · Premio {p}%",
 	["{n}"] = "{n}",
 	["Top 3: +{n} roll"] = "Podio: +{n} tirada",
 	["Top 3: +{n} rolls"] = "Podio: +{n} tiradas",

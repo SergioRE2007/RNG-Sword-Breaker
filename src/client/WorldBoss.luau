@@ -304,7 +304,9 @@ local function refresh()
 		list.Visible = false
 		youText.Visible = false
 	else
-		detail.Text = Lang.t(nil, "Leaves in {time}", { time = WorldBossInfo.clock(left) })
+		-- Cuánto del premio de su tramo lleva ganado: sube mientras pelea (hay que seguir pegando).
+		local share = math.floor(WorldBossInfo.share(lastRank and lastRank.stay or 0) * 100)
+		detail.Text = Lang.t(nil, "Leaves in {time} · Prize {p}%", { time = WorldBossInfo.clock(left), p = share })
 		hpTrack.Visible = body ~= nil
 		list.Visible = lastRank ~= nil
 		if lastRank then
