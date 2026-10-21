@@ -1235,21 +1235,27 @@ Config.WorldBoss = {
 	-- FullStay: fracción de Lifetime que hay que pasar peleando para cobrar el premio entero (el tramo lo da el daño, pero
 	-- lo que se cobra del tramo crece con el tiempo peleando: entrar un segundo, dar un golpe enorme y salir ya no vale).
 	-- ActiveWindow: segundos desde el último golpe en los que se sigue contando como peleando (quien se queda quieto no suma).
-	Rewards = { Luck = 10, MaxRolls = 5, TopBonusRolls = 1, Tickets = { 2, 1, 1 }, FullStay = 0.6, ActiveWindow = 6,
+	-- Tramos hasta 1e33 (el tope de Format, "Dc"): pedido por el usuario el 21-10-2026, con el endgame los premios no se
+	-- distinguían; de 1e9 para arriba llevan un 20 % más de cristales y hay cuatro tramos nuevos, cada vez más gordos.
+	Rewards = { Luck = 10, MaxRolls = 8, TopBonusRolls = 1, Tickets = { 2, 1, 1 }, FullStay = 0.6, ActiveWindow = 6,
 		Tiers = {
 			{ damage = 10, rolls = 1, crystals = 10 },
 			{ damage = 1e3, rolls = 1, crystals = 50 },
 			{ damage = 1e5, rolls = 1, crystals = 100, potions = 1, potionTier = 2 },
 			{ damage = 1e7, rolls = 1, crystals = 125, potions = 1, potionTier = 2 },
-			{ damage = 1e9, rolls = 2, crystals = 150, potions = 1, potionTier = 3 },
-			{ damage = 1e11, rolls = 2, crystals = 200, potions = 2, potionTier = 3 },
-			{ damage = 1e13, rolls = 2, crystals = 250, potions = 2, potionTier = 3 },
-			{ damage = 1e15, rolls = 3, crystals = 300, potions = 2, potionTier = 4 },
-			{ damage = 1e17, rolls = 3, crystals = 350, potions = 3, potionTier = 4 },
-			{ damage = 1e19, rolls = 3, crystals = 400, potions = 3, potionTier = 4 },
-			{ damage = 1e21, rolls = 4, crystals = 425, potions = 4, potionTier = 5 },
-			{ damage = 1e23, rolls = 4, crystals = 450, potions = 4, potionTier = 5 },
-			{ damage = 1e25, rolls = 5, crystals = 500, potions = 5, potionTier = 5 },
+			{ damage = 1e9, rolls = 2, crystals = 180, potions = 1, potionTier = 3 },
+			{ damage = 1e11, rolls = 2, crystals = 240, potions = 2, potionTier = 3 },
+			{ damage = 1e13, rolls = 2, crystals = 300, potions = 2, potionTier = 3 },
+			{ damage = 1e15, rolls = 3, crystals = 360, potions = 2, potionTier = 4 },
+			{ damage = 1e17, rolls = 3, crystals = 420, potions = 3, potionTier = 4 },
+			{ damage = 1e19, rolls = 3, crystals = 480, potions = 3, potionTier = 4 },
+			{ damage = 1e21, rolls = 4, crystals = 510, potions = 4, potionTier = 5 },
+			{ damage = 1e23, rolls = 4, crystals = 540, potions = 4, potionTier = 5 },
+			{ damage = 1e25, rolls = 5, crystals = 600, potions = 5, potionTier = 5 },
+			{ damage = 1e27, rolls = 6, crystals = 700, potions = 6, potionTier = 5 },
+			{ damage = 1e29, rolls = 6, crystals = 800, potions = 7, potionTier = 5 },
+			{ damage = 1e31, rolls = 7, crystals = 950, potions = 8, potionTier = 5 },
+			{ damage = 1e33, rolls = 7, crystals = 1100, potions = 10, potionTier = 5 },
 		},
 	},
 }
