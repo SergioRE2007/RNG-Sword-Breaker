@@ -19,7 +19,11 @@ end
 -- Gemas que cuesta una fusión con esa suerte (entero, nunca menos de MinCost).
 function FusionInfo.cost(luck: number): number
 	local cfg = Config.Fusion
-	return math.max(cfg.MinCost, math.ceil(cfg.CostScale * luck ^ cfg.CostPower))
+	-- Por encima del codo el precio crece más despacio (KneePower): las gemas de los objetos del endgame crecen casi igual
+	-- que su rareza, y con CostPower hasta arriba una fusión de 1e23 salía a ~1e29, más de lo que ganan en un día.
+	local below = math.min(luck, cfg.Knee)
+	local above = math.max(luck / cfg.Knee, 1)
+	return math.max(cfg.MinCost, math.ceil(cfg.CostScale * below ^ cfg.CostPower * above ^ cfg.KneePower))
 end
 
 return FusionInfo

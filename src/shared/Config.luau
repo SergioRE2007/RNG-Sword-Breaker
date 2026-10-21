@@ -219,6 +219,10 @@ Config.Fusion = {
 	Divisor = 2.5, -- la suerte es la suma de las rarezas entre esto
 	CostScale = 0.0125,
 	CostPower = 1.345,
+	-- Codo (21-10-2026, un jugador con armas de 200 Sx pagaba ~100 Oc por fusión y no le llegaban las gemas): desde una
+	-- suerte de Knee el precio crece con KneePower en vez de CostPower. Hasta el codo no cambia nada (3e20 sigue en ~4e25).
+	Knee = 3e20,
+	KneePower = 1,
 	MinCost = 100,
 	Cooldown = 1, -- segundos entre fusiones de un mismo jugador
 	Reach = 40, -- studs desde la máquina en los que el servidor acepta la fusión (la ventana se abre a OpenDistance)
@@ -340,7 +344,9 @@ Config.ModifierCooldown = 0.3 -- segundos mínimos entre tiradas de rasgo o grad
 -- max(MinCost, CostBase * rareza total ^ RarityPower) * Growth ^ n. RarityPower sale de lo que gana de gemas el jugador
 -- tipo frente a lo raras que son sus armas (crecen como rareza ^ 1,5): así subir un arma cuesta parecido a cualquier
 -- hora. CostBase medido con tools/equilibrio/informe.luau sin regenerar lo demás (docs/sistemas/nivel-armas.md). El jugador tipo de tools/equilibrio gasta en niveles la parte `gemasNiveles` de sus gemas (objetivo.luau).
-Config.WeaponLevel = { MaxLevel = 100, PerLevel = 1.02, CostBase = 3e-8, RarityPower = 1.5, Growth = 1.06, MinCost = 10 }
+-- Knee/KneePower (21-10-2026): por encima de esa rareza el coste crece con KneePower en vez de RarityPower (con 1,5 un
+-- arma de 500 Sp costaba 500 No por nivel y un jugador de endgame gana ~100 Oc); hasta el codo no cambia nada.
+Config.WeaponLevel = { MaxLevel = 100, PerLevel = 1.02, CostBase = 3e-8, RarityPower = 1.5, Knee = 1e18, KneePower = 1.1, Growth = 1.06, MinCost = 10 }
 
 -- Renacimiento: solo cuesta monedas y no quita nada (ni monedas ganadas, ni espadas, ni mejoras). Cada uno
 -- multiplica para siempre (por cada renacimiento, ese número elevado a los renacimientos que lleve).
