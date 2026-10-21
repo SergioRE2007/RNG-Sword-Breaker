@@ -23,7 +23,11 @@ end
 -- Gemas que cuesta subir la copia del nivel `level` al siguiente (con su rareza total: arma, metal y tamaño).
 function WeaponLevel.cost(copy, level: number): number
 	local rarity = Permanent.rarity(copy.sword, copy.metal, copy.size)
-	local base = math.max(SETTINGS.MinCost, SETTINGS.CostBase * rarity ^ SETTINGS.RarityPower)
+	-- Por encima del codo, la potencia baja a KneePower: las gemas del endgame crecen casi como la rareza de los objetos,
+	-- no como rareza ^ 1,5 (un arma de 500 Sp costaba 500 No por nivel y ganaban ~100 Oc).
+	local below = math.min(rarity, SETTINGS.Knee)
+	local above = math.max(rarity / SETTINGS.Knee, 1)
+	local base = math.max(SETTINGS.MinCost, SETTINGS.CostBase * below ^ SETTINGS.RarityPower * above ^ SETTINGS.KneePower)
 	return math.ceil(base * SETTINGS.Growth ^ level)
 end
 

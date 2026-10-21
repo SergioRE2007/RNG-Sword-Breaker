@@ -22,6 +22,8 @@ Pedido por el usuario (16-10-2026): subir de nivel cada arma gastando gemas, has
 
 ## Equilibrio
 
+- Codo (21-10-2026; un jugador: "subir un arma de 500 Sp cuesta 500 No y apenas hago 100 Oc"): por encima de `Config.WeaponLevel.Knee` (rareza 1e18) la potencia baja de `RarityPower` (1,5) a `KneePower` (1,1). Las gemas de los objetos del endgame (`Config.Destructibles`) valen ~0,1 % de su rareza, o sea crecen casi lineales, y rareza ^ 1,5 las dejaba atrás. Nivel 0 / nivel 50 por rareza: 1e15 igual que antes (9,5e14 / 1,8e16); 2e23: 2e25 / 3,8e26; 5e26: 1,1e29 (110 Oc, antes ~340 No) / 2e30. Hasta el codo no cambia nada, así que el informe de `tools/equilibrio` (armas por debajo de 1e18) sale igual; no se ha regenerado nada.
+
 - Decidido por el usuario (17-10-2026): el nivel de armas no regenera el resto del equilibrio (vidas, precios, renacimientos siguen como estaban; el endgame más difícil vendrá aparte). Solo se ajusta `CostBase`.
 - `tools/equilibrio` lo simula: el jugador tipo aparta `objetivo.gemasNiveles` (0,5) de sus gemas y sube el nivel más barato de sus armas equipadas (`subirNiveles` en `modelo.luau`); la línea de cada hora del informe enseña los niveles.
 - Medido con `informe.luau 9` (mediana de 9 partidas, 100 h), 5.º renacimiento / niveles a media partida:
