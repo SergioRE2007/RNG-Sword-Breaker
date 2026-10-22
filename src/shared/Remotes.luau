@@ -51,7 +51,7 @@ local NAMES = {
 	"LeaveDungeon", -- cliente -> servidor: salir de la mazmorra en la que está
 	"DungeonEvent", -- servidor -> cliente: (tipo, datos) "hurt" (daño recibido) o "result" ({ won, reason, level, drops?, armorFree?, expires?, granted? }); `drops` = el botín retenido para el menú
 	"DropDecision", -- cliente -> servidor: ({ ids }) los drops del menú de botín que tira (descarta); el resto entra al inventario
-	"EquipArmor", -- cliente -> servidor: (id) poner o quitar una pieza de armadura; ("best") la mejor de cada hueco
+	"EquipArmor", -- cliente -> servidor: (id) poner o quitar una pieza de armadura; ("best") la mejor combinación según su prioridad guardada; ("priority", modo) cambia esa prioridad (clave de Config.Armor.Priority.Weights; se guarda y se publica en "ArmorPriority")
 	"SalvageArmor", -- cliente -> servidor: (id, o { ids } para varias sin equipar) desmontar armadura a cambio de Cristales de grado
 	"SetArmorHidden", -- cliente -> servidor: (true o false) esconder la armadura del personaje (sigue contando); se guarda y se publica en "ArmorHidden"
 	"SetModifierPrefs", -- cliente -> servidor: (kind "traits"|"grades", resultados de "Parar con" como índices separados por comas, desempate de rasgos como texto o nil) los ajustes de la tienda; se guardan y se publican en "StopAt_<kind>" y "TraitPriority"

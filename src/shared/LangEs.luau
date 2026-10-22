@@ -450,7 +450,6 @@ return {
 	["Sure? {n}\n+{crystals} crystals"] = "¿Seguro? {n}\n+{crystals} cristales",
 	["Tap the pieces you want to salvage"] = "Toca las piezas que quieres desmontar",
 	["No armor: it drops in the hub dungeons."] = "Sin armadura: cae en las mazmorras del hub.",
-	["Pieces {n}/{max} · pick one and press Equip"] = "Piezas {n}/{max} · elige una y pulsa Equipar",
 	-- Ventana AdminPanel
 	["This server's weather"] = "Clima de este servidor",
 	["everyone inside sees it and gets its luck"] = "lo ve y lo nota todo el que esté dentro",
@@ -578,6 +577,10 @@ return {
 	["Accessories"] = "Accesorios",
 	["Your swords"] = "Tus espadas",
 	["Equip best"] = "Equipar mejores",
+	["Balanced"] = "Equilibrado",
+	["Pieces {n}/{max}"] = "Piezas {n}/{max}",
+	["Priority: {mode}"] = "Prioridad: {mode}",
+	["What \"Equip best\" looks for. Tap to change it."] = "Lo que busca \"Equipar mejores\". Pulsa para cambiarlo.",
 	["Hide armor"] = "Ocultar armadura",
 	["Show armor"] = "Mostrar armadura",
 	["Nobody sees your armor; its stats still count."] = "Nadie ve tu armadura; sus estadísticas siguen contando.",

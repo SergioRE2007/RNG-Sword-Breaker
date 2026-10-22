@@ -9,7 +9,6 @@ local ArmorModel = require(ReplicatedStorage.Shared.ArmorModel)
 local ArmorStats = require(ReplicatedStorage.Shared.ArmorStats)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Modifiers = require(ReplicatedStorage.Shared.Modifiers)
 local Permanent = require(ReplicatedStorage.Shared.Permanent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Stats = require(ReplicatedStorage.Shared.Stats)
@@ -23,49 +22,21 @@ local cfg = Config.Armor
 local CRYSTAL = "gradeCrystal"
 local random = Random.new()
 
--- La vida se redondea a enteros y los porcentajes a décimas de punto.
-local function rolled(stat: string, base: number, quality, level: number): number
-	local info = cfg.Stats[stat]
-	local value = base * random:NextNumber(cfg.Roll.min, cfg.Roll.max) * quality.mult * ArmorStats.scaling(stat, level)
-	return if info.flat then math.max(1, math.round(value)) else math.round(value * 1000) / 1000
-end
-
 -- Pieza nueva (sin id) de la dificultad `level`; `luck` divide el "1 entre N" de las calidades.
 -- Con `forcedSlot` y `forcedQuality` no se tiran el hueco ni la calidad (modo de pruebas).
+-- Aquí, y solo en el servidor, se tiran las estadísticas (ArmorStats.generate: de 1 a 4 stats con presupuesto de poder) y
+-- se le da su identificador único: después la pieza solo se mueve, nunca se vuelve a tirar (equipar, guardar, comerciar).
 function Armor.roll(level: number, luck: number, forcedSlot: string?, forcedQuality: number?)
 	local slot = forcedSlot or cfg.SlotOrder[random:NextInteger(1, #cfg.SlotOrder)]
 	local qualityIndex = forcedQuality or math.max(Permanent.roll(cfg.Qualities, luck), 1)
-	local quality = cfg.Qualities[qualityIndex]
-	local stats = {}
-	for _, stat in cfg.StatOrder do
-		local base = cfg.Slots[slot].stats[stat]
-		if base then
-			table.insert(stats, { stat = stat, value = rolled(stat, base, quality, level) })
-		end
-	end
-	for _ = 1, quality.mods do
-		local mod = cfg.Mods[Modifiers.roll("armorMods", random)]
-		if mod.stat == "health" and #stats + 1 == cfg.NoHealthAt then
-			-- Se vuelve a tirar unas pocas veces (así sigue mandando el peso de cada modificador) y, si aun así
-			-- sale vida, se coge el primero que no lo sea: nunca queda en un bucle.
-			for _ = 1, 20 do
-				mod = cfg.Mods[Modifiers.roll("armorMods", random)]
-				if mod.stat ~= "health" then
-					break
-				end
-			end
-			if mod.stat == "health" then
-				for _, other in cfg.Mods do
-					if other.stat ~= "health" then
-						mod = other
-						break
-					end
-				end
-			end
-		end
-		table.insert(stats,{ stat = mod.stat, value = rolled(mod.stat, mod.value, quality, level), bonus = true })
-	end
-	return { slot = slot, quality = qualityIndex, level = level, stats = stats }
+	return {
+		uid = ArmorStats.uid(),
+		v = 2,
+		slot = slot,
+		quality = qualityIndex,
+		level = level,
+		stats = ArmorStats.generate(slot, qualityIndex, level, random),
+	}
 end
 
 -- Tira una pieza y la guarda sin equiparla. Con el inventario lleno
@@ -118,25 +89,29 @@ local function find(data, id: unknown)
 	return nil
 end
 
--- "Equipar mejores": en cada hueco, la pieza de más nota (ArmorStats.score) de las que tiene.
+-- "Equipar mejores": la combinación de piezas (una por hueco) de más utilidad para la prioridad guardada del jugador
+-- (ArmorStats.best: compara lo que sube cada stat respecto a lo que ya suma, no los números crudos). Solo cambia los
+-- huecos en los que hay una pieza mejor; los demás se quedan como están, y nunca quita nada.
 local function equipBest(player: Player)
 	PlayerData.editArmor(player, function(edited)
-		local best = {} -- [hueco] = { id, nota }
-		for _, piece in edited.armor do
-			local score = ArmorStats.score(piece)
-			local current = best[piece.slot]
-			if not current or score > current.score or (score == current.score and piece.id < current.id) then
-				best[piece.slot] = { id = piece.id, score = score }
-			end
-		end
-		for slot, entry in best do
-			edited.armorWorn[slot] = entry.id
+		local best = ArmorStats.best(edited.armor, edited.armorWorn, edited.armorPriority)
+		for slot, id in best do
+			edited.armorWorn[slot] = id
 		end
 	end)
 end
 
--- Pone la pieza en su hueco (sustituye a la que hubiera) o la quita si ya estaba puesta.
-local function onEquip(player: Player, id: unknown)
+-- Pone la pieza en su hueco (sustituye a la que hubiera) o la quita si ya estaba puesta. "best" = equipar mejores;
+-- "priority" + modo = cambia qué busca "Equipar mejores" (se valida contra Config.Armor.Priority y se guarda).
+local function onEquip(player: Player, id: unknown, mode: unknown)
+	if id == "priority" then
+		if type(mode) == "string" and cfg.Priority.Weights[mode] then
+			PlayerData.edit(player, function(edited)
+				edited.armorPriority = mode
+			end)
+		end
+		return
+	end
 	if id == "best" then
 		equipBest(player)
 		return

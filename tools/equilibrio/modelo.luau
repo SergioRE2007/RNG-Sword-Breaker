@@ -214,10 +214,6 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			table.insert(oleadas[index], entries)
 		end
 	end
-	local pesoMods = 0
-	for _, mod in armadura.Mods do
-		pesoMods += mod.chance
-	end
 
 	-- Segundos que tarda en una partida de la zona `index` (de una a la siguiente) con esas armas (lista de M.arma), o
 	-- nil si no le da tiempo a acabarla. `vida` = por cuánto va la vida de los enemigos (si falta, el "hp" de la zona).
@@ -588,7 +584,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 			for name, level in estado.upgrades do
 				attrs["Upgrade_" .. name] = level
 			end
-			attrs.Armor_luck, attrs.Armor_damage, attrs.Armor_rollSpeed = estado.armadura[1], estado.armadura[2], estado.armadura[3]
+			attrs.Armor_luck, attrs.Armor_damage, attrs.Armor_coins = estado.armadura[1], estado.armadura[2], estado.armadura[3]
 			luck = Stats.luck(player)
 			typeLuck = luck * Stats.spawnLuck(player)
 			objectLuck = Stats.objectLuck(player)
@@ -716,14 +712,10 @@ function Modelo.nuevo(shared, mundo, objetivo)
 				end
 			end
 		end
+		-- Lo que suma lo puesto: { suerte, ataque, monedas } (la vida no cuenta para el ritmo del juego).
 		local function totales(): { number }
-			local sum = { 0, 0, 0 }
-			for _, piece in puesto do
-				sum[1] += piece.luck
-				sum[2] += piece.damage
-				sum[3] += piece.rollSpeed
-			end
-			return sum
+			local sum = ArmorStats.sum(puesto)
+			return { sum.luck, sum.damage, sum.coins }
 		end
 		local function desmontar(piece)
 			local cristales = ArmorStats.salvage(piece)
@@ -734,42 +726,19 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		local function pieza(index: number, luck: number)
 			local slot = armadura.SlotOrder[1 + math.floor(azar() * #armadura.SlotOrder)]
 			local q = cascada(armadura.Qualities, luck, 1, azar())
-			local quality = armadura.Qualities[q]
 			res.maz.piezas[q] += 1
-			local piece = { quality = q, level = index, luck = 0, damage = 0, rollSpeed = 0 }
-			local function suma(stat: string, base: number)
-				if stat ~= "health" then
-					piece[stat] += base * (armadura.Roll.min + azar() * (armadura.Roll.max - armadura.Roll.min)) * quality.mult * ArmorStats.scaling(stat, index)
-				end
-			end
-			for _, stat in armadura.StatOrder do
-				local base = armadura.Slots[slot].stats[stat]
-				if base then
-					suma(stat, base)
-				end
-			end
-			for _ = 1, quality.mods do
-				local pick = azar() * pesoMods
-				for _, mod in armadura.Mods do
-					pick -= mod.chance
-					if pick < 0 then
-						suma(mod.stat, mod.value)
-						break
+			-- La misma tirada que el servidor (server/Armor.roll): de 1 a 4 stats con presupuesto de poder.
+			local piece = { slot = slot, quality = q, level = index, stats = ArmorStats.generate(slot, q, index, dado) }
+			-- Lo que le vale una pieza: la misma cuenta que "Equipar mejores" en Equilibrado (ArmorStats.utility: lo que sube
+			-- cada stat en proporción a lo que ya suman los otros huecos).
+			local function valor(candidate): number
+				local others = { candidate }
+				for other, wornPiece in puesto do
+					if other ~= slot then
+						table.insert(others, wornPiece)
 					end
 				end
-			end
-			-- Lo que le vale una pieza: lo que sube cada cosa en proporción a lo que ya suman los otros huecos (un 10 % más
-			-- de objetos le cunde más que un 10 % más de suerte o de daño).
-			local luckNow, damageNow, speedNow = 1, 1, 1
-			for other, wornPiece in puesto do
-				if other ~= slot then
-					luckNow += wornPiece.luck
-					damageNow += wornPiece.damage
-					speedNow += wornPiece.rollSpeed
-				end
-			end
-			local function valor(candidate): number
-				return candidate.rollSpeed / speedNow + 0.75 * (candidate.luck / luckNow + candidate.damage / damageNow)
+				return ArmorStats.utility(ArmorStats.sum(others), armadura.Priority.Default)
 			end
 			local worn = puesto[slot]
 			if worn and valor(piece) <= valor(worn) then
@@ -1224,8 +1193,7 @@ function Modelo.nuevo(shared, mundo, objetivo)
 		for _, name in Config.UpgradeOrder do
 			attrs["Upgrade_" .. name] = Config.Upgrades[name].maxLevel
 		end
-		local last = objetivo.armadura[#objetivo.armadura]
-		attrs.Armor_rollSpeed = last[4]
+		-- (La armadura nueva ya no da velocidad de aparición: aquí solo cuenta el tiempo entre objetos.)
 		local player = {
 			GetAttribute = function(_, name)
 				return attrs[name]

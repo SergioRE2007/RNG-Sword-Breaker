@@ -220,7 +220,7 @@ local maz = objetivo.mazmorra
 print(`\n-- Mazmorras y cristales ({maz.parte * 100} % de la sesión en mazmorras; mediana, objetivo entre paréntesis) --`)
 -- Las tiradas objetivo de cada hora son las que aseguran (por pity) el rasgo o el grado que el calendario le supone
 -- al jugador a esa hora: con el pity que hay, casi todo lo raro sale por pity y no por suerte.
-local metas = {} -- [hora] = { rasgo = tiradas, grado = tiradas, armadura = { suerte, ataque, aparición } }
+local metas = {} -- [hora] = { rasgo = tiradas, grado = tiradas, armadura = { suerte, ataque, monedas } }
 local function meta(hour: number)
 	metas[hour] = metas[hour] or {}
 	return metas[hour]
@@ -271,7 +271,7 @@ for _, hour in horasMeta do
 		return entry.armadura[1]
 	end), armor and armor[1], "%.2f")}, ataque +{con(foto(hour, function(entry)
 		return entry.armadura[2]
-	end), armor and armor[2], "%.2f")}, aparición +{con(foto(hour, function(entry)
+	end), armor and armor[2], "%.2f")}, monedas +{con(foto(hour, function(entry)
 		return entry.armadura[3]
 	end), armor and armor[3], "%.2f")}`)
 end

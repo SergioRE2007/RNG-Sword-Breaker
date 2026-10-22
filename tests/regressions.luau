@@ -778,6 +778,230 @@ equal(armorStats.cap("luck", #f.config.Armor.Qualities, lastZone) < 20, true, "t
 local oldArmor = fixture({ armor = { { id = 1, slot = "helmet", quality = 1, level = lastZone, stats = { { stat = "luck", value = 1e6 } } } } })
 equal(oldArmor.data.read(oldArmor.player).armor[1].stats[1].value <= armorStats.cap("luck", 1, lastZone), true, "armadura guardada recortada")
 
+-- Armadura con estadísticas aleatorias (Config.Armor.Generator): de 1 a 4 stats distintas que se reparten un presupuesto
+-- de poder, con la probabilidad de cada cantidad configurable.
+do
+	local armorCfg = f.config.Armor
+	local gen = armorCfg.Generator
+	-- Generador de números al azar propio (en Lune no hay Random): solo hace falta :NextNumber().
+	local seed = 20261016
+	local rng = {
+		NextNumber = function()
+			seed = (seed * 48271) % 2147483647
+			return seed / 2147483647
+		end,
+	}
+	local draws, level, quality = 6000, 4, 3
+	local counts, lowest, highest = table.create(#gen.Count, 0), math.huge, 0
+	local ok, topShare, singleLow = true, 0, math.huge
+	for i = 1, draws do
+		local slot = armorCfg.SlotOrder[1 + i % #armorCfg.SlotOrder]
+		local stats = armorStats.generate(slot, quality, level, rng)
+		counts[#stats] += 1
+		ok = ok and #stats >= 1 and #stats <= #gen.Count
+		local seen, power, lastIndex = {}, 0, 0
+		for _, entry in stats do
+			local index = table.find(armorCfg.StatOrder, entry.stat) or 0
+			ok = ok and not seen[entry.stat] and table.find(gen.Pool, entry.stat) ~= nil and entry.stat ~= "rollSpeed" and entry.value > 0 and index > lastIndex
+			ok = ok and entry.value <= armorStats.cap(entry.stat, quality, level)
+			seen[entry.stat], lastIndex = true, index
+			local share = entry.value / armorStats.reference(entry.stat, slot, quality, level)
+			power += share
+			if #stats == 1 then
+				singleLow = math.min(singleLow, share)
+			end
+			if #stats == 4 then
+				topShare = math.max(topShare, share)
+			end
+		end
+		local relative = power / gen.Budget[#stats]
+		lowest, highest = math.min(lowest, power), math.max(highest, power)
+		-- El poder total es el presupuesto de su cantidad por la tirada de la pieza (con el redondeo de los valores).
+		ok = ok and relative >= gen.Roll.min * 0.97 and relative <= gen.Roll.max * 1.03
+	end
+	equal(ok, true, "generador: stats distintas, del grupo, ordenadas, con poder dentro del presupuesto y bajo el tope")
+	for n, chance in gen.Count do
+		equal(math.abs(counts[n] / draws - chance) <= 0.03, true, `probabilidad de {n} stats`)
+	end
+	equal(highest / lowest < 1.6, true, "piezas de la misma calidad y zona: poder total parecido, tengan las stats que tengan")
+	equal(singleLow >= gen.Roll.min * 0.97, true, "una sola stat: da la referencia entera")
+	-- La mayor parte que puede llevarse una stat de cuatro: presupuesto * tirada * reparto más favorable.
+	local topFour = gen.Budget[4] * gen.Roll.max * (1 + gen.Split) / ((1 + gen.Split) + 3 * (1 - gen.Split))
+	equal(topShare <= topFour * 1.03 and topFour < 0.6, true, "cuatro stats: cada una es mucho más floja que en una especializada")
+	equal(gen.Budget[4] < 2, true, "cuatro stats no dan cuatro veces más poder")
+	local total = 0
+	for _, chance in gen.Count do total += chance end
+	near(total, 1, "las probabilidades de cantidad de stats suman 1")
+
+	-- Cada pieza guarda sus valores: dos del mismo tipo tienen números distintos y topes válidos en todas las zonas.
+	local capped = true
+	for zone = 1, #f.config.Dungeons do
+		for q = 1, #armorCfg.Qualities do
+			for _, slot in armorCfg.SlotOrder do
+				for _, entry in armorStats.generate(slot, q, zone, rng) do
+					capped = capped and entry.value <= armorStats.cap(entry.stat, q, zone)
+				end
+			end
+		end
+	end
+	equal(capped, true, "ninguna pieza nueva supera el tope con el que PlayerData recorta lo guardado")
+
+	-- "Equipar mejores": se comparan multiplicadores reales, no números crudos, y cada modo manda en lo suyo.
+	local function piece(id, slot, stats)
+		return { id = id, slot = slot, quality = 1, level = 1, stats = stats }
+	end
+	local pure = piece(1, "chest", { { stat = "health", value = 1000000 } })
+	local mixed = piece(2, "chest", { { stat = "health", value = 700000 }, { stat = "damage", value = 0.25 }, { stat = "coins", value = 0.12 } })
+	local base = piece(3, "helmet", { { stat = "health", value = 3000000 } })
+	local inventory = { pure, mixed, base }
+	equal(armorStats.best(inventory, {}, "balanced").chest, 2, "Equilibrado: 700K de vida + 25 % de daño + 12 % de monedas vale más que 1M de vida")
+	equal(armorStats.best(inventory, {}, "health").chest, 1, "Vida: gana la de más vida")
+	equal(armorStats.best(inventory, {}, "damage").chest, 2, "Daño: gana la que más sube el daño")
+	equal(armorStats.best(inventory, {}, "coins").chest, 2, "Monedas: gana la que más sube las monedas")
+	equal(armorStats.best(inventory, {}, "luck").chest, 2, "Suerte sin suerte en ninguna: desempatan las demás stats")
+	local lucky = piece(4, "legs", { { stat = "luck", value = 0.4 } })
+	local hardy = piece(5, "legs", { { stat = "health", value = 5000 }, { stat = "luck", value = 0.05 } })
+	equal(armorStats.best({ lucky, hardy }, {}, "luck").legs, 4, "Suerte: gana la de más suerte")
+	equal(armorStats.best({ lucky, hardy }, {}, "health").legs, 5, "Vida: gana la de más vida aunque tenga menos suerte")
+	equal(armorStats.best({ lucky, hardy }, {}, "no existe").legs, armorStats.best({ lucky, hardy }, {}, "balanced").legs, "modo desconocido: Equilibrado")
+	local chosen = armorStats.best(inventory, {}, "balanced")
+	equal(chosen.boots == nil and chosen.legs == nil, true, "solo propone huecos en los que hay piezas")
+	equal(chosen.helmet, 3, "una pieza solo se propone para su hueco")
+	local twinA = piece(10, "boots", { { stat = "luck", value = 0.1 } })
+	local twinB = piece(11, "boots", { { stat = "luck", value = 0.1 } })
+	equal(armorStats.best({ twinA, twinB }, { boots = 11 }, "balanced").boots, 11, "empate: se queda la que lleva puesta")
+	equal(armorStats.best({ twinA, twinB }, {}, "balanced").boots, 10, "empate sin nada puesto: la más antigua")
+	equal(next(armorStats.best({}, {}, "balanced")), nil, "sin piezas no propone nada")
+	-- Con muchas piezas, mejorar hueco a hueco no da nunca más que probar todas las combinaciones.
+	local many, id = {}, 0
+	for _ = 1, 40 do
+		id += 1
+		local slot = armorCfg.SlotOrder[1 + id % #armorCfg.SlotOrder]
+		table.insert(many, { id = id, slot = slot, quality = 3, level = 6, stats = armorStats.generate(slot, 3, 6, rng) })
+	end
+	local function utilityOf(choice): number
+		local picked = {}
+		for _, candidate in many do
+			if choice[candidate.slot] == candidate.id then table.insert(picked, candidate) end
+		end
+		return armorStats.utility(armorStats.sum(picked), "balanced")
+	end
+	local limit = armorCfg.Priority.SearchLimit
+	local exhaustive = armorStats.best(many, {}, "balanced")
+	armorCfg.Priority.SearchLimit = 0
+	local greedy = armorStats.best(many, {}, "balanced")
+	armorCfg.Priority.SearchLimit = limit
+	local validGreedy = true
+	for slot, pickedId in greedy do
+		validGreedy = validGreedy and many[pickedId].slot == slot
+	end
+	equal(validGreedy and utilityOf(greedy) <= utilityOf(exhaustive) + 1e-9, true, "búsqueda hueco a hueco: piezas de su hueco y nunca mejor que la exhaustiva")
+	equal(utilityOf(greedy) >= utilityOf(exhaustive) * 0.98, true, "búsqueda hueco a hueco: casi tan buena como la exhaustiva")
+
+	-- Qué se gana y qué se pierde al cambiar de pieza.
+	local rows = armorStats.compare(mixed, pure)
+	equal(#rows, 3, "comparar: solo las stats que tiene alguna de las dos")
+	equal(rows[1].stat == "health" and rows[1].delta == -300000 and rows[2].stat == "damage" and rows[2].delta == 0.25 and rows[3].stat == "coins", true, "comparar: pierde vida y gana daño y monedas")
+	local lost = armorStats.compare(pure, mixed)
+	equal(lost[2].value == 0 and lost[2].old == 0.25 and lost[2].delta == -0.25, true, "comparar: una stat que la nueva no tiene sale como pérdida")
+	equal(#armorStats.compare(pure, nil), 1, "comparar con el hueco vacío: solo sus stats")
+
+	-- Servidor: la pieza se tira una sola vez, con identificador único, y se conserva igual al equipar, guardar y volver.
+	local af = fixture(nil)
+	local armorServer = af.load("src/server/Armor")
+	table.clear(af.players) -- el jugador de pruebas no tiene personaje: solo se conectan los mensajes
+	armorServer.start()
+	local first = armorServer.roll(3, 1, "chest", 4)
+	local second = armorServer.roll(3, 1, "chest", 4)
+	equal(first.uid ~= second.uid and #first.uid > 0, true, "dos piezas del mismo tipo tienen identificadores distintos")
+	equal(first.v, 2, "pieza nueva marcada como del generador")
+	equal(#first.stats >= 1 and #first.stats <= 4, true, "pieza nueva con 1 a 4 stats")
+	equal(armorServer.store(af.player, first, 1) and armorServer.store(af.player, second, 1), true, "las dos copias se guardan")
+	local saved = af.data.read(af.player)
+	equal(#saved.armor, 2, "duplicados del mismo objeto: dos piezas separadas")
+	equal(saved.armor[1].uid ~= saved.armor[2].uid and saved.armor[1].id ~= saved.armor[2].id, true, "duplicados: id y uid distintos")
+
+	-- Piezas conocidas para comprobar totales sin duplicar bonus al equipar y desequipar.
+	af.data.editArmor(af.player, function(d)
+		d.armor, d.armorWorn, d.nextArmorId = {}, {}, 1
+		for position, stats in {
+			{ { stat = "health", value = 100 }, { stat = "luck", value = 0.1 } },
+			{ { stat = "luck", value = 0.3 }, { stat = "coins", value = 0.5 } },
+			{ { stat = "damage", value = 0.2 } },
+		} do
+			table.insert(d.armor, { id = position, uid = armorStats.uid(), v = 2, slot = if position == 3 then "boots" else "chest", quality = #armorCfg.Qualities, level = lastZone, stats = stats })
+		end
+		d.nextArmorId = 4
+	end)
+	local function attr(name) return af.player:GetAttribute("Armor_" .. name) or 0 end
+	local coinsBefore = stats.coins(af.player)
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, 1)
+	near(attr("luck"), 0.1, "equipada: suma su suerte")
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, 2)
+	near(attr("luck"), 0.3, "otra pieza en el mismo hueco: sustituye, no se suman")
+	near(attr("coins"), 0.5, "monedas de armadura publicadas")
+	near(stats.coins(af.player) / coinsBefore, 1.5, "las monedas de armadura multiplican una sola vez")
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, 2)
+	near(attr("luck") + attr("coins") + attr("health"), 0, "desequipada: no queda nada")
+	near(stats.coins(af.player) / coinsBefore, 1, "sin armadura, las monedas vuelven a su valor")
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, 1)
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, 1)
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, 1)
+	near(attr("luck"), 0.1, "equipar y quitar varias veces no acumula bonus")
+
+	-- Prioridad: se valida en el servidor, se publica y manda en "Equipar mejores".
+	equal(af.player:GetAttribute("ArmorPriority"), "balanced", "prioridad por defecto: Equilibrado")
+	for _, invalid in { "nada", 5, true, {}, 0 / 0 } do
+		af.remotes.EquipArmor.OnServerEvent:fire(af.player, "priority", invalid)
+		equal(af.player:GetAttribute("ArmorPriority"), "balanced", "prioridad inválida rechazada")
+	end
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, "priority", "coins")
+	equal(af.player:GetAttribute("ArmorPriority"), "coins", "prioridad Monedas publicada")
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, "best")
+	near(attr("coins"), 0.5, "Equipar mejores con Monedas pone la pieza de más monedas")
+	equal(af.data.read(af.player).armorWorn.boots, 3, "Equipar mejores equipa también los demás huecos")
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, "priority", "luck")
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, "best")
+	near(attr("luck"), 0.3, "Equipar mejores con Suerte pone la pieza de más suerte")
+	local before = af.data.read(af.player).armorWorn.chest
+	af.remotes.EquipArmor.OnServerEvent:fire(af.player, "best")
+	equal(af.data.read(af.player).armorWorn.chest, before, "Equipar mejores dos veces seguidas no cambia nada")
+
+	-- Guardar, salir y volver: mismas stats, mismo uid, misma prioridad y lo equipado, sin volver a tirar nada.
+	local original = af.data.read(af.player)
+	local reloaded = fixture(af.save())
+	local after = reloaded.data.read(reloaded.player)
+	local same = #after.armor == #original.armor and after.armorPriority == "luck"
+	for position, kept in original.armor do
+		local other = after.armor[position]
+		same = same and other.uid == kept.uid and other.v == kept.v and #other.stats == #kept.stats
+		for index, entry in kept.stats do
+			same = same and other.stats[index].stat == entry.stat and other.stats[index].value == entry.value
+		end
+	end
+	equal(same, true, "guardar y volver: mismas piezas, mismas stats y mismos identificadores")
+	equal(after.armorWorn.chest, original.armorWorn.chest, "guardar y volver: sigue equipada")
+	equal(reloaded.player:GetAttribute("ArmorPriority"), "luck", "guardar y volver: misma prioridad")
+
+	-- Muchas piezas: Equipar mejores acaba y deja una pieza por hueco, cada una en el suyo.
+	local crowd = fixture(nil)
+	table.clear(crowd.players)
+	crowd.load("src/server/Armor").start()
+	crowd.data.editArmor(crowd.player, function(d)
+		for n = 1, armorCfg.MaxPieces do
+			local slot = armorCfg.SlotOrder[1 + n % #armorCfg.SlotOrder]
+			table.insert(d.armor, { id = n, uid = armorStats.uid(), v = 2, slot = slot, quality = 3, level = 6, stats = armorStats.generate(slot, 3, 6, rng) })
+		end
+		d.nextArmorId = armorCfg.MaxPieces + 1
+	end)
+	crowd.remotes.EquipArmor.OnServerEvent:fire(crowd.player, "best")
+	local fits = next(crowd.data.read(crowd.player).armorWorn) ~= nil
+	for slot, wornId in crowd.data.read(crowd.player).armorWorn do
+		fits = fits and crowd.data.read(crowd.player).armor[wornId].slot == slot
+	end
+	equal(fits, true, "60 piezas: Equipar mejores equipa una por hueco y respeta los huecos")
+end
+
 -- Mazmorras: la escalera de zonas no tiene saltos raros y los premios no se disparan (antes: cristales x2048 y calidad x12000).
 local zones = f.config.Dungeons
 equal(zones[1].loot, 1, "la primera zona da los cristales de base")
@@ -1130,11 +1354,11 @@ do
 		bound = { gradeCrystal = 9, [potionKey] = 2, missionToken = 4 },
 		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
 		armor = {
-			{ id = 11, slot = "helmet", quality = lastQuality, level = lastZone, stats = helmetStats },
-			{ id = 12, slot = "boots", quality = 1, level = 1, stats = bootStats },
+			{ id = 11, uid = "uid-casco", v = 2, slot = "helmet", quality = lastQuality, level = lastZone, stats = helmetStats },
+			{ id = 12, slot = "boots", quality = 1, level = 1, stats = bootStats }, -- antigua: sin uid ni versión
 			{ id = 13, slot = "helmet", quality = 1, level = 1, stats = {} },
 		},
-		armorWorn = { helmet = 11, boots = 12 }, armorHidden = true,
+		armorWorn = { helmet = 11, boots = 12 }, armorHidden = true, armorPriority = "luck",
 		potions = { damage = { tier = 3, seconds = 120 }, coins = { tier = topTier, seconds = 1.5 } },
 		daily = { day = 20000, seconds = 1800.5, claimed = { 2, 1 }, streak = 4, streakDay = 19999 },
 		upgrades = levels,
@@ -1157,14 +1381,21 @@ do
 		index = full.index, items = items, bound = { gradeCrystal = 7, [potionKey] = 2 },
 		artifacts = { 1, lastArtifact, 2 }, gear = { lastArtifact, 1 },
 		armor = {
-			{ id = 1, slot = "helmet", quality = lastQuality, level = lastZone, stats = helmetStats },
-			{ id = 2, slot = "boots", quality = 1, level = 1, stats = bootStats },
-			{ id = 3, slot = "helmet", quality = 1, level = 1, stats = {} },
+			{ id = 1, uid = "uid-casco", v = 2, slot = "helmet", quality = lastQuality, level = lastZone, stats = helmetStats },
+			{ id = 2, uid = "", slot = "boots", quality = 1, level = 1, stats = bootStats },
+			{ id = 3, uid = "", slot = "helmet", quality = 1, level = 1, stats = {} },
 		},
-		nextArmorId = 4, armorWorn = { helmet = 1, boots = 2 }, armorHidden = true,
+		nextArmorId = 4, armorWorn = { helmet = 1, boots = 2 }, armorHidden = true, armorPriority = "luck",
 		potions = full.potions, daily = full.daily, upgrades = levels,
 	}
 	local loaded, lf = stable(stored(full), "partida completa")
+	-- Migración: las piezas antiguas conservan sus stats y solo reciben un identificador único nuevo (distinto entre sí).
+	for position = 2, 3 do
+		local uid = loaded.armor[position].uid
+		equal(type(uid) == "string" and #uid > 0 and uid ~= loaded.armor[1].uid and uid ~= loaded.armor[5 - position].uid, true, "pieza antigua: recibe su identificador único")
+		equal(loaded.armor[position].v, nil, "pieza antigua: sigue siendo antigua")
+		expected.armor[position].uid = uid
+	end
 	same(loaded, expected, "partida completa: se carga todo lo guardado")
 	equal(lf.player:GetAttribute("Coins"), 1e30, "monedas enormes publicadas")
 	equal(lf.player:GetAttribute("Equipped"), 2, "primera equipada publicada")
@@ -1375,6 +1606,13 @@ do
 		},
 		armorWorn = { helmet = 4, boots = 99, legs = 6, nada = 1 },
 	}, "armadura rota")
+	-- Todas reciben un identificador único (distinto entre sí) y ninguna pasa a ser "nueva".
+	local seenUids = {}
+	for _, piece in armor.armor do
+		equal(type(piece.uid) == "string" and not seenUids[piece.uid] and piece.v == nil, true, "armadura rota: identificadores únicos")
+		seenUids[piece.uid] = true
+		piece.uid = nil
+	end
 	same(armor.armor, {
 		{ id = 1, slot = "helmet", quality = 1, level = 1, stats = { { stat = "health", value = healthCap }, { stat = "health", value = healthCap / 4 } } },
 		{ id = 2, slot = "boots", quality = 1, level = 1, stats = {} },

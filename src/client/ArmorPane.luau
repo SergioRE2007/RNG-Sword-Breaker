@@ -22,6 +22,8 @@ local cfg = Config.Armor
 local WHITE = Color3.new(1, 1, 1)
 local BLACK = Color3.new(0, 0, 0)
 local GOLD = Color3.fromRGB(255, 215, 90)
+local GREEN = Color3.fromRGB(110, 235, 120) -- lo que se gana al cambiar de pieza
+local RED = Color3.fromRGB(255, 96, 96) -- lo que se pierde
 local FOV = 30
 
 -- Medidas de la pestaña (la ventana de la mochila tiene tamaño de diseño fijo y se escala entera).
@@ -31,6 +33,7 @@ local LEFT = 12 + SLOT + 12 -- donde acaba la columna de huecos
 local CENTER = 214 -- ancho de la columna del personaje
 local RIGHT = LEFT + CENTER + 10 -- donde empieza la lista de piezas
 local BAR = 62 -- alto de los botones de abajo
+local PRIORITY_WIDTH = 168 -- ancho del botón de prioridad de "Equipar mejores"
 
 local function hex(color: Color3): string
 	return "#" .. color:ToHex()
@@ -110,7 +113,14 @@ local function mainStat(piece): string
 	return if first then ArmorStats.value(first.stat, first.value) else ""
 end
 
-local function pieceTip(piece): (string, Color3)
+-- "+120" / "-120" (o "+7.5%" / "-7.5%") de una diferencia: lo que se gana o se pierde en ese stat.
+local function signed(stat: string, delta: number): string
+	return (if delta < 0 then "-" else "+") .. ArmorStats.value(stat, math.abs(delta)):sub(2)
+end
+
+-- Cartel de una pieza: solo las stats que tiene. Con `worn` (la equipada en su hueco, si es otra pieza) añade a cada stat
+-- cuánto se gana (verde) o se pierde (rojo) al cambiarla, y las stats que perdería de la equipada salen en rojo.
+local function pieceTip(piece, worn): (string, Color3)
 	local quality = ArmorStats.quality(piece)
 	local level = Config.Dungeons[piece.level]
 	local lines = {
@@ -118,6 +128,21 @@ local function pieceTip(piece): (string, Color3)
 		`<font color="{hex(quality.color)}">{Lang.t(nil, quality.name)}</font> <font color="{Ui.SOFT}">· {Lang.t(nil, cfg.Slots[piece.slot].name)}</font>`,
 		`<font color="{Ui.SOFT}">{Lang.t(nil, "Dungeon:")}</font> <font color="{hex(level.color)}">{Lang.t(nil, level.name)}</font>`,
 	}
+	if worn and worn ~= piece and worn.slot == piece.slot then
+		for _, row in ArmorStats.compare(piece, worn) do
+			local info = cfg.Stats[row.stat]
+			if row.value > 0 then
+				local text = `<font color="{hex(info.color)}">{ArmorStats.text(row.stat, row.value)}</font>`
+				if math.abs(row.delta) > 1e-9 then
+					text ..= ` <font color="{hex(if row.delta > 0 then GREEN else RED)}">({signed(row.stat, row.delta)})</font>`
+				end
+				table.insert(lines, text)
+			else
+				table.insert(lines, `<font color="{hex(RED)}">{signed(row.stat, -row.old)} {Lang.t(nil, info.name)}</font>`)
+			end
+		end
+		return table.concat(lines, "\n"), quality.color
+	end
 	for _, entry in piece.stats do
 		if not entry.bonus then
 			table.insert(lines, `<font color="{hex(cfg.Stats[entry.stat].color)}">{ArmorStats.text(entry.stat, entry.value)}</font>`)
@@ -242,9 +267,39 @@ function ArmorPane.build(pane: Frame, helpers)
 	local hint = Ui.label(pane, 18)
 	hint.Name = "Hint"
 	hint.Position = UDim2.fromOffset(RIGHT, 8)
-	hint.Size = UDim2.new(1, -RIGHT - 12, 0, 30)
+	hint.Size = UDim2.new(1, -RIGHT - 12 - PRIORITY_WIDTH - 8, 0, 30)
 	hint.TextXAlignment = Enum.TextXAlignment.Left
 	hint.TextTruncate = Enum.TextTruncate.AtEnd
+
+	-- Prioridad de "Equipar mejores": cada pulsación pasa al siguiente modo (Config.Armor.Priority.Order). El servidor lo
+	-- valida y lo guarda; aquí se pinta lo que publica en el atributo "ArmorPriority".
+	local priorityButton = Ui.button(pane, "", Ui.COLORS.purple)
+	priorityButton.Name = "Priority"
+	priorityButton.AnchorPoint = Vector2.new(1, 0)
+	priorityButton.Position = UDim2.new(1, -12, 0, 8)
+	priorityButton.Size = UDim2.fromOffset(PRIORITY_WIDTH, 30)
+	priorityButton.TextSize = 15
+	priorityButton.TextTruncate = Enum.TextTruncate.AtEnd
+	local function currentMode(): string
+		return ArmorStats.mode(player:GetAttribute("ArmorPriority"))
+	end
+	local function paintPriority()
+		local mode = currentMode()
+		priorityButton.Text = Lang.t(nil, "Priority: {mode}", { mode = Lang.t(nil, cfg.Priority.Names[mode]) })
+		local stat = cfg.Stats[mode]
+		priorityButton.BackgroundColor3 = if stat then stat.color else Ui.COLORS.purple
+	end
+	paintPriority()
+	player:GetAttributeChangedSignal("ArmorPriority"):Connect(paintPriority)
+	Ui.tip(priorityButton, function()
+		return Lang.t(nil, "What \"Equip best\" looks for. Tap to change it."), Ui.COLORS.gray
+	end)
+	priorityButton.Activated:Connect(function()
+		local order = cfg.Priority.Order
+		local nextMode = order[(table.find(order, currentMode()) or 0) % #order + 1]
+		Sfx.play("equip")
+		Remotes.EquipArmor:FireServer("priority", nextMode)
+	end)
 
 	local list = helpers.grid(pane, UDim2.fromOffset(RIGHT - 4, 40), UDim2.new(1, -RIGHT - 4, 1, -40 - BAR - 22))
 	local layout = list:FindFirstChildOfClass("UIGridLayout") :: UIGridLayout
@@ -349,7 +404,7 @@ function ArmorPane.build(pane: Frame, helpers)
 		hint.Text = if #pieces == 0
 			then Lang.t(nil, "No armor: it drops in the hub dungeons.")
 			elseif salvaging then Lang.t(nil, "Tap the pieces you want to salvage")
-			else Lang.t(nil, "Pieces {n}/{max} · pick one and press Equip", { n = #pieces, max = cfg.MaxPieces })
+			else Lang.t(nil, "Pieces {n}/{max}", { n = #pieces, max = cfg.MaxPieces })
 		hint.TextColor3 = if salvaging then Ui.COLORS.red:Lerp(WHITE, 0.45) else WHITE
 	end
 
@@ -433,7 +488,18 @@ function ArmorPane.build(pane: Frame, helpers)
 				Ui.cellTag(cell, "E", Ui.COLORS.green)
 			end
 			Ui.tip(cell, function()
-				return pieceTip(find(piece.id) or piece)
+				local current = find(piece.id) or piece
+				-- Si no la lleva puesta, el cartel compara con la que lleva en ese hueco.
+				local worn = nil
+				if not current.worn then
+					for _, other in ArmorStats.pieces(player) do
+						if other.worn and other.slot == current.slot then
+							worn = other
+							break
+						end
+					end
+				end
+				return pieceTip(current, worn)
 			end, true)
 			salvageMark(cell)
 			cell:SetAttribute("Base", quality.color) -- color de su fondo sin marcar
@@ -519,7 +585,10 @@ function ArmorPane.build(pane: Frame, helpers)
 		for _, stat in cfg.StatOrder do
 			local total = player:GetAttribute("Armor_" .. stat) or 0
 			local info = cfg.Stats[stat]
-			table.insert(lines, `<font color="{if total > 0 then hex(info.color) else Ui.SOFT}">{ArmorStats.value(stat, total)}</font> <font color="{Ui.SOFT}">{Lang.t(nil, info.name)}</font>`)
+			-- Spawn Speed ya no sale en piezas nuevas: solo se enseña si alguna antigua puesta lo suma.
+			if total > 0 or table.find(cfg.Generator.Pool, stat) then
+				table.insert(lines, `<font color="{if total > 0 then hex(info.color) else Ui.SOFT}">{ArmorStats.value(stat, total)}</font> <font color="{Ui.SOFT}">{Lang.t(nil, info.name)}</font>`)
+			end
 		end
 		totalsText.Text = table.concat(lines, "\n")
 	end
