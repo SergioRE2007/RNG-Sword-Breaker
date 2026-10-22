@@ -450,10 +450,11 @@ function Stats.spawnLuck(player: Player): number
 	return Stats.potion(player, "boxLuck") * Stats.weather("luck") * Stats.boost("luck")
 end
 
--- Monedas: la mejora "Fortuna", artefactos, los rasgos de las armas equipadas, renacimientos y los pases (ventaja
--- "coins"). Los grados ya no dan monedas: multiplican el daño de su arma (Stats.swordDamage).
+-- Monedas: la mejora "Fortuna", artefactos, los rasgos de las armas equipadas, la armadura (una sola vez: (1 + %)),
+-- renacimientos y los pases (ventaja "coins"). Los grados ya no dan monedas: multiplican el daño de su arma
+-- (Stats.swordDamage).
 function Stats.coins(player: Player): number
-	return upgrade(player, "fortune") * upgrade(player, "bagBoost") * gear(player, "coins") *traits(player, "coins") * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins") * Stats.boost("coins") * Stats.friendBonus(player)
+	return upgrade(player, "fortune") * upgrade(player, "bagBoost") * gear(player, "coins") * traits(player, "coins") * (1 + armor(player, "coins")) * Stats.rebirthBonus(player, "coins") * Stats.passMult(player, "coins") * Stats.potion(player, "coins") * Stats.boost("coins") * Stats.friendBonus(player)
 end
 
 function Stats.gems(player: Player): number

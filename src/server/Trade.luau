@@ -105,7 +105,7 @@ local function freeze(side)
 end
 
 local function pieceView(piece)
-	return { id = piece.id, slot = piece.slot, quality = piece.quality, level = piece.level, stats = piece.stats }
+	return { id = piece.id, uid = piece.uid, v = piece.v, slot = piece.slot, quality = piece.quality, level = piece.level, stats = piece.stats }
 end
 
 -- La petición en curso de un lado tal y como la ve el cliente, o nil. Lo pedido es del otro lado (`other`): la espada o
@@ -374,7 +374,8 @@ local function give(side, pack)
 			data.nextSwordId += 1
 		end
 		for _, piece in pack.armor do
-			table.insert(data.armor, { id = data.nextArmorId, slot = piece.slot, quality = piece.quality, level = piece.level, stats = piece.stats })
+			-- La pieza es la misma (mismo uid y mismas stats): solo cambia de dueño y de posición en el inventario.
+			table.insert(data.armor, { id = data.nextArmorId, uid = piece.uid or ArmorStats.uid(), v = piece.v, slot = piece.slot, quality = piece.quality, level = piece.level, stats = piece.stats })
 			data.nextArmorId += 1
 		end
 		for _, index in pack.artifacts do

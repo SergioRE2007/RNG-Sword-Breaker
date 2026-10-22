@@ -67,7 +67,7 @@ Objetivo.jugador = {
 	paciencia = 120, -- segundos que como mucho le dedica a un objeto; los más duros los deja
 }
 -- Lo que lleva puesto a cada hora (lo dan las mazmorras, que se equilibran para que esto se cumpla):
--- { hora, índice de Config.Traits }, { hora, índice de Config.Grades } y { hora, suerte, ataque, aparición } de la armadura.
+-- { hora, índice de Config.Traits }, { hora, índice de Config.Grades } y { hora, suerte, ataque, monedas } de la armadura (lo que suma el jugador tipo con la prioridad Equilibrado).
 -- El rasgo y el grado son los de su primera arma: la segunda, la tercera y la cuarta llevan cada uno cuando las tiradas
 -- acumuladas llegan a 2, 3 y 4 veces su pity (el modelo saca la curva de tiradas de estas mismas tablas).
 -- De aquí salen los precios (generar.luau). El informe juega las mazmorras de verdad y dice cuánto se cumple: estas

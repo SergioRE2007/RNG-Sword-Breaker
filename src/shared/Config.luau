@@ -607,31 +607,69 @@ Config.Upgrades = {
 -- ARMADURA (cae en las mazmorras). Cuatro huecos, una pieza equipada por hueco. Lo que suma un jugador a cada hora
 -- (calidad, "bonus" de la zona y bases de aquí) está medido con tools/equilibrio/informe.luau contra la tabla
 -- `armadura` de objetivo.luau: si tocas las bases, pásalo.
--- Cada pieza guarda sus valores ya tirados (PlayerData recorta al cargar los porcentajes de las guardadas con la regla
--- antigua, cuando escalaban con el power). Valor de un stat = base del hueco * azar (Roll) * mult de la calidad * lo
--- que escala con la zona (shared/ArmorStats.scaling): la vida, su "power"; los porcentajes, su "bonus", mucho más
--- suave; los de scales = false, nada. "health" es vida que se suma; el resto son
+-- Cada pieza guarda sus valores ya tirados, una sola vez al caer (PlayerData recorta al cargar lo que pase del tope de
+-- ArmorStats.cap). Las piezas NUEVAS (v = 2) tiran de 1 a 4 stats con `Generator` (más abajo); las antiguas conservan las
+-- suyas (hueco fijo + modificadores). Lo que escala con la zona (shared/ArmorStats.scaling): la vida, su "power"; los
+-- porcentajes, su "bonus", mucho más suave; los de scales = false, nada. "health" es vida que se suma; el resto son
 -- porcentajes (0.05 = +5 %) que se suman entre piezas y luego multiplican el stat final (ver shared/Stats).
 Config.Armor = {
 	MaxPieces = 60, -- con el inventario lleno, las piezas nuevas se desmontan solas
 	BaseHealth = 100, -- vida del personaje sin armadura
+	-- Tirada de las piezas ANTIGUAS (hueco fijo + modificadores): ya no se tira, pero ArmorStats.cap la sigue usando para
+	-- recortar lo guardado. Las piezas nuevas se generan con `Generator` (más abajo).
 	Roll = { min = 0.8, max = 1.2 },
-	-- Pedido por el usuario: la 4.ª stat de una pieza no puede ser vida máxima (con "Equipar mejores" una pieza con
-	-- 200 de vida de más se quedaba sin elegirse). Un modificador extra que cayera ahí como vida se vuelve a tirar.
-	NoHealthAt = 4,
 	SlotOrder = { "helmet", "chest", "legs", "boots" },
+	-- `stats` = bases de las piezas antiguas (solo las lee ArmorStats.cap y el modo de pruebas); `weight` = poder relativo
+	-- del hueco para las piezas nuevas (la pechera da más que las botas; las cuatro suman 4).
 	Slots = {
-		helmet = { name = "Helmet", stats = { health = 40, luck = 0.05 } },
-		chest = { name = "Chestplate", stats = { health = 100 } },
-		legs = { name = "Greaves", stats = { health = 60, rollSpeed = 0.03 } },
-		boots = { name = "Boots", stats = { health = 30, damage = 0.03, luck = 0.03 } },
+		helmet = { name = "Helmet", weight = 0.9, stats = { health = 40, luck = 0.05 } },
+		chest = { name = "Chestplate", weight = 1.4, stats = { health = 100 } },
+		legs = { name = "Greaves", weight = 1, stats = { health = 60, rollSpeed = 0.03 } },
+		boots = { name = "Boots", weight = 0.7, stats = { health = 30, damage = 0.03, luck = 0.03 } },
 	},
-	StatOrder = { "health", "damage", "luck", "rollSpeed" },
+	-- El orden es el de los textos. "rollSpeed" (Spawn Speed) ya no sale en piezas nuevas (no está en Generator.Pool),
+	-- pero las antiguas lo conservan y sigue contando.
+	StatOrder = { "health", "damage", "luck", "coins", "rollSpeed" },
 	Stats = {
 		health = { name = "Max Health", flat = true, color = Color3.fromRGB(255, 110, 110) },
 		damage = { name = "Attack", color = Color3.fromRGB(255, 154, 106) },
 		luck = { name = "Luck", color = Color3.fromRGB(126, 224, 122) },
+		coins = { name = "Coins", color = Color3.fromRGB(255, 214, 80) },
 		rollSpeed = { name = "Spawn Speed", scales = false, color = Color3.fromRGB(255, 200, 90) },
+	},
+	-- ESTADÍSTICAS ALEATORIAS de las piezas nuevas (pedido por el usuario). Al caer, cada pieza tira entre 1 y 4 stats
+	-- distintas de `Pool` y se reparten un PRESUPUESTO de poder (shared/ArmorStats.generate):
+	--   valor de un stat = Reference[stat] * weight del hueco * mult de la calidad * lo que escala con la zona
+	--                      * Budget[cuántas stats] * su parte del reparto * tirada de la pieza.
+	-- `Reference` = lo que da una pieza de UNA sola stat en el hueco de peso 1, calidad Común y zona 1 (son los
+	-- coeficientes de conversión: la vida va en puntos y el resto en fracciones, 0,05 = +5 %). `Budget[n]` = poder total
+	-- de una pieza de n stats frente a la de una (1 = igual): las de cuatro dan algo más en total, nunca cuatro veces, así
+	-- que cada stat suya es mucho más flojo que en una especializada. `Split` = cuánto se desvía el reparto de una parte
+	-- igual (0,3 = cada parte de 0,7 a 1,3 veces la media) y `Roll` = tirada de toda la pieza.
+	Generator = {
+		Pool = { "health", "damage", "luck", "coins" },
+		Count = { 0.20, 0.40, 0.30, 0.10 }, -- probabilidad de 1, 2, 3 y 4 stats (suman 1)
+		Budget = { 1, 1.1, 1.16, 1.2 },
+		Split = 0.3,
+		Roll = { min = 0.9, max = 1.1 },
+		Reference = { health = 150, damage = 0.11, luck = 0.11, coins = 0.02 },
+	},
+	-- "Equipar mejores": cada modo da un peso a cada stat; una pieza vale por lo que sube el total de cada stat en
+	-- proporción a lo que el jugador ya tiene (ArmorStats.utility: logaritmo del multiplicador final). Equilibrado
+	-- reparte entre las cuatro (la vida pesa menos: su multiplicador sale del orden de magnitud, no de un %); los demás
+	-- modos mandan en una stat y dejan a las otras solo para desempatar.
+	Priority = {
+		Default = "balanced",
+		Order = { "balanced", "health", "damage", "luck", "coins" },
+		Names = { balanced = "Balanced", health = "Health", damage = "Damage", luck = "Luck", coins = "Coins" },
+		Weights = {
+			balanced = { health = 0.6, damage = 1, luck = 1, coins = 1, rollSpeed = 0.5 },
+			health = { health = 1, damage = 0.05, luck = 0.05, coins = 0.05, rollSpeed = 0.05 },
+			damage = { health = 0.05, damage = 1, luck = 0.05, coins = 0.05, rollSpeed = 0.05 },
+			luck = { health = 0.05, damage = 0.05, luck = 1, coins = 0.05, rollSpeed = 0.05 },
+			coins = { health = 0.05, damage = 0.05, luck = 0.05, coins = 1, rollSpeed = 0.05 },
+		},
+		SearchLimit = 200000, -- combinaciones de piezas que prueba a la vez; con más, mejora hueco a hueco
 	},
 	-- Calidades, de peor a mejor: "odds" = 1 entre N de que salga (la suerte de la dificultad y del enemigo divide N),
 	-- "mods" = modificadores extra que trae, "value" = Cristales de grado al desmontarla: las corrientes no dan ninguno y

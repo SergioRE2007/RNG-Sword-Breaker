@@ -178,6 +178,7 @@ local function publish(player: Player)
 	player:SetAttribute("AutoSell", data.autoSell)
 	player:SetAttribute("ArmorHidden", data.armorHidden)
 	player:SetAttribute("TraitPriority", data.traitPriority)
+	player:SetAttribute("ArmorPriority", data.armorPriority)
 	for _, kind in { "traits", "grades" } do
 		local stops = data.stopAt[kind]
 		player:SetAttribute("StopAt_" .. kind, if stops then table.concat(stops, ",") else nil)
@@ -370,6 +371,7 @@ local function loadArmor(data, saved)
 		return
 	end
 	local worn = if type(saved.armorWorn) == "table" then saved.armorWorn else {}
+	local seen = {} -- identificadores ya vistos: uno repetido (dato corrupto) recibe uno nuevo
 	for _, piece in saved.armor do
 		if #data.armor >= Config.Armor.MaxPieces then
 			break
@@ -386,7 +388,11 @@ local function loadArmor(data, saved)
 				end
 			end
 			local id = #data.armor + 1
-			table.insert(data.armor, { id = id, slot = piece.slot, quality = piece.quality, level = level, stats = stats })
+			-- Migración: las piezas antiguas (sin `v`) conservan sus stats tal cual y solo reciben su identificador único;
+			-- las nuevas (v = 2) conservan el suyo. Nada se vuelve a tirar al cargar.
+			local uid = if type(piece.uid) == "string" and #piece.uid > 0 and #piece.uid <= 64 and not seen[piece.uid] then piece.uid else ArmorStats.uid()
+			seen[uid] = true
+			table.insert(data.armor, { id = id, uid = uid, v = if piece.v == 2 then 2 else nil, slot = piece.slot, quality = piece.quality, level = level, stats = stats })
 			if piece.id ~= nil and worn[piece.slot] == piece.id then
 				data.armorWorn[piece.slot] = id
 			end
@@ -452,7 +458,7 @@ local function applyProgress(data, hours: number)
 	-- sumaría la suya (suerte en el casco, ataque en las botas y aparición en las grebas).
 	local level = math.clamp(snapshot.dungeon, 1, #Config.Dungeons)
 	local quality = math.min(3, #Config.Armor.Qualities)
-	local extra = { helmet = { "luck", snapshot.armor[1] }, boots = { "damage", snapshot.armor[2] }, legs = { "rollSpeed", snapshot.armor[3] } }
+	local extra = { helmet = { "luck", snapshot.armor[1] }, boots = { "damage", snapshot.armor[2] }, legs = { "coins", snapshot.armor[3] } }
 	for _, slot in Config.Armor.SlotOrder do
 		local health = Config.Armor.Slots[slot].stats.health * Config.Armor.Qualities[quality].mult * Config.Dungeons[level].power
 		local stats = { { stat = "health", value = math.round(health) } }
@@ -461,7 +467,7 @@ local function applyProgress(data, hours: number)
 		end
 		local id = data.nextArmorId
 		data.nextArmorId += 1
-		table.insert(data.armor, { id = id, slot = slot, quality = quality, level = level, stats = stats })
+		table.insert(data.armor, { id = id, uid = ArmorStats.uid(), v = 2, slot = slot, quality = quality, level = level, stats = stats })
 		data.armorWorn[slot] = id
 	end
 end
@@ -507,6 +513,7 @@ local function load(player: Player)
 		nextArmorId = 1,
 		armorWorn = {},
 		armorHidden = false, -- armadura escondida: no se ve en el personaje pero sigue contando (server/Armor)
+		armorPriority = Config.Armor.Priority.Default, -- qué busca "Equipar mejores" (clave de Config.Armor.Priority.Weights)
 		potions = {},
 	}
 	for name in Config.Upgrades do
@@ -592,6 +599,7 @@ local function load(player: Player)
 				data.daily = DailyInfo.sanitize(saved.daily)
 				data.autoSell = math.max(0, tonumber(saved.autoSell) or 0)
 				data.armorHidden = saved.armorHidden == true
+				data.armorPriority = ArmorStats.mode(saved.armorPriority)
 				data.pity = Modifiers.newPity(saved.pity)
 				if type(saved.stopAt) == "table" then
 					for _, kind in { "traits", "grades" } do

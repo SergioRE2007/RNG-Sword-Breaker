@@ -450,7 +450,7 @@ local out = {
 	"-- Cómo va el jugador tipo del calendario de progreso a cada hora de juego: lo usa Config.Test.Progress (solo en",
 	"-- Studio) para empezar una partida en esa etapa. `swords` = sus armas, cada una con su metal, su tamaño, su rasgo y su",
 	"-- grado (0 = ninguno) y su nivel: las primeras (hasta Config.Loadout.Slots) son las equipadas, por hueco, y las demás, las que",
-	"-- deja en su Bolsa de oro; `bag` = bolsa por la que va; `armor` = { suerte, ataque, aparición } que suma su armadura.",
+	"-- deja en su Bolsa de oro; `bag` = bolsa por la que va; `armor` = { suerte, ataque, monedas } que suma su armadura.",
 	"return {",
 }
 for _, hour in objetivo.fotos do
