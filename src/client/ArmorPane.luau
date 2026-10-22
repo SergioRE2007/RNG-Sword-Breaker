@@ -131,7 +131,10 @@ local function pieceTip(piece, worn): (string, Color3)
 	if worn and worn ~= piece and worn.slot == piece.slot then
 		for _, row in ArmorStats.compare(piece, worn) do
 			local info = cfg.Stats[row.stat]
-			if row.value > 0 then
+			if row.value > 0 and row.old == 0 then
+				-- Stat que la equipada no tiene: todo es ganancia, en verde y sin repetir la cifra entre paréntesis.
+				table.insert(lines, `<font color="{hex(GREEN)}">{ArmorStats.text(row.stat, row.value)}</font>`)
+			elseif row.value > 0 then
 				local text = `<font color="{hex(info.color)}">{ArmorStats.text(row.stat, row.value)}</font>`
 				if math.abs(row.delta) > 1e-9 then
 					text ..= ` <font color="{hex(if row.delta > 0 then GREEN else RED)}">({signed(row.stat, row.delta)})</font>`
