@@ -16,3 +16,6 @@ graphify-out/
 
 # Dependencias de las herramientas de sonido
 node_modules/
+
+# Contraseñas locales
+.env
